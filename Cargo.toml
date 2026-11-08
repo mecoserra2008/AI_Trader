@@ -1,0 +1,47 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+rust-version = "1.89"
+
+[workspace.dependencies]
+anyhow = "1"
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+chrono = { version = "0.4", features = ["serde"] }
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json", "gzip"] }
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+futures-util = "0.3"
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+form_urlencoded = "1"
+arrow = { version = "53", default-features = false }
+parquet = { version = "53", default-features = false, features = ["arrow", "zstd"] }
+uuid = { version = "1", features = ["v4"] }
+clap = { version = "4", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dotenvy = "0.15"
+flate2 = "1"
+csv = "1"
+rust_decimal = "1"
+
+at-core = { path = "crates/at-core" }
+at-store = { path = "crates/at-store" }
+at-bybit = { path = "crates/at-bybit" }
+at-alt = { path = "crates/at-alt" }
+at-filters = { path = "crates/at-filters" }
+at-risk = { path = "crates/at-risk" }
+at-exec = { path = "crates/at-exec" }
+at-flow = { path = "crates/at-flow" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

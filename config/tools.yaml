@@ -1,0 +1,70 @@
+# Tool registry (ARCHITECTURE §3–§5). status: active | probation | retired | planned
+# impl: where the computation lives. rust = hot-path recursive/closed-form (crates/at-filters),
+#       python = fitting / research (src/ai_trader/tools). Many tools are "fit in Python, filter in Rust".
+
+tools:
+  # --- volatility ---
+  vol.ewma:          {family: vol, impl: [rust, python], cadence: bar, status: active}
+  vol.range:         {family: vol, impl: [rust], cadence: bar, status: active, notes: "Parkinson, Garman-Klass, Yang-Zhang"}
+  vol.garch_t:       {family: vol, impl: {fit: python, filter: rust}, cadence: {fit: weekly, filter: bar}, status: active}
+  vol.robust_bc:     {family: vol, impl: [rust, python], cadence: bar, status: active, notes: "winsorised + slow bias-corrected EWMA; H-V1b supported (QLIKE -0.05 IS / -0.04 holdout vs plain). sigma_risk_next: use for stops/sizing"}
+  vol.weekend_m:     {family: vol, impl: [rust, python], cadence: weekly, status: active, notes: "causal weekend multiplier (prior 0.6, shrunk). CENTRAL estimates only (first passage); H-V2 failed on QLIKE: do not shrink stops/sizing"}
+  vol.har:           {family: vol, impl: [python], cadence: daily, status: active, notes: "HAR on log daily RV; H-VCL1 supported (QLIKE -0.08 vs robust_bc at 24h, both segments). Use for daily-horizon risk"}
+  vol.regime_pct:    {family: vol, impl: [python], cadence: bar, status: planned}
+  # --- regime (9 = 3 direction x 3 vol) ---
+  regime.direction:  {family: regime, impl: {fit: python, filter: rust}, cadence: {fit: weekly, filter: bar}, status: planned}
+  regime.vol:        {family: regime, impl: {fit: python, filter: rust}, cadence: {fit: weekly, filter: bar}, status: planned}
+  regime.grid:       {family: regime, impl: [rust], cadence: bar, status: planned}
+  regime.trend_range: {family: regime, impl: [python], cadence: daily, status: planned}
+  regime.market:     {family: regime, impl: [rust], cadence: bar, status: planned}
+  regime.consensus:  {family: regime, impl: [python], cadence: bar, status: planned}
+  # --- trend ---
+  trend.tsmom:       {family: trend, impl: [python], cadence: bar, status: planned}
+  trend.kalman_llt:  {family: trend, impl: {fit: python, filter: rust}, cadence: bar, status: planned}
+  trend.ma_structure: {family: trend, impl: [python], cadence: bar, status: planned}
+  trend.breakout:    {family: trend, impl: [python], cadence: bar, status: planned}
+  # --- levels / structure ---
+  levels.pivots:     {family: levels, impl: [rust], cadence: bar, status: planned, notes: "non-repainting; known_at = confirmation bar"}
+  levels.cluster:    {family: levels, impl: [python], cadence: bar, status: planned}
+  levels.volume_profile: {family: levels, impl: [python], cadence: daily, status: planned}
+  levels.proximity:  {family: levels, impl: [rust], cadence: bar, status: planned}
+  levels.break_prob: {family: levels, impl: {fit: python, score: rust}, cadence: {fit: weekly, score: bar}, status: planned}
+  ta.oscillators:    {family: levels, impl: [python], cadence: bar, status: planned}
+  # --- timing ---
+  time.session:      {family: timing, impl: [python], cadence: bar, status: planned}
+  time.seasonality:  {family: timing, impl: [python], cadence: daily, status: planned}
+  time.calendar:     {family: timing, impl: [python], cadence: bar, status: planned}
+  time.since:        {family: timing, impl: [python], cadence: bar, status: planned}
+  # --- flow ---
+  flow.imbalance:    {family: flow, impl: [rust], cadence: bar, status: planned}
+  flow.ofi:          {family: flow, impl: [rust], cadence: bar, status: planned}
+  flow.derivs:       {family: flow, impl: [python], cadence: bar, status: planned}
+  flow.vpin:         {family: flow, impl: [rust], cadence: bar, status: planned}
+  # --- sentiment ---
+  sent.news:         {family: sentiment, impl: [python], cadence: bar, status: planned}
+  sent.social:       {family: sentiment, impl: [python], cadence: bar, status: planned}
+  sent.divergence:   {family: sentiment, impl: [python], cadence: bar, status: planned}
+  # --- relational ---
+  rel.beta:          {family: relational, impl: {filter: rust}, cadence: bar, status: planned}
+  rel.factors:       {family: relational, impl: [python], cadence: weekly, status: planned}
+  rel.clusters:      {family: relational, impl: [python], cadence: weekly, status: planned}
+  rel.pairs:         {family: relational, impl: [python], cadence: daily, status: planned}
+  rel.leadlag:       {family: relational, impl: [python], cadence: daily, status: planned}
+  rel.xs_rank:       {family: relational, impl: [python], cadence: bar, status: planned}
+  # --- predictive ---
+  pred.ols_ret:      {family: predictive, impl: [python], cadence: daily, status: planned}
+  pred.quantiles:    {family: predictive, impl: [python], cadence: daily, status: planned}
+  pred.threshold:    {family: predictive, impl: [python], cadence: daily, status: planned}
+  pred.barrier:      {family: predictive, impl: {chain: rust, calibration: python}, cadence: bar, status: planned, notes: "first passage + level chain implemented in at-filters"}
+  pred.event:        {family: predictive, impl: [python], cadence: daily, status: planned}
+  pred.analog:       {family: predictive, impl: [python], cadence: daily, status: planned}
+  # --- panel ---
+  panel.fama_macbeth: {family: panel, impl: [python], cadence: daily, status: planned}
+  panel.coef_drift:  {family: panel, impl: [python], cadence: daily, status: planned}
+  panel.ic:          {family: panel, impl: [python], cadence: daily, status: planned}
+  panel.fe:          {family: panel, impl: [python], cadence: weekly, status: planned}
+  # --- relative value ---
+  relval.factor_gap: {family: relational, impl: [python], cadence: bar, status: planned, notes: "fair value vs BTC/ETH factor model (causal 720h OLS betas, 72h residual z, gap %). H-RV1 contradicted (IS -0.41%/event net, t -3.3; holdout -0.26%): descriptive only, no fade signal"}
+  relval.pair:       {family: relational, impl: [python], cadence: bar, status: planned, notes: "log spread z vs trailing 720h + AR(1) half-life; H-RV2 (BZ-CL) contradicted, no gross reversion; H-RV3 (XAUT-XAU) reverts gross ~0.64 sd but sd ~10-14 bps < 30 bps costs: contradicted net"}
+  # --- regime switch ---
+  regime.trend_vs_mr: {family: regime, impl: [python], cadence: daily, status: planned, notes: "11 causal daily 4h regime features (features.regime_features) + P(trend-zoo ensemble beats MR ensemble over next 7d) from the monthly walk-forward logistic (data/priors/regime_switch_4h_v0.parquet). H-TR3 contradicted in-sample (OOS IC -0.02, t -0.5; gated Sharpe 0.20 < ungated 0.27); holdout sign-only pass is trivial (1.5% exposure). H-TR4 (ER14 terciles) contradicted in-sample (wrong sign, t -2.3). Descriptive only: not a trend/MR switch"}

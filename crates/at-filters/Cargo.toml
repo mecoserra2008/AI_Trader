@@ -1,0 +1,10 @@
+[package]
+name = "at-filters"
+description = "Recursive O(1) estimators and closed-form probability models for the hot path"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true

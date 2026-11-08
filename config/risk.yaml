@@ -1,0 +1,29 @@
+# Risk engine parameters: deterministic, enforced in crates/at-risk. The LLM cannot override any of these.
+# Changing any value starts a new track record (log it in the journal).
+
+risk_per_trade_pct: 0.5          # % of equity lost if the stop is hit (fees + slippage included)
+max_new_trades_per_day: 3        # UTC day
+max_open_positions: 5
+max_positions_per_cluster: 1
+daily_loss_limit_pct: 1.5        # equity drawdown vs UTC day start -> no new entries until next day
+max_gross_exposure_x: 3.0        # sum of position notionals / equity
+max_stop_distance_pct: 15.0      # sanity cap on |entry - stop| / entry
+min_net_expected_r: 0.10         # after costs, in R units
+
+costs:                           # Bybit linear VIP0
+  taker_bps: 5.5
+  maker_bps: 2.0
+  slippage_bps: 2.0              # per market leg
+
+placement:                       # structural TP/SL constants (ARCHITECTURE §3.11). Pre-registered.
+  min_stop_distance_sigma: 0.5
+  max_stop_distance_sigma: 4.0
+  overshoot_quantile: 0.80
+  undershoot_quantile: 0.20
+  max_tp_candidates: 4
+
+llm_view:
+  max_abs_logodds: 1.0
+  confidence_scale: {low: 0.25, medium: 0.5, high: 1.0}
+
+slot_replacement_hurdle_r: 0.15

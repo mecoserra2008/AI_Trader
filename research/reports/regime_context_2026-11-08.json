@@ -1,0 +1,237 @@
+{
+ "as_of": "2026-11-08T11:36:38.763261+00:00",
+ "positioning": {
+  "fear_greed": {
+   "now": 28.0,
+   "7d_ago": 34.0,
+   "30d_ago": 59.0,
+   "pct_2y": 32.0
+  },
+  "dvol_BTC": {
+   "now": 40.3,
+   "7d_ago": 40.3,
+   "30d_ago": 36.4,
+   "pct_1y": 46.0
+  },
+  "dvol_ETH": {
+   "now": 56.0,
+   "7d_ago": 54.4,
+   "30d_ago": 49.2,
+   "pct_1y": 47.0
+  },
+  "stablecoins": {
+   "now_bn": 293.7,
+   "chg_7d_pct": -1.99,
+   "chg_30d_pct": -4.6
+  },
+  "funding_xs": {
+   "median_ann_pct": 0.2,
+   "share_negative": 0.43,
+   "n": 23
+  },
+  "liquidations_since_collector_start": {
+   "short": {
+    "usd": 612977,
+    "n": 196
+   },
+   "long": {
+    "usd": 708727,
+    "n": 339
+   }
+  }
+ },
+ "analogs": {
+  "crypto": {
+   "current_date": "2026-11-07",
+   "current": {
+    "r7": -0.022,
+    "r30": -0.075,
+    "dd90": -0.132,
+    "lrv30": -1.034,
+    "rv_ratio": 0.458,
+    "ldvol": -0.911,
+    "vrp": 0.122,
+    "fng": 25.0,
+    "breadth_below_ma30": 0.947,
+    "alt_rel30": -0.09,
+    "stable30": -0.045,
+    "fund7": 0.081
+   },
+   "current_z": {
+    "r7": -0.3,
+    "r30": -0.51,
+    "dd90": 0.27,
+    "lrv30": -0.86,
+    "rv_ratio": 1.54,
+    "ldvol": -1.13,
+    "vrp": -0.17,
+    "fng": -0.95,
+    "breadth_below_ma30": 1.05,
+    "alt_rel30": -0.56,
+    "stable30": -1.2,
+    "fund7": -0.05
+   },
+   "analogs": {
+    "fwd_r7_mean_%": -0.42,
+    "fwd_r7_median_%": 0.26,
+    "p_up": 0.5,
+    "fwd_rv7_median_%": 31.7,
+    "fwd_maxdd7_median_%": -1.88,
+    "fwd_maxdu7_median_%": 2.41,
+    "fwd_alt_minus_btc7_mean_%": -0.05,
+    "n": 12
+   },
+   "unconditional": {
+    "fwd_r7_mean_%": 0.11,
+    "fwd_r7_median_%": 0.11,
+    "p_up": 0.51,
+    "fwd_rv7_median_%": 39.8,
+    "fwd_maxdd7_median_%": -2.43,
+    "fwd_maxdu7_median_%": 2.65,
+    "fwd_alt_minus_btc7_mean_%": -0.51,
+    "n": 2048
+   },
+   "rv30_now_%": 35.6
+  },
+  "crypto_macro": {
+   "current_date": "2026-11-05",
+   "current": {
+    "r7": -0.025,
+    "r30": -0.117,
+    "dd90": -0.13,
+    "lrv30": -0.997,
+    "rv_ratio": 0.426,
+    "ldvol": -0.861,
+    "vrp": 0.135,
+    "fng": 50.0,
+    "breadth_below_ma30": 1.0,
+    "alt_rel30": -0.145,
+    "stable30": -0.044,
+    "fund7": 0.089,
+    "spx_r30": -0.011,
+    "spx_r7": -0.007,
+    "lvix": 2.81,
+    "hy": 3.32,
+    "hy_chg30": 0.2,
+    "wti_r30": 0.036,
+    "dxy_r30": 0.003
+   },
+   "current_z": {
+    "r7": -0.47,
+    "r30": -1.02,
+    "dd90": 0.0,
+    "lrv30": -0.5,
+    "rv_ratio": 1.51,
+    "ldvol": -0.66,
+    "vrp": 0.07,
+    "fng": 0.02,
+    "breadth_below_ma30": 1.26,
+    "alt_rel30": -1.19,
+    "stable30": -2.41,
+    "fund7": 0.18,
+    "spx_r30": -0.73,
+    "spx_r7": -0.55,
+    "lvix": -0.09,
+    "hy": 0.85,
+    "hy_chg30": 0.7,
+    "wti_r30": 0.25,
+    "dxy_r30": 0.24
+   },
+   "analogs": {
+    "fwd_r7_mean_%": -0.7,
+    "fwd_r7_median_%": -0.2,
+    "p_up": 0.42,
+    "fwd_rv7_median_%": 33.3,
+    "fwd_maxdd7_median_%": -1.92,
+    "fwd_maxdu7_median_%": 2.7,
+    "fwd_alt_minus_btc7_mean_%": 0.53,
+    "n": 12
+   },
+   "unconditional": {
+    "fwd_r7_mean_%": 0.39,
+    "fwd_r7_median_%": 0.24,
+    "p_up": 0.52,
+    "fwd_rv7_median_%": 35.5,
+    "fwd_maxdd7_median_%": -2.15,
+    "fwd_maxdu7_median_%": 2.55,
+    "fwd_alt_minus_btc7_mean_%": -0.61,
+    "n": 1059
+   },
+   "rv30_now_%": 36.9
+  }
+ },
+ "intraweek": {
+  "sess_last7": {
+   "Asia 00-08": 20.0,
+   "Europe 08-13": 9.5,
+   "US 13-21": 63.9,
+   "late US 21-24": 6.7
+  },
+  "sess_prior60": {
+   "Asia 00-08": 23.5,
+   "Europe 08-13": 21.1,
+   "US 13-21": 47.6,
+   "late US 21-24": 7.8
+  },
+  "corr": {
+   "BTC~QQQ": {
+    "last_7d": 0.65,
+    "prior_60d": 0.47
+   },
+   "BTC~NVDA": {
+    "last_7d": 0.53,
+    "prior_60d": 0.34
+   },
+   "BTC~MSTR": {
+    "last_7d": 0.85,
+    "prior_60d": 0.82
+   },
+   "BTC~XAU": {
+    "last_7d": 0.42,
+    "prior_60d": 0.35
+   },
+   "BTC~CL": {
+    "last_7d": -0.18,
+    "prior_60d": -0.23
+   },
+   "BTC~ALTS": {
+    "last_7d": 0.86,
+    "prior_60d": 0.81
+   },
+   "BTC~ETH": {
+    "last_7d": 0.93,
+    "prior_60d": 0.88
+   }
+  },
+  "rv": {
+   "BTC": {
+    "last_7d_ann": 37.9,
+    "prior_60d_ann": 33.5
+   },
+   "ETH": {
+    "last_7d_ann": 51.4,
+    "prior_60d_ann": 45.2
+   },
+   "ALTS": {
+    "last_7d_ann": 52.7,
+    "prior_60d_ann": 58.6
+   },
+   "QQQ": {
+    "last_7d_ann": 39.6,
+    "prior_60d_ann": 16.9
+   },
+   "NVDA": {
+    "last_7d_ann": 65.3,
+    "prior_60d_ann": 31.5
+   },
+   "XAU": {
+    "last_7d_ann": 25.9,
+    "prior_60d_ann": 20.9
+   },
+   "CL": {
+    "last_7d_ann": 55.9,
+    "prior_60d_ann": 43.4
+   }
+  }
+ }
+}

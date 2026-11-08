@@ -1,0 +1,68 @@
+# Data-source catalogue. Human-readable rationale and point-in-time caveats: docs/DATA_SOURCES.md
+#
+# priority:  P0 = build now (free, high value) | P1 = next | P2 = paid / later
+# pit:       native    = timestamps are publication-time, values never revised
+#            vintage   = source keeps revision history (true point-in-time)
+#            revisable = values can be revised silently -> self-archive live, distrust backfill
+# status:    implemented | planned
+# lake:      target table
+
+sources:
+
+  # ---------------- Exchange-native (Bybit) ----------------
+  bybit_klines:        {priority: P0, status: implemented, lake: bars, pit: native, auth: none, history: "since listing", notes: "last/mark/index/premium; /v5/market/*kline"}
+  bybit_funding:       {priority: P0, status: implemented, lake: funding, pit: native, auth: none, history: "since listing"}
+  bybit_open_interest: {priority: P0, status: implemented, lake: open_interest, pit: native, auth: none, history: "~since 2020", notes: "5min..1d intervals"}
+  bybit_ls_ratio:      {priority: P0, status: implemented, lake: ls_ratio, pit: native, auth: none, history: "limited (months)", notes: "self-archive going forward"}
+  bybit_trades_archive: {priority: P0, status: implemented, lake: [flow_bars, trades_raw], pit: native, auth: none, history: "daily CSV since ~2019", url: "https://public.bybit.com/trading", notes: "aggressor side included -> exact CVD"}
+  bybit_instruments:   {priority: P0, status: implemented, lake: instruments, pit: revisable, auth: none, notes: "snapshot daily; delisted symbols vanish -> keep our own history to avoid survivorship bias"}
+  bybit_ws_public:     {priority: P0, status: implemented, lake: [bars, flow_bars, liquidations], pit: native, auth: none, notes: "kline, publicTrade, orderbook, tickers, allLiquidation"}
+
+  # ---------------- Cross-venue derivatives / market data ----------------
+  binance_vision:      {priority: P0, status: planned, lake: [bars, flow_bars, open_interest, ls_ratio], pit: native, auth: none, url: "https://data.binance.vision", notes: "free bulk klines, aggTrades, funding, metrics (OI, top-trader LS). Largest venue: cross-venue confirmation of flow"}
+  deribit_dvol:        {priority: P0, status: implemented, lake: alt_series, pit: native, auth: none, url: "https://www.deribit.com/api/v2/public/get_volatility_index_data", notes: "BTC/ETH implied vol index (crypto VIX)"}
+  deribit_options:     {priority: P1, status: planned, lake: alt_series, pit: native, auth: none, notes: "book summary -> skew, put/call OI; must self-archive (no free history)"}
+  okx_public:          {priority: P2, status: planned, lake: [bars, funding, open_interest], pit: native, auth: none}
+  tardis:              {priority: P2, status: planned, lake: [trades_raw, flow_bars], pit: native, auth: key, cost: paid, notes: "tick + L2 history all venues; 1st of month free"}
+  coinglass:           {priority: P2, status: planned, lake: alt_series, pit: native, auth: key, cost: paid, notes: "aggregated OI / liquidations / funding across venues"}
+
+  # ---------------- Sentiment / news / attention ----------------
+  alternative_me_fng:  {priority: P0, status: implemented, lake: alt_series, pit: native, auth: none, url: "https://api.alternative.me/fng/", history: "since 2018-02 (daily)"}
+  gdelt:               {priority: P0, status: planned, lake: [alt_series, text_items], pit: native, auth: none, url: "https://api.gdeltproject.org/api/v2/doc/doc", history: "15-min resolution since 2017", notes: "news volume / tone timelines; free"}
+  cryptopanic:         {priority: P0, status: planned, lake: text_items, pit: native, auth: key, notes: "aggregated crypto news with community votes; tags currencies"}
+  rss_archive:         {priority: P0, status: planned, lake: text_items, pit: native, auth: none, notes: "CoinDesk, The Block, Decrypt, Cointelegraph RSS: self-archived = PIT by construction"}
+  coindesk_data:       {priority: P1, status: planned, lake: [text_items, bars], pit: native, auth: key, notes: "ex-CryptoCompare news + social stats. claude.ai CoinDesk connector also available (needs auth)"}
+  google_trends:       {priority: P2, status: planned, lake: alt_series, pit: revisable, auth: none, notes: "re-normalised per query window -> only usable if self-archived live"}
+  santiment:           {priority: P2, status: planned, lake: alt_series, pit: revisable, auth: key, cost: paid, notes: "social volume, dev activity, on-chain"}
+  lunarcrush:          {priority: P2, status: planned, lake: alt_series, pit: revisable, auth: key, cost: paid}
+
+  # ---------------- On-chain / DeFi / supply ----------------
+  defillama_stablecoins: {priority: P0, status: implemented, lake: alt_series, pit: revisable, auth: none, url: "https://stablecoins.llama.fi", notes: "total stablecoin supply = crypto liquidity proxy"}
+  defillama_tvl:       {priority: P1, status: planned, lake: alt_series, pit: revisable, auth: none, notes: "chain / protocol TVL, fees, revenue"}
+  coinmetrics_community: {priority: P1, status: planned, lake: alt_series, pit: revisable, auth: none, notes: "active addresses, tx counts, exchange flows (subset), MVRV"}
+  glassnode:           {priority: P2, status: planned, lake: alt_series, pit: vintage, auth: key, cost: paid, notes: "offers PIT metric variants: the only on-chain vendor with explicit PIT"}
+  cryptoquant:         {priority: P2, status: planned, lake: alt_series, pit: revisable, auth: key, cost: paid}
+
+  # ---------------- Scheduled events ----------------
+  token_unlocks:       {priority: P1, status: planned, lake: events_calendar, pit: revisable, auth: key, notes: "Tokenomist (paid) or DefiLlama emissions; record first-seen time as known_ts"}
+  bybit_announcements: {priority: P1, status: planned, lake: events_calendar, pit: native, auth: none, notes: "/v5/announcements/index: listings, delistings, maintenance"}
+  macro_calendar:      {priority: P1, status: planned, lake: events_calendar, pit: native, auth: none, notes: "FOMC/CPI/NFP schedule from official calendars (federalreserve.gov, bls.gov)"}
+  polymarket:          {priority: P1, status: planned, lake: alt_series, pit: native, auth: none, url: "https://gamma-api.polymarket.com", notes: "event probabilities (macro, regulation, crypto); price history via CLOB API"}
+
+  # ---------------- Macro / cross-asset ----------------
+  fred_alfred:         {priority: P0, status: implemented, lake: alt_series, pit: vintage, auth: key, notes: "rates, dollar, liquidity (WALCL, RRP, TGA). ALFRED vintages give true PIT"}
+  etf_flows:           {priority: P1, status: planned, lake: alt_series, pit: revisable, auth: none, notes: "spot BTC/ETH ETF flows (Farside / SoSoValue); published after US close"}
+  tradfi_prices:       {priority: P1, status: planned, lake: bars, pit: native, auth: none, notes: "SPX, NDX, DXY, VIX, gold, US10Y via a free daily source; prices are not revised"}
+
+# Series pulled by default from implemented sources
+defaults:
+  deribit_dvol:
+    currencies: [BTC, ETH]
+    resolution: "3600"           # seconds, or "1D"
+  fred_alfred:
+    series: [DGS10, DGS2, DTWEXBGS, WALCL, RRPONTSYD, WTREGEN, T10YIE, BAMLH0A0HYM2]
+  known_ts_latency_ms:
+    alternative_me_fng: 3600000  # value for day D is published shortly after D 00:00 UTC
+    deribit_dvol: 2000           # after candle close
+    defillama_stablecoins: 86400000
+    fred_alfred: 86400000        # vintage date + 1 day (release times are intraday)

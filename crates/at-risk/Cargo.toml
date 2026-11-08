@@ -1,0 +1,10 @@
+[package]
+name = "at-risk"
+description = "Deterministic risk engine: fixed risk per trade, caps, halts, sizing"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+at-core.workspace = true
+serde.workspace = true

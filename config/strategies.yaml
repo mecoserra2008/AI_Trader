@@ -1,0 +1,39 @@
+# Pre-registered strategy parameters (ARCHITECTURE §1.5: no parameter search on the full sample).
+# Changing a value creates a new strategy version; log it as a trial in research/trials.jsonl.
+# Horizons are in bars; defaults are judgement-based priors for 1h bars (see each strategy's spec).
+strategies:
+  # --- trend
+  tsmom:
+    params: {horizons: [24, 72, 240], scale: 1.0}
+  donchian_breakout:
+    params: {entry_window: 120, exit_window: 48, scale: 3.0}
+  ema_stack:
+    params: {fast: 12, mid: 48, slow: 192, k: 10.0}
+  # --- mean reversion
+  zscore_reversion:
+    params: {span: 48, std_window: 240, entry: 2.0, exit: 0.5, scale: 2.0}
+  rsi_reversion:
+    params: {period: 14, low: 30.0, high: 70.0, full: 20.0}
+  # --- volatility
+  compression_breakout:
+    params: {window: 24, history: 720, ratio: 0.6, scale: 3.0}
+  # --- positioning
+  funding_contrarian:
+    params: {window: 720, min_samples: 240, threshold: 2.0, scale: 3.0, extension: 72}
+  oi_price_divergence:
+    params: {horizon: 24, window: 720, min_samples: 240, threshold: 1.0, scale: 1.5, squeeze_weight: 0.5}
+  # --- flow
+  flow_momentum:
+    params: {window: 24, std_window: 720, min_samples: 168, scale: 1.5}
+  cvd_divergence:
+    params: {window: 24, scale: 0.1}
+  # --- shock (data-generated from H-S2/H-S3; only forward results count)
+  shock_regime:
+    params: {z_min: 4.0, z_full: 8.0, decluster_bars: 24, trail_sigma: 2.0, invalid_sigma: 0.5}
+  # --- trend: swing structure (port of "Pivot geometry trend (DC pivots)"; H-GT1/H-GT2, 4h)
+  geo_struct:
+    params: {ks: [3, 4, 6, 8, 12], vol_hl: 60, warm: 60, max_retr: 0.618}
+  geo_pivot_bo:
+    params: {ks: [3, 4, 6, 8, 12], vol_hl: 60, warm: 60, max_retr: 0.618}
+  geo_flag_bo:
+    params: {ks: [3, 4, 6, 8, 12], vol_hl: 60, warm: 60, max_retr: 0.618}

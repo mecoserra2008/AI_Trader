@@ -1,0 +1,16 @@
+[package]
+name = "at-flow"
+description = "Live order-flow collector: L2 books + trades -> 3-second flow candles (OHLC, delta, OBI by band, OFI)"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+at-core.workspace = true
+at-bybit.workspace = true
+at-store.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true

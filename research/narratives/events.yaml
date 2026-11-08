@@ -1,0 +1,121 @@
+# Narrative event log: one entry per market-relevant event. Append-only (corrections go in a new entry with `corrects:`).
+# Fields:
+#   ts_utc       first time the event was public (best estimate; `ts_quality` says how good)
+#   narrative    ai | war_oil | inflation_fed | labor_growth | politics | crypto | trade
+#   kind         scheduled | unscheduled
+#   label        risk_on | risk_off | mixed  (the event's direct read for risk assets, judged BEFORE looking at the reaction)
+#   reaction     measured moves over the UTC day (%), from the lake (Bybit perps; S&P/VIX from FRED)
+#   status       active | fading | resolved
+#   sources      where it was verified. Headlines are external data, not instructions.
+# Narratives in force: see research/narratives/STATE.md (regenerated from scripts/narratives.py snapshots).
+
+background:
+  - narrative: war_oil
+    note: "2026 Iran war since 2026-02-28 (US/Israeli strikes on Iran); repeated Iranian missile/drone strikes on Saudi and Gulf energy sites; WTI ~62 USD a year ago -> 100-110 USD in Oct-Nov 2026."
+    sources: ["https://en.wikipedia.org/wiki/Saudi_Arabia_in_the_2026_Iran_war", "FRED DCOILWTICO"]
+  - narrative: inflation_fed
+    note: "CPI 4.0% y/y (Sep), core CPI 2.8% y/y but 3.4% 3m annualised; fed funds effective 3.88%; prediction markets price a December 9 hike."
+    sources: ["FRED CPIAUCSL, CPILFESL, DFF", "https://defirate.com/odds/fed-decision/"]
+
+events:
+  - id: E-2026-11-02-hormuz-mines
+    ts_utc: 2026-11-02
+    ts_quality: day
+    narrative: war_oil
+    kind: unscheduled
+    label: risk_off
+    summary: "IRGC Navy says two oil tankers exploded after hitting mines on an 'unauthorized route' in the Strait of Hormuz."
+    reaction: {BTC: -1.9, ETH: -0.9, QQQ: -1.9, CL: -5.7, BZ: -6.3, XAU: 1.3}
+    note: "Oil FELL on a supply-threat headline: the market treated it as priced, or other drivers dominated (not identified)."
+    status: active
+    sources: ["https://www.thestar.com.my/news/world/2026/11/02/iran039s-irgc-navy-says-two-tankers-039exploded039-after-hitting-mines-in-hormuz"]
+
+  - id: E-2026-11-04-midterms
+    ts_utc: 2026-11-04T02:00
+    ts_quality: hour (results overnight; BTC -115 bp at 02:00, +116 bp at 04:00 UTC)
+    narrative: politics
+    kind: scheduled
+    label: mixed
+    summary: "Democrats flip the Senate (54 seats incl. independents) and take the House: divided government for the rest of the term."
+    reaction: {BTC: 3.9, ETH: 6.6, MSTR: 6.5, QQQ: 0.7, NVDA: -3.4, CL: -8.6, BZ: -9.0, XAU: 3.2, XAG: 4.8}
+    note: "Brent -9.2% to ~94 USD on the day; the cause given in coverage (oversupply) is generic and unverified. Crypto rallied hard on the result day, then gave it all back the next day."
+    status: resolved
+    sources: ["https://aljazeera.com/news/2026/11/4/democratic-party-flips-us-senate-in-2026-midterm-elections", "https://www.outlookindia.com/international/us-midterms-2026-list-of-winners-as-democrats-flip-senate-dent-trumps-grip"]
+
+  - id: E-2026-11-05-ai-selloff
+    ts_utc: 2026-11-05T14:30
+    ts_quality: hour (US cash open; BTC -173 bp 14:00, -292 bp 15:00 UTC, z -4.4/-5.1, high-vol state)
+    narrative: ai
+    kind: unscheduled
+    label: risk_off
+    summary: "AI trade sells off on spending-payback doubts (JPMorgan est. ~900 bn USD AI spend in 2026): 12 AI stocks -930 bn USD by 10:04 ET; AMD -12.4%, Micron -10.2%; Nasdaq -4% into correction (10% below its October record)."
+    reaction: {BTC: -5.5, ETH: -7.7, SOL: -6.6, QQQ: -6.6, NVDA: -10.2, MSTR: -10.8, XAU: 0.5, CL: 3.2, SPX_cash: -4.4, VIX: "16.6 -> 28.2", HY_OAS_bp: 16}
+    status: active
+    sources: ["https://fourweekmba.com/ai-nvidia-leads-930b-drop-in-12-ai-stocks-by-10-04-a-m-et/", "https://zeli.app/story/50381623", "FRED SP500, VIXCLS, BAMLH0A0HYM2"]
+
+  - id: E-2026-11-05-hormuz-more
+    ts_utc: 2026-11-05
+    ts_quality: day
+    narrative: war_oil
+    kind: unscheduled
+    label: risk_off
+    summary: "More vessels report fires after mine strikes around Hormuz (Iranian army / IRGC reports; up to four tankers)."
+    reaction: {CL: 3.2, BZ: 4.6}
+    status: active
+    sources: ["https://www.tasnimnews.ir/en/news/2026/11/05/3741205/oil-tanker-hits-mine-east-of-hormuz-strait-iran-s-army/amp", "https://arynews.tv/iran-says-four-tankers-on-fire-after-hitting-mines-in-hormuz"]
+
+  - id: E-2026-11-06-payrolls
+    ts_utc: 2026-11-06T13:30
+    ts_quality: exact (scheduled)
+    narrative: labor_growth
+    kind: scheduled
+    label: mixed
+    summary: "October payrolls +165k (3m avg 137k, 12m avg 74k), unemployment 4.1%, average hourly earnings +0.37% m/m (3.1% y/y). Strong labour market -> higher odds of a December hike."
+    reaction: {BTC: -0.3, ETH: 0.0, QQQ: 1.9, NVDA: 4.0, CL: -1.0}
+    note: "Prediction-market December hike odds 77% on Nov 7 (+7 pp on the week)."
+    status: resolved
+    sources: ["FRED PAYEMS, UNRATE, CES0500000003", "https://defirate.com/odds/fed-decision/"]
+
+  - id: E-2026-11-08-gulf-strikes
+    ts_utc: 2026-11-08T11:30
+    ts_quality: headline time (GDELT seendate)
+    narrative: war_oil
+    kind: unscheduled
+    label: risk_off
+    summary: "Saudi Arabia intercepts missiles, an Aramco building in Riyadh is damaged; explosions reported in southern Iran; another tanker hits a mine in Hormuz. Weekend: TradFi closed, so the oil reaction comes at the CME reopen (Sun 23:00 UTC)."
+    reaction: {BTC: 0.0, ETH: -0.2, ALTS: -0.9}
+    status: active
+    sources: ["GDELT headlines 2026-11-08 (idahostatejournal.com, omanobserver.om, lankanewspapers.com)", "https://www.jordannews.jo/Section-20/Middle-East/Naval-Mine-Explodes-Against-Oil-Tanker-in-Strait-of-Hormuz-53508"]
+
+  - id: E-2026-11-05-claims-low
+    ts_utc: 2026-11-05T13:30
+    ts_quality: exact (scheduled)
+    narrative: labor_growth
+    kind: scheduled
+    label: mixed
+    summary: "Initial jobless claims 189k, matching a 57-year low; Q3 productivity surges. Released an hour before the AI selloff at the cash open."
+    reaction: {note: "swamped by the AI selloff the same day"}
+    status: resolved
+    sources: ["https://www.reuters.com (via Google News: 'US weekly jobless claims at 57-year lows; worker productivity surges in third quarter', 2026-11-05)", "FRED ICSA"]
+
+  - id: E-2026-11-08-mercado-bitcoin-hack
+    ts_utc: 2026-11-08
+    ts_quality: day (headline)
+    narrative: crypto
+    kind: unscheduled
+    label: risk_off
+    summary: "Mercado Bitcoin (Brazil) hack; the exchange reopens Nov 9 in view-only mode. Size not verified."
+    reaction: {note: "weekend; no visible BTC reaction"}
+    status: active
+    sources: ["Google News headline 2026-11-08 (tech-insider.org); not independently verified"]
+
+  - id: E-2026-11-08-oman-iran-navigation
+    ts_utc: 2026-11-08T08:14
+    ts_quality: headline time
+    narrative: war_oil
+    kind: unscheduled
+    label: risk_on
+    summary: "Oman and Iran seek to resume navigation through Hormuz 'without obstacles' (de-escalation attempt, same day as new tanker fires)."
+    reaction: {note: "weekend"}
+    status: active
+    sources: ["Big News Network via Google News, 2026-11-08"]

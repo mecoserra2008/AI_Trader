@@ -1,0 +1,25 @@
+[package]
+name = "at-bybit"
+description = "Bybit v5 REST + WebSocket connectivity (market data and trading)"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+at-core.workspace = true
+at-store.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+reqwest.workspace = true
+tokio-tungstenite.workspace = true
+futures-util.workspace = true
+hmac.workspace = true
+sha2.workspace = true
+hex.workspace = true
+form_urlencoded.workspace = true
+tracing.workspace = true
+flate2.workspace = true
+csv.workspace = true
+chrono.workspace = true

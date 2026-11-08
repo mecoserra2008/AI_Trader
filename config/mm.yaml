@@ -1,0 +1,49 @@
+# Weekend skewed passive quoting: `atx mm` (H-MM1, forward-only experiment). Read by crates/atx/src/mm.rs.
+# Changing any value starts a new track record (log it in the diary).
+#
+# Bearish skew: the ask sits closer to the mid than the bid, so we are sold more often than bought. Every quote is
+# the venue minimum size. Inventory, order flow and our own fill toxicity shift / widen the quotes; swing levels
+# push quotes beyond them (fill on the sweep). Quotes are NOT re-priced on every tick (that only gets filled on
+# aggressive moves): a resting quote is moved only when its target drifted > requote_sigma and it rested >= min_rest_s.
+# Inventory in profit is cleared slowly with passive reduce-only limits at the touch, one lot at a time.
+# Distances are in units of recent 1h sigma (from 1m last-price klines), floored.
+
+# Steady slow bleeders (30d -17..-25%, 7d still down, high efficiency ratio, max 30d bounce 8-10%); SOL pays
+# shorts funding; ADA has a 5.6 bp spread. XLM/LTC/SUI dropped: funding -10..-16%/yr = crowded shorts.
+symbols: [SOLUSDT, XRPUSDT, ADAUSDT]
+refresh_s: 10                  # quote loop period
+sigma_lookback_min: 240        # 1m klines used for sigma_1h
+sigma_floor_bps: 15.0          # sigma_1h never below this
+
+# Quote geometry (multiples of sigma_1h around the reservation price)
+ask_offset_sigma: 0.35         # sell quote: r * (1 + 0.35 sigma)
+bid_offset_sigma: 0.80         # buy quote:  r * (1 - 0.80 sigma)
+requote_sigma: 0.30            # move a resting quote only if its target drifted more than this ...
+min_rest_s: 60                 # ... and it has rested at least this long (urgent if drift > 1 sigma)
+
+# Inventory
+inventory_shift_sigma: 0.50    # at the inventory cap, the reservation price moves 0.5 sigma toward unwinding
+take_profit_sigma: 0.60        # inventory this far in profit -> passive reduce-only quote at the touch (1 lot)
+max_short_usd: 30.0            # per symbol, after a fill
+max_long_usd: 12.0             # per symbol, after a fill
+max_gross_usd: 60.0            # all symbols; never more than 0.6x of a 100 USD account
+
+# Order flow (public trades + book) and toxicity (our own fills)
+flow_window_s: 300             # trade imbalance over the last 5 min
+flow_depth_bps: 25             # book imbalance within 25 bp of mid
+flow_shift_sigma: 0.30         # reservation moves with flow: +1 (all buying) -> +0.3 sigma
+tox_horizon_s: 60              # markout of each fill, measured this long after it
+tox_alpha: 0.30                # EWMA weight of the newest markout (sigma units; negative = we were picked off)
+tox_widen: 1.0                 # offsets x (1 + tox_widen * max(0, -tox))
+tox_pause_sigma: 0.75          # tox below -0.75 sigma: stop adding on that symbol until it recovers
+
+# Levels (liquidity-grab refinement): quotes just inside a swing high / low move beyond it; never closer to mid.
+level_lookback_h: 48           # 15m bars used for pivots + the lookback high/low
+level_pivot_bars: 3            # fractal: higher/lower than 3 bars each side
+level_snap_sigma: 0.5          # a level within 0.5 sigma beyond the quote pulls the quote past it
+level_buffer_sigma: 0.05       # ... by this much beyond the level
+
+# Risk and wind-down
+loss_limit_usd: 1.5            # strategy P&L (fill ledger) down this much -> cancel all, market-flatten, stop
+exit_window_min: 45            # last 45 min before --until: no new risk, inventory cleared passively at the touch
+leverage: 2                    # margin setting only; exposure is capped by the USD limits above

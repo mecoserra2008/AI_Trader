@@ -1,0 +1,282 @@
+# Lake schema: the single contract between the Rust writers (crates/at-store) and the Python readers
+# (src/ai_trader/storage/lake.py). Human-readable description: docs/SCHEMA.md.
+#
+# Conventions
+#   - Storage: Parquet (zstd) under <paths.lake>/<table>/<k=v>/.../part-*.parquet (hive partitioning).
+#   - Partition columns live in the directory path, not inside the files. `year`, `month`, `date`
+#     are derived from event_ts when they're not regular columns.
+#   - Every table is bitemporal: event_ts = what the row refers to; known_ts = earliest time the
+#     system could have known it. Reads ALWAYS filter known_ts <= as_of and keep, per primary key,
+#     the row with the greatest known_ts (revisions are new rows, never in-place updates).
+#   - Types: utf8 | f64 | i64 | i32 | bool | ts_ms (UTC, millisecond precision)
+
+version: 1
+
+tables:
+
+  instruments:
+    doc: Venue instrument metadata snapshots (tick size, lot size, leverage, status).
+    partition_by: [venue]
+    primary_key: [venue, symbol]
+    columns:
+      - {name: venue, type: utf8}
+      - {name: category, type: utf8}
+      - {name: symbol, type: utf8}
+      - {name: base, type: utf8}
+      - {name: quote, type: utf8}
+      - {name: settle, type: utf8}
+      - {name: contract_type, type: utf8}
+      - {name: symbol_type, type: utf8, nullable: true, doc: "'' = crypto; ETF | stock | commodity = TradFi perps"}
+      - {name: status, type: utf8}
+      - {name: launch_ts, type: ts_ms, nullable: true}
+      - {name: tick_size, type: f64}
+      - {name: qty_step, type: f64}
+      - {name: min_qty, type: f64}
+      - {name: max_qty, type: f64}
+      - {name: max_mkt_qty, type: f64}
+      - {name: min_notional, type: f64}
+      - {name: max_leverage, type: f64}
+      - {name: funding_interval_min, type: i32}
+      - {name: event_ts, type: ts_ms, doc: snapshot time}
+      - {name: known_ts, type: ts_ms}
+
+  bars:
+    doc: OHLCV bars. price_type = last | mark | index | premium (mark/index/premium have no volume).
+    partition_by: [venue, price_type, freq, year]
+    primary_key: [venue, price_type, freq, symbol, event_ts]
+    columns:
+      - {name: venue, type: utf8}
+      - {name: price_type, type: utf8}
+      - {name: freq, type: utf8}
+      - {name: symbol, type: utf8}
+      - {name: event_ts, type: ts_ms, doc: bar open time}
+      - {name: close_ts, type: ts_ms, doc: bar close time (exclusive)}
+      - {name: open, type: f64}
+      - {name: high, type: f64}
+      - {name: low, type: f64}
+      - {name: close, type: f64}
+      - {name: volume, type: f64, nullable: true, doc: base units}
+      - {name: turnover, type: f64, nullable: true, doc: quote units}
+      - {name: known_ts, type: ts_ms, doc: close_ts + latency}
+
+  flow_bars:
+    doc: Order-flow aggregates per bar from aggressor-side trades (Bybit trade side = taker side).
+    partition_by: [venue, freq, year]
+    primary_key: [venue, freq, symbol, event_ts]
+    columns:
+      - {name: venue, type: utf8}
+      - {name: freq, type: utf8}
+      - {name: symbol, type: utf8}
+      - {name: event_ts, type: ts_ms}
+      - {name: close_ts, type: ts_ms}
+      - {name: buy_volume, type: f64}
+      - {name: sell_volume, type: f64}
+      - {name: buy_turnover, type: f64}
+      - {name: sell_turnover, type: f64}
+      - {name: n_trades, type: i64}
+      - {name: n_buy, type: i64}
+      - {name: n_sell, type: i64}
+      - {name: vwap, type: f64, nullable: true}
+      - {name: max_trade_size, type: f64}
+      - {name: known_ts, type: ts_ms}
+
+  trades_raw:
+    doc: Raw trades, rolling retention only (data.retention.trades_raw_days).
+    partition_by: [venue, symbol, date]
+    primary_key: [venue, symbol, trade_id]
+    columns:
+      - {name: venue, type: utf8}
+      - {name: symbol, type: utf8}
+      - {name: event_ts, type: ts_ms}
+      - {name: trade_id, type: utf8}
+      - {name: side, type: utf8, doc: Buy | Sell (aggressor)}
+      - {name: price, type: f64}
+      - {name: size, type: f64}
+      - {name: known_ts, type: ts_ms}
+
+  funding:
+    doc: Realised funding rates.
+    partition_by: [venue, year]
+    primary_key: [venue, symbol, event_ts]
+    columns:
+      - {name: venue, type: utf8}
+      - {name: symbol, type: utf8}
+      - {name: event_ts, type: ts_ms, doc: funding settlement time}
+      - {name: rate, type: f64}
+      - {name: known_ts, type: ts_ms}
+
+  open_interest:
+    doc: Open interest snapshots (base units).
+    partition_by: [venue, interval, year]
+    primary_key: [venue, interval, symbol, event_ts]
+    columns:
+      - {name: venue, type: utf8}
+      - {name: interval, type: utf8}
+      - {name: symbol, type: utf8}
+      - {name: event_ts, type: ts_ms}
+      - {name: open_interest, type: f64}
+      - {name: known_ts, type: ts_ms}
+
+  ls_ratio:
+    doc: Account long/short ratio (share of accounts net long / short).
+    partition_by: [venue, period, year]
+    primary_key: [venue, period, symbol, event_ts]
+    columns:
+      - {name: venue, type: utf8}
+      - {name: period, type: utf8}
+      - {name: symbol, type: utf8}
+      - {name: event_ts, type: ts_ms}
+      - {name: buy_ratio, type: f64}
+      - {name: sell_ratio, type: f64}
+      - {name: known_ts, type: ts_ms}
+
+  liquidations:
+    doc: Liquidation prints (from WebSocket allLiquidation; no historical REST source on Bybit).
+    partition_by: [venue, year, month]
+    primary_key: [venue, symbol, event_ts, side, price, size]
+    columns:
+      - {name: venue, type: utf8}
+      - {name: symbol, type: utf8}
+      - {name: event_ts, type: ts_ms}
+      - {name: side, type: utf8, doc: side of the liquidated position}
+      - {name: price, type: f64}
+      - {name: size, type: f64}
+      - {name: known_ts, type: ts_ms}
+
+  alt_series:
+    doc: Generic numeric time series from alternative/macro sources (long format).
+    partition_by: [source, year]
+    primary_key: [source, series_id, entity, event_ts]
+    columns:
+      - {name: source, type: utf8}
+      - {name: series_id, type: utf8}
+      - {name: entity, type: utf8, doc: asset / coin / country / 'all'}
+      - {name: event_ts, type: ts_ms, doc: observation period start}
+      - {name: value, type: f64, nullable: true}
+      - {name: vintage, type: utf8, nullable: true, doc: release vintage (ALFRED realtime_start), if any}
+      - {name: pit_quality, type: utf8, doc: native | vintage | revisable}
+      - {name: known_ts, type: ts_ms}
+
+  text_items:
+    doc: News / social items. Article bodies are NOT stored; only metadata, short title and scores.
+    partition_by: [source, year, month]
+    primary_key: [source, item_id]
+    columns:
+      - {name: source, type: utf8}
+      - {name: item_id, type: utf8, doc: stable hash of source id or url}
+      - {name: event_ts, type: ts_ms, doc: published time}
+      - {name: entities, type: utf8, doc: comma-separated tickers/coins}
+      - {name: title, type: utf8, nullable: true}
+      - {name: url, type: utf8, nullable: true}
+      - {name: scores_json, type: utf8, nullable: true, doc: "{scorer_version: score, ...}"}
+      - {name: known_ts, type: ts_ms, doc: ingestion time (live) or published + latency (backfill)}
+
+  events_calendar:
+    doc: Scheduled events (macro releases, token unlocks, expiries, listings).
+    partition_by: [source, year]
+    primary_key: [source, event_id]
+    columns:
+      - {name: source, type: utf8}
+      - {name: event_id, type: utf8}
+      - {name: event_type, type: utf8}
+      - {name: entity, type: utf8}
+      - {name: event_ts, type: ts_ms, doc: scheduled time}
+      - {name: importance, type: i32, nullable: true}
+      - {name: details_json, type: utf8, nullable: true}
+      - {name: known_ts, type: ts_ms, doc: when the schedule was announced / first seen}
+
+  snapshots:
+    doc: Precomputed tool outputs per decision session (what the LLM saw).
+    partition_by: [year, month]
+    primary_key: [session_id, symbol, tool]
+    columns:
+      - {name: session_id, type: utf8}
+      - {name: symbol, type: utf8}
+      - {name: tool, type: utf8}
+      - {name: tool_version, type: utf8}
+      - {name: event_ts, type: ts_ms, doc: as_of of the session}
+      - {name: payload_json, type: utf8}
+      - {name: known_ts, type: ts_ms}
+
+  flow_3s:
+    doc: >
+      BASE order-flow layer: 3-second candles from live trades + L2 books (atx collect). Everything else
+      (1m rollups, SMA/EMA stacks, z-scores) is DERIVED from this table, never stored separately.
+      Retention is governed by the storage budget (storage.budget_gb); flow_1m is kept long term.
+    partition_by: [venue, category, date]
+    primary_key: [venue, category, symbol, event_ts]
+    columns:
+      - {name: venue, type: utf8}
+      - {name: category, type: utf8, doc: linear | spot | inverse}
+      - {name: symbol, type: utf8}
+      - {name: event_ts, type: ts_ms, doc: candle open}
+      - {name: open, type: f64, nullable: true, doc: first trade price (null if no trades)}
+      - {name: high, type: f64, nullable: true}
+      - {name: low, type: f64, nullable: true}
+      - {name: close, type: f64, nullable: true, doc: last trade price, carried forward through trade-less candles}
+      - {name: vwap, type: f64, nullable: true}
+      - {name: buy_vol, type: f32, doc: taker-buy volume (base). V = buy + sell, Delta = buy - sell (derived, not stored)}
+      - {name: sell_vol, type: f32}
+      - {name: buy_notional, type: f32, doc: quote currency}
+      - {name: sell_notional, type: f32}
+      - {name: n_buy, type: i32}
+      - {name: n_sell, type: i32}
+      - {name: max_trade, type: f32, doc: largest single print (base)}
+      - {name: mid, type: f64, nullable: true, doc: mid at candle close}
+      - {name: spread_bps, type: f32, nullable: true, doc: time-weighted average}
+      - {name: micro_bps, type: f32, nullable: true, doc: TWA (microprice - mid) / mid in bps}
+      - {name: obi_l1, type: f32, nullable: true, doc: TWA top-of-book imbalance (bid-ask)/(bid+ask)}
+      - {name: obi_5, type: f32, nullable: true, doc: TWA depth imbalance within 5 bps of mid}
+      - {name: obi_10, type: f32, nullable: true}
+      - {name: obi_25, type: f32, nullable: true}
+      - {name: obi_50, type: f32, nullable: true}
+      - {name: obi_100, type: f32, nullable: true}
+      - {name: depth_bid_25, type: f32, nullable: true, doc: TWA bid notional within 25 bps}
+      - {name: depth_ask_25, type: f32, nullable: true}
+      - {name: depth_bid_100, type: f32, nullable: true}
+      - {name: depth_ask_100, type: f32, nullable: true}
+      - {name: ofi, type: f32, nullable: true, doc: summed L1 order-flow imbalance (Cont-Kukanov-Stoikov), base units}
+      - {name: book_span_bps, type: f32, nullable: true, doc: min distance covered by the received depth (bands beyond it are truncated)}
+      - {name: book_cov, type: f32, doc: fraction of the candle with a valid book}
+      - {name: book_updates, type: i32}
+      - {name: known_ts, type: ts_ms, doc: local time the candle was finalised}
+
+  flow_1m:
+    doc: Exact rollup of flow_3s (sums for flows, means of time-weighted book features weighted by book_cov). Long-term tier.
+    partition_by: [venue, category, date]
+    primary_key: [venue, category, symbol, event_ts]
+    columns:
+      - {name: venue, type: utf8}
+      - {name: category, type: utf8, doc: linear | spot | inverse}
+      - {name: symbol, type: utf8}
+      - {name: event_ts, type: ts_ms, doc: candle open}
+      - {name: open, type: f64, nullable: true, doc: first trade price (null if no trades)}
+      - {name: high, type: f64, nullable: true}
+      - {name: low, type: f64, nullable: true}
+      - {name: close, type: f64, nullable: true, doc: last trade price, carried forward through trade-less candles}
+      - {name: vwap, type: f64, nullable: true}
+      - {name: buy_vol, type: f32, doc: taker-buy volume (base). V = buy + sell, Delta = buy - sell (derived, not stored)}
+      - {name: sell_vol, type: f32}
+      - {name: buy_notional, type: f32, doc: quote currency}
+      - {name: sell_notional, type: f32}
+      - {name: n_buy, type: i32}
+      - {name: n_sell, type: i32}
+      - {name: max_trade, type: f32, doc: largest single print (base)}
+      - {name: mid, type: f64, nullable: true, doc: mid at candle close}
+      - {name: spread_bps, type: f32, nullable: true, doc: time-weighted average}
+      - {name: micro_bps, type: f32, nullable: true, doc: TWA (microprice - mid) / mid in bps}
+      - {name: obi_l1, type: f32, nullable: true, doc: TWA top-of-book imbalance (bid-ask)/(bid+ask)}
+      - {name: obi_5, type: f32, nullable: true, doc: TWA depth imbalance within 5 bps of mid}
+      - {name: obi_10, type: f32, nullable: true}
+      - {name: obi_25, type: f32, nullable: true}
+      - {name: obi_50, type: f32, nullable: true}
+      - {name: obi_100, type: f32, nullable: true}
+      - {name: depth_bid_25, type: f32, nullable: true, doc: TWA bid notional within 25 bps}
+      - {name: depth_ask_25, type: f32, nullable: true}
+      - {name: depth_bid_100, type: f32, nullable: true}
+      - {name: depth_ask_100, type: f32, nullable: true}
+      - {name: ofi, type: f32, nullable: true, doc: summed L1 order-flow imbalance (Cont-Kukanov-Stoikov), base units}
+      - {name: book_span_bps, type: f32, nullable: true, doc: min distance covered by the received depth (bands beyond it are truncated)}
+      - {name: book_cov, type: f32, doc: fraction of the candle with a valid book}
+      - {name: book_updates, type: i32}
+      - {name: known_ts, type: ts_ms, doc: local time the candle was finalised}

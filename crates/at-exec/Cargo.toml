@@ -1,0 +1,16 @@
+[package]
+name = "at-exec"
+description = "Broker abstraction with Bybit and paper implementations"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+at-core.workspace = true
+at-bybit.workspace = true
+at-risk.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true

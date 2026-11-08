@@ -1,0 +1,182 @@
+# AI_Trader — main settings. Secrets live in .env (never here).
+# Read by both the Rust core (crates/at-core/src/config.rs) and Python (src/ai_trader/core/config.py).
+
+# Execution venue environment: demo | testnet | mainnet
+#   demo    = Bybit Demo Trading: mainnet prices, simulated fills (recommended for forward paper testing)
+#   testnet = Bybit testnet: separate, illiquid order book (connectivity tests only)
+#   mainnet = real money. Requires execution.allow_mainnet=true AND env AI_TRADER_ALLOW_MAINNET=1
+# Override at runtime with env AI_TRADER_ENVIRONMENT.
+environment: demo
+
+execution:
+  allow_mainnet: false
+  stop_trigger_by: MarkPrice     # MarkPrice | LastPrice | IndexPrice. Mark avoids single-venue wick stop-outs
+  tp_trigger_by: LastPrice
+  default_leverage: 5            # margin setting only; position size comes from the risk engine
+  entry_order_type: Limit        # Limit | Market
+  limit_time_in_force: GTC
+
+paths:                           # relative to the project root
+  data_root: data
+  lake: data/lake
+  journal: data/journal
+  model_states: data/models
+  raw_cache: data/raw
+  logs: logs
+
+venues:
+  bybit:
+    category: linear
+    settle_coin: USDT
+    recv_window_ms: 5000
+    rest_rate_limit_per_s: 8     # well below Bybit's public IP limit (600 req / 5 s)
+    market_data_env: mainnet     # historical + live market data always from mainnet
+    public_trades_archive: https://public.bybit.com/trading
+    endpoints:
+      mainnet:
+        rest: https://api.bybit.com
+        ws_public: wss://stream.bybit.com/v5/public/linear
+        ws_private: wss://stream.bybit.com/v5/private
+      testnet:
+        rest: https://api-testnet.bybit.com
+        ws_public: wss://stream-testnet.bybit.com/v5/public/linear
+        ws_private: wss://stream-testnet.bybit.com/v5/private
+      demo:
+        rest: https://api-demo.bybit.com
+        ws_public: wss://stream.bybit.com/v5/public/linear
+        ws_private: wss://stream-demo.bybit.com/v5/private
+
+universe:
+  venue: bybit
+  category: linear
+  quote: USDT
+  contract_type: LinearPerpetual
+  symbol_types: [""]            # Bybit symbolType: "" = crypto. Add ETF/stock/commodity to include TradFi perps
+  min_24h_turnover_usd: 20000000
+  min_listing_age_days: 30
+  max_symbols: 150
+  always_include: [BTCUSDT, ETHUSDT]
+  exclude: []
+  market_proxy: BTCUSDT
+
+data:
+  history_start: "2020-01-01"
+  bar_freqs: [1d, 4h, 1h, 15m]
+  price_types: [last, mark, index]
+  flow_freqs: [1h, 15m]          # aggregated from the public trade archive
+  open_interest_interval: 1h
+  ls_ratio_period: 1h
+  # known_ts = event-time anchor + latency. Conservative by design (see docs/SCHEMA.md).
+  known_ts_latency_ms:
+    bars: 2000
+    flow_bars: 2000
+    funding: 2000
+    open_interest: 2000
+    ls_ratio: 2000
+    trades: 500
+  retention:
+    trades_raw_days: 14
+    bars_1m_days: 365
+  duckdb:
+    memory_limit: 2GB
+    threads: 4
+
+schedule:                        # decision sessions (UTC). Timeframe still to be finalised.
+  sessions_utc: ["00:05", "08:05", "16:05"]
+  batch_lead_minutes: 5
+
+regimes:
+  direction_states: [up, range, down]
+  vol_states: [low, normal, high]
+  switch_posterior: 0.6
+  confirm_bars: 3
+  min_episodes_per_cell: 10
+  # v0 rule-based labeller (research/regimes.py): causal, no fitting. Replaced by the factorial HMM later.
+  v0:
+    direction_threshold: 0.5       # |mean clipped z_k| above this = trend; z_k = log(c_t/c_{t-k}) / (σ̂·√k)
+    direction_horizons_hours: [24, 72, 240]
+    vol_window_hours: 4320         # trailing window for σ̂ percentiles (~180 days)
+    vol_low_quantile: 0.33
+    vol_high_quantile: 0.67
+
+research:
+  knowledge_cutoff: "2026-07-01"   # LLM training cutoff: data on/after this date is a clean holdout for LLM-generated hypotheses
+  min_episodes_per_cell: 10
+  shrinkage_kappa: 10              # empirical-Bayes pseudo-episodes pulling cell estimates toward the pooled mean
+  shock_z: 4.0                     # |vol-standardised return| defining a price shock
+  shock_decluster_hours: 24
+  path_horizons_hours: [1, 4, 12, 24, 72, 168]
+  # Data audit 2026-11-07 (research/reports/data_audit_2026-11-07.md)
+  burn_in_days: 14                 # drop the first N days after a symbol's first bar
+  burn_in_days_new: 30             # ... for listings from burn_in_new_listing_year on (illiquid launch phase)
+  burn_in_new_listing_year: 2023
+
+candidates:
+  main_list_size: 20
+  side_channel_size: 5
+  max_promotions: 3
+  max_hypothesis_requests: 2
+
+llm:
+  provider: anthropic
+  model: claude-opus-5-5         # pinned. Changing it starts a new track record.
+  prompt_version: v0.1
+  max_tool_calls_per_session: 25
+  max_tool_calls_per_candidate: 4
+  self_consistency_k: 1
+
+# Order-flow collector (atx collect -> flow_3s). docs/ORDER_FLOW.md
+flow:
+  ws_public_base: wss://stream.bybit.com/v5/public    # + /linear | /spot | /inverse
+  grace_ms: 1500             # wall-clock grace before a quiet 3 s candle is closed
+  flush_secs: 300            # buffer in memory, write one file per stream every 5 min
+  symbols_per_conn: 25       # websocket connections are chunked (2 topics per symbol)
+  # Tiers from research/reports/bybit_instruments_2026-11-07.md (7-day average turnover).
+  # Measured cost: ~59 B per 3 s candle compacted = 1.7 MB per stream-day. 70 streams ~ 120 MB/day.
+  streams:
+    - {category: linear, depth: 1000, symbols: [BTCUSDT, ETHUSDT]}
+    - category: linear      # Tier A perps (also collected on spot below)
+      depth: 200
+      symbols: [SOLUSDT, XRPUSDT, HYPEUSDT, NEARUSDT, 1000PEPEUSDT, ENAUSDT, DOGEUSDT, SUIUSDT, TRUMPUSDT,
+                WLDUSDT, UNIUSDT, LINKUSDT, BNBUSDT, AAVEUSDT, LITUSDT, XAUTUSDT, BEAMUSDT, PUMPFUNUSDT]
+    - category: linear      # Tier B crypto perps (incl. long-history research universe)
+      depth: 200
+      symbols: [ADAUSDT, AVAXUSDT, LTCUSDT, BCHUSDT, DOTUSDT, TRXUSDT, ATOMUSDT, ETCUSDT, FILUSDT, XLMUSDT,
+                ZECUSDT, XMRUSDT, ONDOUSDT, INJUSDT, ARBUSDT, TAOUSDT, ZROUSDT]
+    - category: linear      # TradFi perps: trade through the weekend (weekend information proxy, H-W6)
+      depth: 200
+      symbols: [SOXLUSDT, QQQUSDT, NVDAUSDT, TSLAUSDT, MSTRUSDT, MUUSDT, GOOGLUSDT, AAPLUSDT, INTCUSDT,
+                SPCXUSDT, XAUUSDT, XAGUSDT, CLUSDT]
+    - {category: spot, depth: 1000, symbols: [BTCUSDT, ETHUSDT]}
+    - category: spot        # Tier A spot (spot-vs-perp flow divergence, H-F3)
+      depth: 200
+      symbols: [SOLUSDT, XRPUSDT, HYPEUSDT, NEARUSDT, PEPEUSDT, ENAUSDT, DOGEUSDT, SUIUSDT, TRUMPUSDT,
+                WLDUSDT, UNIUSDT, LINKUSDT, BNBUSDT, AAVEUSDT, LITUSDT, XAUTUSDT, BEAMUSDT, PUMPUSDT]
+
+storage:
+  budget_gb: 30              # hard cap for the whole lake (scripts/storage.py enforces it)
+  flow_3s_min_days: 14       # never prune 3 s data younger than this
+  prunable: [flow_3s, trades_raw]   # pruned oldest-first, only after rollup (flow_3s -> flow_1m)
+
+# Live market-data updater (atx update -> bars, funding, open_interest, alt_series). scripts/updater.ps1
+# Keeps the lake current between manual backfills. Cursors: cursor_file (stream -> newest event_ts written).
+live:
+  # A list, or a path (relative to the repo) to a universe file (whitespace/comma separated, # comments).
+  # 23 long-history research symbols + the 13 TradFi perps from flow.streams.
+  symbols: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, DOGEUSDT, ADAUSDT, LINKUSDT, LTCUSDT, BCHUSDT, AVAXUSDT,
+            DOTUSDT, BNBUSDT, TRXUSDT, NEARUSDT, ATOMUSDT, ETCUSDT, FILUSDT, UNIUSDT, AAVEUSDT, XLMUSDT,
+            SUIUSDT, ENAUSDT, HYPEUSDT,
+            SOXLUSDT, QQQUSDT, NVDAUSDT, TSLAUSDT, MSTRUSDT, MUUSDT, GOOGLUSDT, AAPLUSDT, INTCUSDT,
+            SPCXUSDT, XAUUSDT, XAGUSDT, CLUSDT, BZUSDT, XAUTUSDT, PAXGUSDT]
+  bar_freqs: [1h, 4h, 1d]
+  price_types: [last, mark]
+  funding: true              # polled at most every funding_poll_secs; only new settlements are written
+  funding_poll_secs: 600
+  open_interest: {interval: 4h}   # complete periods only (false = off)
+  dvol: [BTC, ETH]           # Deribit DVOL, hourly candles
+  dvol_resolution: 3600
+  fng: true                  # Fear & Greed, daily
+  poll_secs: 20              # cycle period
+  bar_grace_secs: 5          # a bar is fetched only once it closed at least this long ago
+  backfill_days: 3           # start of a stream without a cursor (overlap with existing rows is harmless)
+  cursor_file: data/state/updater_cursor.json

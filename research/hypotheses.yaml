@@ -1,0 +1,871 @@
+# Hypothesis registry: pre-registered BEFORE testing. Results are appended to
+# research/hypotheses_results.jsonl (never edited). Statuses: proposed | testing | supported |
+# rejected | inconclusive. `prior` = subjective P(hypothesis holds) before seeing our data.
+#
+# Protocol (docs/RESEARCH_PROTOCOL.md):
+#   1. State the hypothesis, the test, the success criterion and the prior here, first.
+#   2. Test on `llm_in_sample` (before research.knowledge_cutoff). Claude has read papers and forum
+#      lore about this period, so in-sample "confirmation" is weak evidence.
+#   3. Confirm on `clean_holdout` (after the cutoff), which Claude has never seen. It grows every day.
+#   4. Log every test (including failures) in the results file and the diary.
+
+hypotheses:
+
+  H-W1:
+    title: Weekend volatility is lower than weekday volatility
+    statement: Realised vol over the TradFi weekend window (Fri 17:00 ET -> Sun 18:00 ET) is below the vol implied by the Friday-close σ̂ (rv_ratio < 1) for most weekends.
+    rationale: TradFi venues closed -> fewer informed/institutional participants -> less price discovery.
+    test: median rv_ratio across weekends and per-symbol; sign test vs 1.
+    success: median rv_ratio < 0.9 and > 60% of weekends below 1, in both segments.
+    prior: 0.85
+    family: calendar
+    status: proposed
+
+  H-W2:
+    title: Weekend drift without activity reverts by Monday
+    statement: Weekend moves with |wk_z| >= 1 on below-baseline turnover (vol_ratio < 0.9) are partially reversed between the CME reopen and Monday's NYSE close.
+    rationale: Thin-liquidity drift carries no information; TradFi reopening restores normal price discovery.
+    test: mean of sign(wk_z) * post-weekend return (reopen -> Monday NYSE close) in σ units in that bucket; NW t-stat; strategy weekend_drift_fade.
+    success: mean signed continuation < 0 with t < -2 in-sample and same sign in holdout.
+    prior: 0.45
+    family: calendar
+    status: proposed
+
+  H-W3:
+    title: Weekend information shocks continue into the TradFi session
+    statement: Weekend moves with |wk_z| >= 2 on above-baseline turnover (vol_ratio >= 1.2) continue between the CME reopen and Monday's NYSE close.
+    rationale: Information that arrived while TradFi was closed is absorbed (ETF flows, CME basis, equity-linked buyers) only after it reopens.
+    test: mean signed continuation in σ units; strategy weekend_shock_follow.
+    success: mean > 0 with t > 2 in-sample and same sign in holdout.
+    prior: 0.40
+    family: calendar
+    status: proposed
+
+  H-W4:
+    title: CME gaps fill more often than a random walk implies
+    statement: The Friday CME-close price is revisited between the Sunday reopen and Monday's NYSE close more often than the driftless reflection-principle baseline 2·(1 − Φ(d/√bars)).
+    rationale: Widely held trader lore ("CME gaps always fill"). Likely partly a selection artefact; tested against the proper null.
+    test: observed fill rate vs mean baseline probability across weekends; binomial z.
+    success: observed - baseline > 5pp with z > 2 in-sample and same sign in holdout.
+    prior: 0.30
+    family: calendar
+    status: proposed
+
+  H-W5:
+    title: The Monday NYSE open is a volatility and inflection point after eventful weekends
+    statement: After weekends with |wk_z| >= 2, absolute returns in the first 3 hours after Monday's NYSE open exceed the same window on other weekdays, and the direction is related to the weekend move.
+    rationale: First moment TradFi can price weekend information.
+    test: ratio of mean |z| in the window (eventful weekends vs other days); sign correlation with wk_z.
+    success: ratio > 1.3 with bootstrap CI excluding 1.
+    prior: 0.55
+    family: calendar
+    status: proposed
+
+  H-W5b:
+    title: Monday NYSE-open moves after eventful weekends, measured in pre-weekend sigma
+    statement: After weekends with |wk_z| >= 2, mean |return| over the 09:00-11:59 ET bars on Monday, divided by sigma_fri, exceeds the same quantity on other weekdays (each divided by that day's pre-session sigma).
+    rationale: Same as H-W5. Registered after H-W5 was found to be biased by the EWMA absorbing the weekend shock (diary 2026-11-07); counts as an additional trial.
+    test: ratio of means with bootstrap CI over weekends.
+    success: ratio > 1.3 with CI excluding 1, in-sample; ratio > 1 in holdout.
+    prior: 0.55
+    family: calendar
+    status: proposed
+
+  H-R1:
+    title: Trend strategies earn only in trend cells
+    statement: tsmom / ema_stack / donchian_breakout have positive shrunk mean P&L in R1, R2, R7, R8 and non-positive in R5, R6.
+    rationale: Momentum needs persistent drift; ranges chop trend followers.
+    test: by_regime on pooled symbols, 1h bars.
+    success: sign pattern holds for >= 2 of 3 trend strategies in both segments.
+    prior: 0.60
+    family: regime
+    status: proposed
+
+  H-R2:
+    title: Mean reversion earns in range cells and loses in trends
+    statement: zscore_reversion / rsi_reversion have positive shrunk mean P&L in R4, R5, R6 and negative in R2, R3, R8, R9.
+    rationale: Mirror image of H-R1.
+    test: by_regime on pooled symbols, 1h bars.
+    success: sign pattern holds for both strategies in both segments.
+    prior: 0.50
+    family: regime
+    status: proposed
+
+  H-S1:
+    title: Large price shocks continue in high-vol trend cells and revert in ranges
+    statement: After |z| >= 4 shocks, signed forward returns are positive (continuation) when the cell at shock time is R3/R9 and negative (reversal) when it is R4/R5.
+    rationale: Shocks inside established moves are liquidations / forced flows (continuation); shocks inside ranges are liquidity air pockets (reversal).
+    test: shock_study, horizons 4/24/72 h, pooled symbols.
+    success: sign pattern at h = 24 with |t| > 2 for the pooled split.
+    prior: 0.40
+    family: shock
+    status: proposed
+
+  # ---- registered 2026-11-07 AFTER the first in-sample run: data-generated, so only the holdout counts ----
+
+  H-S2:
+    title: Shocks into calm markets continue; shocks in liquidation regimes reverse
+    statement: After |z| >= 4 shocks, the 24h signed forward return is positive when the cell at shock time is a low-vol cell (R1, R4, R7) and negative when it is R9.
+    rationale: Found in-sample (R1 +0.14 t3.8, R4 +0.09 t3.3, R9 -0.23 t-4.5; diary 2026-11-07). A large move into a quiet market is new information (repricing). A large move inside a liquidation regime is forced flow that exhausts.
+    test: shock_study, h = 24 bars on 1h, pooled; holdout only.
+    success: holdout signs match for R4 and R9 (the cells with the most events), and the pooled low-vol mean > 0.
+    prior: 0.50
+    family: shock
+    status: testing
+    data_generated: true
+
+  H-T1:
+    title: Hourly deviations from trend continue rather than revert
+    statement: zscore_reversion (fade > 2 sigma deviations from a 48-bar EMA) has negative GROSS P&L on 1h bars across the universe.
+    rationale: Found in-sample (gross -1.5 risk units x100 per active bar). Consistent with positive gross P&L of the trend strategies.
+    test: gross (pre-cost) mean P&L per active bar, pooled; holdout only.
+    success: holdout gross mean < 0.
+    prior: 0.60
+    family: regime
+    status: testing
+    data_generated: true
+
+  H-S3:
+    title: Vol state at shock time decides continuation vs reversal
+    statement: After |z| >= 4 shocks, the 24h signed forward return is > 0 when vol_state == low (R1, R4, R7) and < 0 when vol_state is normal or high (R2, R3, R5, R6, R8, R9).
+    rationale: Sharpened from the H-S2 holdout check (2026-11-07), where every normal/high-vol cell reversed. Discovered on the holdout, so it may ONLY be tested on data after test_from.
+    test: shock_study on events with event_ts >= test_from.
+    success: both signs hold with >= 30 events per side.
+    prior: 0.45
+    family: shock
+    status: testing
+    data_generated: true
+    test_from: "2026-11-08"
+
+  # ---- order flow (registered 2026-11-07, BEFORE any flow_3s data existed: all data is clean holdout) ----
+
+  H-F1:
+    title: "L1 order-flow imbalance explains contemporaneous and predicts short-horizon mid moves"
+    statement: "Summed OFI (normalised by average L1 depth) over 1 min has a positive slope on the same-minute mid return (R2 > 0.2 for BTC/ETH perps), and the 1-min OFI EMA has positive predictive slope for the next 1-5 min return."
+    rationale: "Cont, Kukanov & Stoikov (2014, arXiv 1011.6402) - price impact is linear in OFI. Contemporaneous fit is near-mechanical; the predictive part is the real test."
+    test: "OLS with HAC SEs per symbol on flow_1m, pooled across symbols by time-clustered means."
+    success: "contemporaneous R2 > 0.2 and predictive t > 2 for at least half the Tier-A perps."
+    prior: 0.55
+    family: flow
+    status: proposed
+
+  H-F2:
+    title: "Depth imbalance beyond the touch adds information over L1"
+    statement: "Banded OBI within 10-25 bps predicts the next 1-5 min mid return with incremental R2 over obi_l1 and OFI."
+    rationale: "Deeper resting liquidity reflects slower, more informed intent than the touch, which is dominated by HFT quote flicker."
+    test: "nested OLS (L1 vs L1 + banded), out-of-sample by day."
+    success: "incremental OOS R2 > 0 on > 60% of days for Tier-A symbols."
+    prior: 0.40
+    family: flow
+    status: proposed
+
+  H-F3:
+    title: "Spot-vs-perp taker-flow divergence predicts the perp"
+    statement: "When spot taker delta (EMA, standardised) disagrees in sign with perp taker delta, the perp's next 5-60 min return follows spot."
+    rationale: "Spot buying is unlevered and harder to fake. Perp flow carries more leveraged, short-horizon speculation. Divergence = leverage-driven moves that spot doesn't confirm."
+    test: "event study on divergence episodes (|z| > 1.5 both, opposite sign), signed forward returns, by regime cell."
+    success: "mean signed forward return > 0 with t > 2 at 15 or 60 min."
+    prior: 0.45
+    family: flow
+    status: proposed
+
+  H-F4:
+    title: "Flow regimes differ on weekends (TradFi closed)"
+    statement: "On TradFi weekends, the joint distribution of (delta z, OBI, OFI z) has lower dependence between flow and subsequent returns (smaller OFI impact slope) and thinner books (lower depth_25) than on weekdays."
+    rationale: "Links H-W1 (lower weekend vol) to microstructure: fewer informed participants, thinner liquidity, more noise flow."
+    test: "impact slope and depth by tradfi_weekend flag; copula dependence (Kendall tau) by flag."
+    success: "weekend depth_25 lower AND weekend OFI impact slope per unit depth different from weekday (CI excludes equality)."
+    prior: 0.60
+    family: flow
+    status: proposed
+
+  H-W6:
+    title: "Weekend crypto moves confirmed by weekend-traded TradFi perps continue"
+    statement: "When the weekend crypto move (wk_z) has the same sign as the weekend move of Bybit's equity-index / ETF perps (e.g. QQQ, SOXL, NVDA basket) and both are large, the crypto move continues from the Sunday reopen to Monday's NYSE close; unconfirmed moves revert."
+    rationale: "H-W3 failed using price/turnover alone because it couldn't tell information from thin-book drift. Bybit TradFi perps trade through the weekend (307/310 traded on a Saturday), so a joint crypto + equity-perp move is a direct sign of macro information arriving while TradFi venues are closed."
+    test: "weekend_outcomes joined with the TradFi-perp basket weekend return (in its own Friday sigma units); signed post-weekend z by confirmed / unconfirmed bucket. Needs a TradFi-perp history backfill (bars) first."
+    success: "confirmed bucket mean signed post z > 0 and unconfirmed < 0, difference t > 2 in-sample; same signs in holdout."
+    prior: 0.40
+    family: calendar
+    status: proposed
+
+  # ---- from the review of prior projects (2026-11-07; research/notes/SYNTHESIS_prior_projects.md) ----
+
+  H-X1:
+    title: "Close-confirmed structural stops beat resting stops on 1h"
+    statement: "For long/short entries with structural stops beyond 1h pivots, exiting only when a 1h bar CLOSES beyond the stop (plus a wide resting catastrophe stop at 2x the distance) yields higher net mean R than a resting stop triggered by any intrabar touch."
+    rationale: "BACKTEST_TREND_FOLLOWING pre-registered test: resting stops hurt (dSharpe -0.24, p=0.01) because 1h stop touches revert within the hour. Directly relevant to our bracket orders (at-exec uses resting SL)."
+    test: "On Bybit BTCUSDT 5m (2020-2026, imported) simulate both stop policies for the same entries (donchian_breakout / ema_stack on 1h), costs included, R per trade; paired comparison."
+    success: "paired mean R difference > 0 with t > 2 in-sample; same sign in holdout; catastrophe-stop tail (worst R) no worse than -2.5R."
+    prior: 0.50
+    family: execution
+    status: proposed
+
+  H-X2:
+    title: "Trend edge lives at 4h/1d, not 1h"
+    statement: "Net (after costs) risk-unit P&L of ema_stack and donchian_breakout is higher at 4h and 1d than at 1h across the 23-symbol universe."
+    rationale: "Prior project: 1h cells were 74% of variance and ~0 net (costs 7-10%/yr). Our 1h playbook: tsmom loses all edge to turnover. Consistent evidence from two independent setups."
+    test: "playbook() at 1h, 4h, 1d; compare pooled ALL-cell net mean per unit risk-time (scale per-bar P&L to per-day)."
+    success: "4h and 1d per-day net > 1h per-day net for both strategies in-sample; same ordering in holdout."
+    prior: 0.60
+    family: regime
+    status: proposed
+
+  H-X3:
+    title: "High trailing realised vol predicts weaker trend returns"
+    statement: "The cross-sectional/time-series percentile of 20-day realised vol negatively predicts the next 10-day net return of trend strategies (rank IC < 0)."
+    rationale: "Prior project OOS: IC -0.19 (p=.003) for a trend book. Suggests vol-axis conditioning beyond vol-scaling."
+    test: "rank IC of RV20 percentile vs next-10d strategy P&L, pooled by time; strategies tsmom/ema_stack/donchian at 4h."
+    success: "IC < -0.05 with t < -2 in-sample; negative in holdout."
+    prior: 0.45
+    family: regime
+    status: proposed
+
+  H-W7:
+    title: "Weekend variance risk premium: implied vol overprices the TradFi weekend"
+    statement: "Realised variance over the TradFi weekend window (Fri 17:00 ET -> Sun 18:00 ET), divided by the variance implied by Friday 08:00 UTC 7-day ATM IV over the same calendar time, is lower than the same ratio for equal-length weekday windows (Tue 17:00 ET -> Thu 18:00 ET, implied from Tue 08:00 UTC)."
+    rationale: "H-W1 (weekend RV ~0.77x Friday-implied, supported) + prior project's pre-registered finding that Friday-sold weekly options beat other entry days (BTC t 3.1, ETH t 3.6). Options price calendar time; weekends deliver less."
+    test: "imported Deribit SVI atm_7 + Bybit 1h bars; mean log ratio weekend minus weekday, clustered by week."
+    success: "difference < 0 with t < -2 in-sample for BTC and ETH; same sign in holdout."
+    prior: 0.65
+    family: calendar
+    status: proposed
+
+  H-S4:
+    title: "Post-jump volatility contracts quickly"
+    statement: "After |z| >= 5 shocks, realised vol over the next 24h decays toward its pre-shock level with a half-life under 12h, i.e. the EWMA sigma overstates next-day vol after jumps."
+    rationale: "Prior project's jump-regime work: vol contraction half-life ~5h after jumps. If true, EWMA/GARCH sizing after shocks is too conservative and post-shock reversal (H-S2/S3) trades are under-sized."
+    test: "event study on BTC 5m (imported) and 1h universe: realised vol in hours 1-24 after the jump vs sigma_next at the jump; fit decay."
+    success: "half-life < 12h and realised/forecast ratio over 24h < 0.8, in-sample and holdout."
+    prior: 0.55
+    family: shock
+    status: proposed
+
+  H-F5:
+    title: "Order-flow signals pay as entry timing, not as standalone taker strategies"
+    statement: "For entries generated by slower strategies (4h/1d), delaying a passive limit entry until 3 s OBI/OFI favours the trade side reduces entry cost / adverse selection by >= 30% vs immediate entry, without lowering fill rate below 80%."
+    rationale: "Prior project: ETH OBI IC 0.198 at 1 s (OOS, 3 days) but unprofitable as taker (11 bps round trip) and as maker unless rebates. Flow carries information at horizons too short to pay costs alone."
+    test: "paper-execution simulation on flow_3s once >= 30 days are collected."
+    success: "median entry slippage vs decision mid improves >= 30% with fill rate >= 80%."
+    prior: 0.45
+    family: execution
+    status: proposed
+
+  H-TP1:
+    title: "Stock perps drift off-hours and revert at the US cash open"
+    statement: "Bybit stock/ETF perps' moves between the NYSE close and the next NYSE open (including weekends) partially revert during the first 2 hours of the cash session."
+    rationale: "Off-hours perp prices are set by crypto-native traders without access to the underlying's liquidity; the cash open re-anchors them. From ETH_BMNR_PROJECT's BMNR perp observations."
+    test: "flow_3s / Bybit index vs last price for the 13 TradFi perps being collected; signed reversal at the open."
+    success: "mean signed reversal > 0, t > 2 across names, after >= 6 weeks of collection."
+    prior: 0.45
+    family: calendar
+    status: proposed
+
+  H-X2b:
+    title: "Trend edge lives at 4h/1d, not 1h (scale-free re-test)"
+    statement: "The cross-symbol average annualised Sharpe of daily-aggregated net P&L for ema_stack and donchian_breakout is higher at 4h and 1d than at 1h."
+    rationale: "H-X2 used per-day P&L in bar-risk units, which is not comparable across frequencies (a 1h position carries ~sqrt(24)x the daily risk of a 1d one). Registered after seeing H-X2's invalid result; counts as an extra trial."
+    test: "per symbol: sum net P&L per UTC day, annualised Sharpe; average across the 23 symbols; per segment."
+    success: "4h and 1d Sharpe > 1h Sharpe for both strategies in-sample; same ordering in holdout."
+    prior: 0.60
+    family: regime
+    status: proposed
+
+  H-X2c:
+    title: "4h is the trend sweet spot (beats 1h); 1d is not better"
+    statement: "Cross-symbol mean annualised Sharpe of daily net P&L is higher at 4h than at 1h for ema_stack and donchian_breakout."
+    rationale: "Seen in BOTH segments of the H-X2b test (2026-11-07), which failed only because 1d underperformed. Discovered on the holdout, so it is only testable on data after test_from."
+    test: "same as H-X2b, restricted to event_ts >= test_from."
+    success: "4h > 1h for both strategies over >= 90 days."
+    prior: 0.60
+    family: regime
+    status: testing
+    data_generated: true
+    test_from: "2026-11-08"
+
+  # ---- positioning strategies (hypotheses written in the strategy specs before data existed; formalised 2026-11-07 BEFORE running) ----
+
+  H-P1:
+    title: "Crowded funding fades work where crowding unwinds (funding_contrarian)"
+    statement: "funding_contrarian has positive shrunk mean net P&L in its expected cells R3, R6, R9 and positive pooled (ALL) mean at 4h."
+    rationale: "Strategy spec prior (positioning.py): extreme funding against a trailing 30-day z with price extended the same way = crowded positioning that unwinds."
+    test: "playbook 4h, strategy_by_cell, 23 symbols."
+    success: "mean_shrunk > 0 in >= 2 of R3/R6/R9 and ALL mean > 0, in-sample; ALL mean > 0 in holdout."
+    prior: 0.35
+    family: positioning
+    status: proposed
+
+  H-P2:
+    title: "Rising open interest predicts upward pressure (oi_price_divergence)"
+    statement: "oi_price_divergence (long-only by construction) has positive pooled net P&L at 4h and beats its own exposure-matched buy-and-hold (mean P&L per active bar > mean forward return per bar of the same symbols)."
+    rationale: "Strategy spec: new longs drive continuation and new shorts get squeezed. Long-only design means a positive result could just be beta; hence the exposure-matched comparison."
+    test: "playbook 4h strategy_by_cell ALL; compare with mean fwd_ret/sigma_next over all bars (risk-unit buy-and-hold)."
+    success: "ALL mean > buy-and-hold mean with NW t > 2 in-sample; same sign in holdout."
+    prior: 0.30
+    family: positioning
+    status: proposed
+
+  # ---- vol tool validations (registered 2026-11-07 BEFORE building the tools) ----
+
+  H-V1:
+    title: "Jump-robust EWMA forecasts variance better than plain EWMA"
+    statement: "An EWMA (lambda 0.94) fed with returns winsorised at +/-4 sigma_prev has lower mean QLIKE loss for the next-24h cumulative variance than the plain EWMA, pooled over the 23-symbol 1h universe, and its realised/forecast ratio after |z| >= 5 jumps is closer to 1 (H-S4 found 0.73)."
+    rationale: "H-S4: one jump inflates the plain EWMA for days while realised vol decays with a 2-3 h half-life."
+    test: "QLIKE = V/F - log(V/F) - 1 at every 24th bar (non-overlapping 24h windows); paired difference robust - plain, NW t; post-jump ratio median."
+    success: "mean QLIKE difference < 0 with t < -2 in-sample, same sign in holdout; post-jump median ratio in [0.85, 1.15]."
+    prior: 0.65
+    family: vol
+    status: proposed
+
+  H-V2:
+    title: "Weekend scaling of sigma improves variance forecasts that span TradFi weekends"
+    statement: "Scaling the per-bar forecast variance by m^2 for future bars inside the TradFi weekend window (m = causal per-symbol estimate shrunk to a 0.6 prior) lowers mean QLIKE for 24h windows that overlap the weekend, without worsening windows that don't (they're unaffected by construction)."
+    rationale: "H-W1 (weekend RV ~0.77x Friday sigma-hat) and H-W7 (weekend RV/implied 0.2-0.45x)."
+    test: "same QLIKE design on windows with >= 12 weekend bars; paired difference (robust+weekend) - robust, NW t."
+    success: "difference < 0 with t < -2 in-sample, same sign in holdout."
+    prior: 0.75
+    family: vol
+    status: proposed
+
+  H-V1b:
+    title: "Bias-corrected robust EWMA forecasts variance better than plain EWMA"
+    statement: "The robust EWMA (winsorised at 4 sigma) multiplied by a slow causal bias factor b = EWMA_0.999(r^2) / EWMA_0.999(x_clipped^2) has lower mean QLIKE than the plain EWMA for 24h windows, and post-jump realised/forecast median within [0.85, 1.15]."
+    rationale: "H-V1 failed because winsorising biases variance down (in-sample weekday windows: median realised/forecast 1.05). The slow factor restores the long-run level without letting single jumps back in. Designed from in-sample diagnostics only; counts as an extra trial."
+    test: "same design as H-V1."
+    success: "same as H-V1."
+    prior: 0.55
+    family: vol
+    status: proposed
+
+  # ---- vector candles, liquidity crunches, vol clustering (registered 2026-11-07 BEFORE any test) ----
+  # Vector candle (1h): range_sig = ln(high/low)/sigma_prev >= 3 AND vol_rel = turnover / median(turnover, prior 168 bars) >= 2
+  #   AND body = |close-open|/(high-low) >= 0.6. Direction d = sign(close-open). Zone = body [min(o,c), max(o,c)].
+  #   "Thin" = vol_rel / range_sig in the bottom 20% of its prior-168-bar distribution. Events declustered over 24 bars.
+
+  H-VC1:
+    title: "Vector candles continue in their direction"
+    statement: "After a vector candle, the signed forward return d*ln(c_{t+h}/c_t)/(sigma_prev*sqrt(h)) is positive at h = 4 and 24 bars, pooled over the 23-symbol 1h universe."
+    rationale: "A vector candle is aggressive liquidity-taking that sweeps resting orders: momentum ignition / forced flow that often keeps going."
+    test: "event study, NW t across events clustered by timestamp; also split by vol_state at the event."
+    success: "mean signed z > 0 with t > 2 at h = 24 in-sample; same sign in holdout."
+    prior: 0.45
+    family: microstructure
+    status: proposed
+
+  H-VC2:
+    title: "Swept zones get revisited more than a random walk implies"
+    statement: "Price trades back to the vector candle's zone midpoint within 72 bars more often than the driftless reflection-principle baseline 2*(1 - Phi(d / sqrt(h))), d = distance from the close to the midpoint in sigma_prev units."
+    rationale: "The thin print leaves an inefficiently priced area ('imbalance' / 'fair value gap' lore). Tested against the proper null, like H-W4."
+    test: "observed revisit rate minus mean baseline per event; t over events clustered by timestamp."
+    success: "excess > 5pp with t > 2 in-sample; same sign in holdout."
+    prior: 0.35
+    family: microstructure
+    status: proposed
+
+  H-VC3:
+    title: "Swept zones act as support/resistance on the first revisit"
+    statement: "On the first return of price to the vector zone's near edge (the close side of the body), price rejects (moves 1 sigma away from the zone before 1 sigma into it) more often than the symmetric first-passage null of 0.5."
+    rationale: "Participants who missed the move defend the zone; liquidity rebuilds there. Lore claims zones act as S/R."
+    test: "first touch within 168 bars; race between +1 sigma rejection and -1 sigma penetration on 1h closes (sigma = sigma_prev at the touch)."
+    success: "rejection rate > 0.55 with binomial z > 2 in-sample; > 0.5 in holdout."
+    prior: 0.35
+    family: microstructure
+    status: proposed
+
+  H-VC5:
+    title: "Vector candles backed by one-sided aggressor flow continue; balanced ones revert"
+    statement: "Among vector candles on BTC/ETH with flow bars, those with aligned taker imbalance (sign(buy-sell) = d and |buy-sell|/(buy+sell) >= 0.2) have higher 24-bar signed forward return than unaligned ones."
+    rationale: "True sweeps are aggressor-driven; a big range without one-sided flow is a liquidity air pocket (book gap), which reverts."
+    test: "flow_bars 1h (180 days of BTC/ETH); difference in mean signed z, aligned minus unaligned."
+    success: "difference > 0 with t > 2 pooled across segments (sample is small); report per segment."
+    prior: 0.45
+    family: microstructure
+    status: proposed
+
+  H-VC4:
+    title: "Vol clusters after vector candles (unlike pure jumps)"
+    statement: "Realised variance over the 24 bars after a vector candle exceeds the robust_bc forecast made at its close (median realised/forecast > 1.05, bootstrap CI excluding 1), whereas after equal-|z| non-vector jumps it does not."
+    rationale: "H-S4: pure jumps decay fast. Volume-driven sweeps signal a liquidity event (forced flow, deleveraging) that keeps vol elevated."
+    test: "1h universe; ratio sqrt(realised var / forecast var), vector vs matched non-vector |z| >= 3 bars."
+    success: "vector median ratio > 1.05 (CI excludes 1) and > the non-vector median, in-sample; same ordering in holdout."
+    prior: 0.50
+    family: vol
+    status: proposed
+
+  H-LC2:
+    title: "Illiquidity spikes predict vol that the forecast misses"
+    statement: "When Amihud illiquidity ILLIQ = |ret| / turnover has log z-score >= 2 vs its trailing 30-day distribution, realised variance over the next 24 bars exceeds the robust_bc forecast (median ratio > 1.05)."
+    rationale: "Liquidity crunches (thin books per unit of trading) precede vol bursts: same flow, bigger moves."
+    test: "1h universe event study; bootstrap CI of the median ratio; compare with all bars."
+    success: "median ratio > 1.05 with CI excluding 1 in-sample; > 1 in holdout."
+    prior: 0.45
+    family: vol
+    status: proposed
+
+  H-VCL1:
+    title: "Multi-scale HAR beats the single-scale robust EWMA"
+    statement: "A HAR-RV model (daily, weekly, monthly RV components from 1h returns; OLS on log RV, refit monthly on an expanding window) has lower mean QLIKE than robust_bc for the next-24h variance."
+    rationale: "Vol clustering is long-memory (heterogeneous horizons), which a single-lambda EWMA can't capture. HAR is the standard benchmark (Corsi 2009)."
+    test: "same QLIKE design as H-V1b (daily non-overlapping windows), paired NW t."
+    success: "dQLIKE < 0 with t < -2 in-sample; same sign in holdout."
+    prior: 0.55
+    family: vol
+    status: proposed
+
+  # ---- Pivot Geometry Trend (user's Pine indicator; registered 2026-11-07 BEFORE porting/testing) ----
+  # Prior evidence: BACKTEST_TREND_FOLLOWING concluded the geometry adds no alpha beyond slow trend
+  # (live rule OOS 2020-22 Sharpe -0.12; 3 symbols, mostly 1h, heavily iterated). Here: 23 symbols, 4h,
+  # K-ensemble {3,4,6,8,12} exactly as in the indicator, no parameter selection.
+
+  H-GT1:
+    title: "Pivot-geometry trend models earn positive net Sharpe at 4h"
+    statement: "geo_struct, geo_pivot_bo and geo_flag_bo (K-ensemble 3,4,6,8,12; sigma = EWMA std of price changes, half-life 60; maxRetr 0.618) each have positive cross-symbol mean annualised Sharpe of daily net P&L at 4h."
+    rationale: "Directional-change pivots measure trend structure in vol units; FLAG_BO adds a pullback filter and a structural trailing stop."
+    test: "H-X2b method: signals on full history, daily net P&L per symbol, annualised Sharpe, mean over 23 symbols, per segment."
+    success: "all three > 0 in-sample; same signs in holdout."
+    prior: 0.35
+    family: trend
+    status: proposed
+
+  H-GT2:
+    title: "Geometry adds over slow trend"
+    statement: "The best-performing of the three geo models does NOT need to be chosen: the equal-weight average of geo_struct, geo_pivot_bo, geo_flag_bo signals has higher 4h Sharpe than ema_stack."
+    rationale: "Tests the prior project's conclusion (no added value) without selecting the best variant."
+    test: "same method; geo_avg signal = mean of the three signals."
+    success: "geo_avg Sharpe > ema_stack Sharpe in-sample and holdout."
+    prior: 0.25
+    family: trend
+    status: proposed
+
+  H-GT3:
+    title: "Directional-change swing levels act as support/resistance"
+    statement: "On the first touch of the last confirmed DC swing high (from below) or swing low (from above), K = 6, price rejects (moves 1 sigma away before 1 sigma through) more often than the symmetric null 0.5."
+    rationale: "If confirmed pivots are real structure, they should matter for the level chain (ARCHITECTURE 3.11). Same race design as H-VC3."
+    test: "4h universe; first touch after confirmation; race on closes; sigma = indicator sigma at the touch."
+    success: "rejection rate > 0.55 with binomial z > 2 in-sample; > 0.5 in holdout."
+    prior: 0.40
+    family: levels
+    status: proposed
+
+  H-VC6:
+    title: "Thin vector candles revert"
+    statement: "After thin vector candles (definition above), the 24-bar signed forward z is negative."
+    rationale: "Exploratory split in the vector study (2026-11-07): -0.09 in-sample (t -1.4), -0.45 holdout (t -2.2, 69 events). Big range on little volume per sigma = liquidity air pocket, not conviction. Both segments seen, so forward-only (4h is not an independent sample of the same moves)."
+    test: "1h universe, events with event_ts >= test_from."
+    success: "mean signed z < 0 with >= 30 events and t < -2."
+    prior: 0.45
+    family: microstructure
+    status: testing
+    data_generated: true
+    test_from: "2026-11-08"
+
+  H-VC7:
+    title: "The first 1-sigma move after a vector candle goes against it"
+    statement: "After a vector candle, the first +/-1 sigma move measured from its close (on subsequent closes) goes against the candle's direction with probability > 0.52."
+    rationale: "What H-VC3 actually measured (design flaw: the near edge is the vector's own close): breaks of the close edge won 52-55% in both segments. Forward-only."
+    test: "1h universe, events with event_ts >= test_from; binomial z."
+    success: "probability > 0.52 with z > 2."
+    prior: 0.45
+    family: microstructure
+    status: testing
+    data_generated: true
+    test_from: "2026-11-08"
+
+  # ---- Vector-candle OPEN levels on 4h, "active until taken" (user's chart practice; registered 2026-11-07 BEFORE testing) ----
+  # Vector (PVSRA climax): volume_t >= 2 * mean(volume_{t-10..t-1}) OR volume_t*range_t >= max(volume*range over t-10..t-1).
+  # Level L = open_t; active from bar t+1 until the first bar whose [low, high] contains L (the first touch = "taken").
+  # Race from the touch bar's close on 4h closes: reject = close back beyond L by +1 sigma on the side price came from,
+  #   before closing 1 sigma through L (sigma = sigma_risk_next * close at the touch bar, price units).
+  # Driftless null per event: p0 = clip((x0 - (L - s*sigma)) / (2*sigma), 0, 1) in the approach-side orientation,
+  #   x0 = touch close (accounts for wick touches that already closed back on the original side).
+  # Control levels: opens of non-vector candles from which price moved >= 1 sigma away (same side logic) before returning.
+
+  H-VZ1:
+    title: "Active vector-open levels hold on the first touch"
+    statement: "On the first touch of an active 4h vector-open level, the rejection rate exceeds the per-event driftless null by more than 3 percentage points."
+    rationale: "User's practice (chart 2026-11-07): vector opens are where aggressive liquidity started a violent move; resting interest is defended there until it's taken."
+    test: "23-symbol 4h universe; mean(reject - p0) per event, t-stat clustered by touch timestamp."
+    success: "excess > 3pp with t > 2 in-sample; > 0 in holdout."
+    prior: 0.40
+    family: levels
+    status: proposed
+
+  H-VZ2:
+    title: "Vector opens are better levels than ordinary candle opens"
+    statement: "The first-touch excess rejection (reject - p0) is higher for vector-open levels than for control levels (opens of non-vector candles price had moved >= 1 sigma away from)."
+    rationale: "If any open works equally well, the effect is generic level-revisit dynamics, not vector-candle liquidity."
+    test: "difference of mean excesses, Welch t."
+    success: "difference > 0 with t > 2 in-sample; > 0 in holdout."
+    prior: 0.35
+    family: levels
+    status: proposed
+
+  H-VZ3:
+    title: "Taken levels are switched off"
+    statement: "On the SECOND touch of a vector-open level (after its first touch), the excess rejection over the null is smaller than on the first touch and indistinguishable from zero."
+    rationale: "User's rule: once the liquidity is taken, the level stops mattering."
+    test: "same race for second touches (first bar after the first touch's race resolves whose range contains L again)."
+    success: "first-touch excess minus second-touch excess > 0 with t > 2 in-sample, and second-touch excess |t| < 2."
+    prior: 0.40
+    family: levels
+    status: proposed
+
+  H-VZ4:
+    title: "Untaken vector opens act as magnets"
+    statement: "Active vector-open levels are taken (touched) within 60 4h-bars more often than the driftless reflection-principle baseline 2*(1 - Phi(d / sqrt(60))), d = distance from the vector close to L in per-bar sigma."
+    rationale: "'Liquidity gets taken': unfilled origins of violent moves get revisited."
+    test: "observed take rate minus mean baseline; t clustered by event timestamp."
+    success: "excess > 5pp with t > 2 in-sample; > 0 in holdout."
+    prior: 0.40
+    family: levels
+    status: proposed
+
+  # ==== Batch 2026-11-07 night: auction equilibrium, regime detection, vol clustering, fundamentals, carry, adverse selection ====
+  # Volume profile (auction): per UTC day, distribute each bar's volume uniformly over [low, high] on a price grid
+  # (bin = 0.05% of price); POC = max-volume bin; value area (VA) = smallest contiguous range around the POC holding 70% of volume.
+  # Data: Bybit BTCUSDT 5m (2020-04 -> 2026-09) and Binance ETHUSDT 1m (2023 -> 2026-07); sigma = robust_bc at decision time.
+
+  H-AU1:
+    title: "Acceptance outside the prior value area leads to continuation (imbalance)"
+    statement: "After two consecutive 1h closes beyond the prior day's VAH (VAL), the return over the next 24h in that direction is positive."
+    rationale: "Auction theory: price accepted outside value starts a new value search (imbalance), i.e. a trend."
+    test: "BTC 5m-derived profiles; signed 24h return in sigma units; one event per side per day; t over days."
+    success: "mean > 0 with t > 2 in-sample; same sign in holdout."
+    prior: 0.45
+    family: auction
+    status: proposed
+
+  H-AU2:
+    title: "Failed auction outside value rotates to the other side (the 80 percent rule)"
+    statement: "When the day opens outside the prior VA and then has two consecutive 1h closes back inside, price reaches the opposite VA edge before closing 0.5 sigma back beyond the re-entry edge more often than the driftless first-passage null."
+    rationale: "Market-profile lore: rejected excursions rotate through value. Tested against the proper first-passage null."
+    test: "race on 1h closes from the second inside close; per-event null b/(a+b); excess = hit - null."
+    success: "excess > 5pp with t > 2 in-sample; > 0 in holdout."
+    prior: 0.35
+    family: auction
+    status: proposed
+
+  H-AU3:
+    title: "Balance vs imbalance regimes decide whether mean reversion or trend works"
+    statement: "When the prior day's VA overlaps the day before's by >= 70% (balance), 1h mean-reversion strategies (zscore_reversion, rsi_reversion) do better than trend strategies (ema_stack, donchian_breakout) on the next day; when the overlap is <= 30% (imbalance), the reverse."
+    rationale: "Overlapping value = two-sided auction (fade the edges); migrating value = one-sided (follow)."
+    test: "BTC daily net P&L of each strategy (signals on full history) by overlap bucket; difference-in-differences (MR - trend) balance minus (MR - trend) imbalance."
+    success: "DiD > 0 with t > 2 in-sample; > 0 in holdout."
+    prior: 0.40
+    family: auction
+    status: proposed
+
+  H-AU4:
+    title: "The prior day's POC is a magnet in balance"
+    statement: "On days following a balance day (overlap >= 70%), price touches the prior day's POC within the day more often than the reflection-principle null given its distance at the open."
+    rationale: "In balance, price rotates around fair value."
+    test: "touch rate minus 2*(1 - Phi(d/sqrt(24))) per day, d in hourly sigma at the open."
+    success: "excess > 5pp with t > 2 in-sample; > 0 in holdout."
+    prior: 0.45
+    family: auction
+    status: proposed
+
+  H-RG1:
+    title: "Variance ratio detects trend vs mean-reversion regimes"
+    statement: "When the trailing 7-day variance ratio VR = Var(24h returns) / (24 * Var(1h returns)) > 1.2, trend strategies (ema_stack, donchian) beat mean-reversion strategies (zscore, rsi) over the next 7 days; when VR < 0.8 the reverse."
+    rationale: "VR > 1 means positive autocorrelation (trending); VR < 1 negative (reverting). A causal, model-free regime detector."
+    test: "23-symbol 1h universe; weekly non-overlapping samples; DiD of (trend - MR) next-7d net P&L between VR buckets, clustered by week."
+    success: "DiD > 0 with t > 2 in-sample; > 0 in holdout."
+    prior: 0.45
+    family: regime
+    status: proposed
+
+  H-VCL2:
+    title: "Downside variance clusters more (leverage effect) in crypto"
+    statement: "Adding the previous day's negative realised semivariance (RS-) to HAR lowers next-day QLIKE vs HAR alone."
+    rationale: "Leverage / panic effect: down moves raise future vol more than up moves (Patton and Sheppard 2015). Crypto may differ (upside vol in alts)."
+    test: "same expanding-window design as H-VCL1; paired QLIKE difference, NW t; 23 symbols."
+    success: "dQLIKE < 0 with t < -2 in-sample; same sign in holdout."
+    prior: 0.50
+    family: vol
+    status: proposed
+
+  H-VCL3:
+    title: "Vol spills over from BTC to alts"
+    statement: "Adding BTC's daily and weekly log-RV to each alt's HAR lowers next-day QLIKE for alts."
+    rationale: "BTC is the market factor; risk-off shocks start there."
+    test: "22 alts; HAR vs HAR+BTC; paired QLIKE, NW t."
+    success: "dQLIKE < 0 with t < -2 in-sample; same sign in holdout."
+    prior: 0.55
+    family: vol
+    status: proposed
+
+  H-VCL4:
+    title: "Implied vol adds information beyond HAR"
+    statement: "Adding log DVOL^2 (or 7d ATM IV^2 from the imported SVI surface) to HAR lowers QLIKE for the next 7 days of BTC and ETH realised variance."
+    rationale: "Options markets aggregate forward-looking information (events, positioning) that past RV can't see."
+    test: "weekly non-overlapping windows; HAR-7d vs HAR-7d + IV; paired QLIKE."
+    success: "dQLIKE < 0 with t < -2 in-sample; same sign in holdout."
+    prior: 0.60
+    family: vol
+    status: proposed
+
+  H-VCL5:
+    title: "Vol compression underpredicts the expansion"
+    statement: "When 20-day RV is in the bottom 10% of its trailing year, realised variance over the next 5 days exceeds the HAR forecast (median ratio > 1.1), with no predictable direction (mean signed 5d return not different from 0)."
+    rationale: "Compressed vol coils; forecasts anchored on recent calm miss the release. Direction-neutral, so exploitable via options / straddle-like exposure, not direction."
+    test: "23 symbols, daily samples, ratio realised/HAR over 5d; bootstrap CI; t of signed return."
+    success: "median ratio > 1.1 with CI excluding 1 and |t_return| < 2, in-sample; ratio > 1 in holdout."
+    prior: 0.40
+    family: vol
+    status: proposed
+
+  H-FU1:
+    title: "Stablecoin liquidity growth predicts crypto returns"
+    statement: "The 30-day log change in total stablecoin supply (z vs trailing 1y) positively predicts next-30-day BTC (and equal-weight universe) returns, sampled weekly."
+    rationale: "Stablecoin issuance = new dry powder entering crypto. Data is pit revisable (DefiLlama back-fills), so in-sample evidence is weak by construction."
+    test: "weekly samples, OLS slope with NW t (overlapping 30d outcomes)."
+    success: "slope > 0 with t > 2 in-sample; > 0 in holdout."
+    prior: 0.30
+    family: fundamentals
+    status: proposed
+
+  H-FU2:
+    title: "A high variance risk premium predicts positive returns"
+    statement: "BTC VRP = DVOL^2 - HAR-forecast variance (annualised) positively predicts next-30-day BTC returns (weekly samples)."
+    rationale: "VRP compensates for bearing crash risk (Bollerslev, Tauchen and Zhou 2009); high VRP = fear priced = higher expected returns."
+    test: "OLS slope, NW t; 2021-03 onwards (DVOL history)."
+    success: "slope > 0 with t > 2 in-sample; > 0 in holdout."
+    prior: 0.35
+    family: fundamentals
+    status: proposed
+
+  H-C1:
+    title: "Perp funding carry is a harvestable premium"
+    statement: "A delta-neutral carry book (short perp / long spot, equal-weight across the 23 symbols, held only when the trailing 7-day mean funding > 0, rebalanced weekly, 10 bps per leg per position change) earns positive net annualised return with Sharpe > 1."
+    rationale: "Persistent leverage demand from long speculators pays shorts; the premium is structural, not predictive."
+    test: "Bybit realised funding history; costs on turnover; weekly P&L; Sharpe, max drawdown, worst funding-flip week."
+    success: "net Sharpe > 1 in-sample; net return > 0 in holdout."
+    prior: 0.55
+    family: carry
+    status: proposed
+
+  H-AS1:
+    title: "Large-OFI candles are toxic: mid keeps moving in their direction"
+    statement: "After 3 s candles with |OFI z| >= 2 (vs trailing 1h), the mid moves in the OFI direction over the next 30 s to 5 min (positive markout), with impact decaying with a half-life under 2 minutes."
+    rationale: "Adverse selection: aggressive informed flow moves prices; liquidity providers who fill it lose."
+    test: "flow_3s markouts at 3/30/60/300 s; requires >= 14 days of collection."
+    success: "positive markout at 30 s and 60 s with t > 2 across Tier-A perps."
+    prior: 0.65
+    family: adverse_selection
+    status: proposed
+
+  H-AS2:
+    title: "Liquidity withdrawal precedes moves (book-based crunch)"
+    statement: "When depth within 25 bps drops by >= 2 sigma (vs trailing 1h) while the spread widens, |mid return| over the next 1-5 minutes exceeds its conditional expectation from current volatility."
+    rationale: "Makers pull quotes ahead of informed flow or events. The book-based version of the failed bar proxy (H-LC2)."
+    test: "flow_3s events; ratio of realised |return| to the trailing-vol expectation; requires >= 14 days."
+    success: "median ratio > 1.2 with CI excluding 1."
+    prior: 0.55
+    family: adverse_selection
+    status: proposed
+
+  H-C1b:
+    title: "Low-turnover carry overlay that scales with the funding regime"
+    statement: "An always-on short-perp / long-spot carry book (no weekly sign filter), scaled by the trailing 30-day mean funding (zero weight when that mean <= 0), earns net return above the risk-free rate on the capital it ties up (1.5x notional)."
+    rationale: "H-C1 vol/fund study (2026-11-07): carry is real but decayed (net 0.5%/yr 2025, -4.8% 2026 H1); the weekly sign filter costs 2.4-3.4%/yr in turnover; an always-on book did as well or better. Seen on both segments, so forward-only."
+    test: "weekly forward P&L from test_from; costs 10 bps per leg per change; compare with the 3-month T-bill yield."
+    success: "net annualised return on capital > T-bill yield over >= 26 weeks."
+    prior: 0.35
+    family: carry
+    status: testing
+    data_generated: true
+    test_from: "2026-11-08"
+
+  # ---- Weekend options study (registered 2026-11-07 BEFORE testing; follows H-W7) ----
+  # Instrument: Deribit daily-expiry ATM straddle (strike nearest the index), BTC and ETH.
+  # WEEKEND trade: sell Friday at the 08:00 UTC sampling window, expiry Monday 08:00 UTC (3 calendar days, covers the TradFi weekend).
+  # WEEKDAY control: sell Monday 08:00 UTC, expiry Thursday 08:00 UTC (same length, no weekend).
+  # Entry price = trade-implied premium near 08:00 (from raw trades: median iv of ATM trades on that expiry -> Black-76 price),
+  #   minus half-spread estimated from |trade price - mark price|; Deribit fee 0.03% of underlying per leg (capped at 12.5% of premium).
+  # Delta-hedged hourly with the perp (Bybit 1h closes; 5 bps per hedge trade on notional changed). Settlement at the 08:00 index.
+  # P&L in units of entry premium and of underlying notional. Data: BACKTEST_TREND_FOLLOWING Deribit raw trades 2020-2026.
+
+  H-OPT1:
+    title: "Selling the weekend straddle earns a premium net of costs"
+    statement: "The Friday-to-Monday delta-hedged short ATM daily straddle has positive mean net P&L per trade for BTC and ETH."
+    rationale: "H-W7: weekend realised variance is 0.2-0.45x the implied; the prior project found Friday-sold weeklies beat other days."
+    test: "per-week P&L, t over weeks; both underlyings; per year."
+    success: "mean net P&L > 0 with t > 2 in-sample for both; > 0 in holdout."
+    prior: 0.60
+    family: options
+    status: proposed
+
+  H-OPT2:
+    title: "The weekend straddle beats the same-length weekday straddle"
+    statement: "Paired by week, net P&L (in premium units) of the Fri-Mon short straddle exceeds that of the Mon-Thu short straddle."
+    rationale: "Options price calendar time; the weekend delivers less of it than weekdays (H-W7 weekday ratio ~0.85-0.97)."
+    test: "paired difference by week, t."
+    success: "difference > 0 with t > 2 in-sample; > 0 in holdout."
+    prior: 0.60
+    family: options
+    status: proposed
+
+  H-OPT3:
+    title: "The weekend straddle's tail is survivable at small size"
+    statement: "Sized so the 99th-percentile weekend loss equals 1% of capital, the strategy's annualised net return exceeds 5% and its worst single weekend loses less than 3% of capital."
+    rationale: "Short vol dies in jumps; the question is whether premium per unit of tail risk is enough."
+    test: "empirical loss quantiles in-sample; apply the same sizing rule to the holdout."
+    success: "both conditions in-sample; holdout worst loss < 3% of capital."
+    prior: 0.40
+    family: options
+    status: proposed
+
+  H-OPT4:
+    title: "Sell the weekend at the US close, not at Friday 08:00"
+    statement: "A short ATM straddle on Bybit daily options sold Friday 21:00 UTC (US cash close) and expiring Monday 08:00 UTC, delta-hedged only when |net delta| > 0.25 (band hedge), has positive mean net P&L."
+    rationale: "H-OPT1 failed because the Fri 08:00 -> Mon 08:00 window includes the Friday US session (realises 2-2.8x its implied share) and hourly hedging cost ~0.26% of notional. Starting at the US close isolates the quiet part (H-W1/H-W7); band hedging cuts turnover. Historical option data is sampled before 08:00 only, so forward-only with collected Bybit quotes."
+    test: "forward from test_from using Bybit option tickers snapshotted at Fri 21:00 UTC (needs a quote collector); P&L per weekend in % of notional; t over weekends."
+    success: "mean net P&L > 0 with t > 2 over >= 26 weekends; worst weekend loss < 3x mean weekly premium x 10."
+    prior: 0.35
+    family: options
+    status: testing
+    data_generated: true
+    test_from: "2026-11-13"
+
+  # ---- Relative value / fair value (registered 2026-11-07 BEFORE testing) ----
+  # All legs use synchronous Bybit 1h closes (lesson from ETH_BMNR's BZ/CL artifact). Costs: 7.5 bps per leg per side.
+
+  H-RV1:
+    title: "Alt residuals vs a BTC/ETH factor model revert"
+    statement: "For each alt, regress hourly log returns on BTC and ETH returns over the trailing 30 days (causal OLS); when the cumulative residual over the last 72 h has |z| >= 2 (z = residual sum / (residual std * sqrt(72))), the factor-hedged residual return over the next 24 h has the opposite sign."
+    rationale: "Idiosyncratic dislocations from a coin's fair value relative to the market factor get arbitraged; the trade is market-neutral, so it doesn't rely on direction (which isn't forecastable, P5)."
+    test: "21 alts in the 1h universe; one event per alt per 24 h; mean reversion return (residual units and % net of 4 legs of costs), t clustered by timestamp."
+    success: "mean net reversion return > 0 with t > 2 in-sample; > 0 in holdout."
+    prior: 0.40
+    family: relative_value
+    status: proposed
+
+  H-RV2:
+    title: "The Brent-WTI spread on Bybit perps mean-reverts"
+    statement: "When s = ln(BZUSDT) - ln(CLUSDT) deviates by |z| >= 2 from its trailing 30-day mean (z vs trailing std), the next-24h change in s moves back toward the mean."
+    rationale: "Brent and WTI are tied by arbitrage (transport, quality); perps on a crypto venue add noise around that anchor, especially off-hours."
+    test: "bars where both legs have a fresh 1h close; signed 24h change toward the mean in units of the trailing std; net of 4 legs of costs; t over events (one per 24 h)."
+    success: "mean > 0 with t > 2 pooled (BZUSDT listed 2026-05, so most data is holdout: report both segments; the in-sample part is too short for its own verdict)."
+    prior: 0.45
+    family: relative_value
+    status: proposed
+
+  H-RV3:
+    title: "Tokenised gold vs gold perp basis mean-reverts"
+    statement: "When b = ln(XAUTUSDT) - ln(XAUUSDT) deviates by |z| >= 2 from its trailing 30-day mean, the next-24h change in b moves back toward the mean; deviations opened while TradFi gold is closed (weekends) revert faster."
+    rationale: "XAUT is redeemable for physical gold; XAUUSDT tracks the gold index, which freezes when CME is shut. Two prices for the same asset, one of them stale off-hours."
+    test: "same design as H-RV2, split by whether the event starts in a TradFi weekend."
+    success: "mean > 0 with t > 2 in-sample (XAUT history from 2025-01); > 0 in holdout."
+    prior: 0.50
+    family: relative_value
+    status: proposed
+
+  H-RV4:
+    title: "Perp-spot basis extremes revert within the hour (forward)"
+    statement: "From flow_3s mids, the basis ln(perp mid) - ln(spot mid) for Tier-A tokens reverts toward its trailing 1-day mean after |z| >= 3 excursions, within 60 minutes."
+    rationale: "Perp and spot are the same asset; basis spikes are temporary liquidity imbalances (and drive funding)."
+    test: "flow_3s, after >= 14 days of collection."
+    success: "median reversion > 50% of the excursion within 60 min with t > 2 across symbols."
+    prior: 0.60
+    family: relative_value
+    status: proposed
+
+  # ---- Trend vs mean-reversion regimes + trend model zoo (registered 2026-11-08 BEFORE testing) ----
+  # Universe: the 23-symbol crypto set, 4h bars (primary) and 1d (secondary). Costs: 7.5 bps per side.
+  # Zoo (fixed, ~24 variants, no parameter search beyond this list): TSMOM {1, 3, 7, 14, 30} days; MA crossover
+  #   {(1d,7d), (3d,14d), (7d,30d), (14d,60d)}; Donchian breakout {7, 14, 30, 60} days with half-length exit;
+  #   EMA stack {fast, mid, slow} x 2 scales; regression-slope t-stat {7, 14, 30} days; existing ema_stack /
+  #   donchian_breakout / tsmom as configured. Signals vol-scaled where natural; evaluated with
+  #   ai_trader.research.evaluate.strategy_pnl (sized at entry, risk units).
+  # Regime features (causal, computed daily from 4h bars): efficiency ratio ER(7d, 30d); directional-vol ratio
+  #   DVR = (RS+ - RS-)/(RS+ + RS-) over 7d and 30d; trend t-stat (mean/std*sqrt(n)) over 7d and 30d; variance ratio
+  #   VR(1d vs 4h) over 30d; lag-1 autocorrelation of 4h and 1d returns over 30d; robust-vol percentile (1y); vol-of-vol.
+
+  H-TR1:
+    title: "An equal-weight ensemble of simple trend models earns positive net Sharpe"
+    statement: "The equal-weight average signal of the fixed trend zoo, per symbol, has positive cross-symbol mean annualised Sharpe of daily net P&L at 4h."
+    rationale: "Diversifying across horizons and rule types is the standard robust way to harvest time-series momentum without choosing a winner."
+    test: "H-X2b method (signals on full history, daily net P&L per symbol, mean Sharpe over symbols), per segment."
+    success: "Sharpe > 0.3 in-sample; > 0 in holdout."
+    prior: 0.45
+    family: trend
+    status: proposed
+
+  H-TR2:
+    title: "Walk-forward selection of the best trend models beats the ensemble"
+    statement: "Each month, holding the top-3 zoo variants by trailing 12-month net Sharpe (per symbol) yields higher out-of-sample Sharpe than the equal-weight zoo ensemble."
+    rationale: "Tests whether past model ranking carries information. The usual finding is that it doesn't (selection noise > persistent skill)."
+    test: "monthly walk-forward from the first date with 12 months of history; compare OOS daily net Sharpe, paired by month."
+    success: "selection Sharpe > ensemble Sharpe with paired t > 2 in-sample; same sign in holdout."
+    prior: 0.30
+    family: trend
+    status: proposed
+
+  H-TR3:
+    title: "A walk-forward regime classifier tells trend from mean-reversion periods"
+    statement: "A logistic model on the regime features, refit monthly on an expanding window, predicting the sign of next-7-day (trend ensemble - mean-reversion ensemble) net P&L per symbol, has out-of-sample rank IC > 0; gating (trade the trend ensemble only when P(trend wins) > 0.5, else flat) raises OOS Sharpe vs ungated."
+    rationale: "Previous single-feature switches failed (H-RG1, H-AU3); a combination of vol and directional-vol features, judged purely out of sample, is the fair final test of the regime-switch idea."
+    test: "monthly walk-forward; IC = Spearman of predicted prob vs realised (trend - MR) next-7d P&L, clustered by week; gated vs ungated Sharpe."
+    success: "OOS IC > 0 with t > 2 AND gated Sharpe > ungated in-sample; both same sign in holdout."
+    prior: 0.30
+    family: regime
+    status: proposed
+
+  H-TR4:
+    title: "Directional efficiency predicts trend profitability (single feature)"
+    statement: "Symbol-weeks in the top tercile of the 14-day efficiency ratio have higher next-7-day trend-ensemble net P&L than the bottom tercile."
+    rationale: "The simplest 'is it trending?' measure. If even this has no signal, regime gating is unlikely to help."
+    test: "tercile difference, clustered by week, NW t."
+    success: "difference > 0 with t > 2 in-sample; > 0 in holdout."
+    prior: 0.40
+    family: regime
+    status: proposed
+
+  # ---- Weekend skewed passive quoting (registered 2026-11-08 01:55 UTC BEFORE the first run; forward-only) ----
+  H-MM1:
+    title: "Bearish-skewed weekend passive quoting earns more than maker fees and adverse selection"
+    statement: "atx mm with config/mm.yaml as of 2026-11-08 02:30 UTC (SOL/XRP/ADA perps; minimum-lot post-only quotes; ask r*(1+0.35 sigma_1h), bid r*(1-0.80 sigma_1h) around a reservation price shifted by inventory (0.5 sigma at cap) and order flow (0.3 sigma at full imbalance); toxicity widening/pausing; swing-level snapping; non-chasing requotes (0.3 sigma drift after 60 s); profitable inventory (>= 0.6 sigma) cleared passively at the touch; caps 30/12/60 USD; loss limit 1.5 USD; 45-min passive wind-down) earns positive net P&L (fees, funding, wind-down slippage included) per unit of traded notional over TradFi weekends."
+    rationale: "Requested by the user on a bearish macro view (risk-off, weekend, sideways) for slow-bleeding tokens. Priors against: VIP0 maker fee is +2 bps (ETH_BMNR found book-informed MM needs a -1.2 to -1.4 bps rebate), the bearish skew is a directional bet (direction not forecastable, P5), adverse selection on post-only fills is untested (H-AS1), and levels showed no directional value (H-VZ/H-GT/H-AU); here they only push quotes outward. Prior for: weekend vol is lower (H-W1); quotes several bps wide of a 1-tick book on liquid names earn real spread when they fill on noise rather than on information."
+    test: "per run, from data/mm/<env>-<run>/summary.json + executions.json + journal fill markouts: net P&L / traded notional (bps); markouts of each fill at 1, 5 and 30 min (flow_3s mids); decompose into spread capture, adverse selection, inventory P&L, fees. Mainnet runs only count (demo fills are unrealistic for passive orders). Verdict only after >= 4 weekends and >= 200 fills."
+    success: "net P&L per traded notional > 0 with t > 2 over runs; mean 5-min markout-adjusted spread capture > maker fee."
+    prior: 0.15
+    family: microstructure
+    status: proposed
+    notes: "Config history: v0 (01:55, SOL/DOGE/LTC, 2:1 lot skew, 4 bp requotes) demo smoke tests only; v1 (02:30) after user direction (minimum size, no chasing, flow/toxicity/levels, passive profit clearing, slow-bleed book). First mainnet run 2026-11-08 ~02:45 -> 12:00 UTC, 100 USD budget (caps well below it). One run cannot decide anything."
+
+  # ---- Historical analogs (registered 2026-11-08 11:50 UTC BEFORE looking at any analog outcome) ----
+  # scripts/regime_context.py: daily BTC state vectors since 2021-03 (r7, r30, dd90, log rv30, rv7/rv30, log DVOL,
+  # DVOL/rv30, F&G, alt breadth below MA30, alt-BTC 30d, stablecoin 30d, funding 7d; + macro: SPX 7d/30d, log VIX,
+  # HY OAS and its 30d change, WTI 30d, broad dollar 30d). Nearest 12 past dates by mean squared z distance,
+  # >= 21 days apart, last 45 days excluded. Today's run is descriptive context only.
+  H-AN1:
+    title: "Analog days forecast next-week BTC realised vol better than HAR"
+    statement: "The median next-7-day realised vol of the 12 nearest analog dates (crypto feature set) has lower QLIKE against realised next-7-day vol than the HAR-RV daily forecast, walk-forward (features z-scored on data up to each date)."
+    rationale: "State similarity may carry vol-regime information beyond the vol history HAR uses (DVOL premium, breadth, sentiment)."
+    test: "weekly walk-forward from 2022-06; QLIKE difference (analog - HAR), Diebold-Mariano with NW SE."
+    success: "mean QLIKE difference < 0 with DM t < -2 in-sample; < 0 in holdout."
+    prior: 0.25
+    family: volatility
+    status: proposed
+
+  H-AN2:
+    title: "Analog days forecast the sign of next-week BTC return"
+    statement: "The sign of the mean next-7-day BTC return over the 12 nearest analog dates (both feature sets) predicts the sign of the realised next-7-day return better than 50% / the unconditional up-rate, walk-forward."
+    rationale: "Null-expected (P5: direction not forecastable). Registered so analog direction claims are never used informally."
+    test: "weekly walk-forward from 2022-06; hit rate vs the expanding unconditional up-rate; rank IC of analog mean vs realised, NW t."
+    success: "hit rate above the unconditional rate with t > 2 in-sample and holdout."
+    prior: 0.10
+    family: regime
+    status: proposed
+
+  # ---- Event response (registered 2026-11-08 12:30 UTC, forward-only: CPI reactions since 2022 are in my training data) ----
+  H-EV1:
+    title: "BTC's CPI-window return has the opposite sign of the core CPI surprise"
+    statement: "On US CPI release days, the BTC log return from the bar before the release to 16:00 UTC is negative when core CPI m/m exceeds the published consensus and positive when it is below; |return| is larger when |surprise| >= 0.1 pp."
+    rationale: "In the current regime (headline CPI 4%, December hike ~77% priced, BTC~QQQ hourly corr 0.65) inflation surprises move hike odds, which move long-duration assets. Historical CPI-day vol is 1.4x normal (1.7x in 2022-23), so the window carries information; whether its sign is predictable from the surprise is the question."
+    test: "forward from 2026-11-10: record consensus (two public previews, before the release), actual, BTC/ETH/QQQ window returns; sign agreement over releases; needs >= 12 releases for a verdict."
+    success: "sign agreement >= 75% over >= 12 releases with |surprise| > 0; and mean |return| higher for |surprise| >= 0.1 pp."
+    prior: 0.45
+    family: macro_event
+    status: proposed

@@ -1,0 +1,16 @@
+[package]
+name = "at-store"
+description = "Bitemporal Parquet lake writer driven by config/schema.yaml"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+at-core.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+chrono.workspace = true
+arrow.workspace = true
+parquet.workspace = true
+uuid.workspace = true

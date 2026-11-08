@@ -1,0 +1,17 @@
+[package]
+name = "at-alt"
+description = "Alternative data connectors (sentiment, options vol, stablecoins, macro vintages)"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+at-core.workspace = true
+at-store.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+reqwest.workspace = true
+tokio.workspace = true
+chrono.workspace = true
+tracing.workspace = true
