@@ -23,6 +23,7 @@
 //!   atx mm-replay --symbol S --date D --ob200 Z --trades T --variants V --out DIR   mm quoter on a replayed real book (research only)
 //!   atx live status|tiers|propose|approve|submit|reconcile|kill|flatten-bot   small LIVE desk (config/risk.yaml live_small)
 //!   atx ctrader check|symbols|ticks|trendbars|stream|ping   read-only cTrader Open API (BlackBull): cross-venue study, vecopen trend bars
+//!   atx tape --symbols A,B [--window-s 60]      read-only participant labeller on public data (config/tape.yaml; descriptive, untested)
 
 mod cmd;
 mod ctrader;
@@ -36,6 +37,7 @@ mod mm;
 mod mm_replay;
 mod scalp;
 mod scalp_live;
+mod tape;
 mod updater;
 
 use clap::{Parser, Subcommand};
@@ -239,6 +241,9 @@ enum Command {
     /// cTrader Open API (BlackBull), read-only market data: check | symbols | ticks | trendbars | stream | ping. Never sends orders.
     #[command(subcommand)]
     Ctrader(ctrader::CtraderCmd),
+    /// Read-only participant labeller (HFT flicker, spoofs, algos, icebergs, sweeps, liquidations, size buckets, push summary) on
+    /// Bybit public data (config/tape.yaml). Descriptive labels, not tested signals. No keys, no orders.
+    Tape(tape::TapeArgs),
 }
 
 #[derive(clap::Args)]
@@ -361,5 +366,6 @@ async fn main() -> anyhow::Result<()> {
         Command::Ctrader(c) => ctrader::run(&ctx, c).await,
         Command::Live(c) => live::run(&ctx, c).await,
         Command::Scalp(a) => scalp::run(&ctx, a).await,
+        Command::Tape(a) => tape::run(&ctx, a).await,
     }
 }

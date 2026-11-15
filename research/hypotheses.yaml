@@ -2772,3 +2772,69 @@ hypotheses:
     prior: 0.15
     family: scalp_flow
     status: proposed
+
+  # ---- Rough volatility / Volterra kernels (block RFSV; research agent, registered 2026-11-15 ~23:30 UTC BEFORE any data was read) ----
+  # Data: universe L (23 crypto perps). Daily log RV = log sum of squared 5m log returns over the UTC day (Bybit public REST 5m
+  # klines, data/research/bos/bars/5m, 2022-01 -> 2026-11-15); hourly log RV = log sum of the twelve 5m squared returns of the hour,
+  # deseasonalised by an expanding (point-in-time) hour-of-week mean of log RV. Segments by origin time vs 2026-07-01.
+  H-RFSV1:
+    title: "Crypto log volatility is rough: the GJR structure function scales with H < 0.5 (about 0.1-0.2), stably across v0 cells"
+    statement: >-
+      For each universe-L token, m(q, D) = mean |log s_{t+D} - log s_t|^q (s = sqrt(RV)) scales as D^(q H) with q in {0.5, 1, 1.5, 2, 3}
+      and D = 1..20 days (daily) or 1..48 hours (hourly, deseasonalised). H = slope of log m(2, D) on log D divided by 2
+      (Gatheral, Jaisson & Rosenbaum 2018); the zeta_q = q H linearity check (R^2 of zeta_q on q) is reported.
+    rationale: "GJR find H ~ 0.1 for equity indices and FX; if crypto RV is rough, a power-law kernel should forecast log RV better than the HAR cascade."
+    test: >-
+      Per token and segment: H with a 95% moving-block bootstrap CI (blocks of 30 days / 168 hours, 300 resamples, seed 0). Pooled H =
+      median over tokens. Regime stability: m(2, D) computed only over origins t whose own-token daily v0 cell (regimes.label on 1d bars)
+      is in each vol state (low / normal / high) and each of the 9 cells (>= 200 increments per D), pooled across tokens.
+    success: >-
+      Supports iff the pooled daily H < 0.5 with the bootstrap CI upper bound < 0.35 for >= 80% of tokens, in both segments, AND the per-vol-state
+      pooled H differ by < 0.1 (stability). Contradicts iff the median H >= 0.4 in either segment. Else inconclusive.
+    prior: 0.75
+    family: rough_vol
+    status: proposed
+  H-RFSV2:
+    title: "The RFSV power-law-kernel predictor of log RV beats log-HAR out of sample at 1h, 4h and 24h"
+    statement: >-
+      Primary model RFSV-GJR: E[log RV_{t,h} | F_t] from the GJR (2018) rough predictor, log v_{t+D} ~ cos(H pi)/pi D^(H+1/2) sum_s log v_{t-s} /
+      ((s + D) s^(H+1/2)) (discretised, truncated at 500 lags of the grid, weights renormalised to 1), averaged over the h target steps, with H
+      estimated on the training fold only (H-RFSV1 estimator) and a QLIKE-optimal level constant c fitted on the training fold
+      (forecast F = exp(pred + c)). Secondary RFSV-reg: OLS of log target on [1, power-law-kernel-weighted log RV] with the exponent
+      chosen on the training fold. Baselines (same deseasonalised inputs, same refits): log-HAR (OLS of log target on log of the
+      1-step, 1-day, 1-week means; constant c), level HAR (OLS), GARCH(1,1)-t on deseasonalised returns (hourly grid) / daily returns
+      (daily grid). Horizons: 1h and 4h on the hourly grid (origins every hour / every 4h), 24h on the daily grid (00 UTC origins,
+      classic daily RV from 5m). Purged quarterly expanding walk-forward: training targets end >= 1 day before the test quarter,
+      first test quarter after >= 365 training days.
+    rationale: "Rough-vol literature (GJR 2018, Bennedsen-Lunde-Pakkanen 2022) reports kernel predictors at least matching HAR with fewer parameters; HAR is itself a coarse approximation of a power-law kernel."
+    test: >-
+      Loss QLIKE on the RV level (RV/F - log(RV/F) - 1) and MSE on log RV (each model's natural log forecast). Diebold-Mariano: loss
+      difference RFSV-GJR minus log-HAR averaged over tokens per origin, Newey-West t (Bartlett, lag = max(h, NW auto)); also per-token DM
+      counts (t < -2). Holm over the 3 horizons x QLIKE per segment.
+    success: >-
+      Supports in a segment iff QLIKE(RFSV-GJR) - QLIKE(log-HAR) < 0 with Holm-adjusted p < 0.05 at >= 2 of the 3 horizons and no horizon
+      with t > +2. Contradicts iff the difference is >= 0 at every horizon. Else inconclusive. Pooled per the protocol. RFSV-reg and the
+      MSE results are reported (secondary, not part of the verdict).
+    prior: 0.30
+    family: rough_vol
+    status: proposed
+  H-VOLT1:
+    title: "A power-law (Volterra / fractional) kernel of past standardised returns predicts the next return better than EWMA momentum, net of costs"
+    statement: >-
+      Signal s_t = sum_{k=1..K} w_k z_{t-k+1}, w_k = k^(-beta) / sum k^(-beta) (the fractional-integration kernel family, beta = 1 - d),
+      K = 168 bars, z = ret / sigma_risk_prev (robust_bc, look-ahead safe); beta chosen on the training fold from {0.1, 0.3, 0.5, 0.7,
+      0.9, 1.1, 1.3, 1.5} by train IC. Baseline EWMA momentum: w_k = lambda^(k-1), half-life chosen on the same folds from
+      {1, 2, 4, 8, 16, 32, 64, 128} bars (equal effort). Bars 1h and 4h (lake, market_frame), universe L. Target: the next bar's z (sign
+      and size). Trading arm: position sign(s_t) held one bar, entered with a limit at the close (maker 2 bp, filled only if the next
+      bar trades through the price, else no position that bar), exit at the next close by limit (maker 2 bp; taker 5.5 + 2 bp slip if
+      the exit limit is not traded through), P&L in risk units (ret / sigma).
+    rationale: "Rough-vol Volterra representations suggest long-memory kernels; if any drift persistence is power-law shaped, a fractional kernel should beat a single exponential."
+    test: >-
+      Purged quarterly walk-forward (as H-RFSV2). Per timestamp: cross-token mean of s_t * z_{t+1} / sd, i.e. pooled IC; IC(Volterra) -
+      IC(EWMA) NW t over timestamps. Net Sharpe of both trading arms (annualised, per token then equal-weight), paired difference NW t.
+    success: >-
+      Supports in a segment iff IC difference > 0 with NW t > 2 AND the Volterra arm's net Sharpe > EWMA's and > 0, at >= 1 of the 2
+      frequencies. Contradicts iff the IC difference <= 0 at both frequencies or both net Sharpes <= 0. Else inconclusive.
+    prior: 0.12
+    family: rough_vol
+    status: proposed

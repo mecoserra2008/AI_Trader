@@ -1,0 +1,77 @@
+# `atx tape` (crates/atx/src/tape.rs): deterministic, read-only participant labeller on Bybit PUBLIC data.
+# No keys, no orders, no balances. Every label below is a DESCRIPTIVE footprint rule, not a tested signal: none of
+# these labels has been registered or evaluated as a hypothesis. Changing a value changes the config hash (logged).
+#
+# Streams per symbol (one websocket): orderbook.<l1_depth> (L1, 10 ms), orderbook.<near_depth> (20 ms, cancels near
+# the touch), orderbook.<deep_depth> (walls, spoofs, liquidity pools), publicTrade, allLiquidation.
+# Clocks: windows on the local receive clock; same-order grouping (clips, sweeps) on the exchange trade time T.
+window_s: 60                     # summary window (one TAPE line + one JSON row per symbol per window)
+l1_depth: 1
+near_depth: 50
+deep_depth_default: 200
+deep_depth: {BTCUSDT: 1000, ETHUSDT: 1000}
+alert_cooldown_ms: 5000          # same (symbol, alert kind, side) at most once per 5 s on the console (all are journaled)
+
+hft:                             # 1. HFT market makers / quote flicker (orderbook.1)
+  flicker_ms: 500                # an L1 level (side, price) that appears at the top and leaves within 500 ms ...
+  trade_pad_ms: 500              # ... with no print at that price from born-200 ms to end+500 ms = a flicker
+  near_touch_ticks: 5            # cancel-to-trade: size removed from levels within 5 ticks of the touch (orderbook.50
+                                 #   deltas) minus traded volume, over traded volume
+  sample_every_s: 5              # rolling-window values sampled every 5 s ...
+  history_min: 30                # ... into a 30-min history
+  pctile: 0.80                   # HFT_MM = L1 update rate AND flicker share both > their 30-min 80th percentile
+  min_history: 24                # fewer samples (2 min): label "warmup"
+
+spoof:                           # 2. spoofing / layering (deep book)
+  size_mult: 5.0                 # a wall = resting size >= 5 x the median level size within band_bps of mid
+  band_bps: 50.0
+  end_frac: 0.5                  # the wall ends when its size falls below 50 % of its peak (or the level is deleted)
+  traded_frac: 0.5               # traded at its price >= 50 % of the removed size = consumed (defence), else pulled
+  approach_ticks: 3              # SPOOF = pulled while within 3 ticks of its own-side touch, closer than at birth,
+  min_life_ms: 500               #   after living >= 500 ms (shorter = flicker, not a wall)
+  follow_s: 10                   # moved_away = mid moved away from the pulled wall's side over the next 10 s
+  max_walls: 400
+
+algo:                            # 3. execution algos (taker clips = trades with the same side and exchange time T)
+  qty_tol: 0.01                  # identical clip size within 1 %
+  min_clips: 5                   # >= 5 clips in the window
+  max_cv: 0.5                    # coefficient of variation of the inter-arrival gaps < 0.5
+  min_cadence_ms: 200            # mean gap >= 200 ms (faster = one order's fills, not slicing)
+  min_clip_p50_mult: 1.0         # only clips >= the rolling p50 clip notional (round-lot retail is not slicing); none before warm-up
+  eval_every_s: 5
+  stop_after_s: 30               # ALGO stop alert after 30 s without detection
+
+iceberg:                         # 4. icebergs / passive defence (L1 episodes)
+  exec_mult: 1.5                 # executed at the touch price > 1.5 x the largest displayed size of that episode ...
+  min_refills: 1                 # ... with >= 1 refill (displayed size rising after a hit while the price holds)
+  alert_usd_default: 50000
+  alert_usd: {BTCUSDT: 250000}
+
+sweep:                           # 5. aggressive sweeps / stop runs
+  min_levels: 2                  # multi-level sweep = same side + same T at >= 2 prices
+  burst_ms: 1000                 # burst = same-side notional over 1 s > burst_p99_mult x p99 clip notional ...
+  burst_min_ticks: 2             # ... while price moved >= 2 ticks in the aggressor's direction
+  burst_p99_mult: 3.0
+  alert_median_mult: 5.0         # ALERT a sweep > 5 x the median sweep notional (rolling) ...
+  alert_min_p99_mult: 1.0        # ... AND > the rolling p99 clip notional (whale-sized); none before warm-up
+  alert_min_history: 20
+  history: 500
+
+liq:                             # 5b. allLiquidation.<symbol>
+  cascade_n: 5                   # LIQ_CASCADE = >= 5 liquidations of one side ...
+  cascade_s: 30                  # ... within 30 s
+
+buckets:                         # 6. taker delta by clip-notional bucket (rolling distribution, no look-ahead)
+  history: 20000                 # last 20 000 clips
+  min_obs: 200
+  recompute_every_s: 5
+  p_small: 0.50                  # small < p50, medium p50-p95, large p95-p99, whale > p99
+  p_large: 0.95
+  p_whale: 0.99
+
+pool:                            # 7. next liquidity pool: largest resting level > 2 ticks from the touch within 1 % of mid
+  min_ticks: 2
+  max_pct: 1.0
+
+push:                            # 7. "where they want to push it" (descriptive)
+  big_min_imbalance: 0.2         # large+whale delta counts only when |delta| >= 20 % of large+whale gross
