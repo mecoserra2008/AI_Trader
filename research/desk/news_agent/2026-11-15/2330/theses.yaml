@@ -1,0 +1,161 @@
+# News-agent theses, round 1 (2026-11-15 23:30 UTC). Same schema as research/desk/theses.yaml (theses_v1), for the
+# orchestrator to adopt or reject. Not merged into the ledger by this agent. Model claude-opus-5-5, prompt desk-news-v1.
+# Every thesis is narrative context with no tested edge (R-MAC-3, R-NEWS-7); probabilities are calibrated against the
+# stated base rate, and where a `resolution` block is given, score on it (not on the sign of the horizon return).
+# Lake series = daily closes of 1h bars (UTC date, today excluded), so proxies lag up to a day.
+
+source_note: >-
+  Built from the desk collector (data/research/sentiment/news, 158 RSS items 11-11..11-15), Bybit public tickers at
+  23:32 UTC, research/live/LATEST.md (23:03 UTC regime block) and web sources listed in news.md / news.json.
+
+theses:
+  - id: T-NEWS-20261115-1
+    component: catalyst_week
+    title: "W47 catalysts (retail sales, NVDA, minutes, Anthropic IPO) are a vol week for BTC, not a direction week"
+    author: news_agent
+    created_ts: 2026-11-15T23:30:00Z
+    claim: >-
+      From 2026-11-15 23:30 to 2026-11-19 23:30 UTC (through retail sales Tue 13:30, NVDA Tue 21:20, the 20y auction
+      Wed 18:00, FOMC minutes Wed 19:00, the Anthropic IPO pricing ~Nov 18 and first trade ~Nov 19), BTCUSDT's 96-hour
+      log return stays inside +-1 sigma, where sigma = the scorer's 30-day 1h sigma x sqrt(96) = 0.435% x 9.8 = 4.26%,
+      i.e. a close inside [62,483, 68,041] from the 23:00 close of 65,202.9. The crowd says "this week decides
+      crypto"; we expect intraday spikes that do not add up to a trend. This conflicts in part with
+      T-CLAUDE-20261115-deep: 61,899 lies outside the band, so an early undercut that does not recover fails this one.
+    mechanism: >-
+      Scheduled macro events raise vol, not direction (R-NEWS-5, calendar readings); equity-led BTC moves are same-hour
+      only (R-PX-12); after a flush, R9 hands over to R6 whipsaw about 80% of the time (R-RB-3, R-PX-8); large surprise
+      days do not continue (R-SIG-2). The events point in different directions (hawkish data vs. an AI relief or miss),
+      which raises the odds of offsetting moves.
+    direction: neutral
+    direction_note: "Neutral: theses.py scores a hit if |r| < sigma_1h x sqrt(hours), which is exactly this claim."
+    assets: [BTCUSDT]
+    horizon_days: 4
+    probability: 0.52
+    base_rate: >-
+      The scorer's sigma is the trailing 30-day one (4.26% over 96 h). Current vol is higher: PNN 24h sigma 3.13%
+      (LATEST.md), about 5.6% over 96 h after decay (R-VOL-3). P(|r| < 4.26%) with sigma 5.6% is about 0.55 under a
+      Student-t. Shaded to 0.52 because jumps cluster (R-EXEC-3), the field gives P(jump, 24h) 31% and four catalysts
+      fall inside the window. This is a weak claim: roughly a coin flip, logged so the "decisive week" narrative gets
+      scored.
+    resolution:
+      event: "|ln(BTCUSDT 1h close at 2026-11-19T23:00Z / 65202.9)| < 0.0426 (sigma_1h(720h) 0.43487% x sqrt(96))"
+      also_record: ["the max intraday excursion in sigma", "BTC same-hour move at the NVDA release (Tue 21:00-22:00 bar)"]
+    trigger: on_create
+    proxies:
+      - {id: btc_above_band_low, series: "lake:BTCUSDT", transform: level, op: ">", value: 62483, note: "-1 sigma(96h) from 65,202.9"}
+      - {id: btc_below_band_high, series: "lake:BTCUSDT", transform: level, op: "<", value: 68041, note: "+1 sigma(96h)"}
+    invalidation:
+      any:
+        - {series: "lake:BTCUSDT", transform: level, op: "<=", value: 59877, note: "daily close beyond -2 sigma(96h): a direction week after all"}
+        - {series: "lake:BTCUSDT", transform: level, op: ">=", value: 71003, note: "daily close beyond +2 sigma(96h)"}
+    status: active
+    watch: ["retail sales 2026-11-17 13:30", "NVDA results 2026-11-17 21:20 / call 22:00", "20y auction 2026-11-18 18:00",
+            "FOMC minutes 2026-11-18 19:00", "Anthropic IPO pricing ~2026-11-18, first trade ~2026-11-19 (Nasdaq: ANT)"]
+    links: [T-USER-20261115-a, T-USER-20261115-b, T-USER-20261115-d, T-CLAUDE-20261115-deep, R-PX-12, R-NEWS-5, R-RB-3]
+
+  - id: T-NEWS-20261115-2
+    component: forced_flow
+    title: "MSCI deletion: MSTR underperforms BTC into the Nov 30 effective close"
+    author: news_agent
+    created_ts: 2026-11-15T23:30:00Z
+    claim: >-
+      MSTRUSDT's log return minus BTCUSDT's, from 2026-11-15 23:30 UTC to 2026-12-01 00:00 UTC, is negative.
+    mechanism: >-
+      MSCI deletes Strategy from the MSCI USA index (and so World and ACWI) at the close of Nov 30 under its new
+      "non-operating issuer" screen. Passive trackers must sell by that close; JPMorgan's estimate is ~$2.8B, and up to
+      $8.8B more if other index providers follow (web, Bitcoin Magazine / BeInCrypto). A shrinking mNAV also weakens
+      Strategy's equity-funded BTC buying. The sellers sell MSTR shares, not BTC, so the pressure shows up in the
+      relative price.
+    direction: short
+    direction_note: "MSTR relative to BTC; not a BTC call. The perp is 24/7, but the forced flow trades in NYSE hours."
+    assets: [MSTRUSDT]
+    horizon_days: 15
+    probability: 0.55
+    base_rate: >-
+      Index deletions earn negative abnormal returns from announcement to effective date on average, with partial
+      reversal afterwards (index-effect literature, e.g. Chen-Noronha-Singal 2004). Much of that is front-loaded: MSTR
+      fell 2.6% after hours on the Nov 11 announcement (The Block), and 23.7% vs BTC's smaller drop over 7 days
+      (tradfi_week.md). MSTR's beta to BTC is above 1, so a BTC rally can swamp the drift. Hence 0.55, not higher.
+    resolution:
+      event: "ln(MSTRUSDT 2026-12-01T00:00Z / 2026-11-15T23:30Z) - ln(BTCUSDT same window) < 0"
+      also_record: ["the same residual after a rolling 30d beta to BTC", "MSTR minus BTC from Dec 1 to Dec 8 (expected reversal)"]
+    trigger: on_create
+    proxies:
+      - {id: mstr_lags_btc_5obs, series: "lake:MSTRUSDT", vs: "lake:BTCUSDT", transform: rel_logret_5, op: "<", value: 0.0}
+      - {id: mstr_lags_btc_1obs, series: "lake:MSTRUSDT", vs: "lake:BTCUSDT", transform: rel_logret_1, op: "<", value: 0.0}
+      - {id: mstr_below_leg, series: "lake:MSTRUSDT", transform: level, op: "<", value: 107.52, note: "untouched 4h leg (tradfi_week.md)"}
+    invalidation:
+      any:
+        - {series: "lake:MSTRUSDT", vs: "lake:BTCUSDT", transform: rel_logret_10, op: ">=", value: 10.0, note: "MSTR beats BTC by >= 10% over 10 obs: the forced flow is absorbed"}
+    status: active
+    watch: ["MSCI effective close 2026-11-30 21:00 UTC", "any other index provider (FTSE / S&P / CRSP) following MSCI", "Strategy 8-K BTC purchases (Mondays)"]
+    links: [R-MM-2, R-PD-1, R-TF-1, R-MAC-3]
+
+  - id: T-NEWS-20261115-3
+    component: positioning
+    title: "ETH's weekend outperformance is short covering; ETH/BTC gives it back within 3 days"
+    author: news_agent
+    created_ts: 2026-11-15T23:30:00Z
+    claim: >-
+      ETHUSDT underperforms BTCUSDT from 2026-11-15 23:30 to 2026-11-18 23:30 UTC (negative log ratio).
+    mechanism: >-
+      ETH is up 4.6% over 24h against BTC's 2.6%, while ETH OI fell 2.7% (LATEST.md 23:03: "OI falling into the rise
+      (short covering)"). There is no spot-demand evidence: ETH spot ETFs had a 7th straight week of outflows,
+      $398.9M in the week to Nov 13, ~$2.42B since late September (newsbtc). Covering-driven relative moves fade once
+      the covering ends.
+    direction: short
+    direction_note: "ETH relative to BTC, pair framing only (log ratio); R-XS-3 says a relative rank is not an entry."
+    assets: [ETHUSDT]
+    horizon_days: 3
+    probability: 0.55
+    base_rate: >-
+      A pair's 3-day sign is about a coin flip. R-XS-2 says short-term reversal ranks the median correctly, which
+      tilts it slightly toward reversal; R-XS-3 says the quintile spread loses after costs, so the tilt is small.
+    resolution:
+      event: "ln(ETH/BTC at 2026-11-18T23:30Z) - ln(ETH/BTC at 2026-11-15T23:30Z) < 0"
+    trigger: on_create
+    proxies:
+      - {id: eth_lags_btc_1obs, series: "lake:ETHUSDT", vs: "lake:BTCUSDT", transform: rel_logret_1, op: "<", value: 0.0}
+      - {id: eth_lags_btc_3obs, series: "lake:ETHUSDT", vs: "lake:BTCUSDT", transform: rel_logret_3, op: "<", value: 0.0}
+    invalidation:
+      any:
+        - {series: "lake:ETHUSDT", vs: "lake:BTCUSDT", transform: rel_logret_3, op: ">=", value: 3.0, note: "ETH extends its lead by 3% more: real demand, not covering"}
+    status: active
+    watch: ["ETH OI turning up with price (new longs, not covering)", "first ETH ETF net-inflow day", "ETH 1h close above 1836.7 (alpha sleeve invalidation)"]
+    links: [R-XS-2, R-XS-3, R-RB-4, T-CLAUDE-20261115-deep]
+
+  - id: T-NEWS-20261115-4
+    component: real_yields
+    title: "Gold rejects 3881-3899.53 and tags 3777.97 before 3951.03 by Fri 20 Nov 20:00 UTC"
+    author: news_agent
+    created_ts: 2026-11-15T23:30:00Z
+    claim: >-
+      XAUUSDT (3886.47 at 23:32 UTC, inside the 3881-3899.53 confluence) trades at or below 3777.97 (7d VAL) before it
+      trades at or above 3951.03 (untouched 4h leg), and does so before 2026-11-20 20:00 UTC.
+    mechanism: >-
+      Real 10y yields are at p96 and the broad dollar at p99 (tradfi_week.md). Retail sales (Tue), the 20y auction and
+      the minutes (Wed) can push real yields higher (theses a / d). Late reclaim longs pay +28% annualised funding (p88).
+      Oil's fade lowers the inflation impulse, which works the other way.
+    direction: short
+    direction_note: "First-passage claim; score on `resolution`."
+    assets: [XAUUSDT]
+    horizon_days: 5
+    probability: 0.33
+    base_rate: >-
+      Driftless P(down level first) from 3886.47 = ln(3951.03/3886.47) / ln(3951.03/3777.97) = 0.37. About 10-15% of
+      paths touch neither level in 5 days (daily ATR 77), giving ~0.33. The narrative adds no tested edge (R-MAC-1,
+      R-MAC-3), so no uplift.
+    resolution:
+      event: "first touch of <= 3777.97 precedes first touch of >= 3951.03, within [created_ts, 2026-11-20T20:00Z]; neither = false"
+    trigger: on_create
+    proxies:
+      - {id: xau_below_zone, series: "lake:XAUUSDT", transform: level, op: "<", value: 3881.0}
+      - {id: xau_1d_down, series: "lake:XAUUSDT", transform: logret_1, op: "<", value: 0.0}
+      - {id: real_yield_up_5obs, series: "fred:DFII10", transform: chg_5, op: ">", value: 0.0}
+      - {id: dollar_up_5obs, series: "fred:DTWEXBGS", transform: chg_5, op: ">", value: 0.0}
+    invalidation:
+      any:
+        - {series: "lake:XAUUSDT", transform: level, op: ">=", value: 3951.03, note: "daily close at or above the untouched 4h leg"}
+    status: active
+    watch: ["Mon 07:00-12:00 UTC: no commodity entries (R-TF-6)", "retail sales Tue 13:30", "20y auction Wed 18:00", "FOMC minutes Wed 19:00"]
+    links: [T-USER-20261115-a, T-USER-20261115-d, R-TF-6, R-PX-4, R-MAC-1, R-MAC-3]

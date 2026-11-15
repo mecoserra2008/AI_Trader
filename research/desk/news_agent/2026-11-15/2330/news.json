@@ -1,0 +1,539 @@
+{
+ "contract": "news_agent_round_v1",
+ "agent": "news",
+ "round": 1,
+ "cycle_id": "20261115T2330",
+ "as_of": "2026-11-15T23:32:00Z",
+ "model": "claude-opus-5-5",
+ "prompt_version": "desk-news-v1",
+ "snapshot_ref": "research/desk/2026-11-15/2056",
+ "regime": {
+  "summary": "BTC/ETH/SOL v0 R9 liquidation, high vol (DVOL 44.2 p98); funding ~0; BTC OI flat 69.7k BTC (-2.0% vs 16:00); 24h liq longs $26.0M vs shorts $13.0M; ETH OI falling into its rise (short covering); F&G 10; narrative risk-off.",
+  "cells": {
+   "BTCUSDT": "R9",
+   "ETHUSDT": "R9",
+   "SOLUSDT": "R9"
+  },
+  "market_2332": {
+   "BTCUSDT": 65060.4,
+   "ETHUSDT": 1828.01,
+   "XAUUSDT": 3886.47,
+   "MSTRUSDT": 101.17,
+   "NVDAUSDT": 164.99,
+   "QQQUSDT": 682.59,
+   "KAVAUSDT_funding_8h_pct": -1.4098,
+   "NVDAUSDT_funding_8h_pct": 0.143,
+   "BTCUSDT_funding_8h_pct": 0.004
+  },
+  "sources": [
+   "research/live/LATEST.md (23:03)",
+   "Bybit v5 market/tickers 23:32 UTC",
+   "Bybit 15m klines, open-interest 1h"
+  ]
+ },
+ "triggers": [
+  {
+   "ts_utc": "2026-11-15T23:00Z",
+   "trigger": "CME reopen: Bybit BTC 15m bar high 65,485 low 64,780, $88.6M turnover; failed break of 65,271; OI flat",
+   "sources": [
+    "Bybit kline / open-interest API"
+   ],
+   "perps": [
+    "BTCUSDT",
+    "ETHUSDT"
+   ],
+   "theses": [
+    "deep"
+   ],
+   "expected": {
+    "direction": "none",
+    "sigma": 1.2,
+    "note": "range ~1.2 sigma_1h (0.89%); R-PX-9 weekend"
+   },
+   "status": "confirmed",
+   "window": "last_6h"
+  },
+  {
+   "ts_utc": "2026-11-15T21:57Z",
+   "trigger": "CZ denies Binance sold crypto after the Oct 29 hack; Sat-Sun liquidations $2.02B (longs $1.68B)",
+   "sources": [
+    "https://www.theblock.co/news/markets/2026-11-15-cz-denies-binance-sold-crypto-as-bitcoin-bounces-from-four-month-low-near-62000-440807"
+   ],
+   "perps": [
+    "BTCUSDT",
+    "BNBUSDT"
+   ],
+   "theses": [
+    "deep"
+   ],
+   "expected": {
+    "direction": "none"
+   },
+   "status": "confirmed",
+   "window": "last_6h"
+  },
+  {
+   "ts_utc": "2026-11-15T22:00Z",
+   "trigger": "Kava Lend exploit (11-14): ~55.2M KAVA (~$3.76M) via a dormant BUSD market; KAVA -~40%; funding -1.41%/8h",
+   "sources": [
+    "https://www.newsbtc.com/news/defi/kava-lend-exploit-collateral-busd-market-55-million/"
+   ],
+   "perps": [
+    "KAVAUSDT"
+   ],
+   "theses": [],
+   "expected": {
+    "direction": "none",
+    "note": "crowded short; depth too thin for limits"
+   },
+   "status": "confirmed",
+   "window": "last_6h"
+  },
+  {
+   "ts_utc": "2026-11-15T21:00Z",
+   "trigger": "ETH ETFs 7th straight outflow week ($398.9M; ~$2.42B since late Sep); BTC ETFs -$1.91B over 7 days",
+   "sources": [
+    "https://www.newsbtc.com/ethereum-news/ether-etfs-seventh-week-outflows-398-million-november-2026/",
+    "https://www.theblock.co/news/markets/2026-11-15-cz-denies-binance-sold-crypto-as-bitcoin-bounces-from-four-month-low-near-62000-440807"
+   ],
+   "perps": [
+    "ETHUSDT",
+    "BTCUSDT"
+   ],
+   "theses": [
+    "a",
+    "deep"
+   ],
+   "expected": {
+    "direction": "none",
+    "note": "R-NEWS-7"
+   },
+   "status": "confirmed",
+   "window": "last_6h"
+  },
+  {
+   "ts_utc": "2026-11-15T22:50Z",
+   "trigger": "Huang (resigned Nov 12) campaigns to return; petition >100k; CEO uncertainty into the print",
+   "sources": [
+    "https://cointelegraph.com/magazine/us-sellers-drive-bitcoin-crash-jensen-plots-comeback-hodlers-digest"
+   ],
+   "perps": [
+    "NVDAUSDT",
+    "QQQUSDT",
+    "SOXLUSDT",
+    "MUUSDT"
+   ],
+   "theses": [
+    "b",
+    "d"
+   ],
+   "expected": {
+    "direction": "none",
+    "note": "NVDA vol"
+   },
+   "status": "confirmed",
+   "window": "last_6h"
+  },
+  {
+   "ts_utc": null,
+   "trigger": "Anthropic IPO: 825M shares at $70-78 (~$64.35B, ~$1.4T); pricing ~11-18, Nasdaq ANT ~11-19",
+   "sources": [
+    "https://www.upi.com/Top_News/US/2026/11/10/anthropic-ipo-stock-range-nasdaq/6651794326745/",
+    "https://decrypt.co/383001/morning-minute-what-anthropics-1-4-trillion-ipo-means-for-crypto"
+   ],
+   "perps": [
+    "BTCUSDT",
+    "ANTHROPICUSDT",
+    "NVDAUSDT",
+    "QQQUSDT"
+   ],
+   "theses": [
+    "b",
+    "d"
+   ],
+   "expected": {
+    "direction": "untested",
+    "note": "crowd: liquidity drain; HC-NEWS-20261115-2"
+   },
+   "status": "confirmed",
+   "window": "in_force"
+  },
+  {
+   "ts_utc": "2026-11-30T21:00Z",
+   "trigger": "MSCI deletes MSTR at the Nov 30 close; JPM est ~$2.8B passive selling, up to +$8.8B if others follow",
+   "sources": [
+    "https://theblock.co/news/markets/2026-11-11-strategy-metaplanet-lose-msci-index-membership-november-reshuffle-438437",
+    "https://bitcoinmagazine.com/markets/msci-removes-strategy-mstr-usa-index"
+   ],
+   "perps": [
+    "MSTRUSDT",
+    "COINUSDT"
+   ],
+   "theses": [
+    "deep"
+   ],
+   "expected": {
+    "direction": "MSTR vs BTC down",
+    "note": "T-NEWS-20261115-2"
+   },
+   "status": "confirmed",
+   "window": "in_force"
+  },
+  {
+   "ts_utc": "2026-11-16",
+   "trigger": "Bybit: ANTHROPICUSDT split and rename; spot delisting of 12 pairs (spot only per the title)",
+   "sources": [
+    "https://api.bybit.com/v5/announcements/index?locale=en-US&limit=50"
+   ],
+   "perps": [
+    "ANTHROPICUSDT"
+   ],
+   "theses": [],
+   "expected": {
+    "direction": "none"
+   },
+   "status": "unconfirmed: article pages blocked, ratio/time/list unknown",
+   "window": "next_48h"
+  },
+  {
+   "ts_utc": "2026-11-16T08:00Z",
+   "trigger": "Deribit BTC daily expiry: OI $346.1M, P/C 1.94, max pain 68,000",
+   "sources": [
+    "research/desk/2026-11-15/2056/news.json"
+   ],
+   "perps": [
+    "BTCUSDT"
+   ],
+   "theses": [],
+   "expected": {
+    "direction": "none",
+    "note": "R-VOL-28; HC-NEWS-20261115-4"
+   },
+   "status": "confirmed",
+   "window": "next_48h"
+  },
+  {
+   "ts_utc": "2026-11-16T10:00Z",
+   "trigger": "Fed Gov. Barr: AI and Financial Stability (Milan)",
+   "sources": [
+    "https://www.federalreserve.gov/newsevents/2026-November.htm"
+   ],
+   "perps": [],
+   "theses": [
+    "a"
+   ],
+   "expected": {
+    "direction": "none"
+   },
+   "status": "confirmed",
+   "window": "next_48h"
+  },
+  {
+   "ts_utc": "2026-11-16T13:00Z",
+   "trigger": "ARB unlock 92.65M ARB; ~$12.5M at 0.13446 (W47.yaml's $27.6M was at the 2025 price); 0.67x 24h turnover",
+   "sources": [
+    "research/calendar/2026-W47.yaml",
+    "Bybit tickers 23:32"
+   ],
+   "perps": [
+    "ARBUSDT"
+   ],
+   "theses": [],
+   "expected": {
+    "direction": "untested",
+    "note": "vol only"
+   },
+   "status": "confirmed",
+   "window": "next_48h",
+   "erratum": "W47.yaml USD value"
+  },
+  {
+   "ts_utc": "2026-11-16",
+   "trigger": "STRK / SEI / CRO monthly unlocks",
+   "sources": [
+    "web aggregators (2025 pages; 2026 amounts unverified)"
+   ],
+   "perps": [
+    "STRKUSDT",
+    "SEIUSDT",
+    "CROUSDT"
+   ],
+   "theses": [],
+   "expected": {
+    "direction": "untested"
+   },
+   "status": "unconfirmed",
+   "window": "next_48h"
+  },
+  {
+   "ts_utc": "2026-11-16T17:00Z",
+   "trigger": "Warsh, SF Fed conference",
+   "sources": [
+    "research/desk/2026-11-15/2056/reports/tradfi_week.md"
+   ],
+   "perps": [],
+   "theses": [
+    "a"
+   ],
+   "expected": {
+    "direction": "none"
+   },
+   "status": "unconfirmed: not on the Fed Board calendar",
+   "window": "next_48h"
+  },
+  {
+   "ts_utc": "2026-11-17T13:30Z",
+   "trigger": "US October retail sales (advance)",
+   "sources": [
+    "https://forexfundamentals.com/economic-calendar/us-retail-sales/2026-11-17"
+   ],
+   "perps": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "XAUUSDT",
+    "QQQUSDT"
+   ],
+   "theses": [
+    "a",
+    "d"
+   ],
+   "expected": {
+    "direction": "vol",
+    "note": "consensus +0.3% (forexfundamentals) vs +0.2% (kiplinger): conflict; Nov 10 CPI analog BTC -2.4 sigma over 3h"
+   },
+   "status": "confirmed",
+   "window": "next_48h"
+  },
+  {
+   "ts_utc": "2026-11-17T14:10Z",
+   "trigger": "Fed Gov. Waller, Payments (TCH)",
+   "sources": [
+    "https://www.federalreserve.gov/newsevents/2026-November.htm"
+   ],
+   "perps": [],
+   "theses": [
+    "a"
+   ],
+   "expected": {
+    "direction": "none"
+   },
+   "status": "confirmed",
+   "window": "next_48h"
+  },
+  {
+   "ts_utc": "2026-11-17T21:20Z",
+   "trigger": "NVDA Q3 FY27 results (call 22:00 UTC); implied +-9.6..10.8% (Nov 12)",
+   "sources": [
+    "https://investor.nvidia.com/news/press-release-details/2026/NVIDIA-Sets-Conference-Call-for-Third-Quarter-Financial-Results/"
+   ],
+   "perps": [
+    "NVDAUSDT",
+    "SOXLUSDT",
+    "MUUSDT",
+    "QQQUSDT",
+    "BTCUSDT"
+   ],
+   "theses": [
+    "b",
+    "d"
+   ],
+   "expected": {
+    "direction": "vol",
+    "sigma": 1.6,
+    "note": "NVDA ~1.6x 1d ATR; BTC same-hour beta 0.29 (R-PX-12)"
+   },
+   "status": "confirmed",
+   "window": "next_48h"
+  },
+  {
+   "ts_utc": "2026-11-18T18:00Z",
+   "trigger": "20y bond auction ($16bn)",
+   "sources": [
+    "research/desk/2026-11-15/2056/reports/tradfi_week.md"
+   ],
+   "perps": [
+    "XAUUSDT",
+    "BTCUSDT"
+   ],
+   "theses": [
+    "a",
+    "d"
+   ],
+   "expected": {
+    "direction": "vol"
+   },
+   "status": "confirmed",
+   "window": "beyond_48h"
+  },
+  {
+   "ts_utc": "2026-11-18T19:00Z",
+   "trigger": "FOMC minutes (Oct 27-28)",
+   "sources": [
+    "https://www.federalreserve.gov/newsevents/2026-November.htm"
+   ],
+   "perps": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "XAUUSDT"
+   ],
+   "theses": [
+    "a",
+    "d"
+   ],
+   "expected": {
+    "direction": "vol"
+   },
+   "status": "confirmed",
+   "window": "beyond_48h"
+  }
+ ],
+ "theses_file": "research/desk/news_agent/2026-11-15/2330/theses.yaml",
+ "theses": [
+  {
+   "id": "T-NEWS-20261115-1",
+   "direction": "neutral",
+   "assets": [
+    "BTCUSDT"
+   ],
+   "p": 0.52,
+   "window_end": "2026-11-19T23:30Z",
+   "band": [
+    62483,
+    68041
+   ]
+  },
+  {
+   "id": "T-NEWS-20261115-2",
+   "direction": "short",
+   "assets": [
+    "MSTRUSDT"
+   ],
+   "p": 0.55,
+   "window_end": "2026-12-01T00:00Z",
+   "note": "relative to BTC"
+  },
+  {
+   "id": "T-NEWS-20261115-3",
+   "direction": "short",
+   "assets": [
+    "ETHUSDT"
+   ],
+   "p": 0.55,
+   "window_end": "2026-11-18T23:30Z",
+   "note": "ETH/BTC log ratio"
+  },
+  {
+   "id": "T-NEWS-20261115-4",
+   "direction": "short",
+   "assets": [
+    "XAUUSDT"
+   ],
+   "p": 0.33,
+   "window_end": "2026-11-20T20:00Z",
+   "levels": {
+    "down": 3777.97,
+    "up": 3951.03
+   }
+  }
+ ],
+ "conflicts": [
+  {
+   "id": "HC-NEWS-20261115-1",
+   "narrative": "7-day ETF outflow streak = more downside",
+   "evidence": "13/158 collector headlines mention ETFs, mean tone -0.36; Anchorage 'US sellers'",
+   "rules": [
+    "R-NEWS-7"
+   ],
+   "lean": "no direction from flows",
+   "hypothesis": "After >= 7 consecutive US spot BTC ETF net-outflow days (Farside, 2024-01..), compare BTC's vol-standardised next-5d return with the unconditional one; also regress the 5d flow z on the next-5d return (HAC)",
+   "success": "mean < -0.3 sigma with block-bootstrap 95% CI < 0 in both llm_in_sample and clean_holdout"
+  },
+  {
+   "id": "HC-NEWS-20261115-2",
+   "narrative": "mega-IPOs (Anthropic $64B, SpaceX, OpenAI) drain crypto liquidity",
+   "evidence": "CoinDesk 11-13 x2, CZ attribution, Saylor, a hedge fund (Crypto Briefing), Decrypt",
+   "rules": [
+    "R-PX-12",
+    "R-NEWS-7"
+   ],
+   "lean": "untested; no trade on drain or relief",
+   "hypothesis": "Monthly US IPO proceeds (Ritter) vs BTC's vol-standardised monthly return (HAC); event study of US IPOs >= $5B on windows [pricing-5d, 0] and [0, +5d]",
+   "success": "slope t < -2 in both segments, and pre-window mean < 0 with post-window mean > 0; flag low power"
+  },
+  {
+   "id": "HC-NEWS-20261115-3",
+   "narrative": "crowded shorts (deeply negative funding) = squeeze",
+   "evidence": "KAVA -1.41%/8h, RARE -3986% ann, SOL funding p0",
+   "rules": [
+    "R-RB-4",
+    "R-AVOID-1",
+    "R-CARRY-2"
+   ],
+   "lean": "the rules",
+   "hypothesis": "Funding <= -0.5%/8h on a perp with depth25 >= $50k: next 24h return net of funding paid vs names matched at funding p10",
+   "success": "> +0.25 sigma net with CI > 0 in both segments"
+  },
+  {
+   "id": "HC-NEWS-20261115-4",
+   "narrative": "max pain 68k pulls BTC into the daily expiry",
+   "evidence": "Deribit 11-16 OI $346M, P/C 1.94",
+   "rules": [
+    "R-VOL-28"
+   ],
+   "lean": "no pin",
+   "hypothesis": "Deribit daily expiries with OI >= $200M: |ln(S/maxpain)| at T-12h vs T, against a placebo of the same hours without a big expiry",
+   "success": "shrink > placebo with t > 2 in both segments",
+   "data_gap": "historical OI by strike"
+  },
+  {
+   "id": "HC-NEWS-20261115-5",
+   "narrative": "F&G 10 = the bottom",
+   "evidence": "minority: CryptoSlate 'looks cheap', CZ 'bought'",
+   "rules": [
+    "R-NEWS-7",
+    "R-RB-1",
+    "R-RB-2"
+   ],
+   "lean": "the rules",
+   "hypothesis": "First F&G <= 10 print (14d dedup): BTC's 7d/14d vol-standardised return",
+   "success": "> +0.3 sigma with CI > 0 in both segments"
+  }
+ ],
+ "headline_counts": {
+  "window": "2026-11-11T21:46Z..2026-11-15T23:00Z",
+  "n": 158,
+  "crash_slide_low": 32,
+  "etf": 13,
+  "nvidia_jensen": 15,
+  "hack_exploit": 10,
+  "fed_rate": 10,
+  "liquidity_stablecoin": 9,
+  "bottom_cheap_buy": 4,
+  "ipo_anthropic": 3,
+  "binance": 4,
+  "strategy_msci": 4
+ },
+ "thesis_check": {
+  "run": "scripts/thesis_check.py --dry-run --no-refresh --as-of 2026-11-15T23:30Z",
+  "a": "strengthening 4/5",
+  "b": "active 4/6",
+  "c": "weakening 1/5 (waiting for trigger)",
+  "d": "strengthening 7/9",
+  "deep": "active 3/6, not invalidated",
+  "btc_since_1900_pct": 0.761,
+  "eth_since_1900_pct": 0.633
+ },
+ "data_gaps": [
+  "Bybit article pages blocked: ANTHROPIC split ratio/time and the list of 12 delisted pairs unknown",
+  "2026 unlock amounts for STRK/SEI/CRO unverified (aggregators return 2025 pages)",
+  "Dec-hike probability stale (11-10)",
+  "no CME futures gap figure",
+  "retail sales consensus conflict",
+  "Reddit keys not set up"
+ ],
+ "honesty": {
+  "direction_claim": false,
+  "base_rate": "see each thesis's base_rate; none beats its driftless value by a tested edge",
+  "no_sizes": true
+ }
+}
