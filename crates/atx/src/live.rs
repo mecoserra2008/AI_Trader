@@ -1335,7 +1335,8 @@ impl<'a> Desk<'a> {
                    "filled_qty": tr.filled_qty, "avg_entry": tr.avg_entry, "mid_at_submit": mid, "entry_ref": tr.entry_ref, "slip_bps_vs_mid": slip_mid,
                    "paper_slip_bps": self.cfg.entry.slip_bps, "repegs": tr.repegs, "orders": tr.order_ids, "fills": fills, "submitted_ms": tr.submitted_ms,
                    "first_fill_ms": tr.first_fill_ms, "time_to_first_fill_ms": tr.first_fill_ms.map(|t| t - tr.submitted_ms), "window_ms": window_ms,
-                   "stop": tr.stop, "target": tr.target, "risk_to_stop_usd": tr.risk_to_stop_usd, "max_loss_usd": tr.max_loss_usd, "approved_by": approved_by, "notes": tr.notes}),
+                   "stop": tr.stop, "target": tr.target, "risk_to_stop_usd": tr.risk_to_stop_usd, "max_loss_usd": tr.max_loss_usd, "approved_by": approved_by, "notes": tr.notes,
+                   "test_hooks": if test.any() { json!({"behind_bps": test.test_behind_bps, "window_secs": test.test_window_secs}) } else { Value::Null }}),
             &versions,
         )?;
         finish(&tr.status, json!({"trade": tr}))?;
@@ -1382,6 +1383,35 @@ impl<'a> Desk<'a> {
         let mut n = 0u32;
         let reason;
         loop {
+            // 1. the resting order first: a fill always wins over a later chase decision
+            let mut cum = 0.0;
+            if let Some((oid, _)) = cur.clone() {
+                let o = t.order_status(&tr.symbol, &oid).await.ok().flatten();
+                let status = o.as_ref().and_then(|o| o["orderStatus"].as_str()).unwrap_or("").to_string();
+                cum = o.as_ref().map(|o| num(&o["cumExecQty"])).unwrap_or(0.0);
+                if cum > 0.0 && tr.first_fill_ms.is_none() {
+                    tr.first_fill_ms = Some(o.as_ref().map(|o| num(&o["updatedTime"]) as i64).filter(|x| *x > 0).unwrap_or_else(now_ms));
+                }
+                match status.as_str() {
+                    "Filled" => {
+                        cur = None;
+                        reason = "filled".to_string();
+                        break;
+                    }
+                    "Cancelled" | "Rejected" | "Deactivated" | "PartiallyFilledCanceled" => {
+                        done_qty += cum;
+                        self.jw(
+                            "order",
+                            json!({"action": "venue_cancelled", "trade_id": tr.id, "symbol": tr.symbol, "order_id": oid, "status": status, "cum_exec_qty": cum,
+                                   "reject_reason": o.as_ref().map(|o| o["rejectReason"].clone()), "cancel_type": o.as_ref().map(|o| o["cancelType"].clone())}),
+                            &tr.versions,
+                        )?;
+                        cur = None; // PostOnly would have crossed: re-place at the new touch
+                        cum = 0.0;
+                    }
+                    _ => {}
+                }
+            }
             if self.paths.kill_active() {
                 reason = "kill".to_string();
                 break;
@@ -1399,23 +1429,19 @@ impl<'a> Desk<'a> {
                 reason = "stop_breached".to_string();
                 break;
             }
-            if !lv::peg_price_ok(side, tr.qty, px, tr.stop, fees, &self.cfg, tr.stop_slip_bps) {
-                reason = "chase_limit".to_string();
+            // 2. the size allowed at this price: risk to the stop <= 1.70, notional <= cap / gross headroom, worst case <= 2 USD
+            let allowed = lv::chase_qty(side, tr.qty, tr.notional_usd, px, tr.stop, fees, &self.cfg, rule.qty_step);
+            let filled_now = done_qty + cum;
+            let stop_reason = if filled_now > 0.0 { "partial_chase_limit" } else { "chase_limit" };
+            if allowed <= 0.0 || !lv::peg_price_ok(side, allowed.max(filled_now), px, tr.stop, fees, &self.cfg, tr.stop_slip_bps) {
+                reason = stop_reason.to_string();
                 break;
             }
+            let order_qty = round_to_step(allowed - done_qty, rule.qty_step, Round::Down);
             match cur.clone() {
                 None => {
-                    let allowed = lv::chase_qty(side, tr.qty, tr.notional_usd, px, tr.stop, fees, &self.cfg, rule.qty_step);
-                    let remaining = round_to_step(allowed - done_qty, rule.qty_step, Round::Down);
-                    if remaining < rule.min_qty || remaining * px < rule.min_notional {
-                        reason = if done_qty > 0.0 && allowed >= tr.qty {
-                            "filled"
-                        } else if done_qty > 0.0 {
-                            "partial_chase_limit"
-                        } else {
-                            "chase_limit"
-                        }
-                        .to_string();
+                    if order_qty < rule.min_qty || order_qty * px < rule.min_notional {
+                        reason = if done_qty > 0.0 && allowed >= tr.qty { "filled" } else { stop_reason }.to_string();
                         break;
                     }
                     n += 1;
@@ -1424,7 +1450,7 @@ impl<'a> Desk<'a> {
                         symbol: tr.symbol.clone(),
                         side: side.bybit_open(),
                         order_type: "Limit",
-                        qty: format_step(remaining, rule.qty_step),
+                        qty: format_step(order_qty, rule.qty_step),
                         price: Some(format_step(px, rule.tick_size)),
                         time_in_force: self.cfg.entry.time_in_force.clone(),
                         take_profit: tr.target.map(|x| format_step(x, rule.tick_size)),
@@ -1441,9 +1467,14 @@ impl<'a> Desk<'a> {
                             }
                             tr.order_ids.push(oid.clone());
                             tr.link_ids.push(link.clone());
-                            self.jw("order", json!({"action": "place", "trade_id": tr.id, "symbol": tr.symbol, "side": side, "order_id": oid, "link": link, "price": px, "qty": remaining, "stop": tr.stop, "target": tr.target, "tif": req.time_in_force, "bid": book.best_bid(), "ask": book.best_ask()}), &tr.versions)?;
+                            self.jw(
+                                "order",
+                                json!({"action": "place", "trade_id": tr.id, "symbol": tr.symbol, "side": side, "order_id": oid, "link": link, "price": px, "qty": order_qty,
+                                       "stop": tr.stop, "target": tr.target, "tif": req.time_in_force, "bid": book.best_bid(), "ask": book.best_ask()}),
+                                &tr.versions,
+                            )?;
                             cur = Some((oid, px));
-                            cur_qty = remaining;
+                            cur_qty = order_qty;
                         }
                         Err(e) => {
                             self.jw(
@@ -1456,58 +1487,37 @@ impl<'a> Desk<'a> {
                         }
                     }
                 }
-                Some((oid, opx)) => {
-                    let o = t.order_status(&tr.symbol, &oid).await.ok().flatten();
-                    let status = o.as_ref().and_then(|o| o["orderStatus"].as_str()).unwrap_or("").to_string();
-                    let cum = o.as_ref().map(|o| num(&o["cumExecQty"])).unwrap_or(0.0);
-                    if cum > 0.0 && tr.first_fill_ms.is_none() {
-                        tr.first_fill_ms = Some(o.as_ref().map(|o| num(&o["updatedTime"]) as i64).filter(|x| *x > 0).unwrap_or_else(now_ms));
+                Some((oid, opx)) if (px - opx).abs() > rule.tick_size * 0.5 => {
+                    // the chase may only shrink the order
+                    if order_qty <= cum + 1e-12 || order_qty - cum < rule.min_qty {
+                        reason = stop_reason.to_string();
+                        break;
                     }
-                    match status.as_str() {
-                        "Filled" => {
-                            cur = None;
-                            reason = "filled".to_string();
-                            break;
-                        }
-                        "Cancelled" | "Rejected" | "Deactivated" | "PartiallyFilledCanceled" => {
-                            done_qty += cum;
-                            self.jw("order", json!({"action": "venue_cancelled", "trade_id": tr.id, "symbol": tr.symbol, "order_id": oid, "status": status, "cum_exec_qty": cum, "reject_reason": o.as_ref().map(|o| o["rejectReason"].clone()), "cancel_type": o.as_ref().map(|o| o["cancelType"].clone())}), &tr.versions)?;
-                            cur = None; // PostOnly would have crossed: re-place at the new touch
-                        }
-                        _ if (px - opx).abs() > rule.tick_size * 0.5 => {
-                            // the chase may only shrink the order: risk to the stop <= 1.70, notional <= the decided one
-                            let allowed = lv::chase_qty(side, tr.qty, tr.notional_usd, px, tr.stop, fees, &self.cfg, rule.qty_step);
-                            let order_qty = round_to_step(allowed - done_qty, rule.qty_step, Round::Down);
-                            if order_qty <= cum + 1e-12 || order_qty - cum < rule.min_qty {
-                                reason = if cum + done_qty > 0.0 { "partial_chase_limit" } else { "chase_limit" }.to_string();
-                                break;
+                    let new_qty = (order_qty + 1e-12 < cur_qty).then(|| format_step(order_qty, rule.qty_step));
+                    match self.venue.amend(&tr.symbol, &oid, &format_step(px, rule.tick_size), new_qty.as_deref()).await {
+                        Ok(()) => {
+                            tr.repegs += 1;
+                            if new_qty.is_some() {
+                                cur_qty = order_qty;
                             }
-                            let new_qty = (order_qty + 1e-12 < cur_qty).then(|| format_step(order_qty, rule.qty_step));
-                            match self.venue.amend(&tr.symbol, &oid, &format_step(px, rule.tick_size), new_qty.as_deref()).await {
-                                Ok(()) => {
-                                    tr.repegs += 1;
-                                    if new_qty.is_some() {
-                                        cur_qty = order_qty;
-                                    }
-                                    self.jw(
-                                        "order",
-                                        json!({"action": "repeg", "trade_id": tr.id, "symbol": tr.symbol, "order_id": oid, "from": opx, "to": px, "qty": cur_qty, "cum_exec_qty": cum, "bid": book.best_bid(), "ask": book.best_ask()}),
-                                        &tr.versions,
-                                    )?;
-                                    cur = Some((oid, px));
-                                }
-                                Err(e) => {
-                                    self.jw(
-                                        "order",
-                                        json!({"action": "repeg_error", "trade_id": tr.id, "symbol": tr.symbol, "order_id": oid, "to": px, "error": format!("{e:#}")}),
-                                        &tr.versions,
-                                    )?;
-                                }
-                            }
+                            self.jw(
+                                "order",
+                                json!({"action": "repeg", "trade_id": tr.id, "symbol": tr.symbol, "order_id": oid, "from": opx, "to": px, "qty": cur_qty, "cum_exec_qty": cum,
+                                       "bid": book.best_bid(), "ask": book.best_ask()}),
+                                &tr.versions,
+                            )?;
+                            cur = Some((oid, px));
                         }
-                        _ => {}
+                        Err(e) => {
+                            self.jw(
+                                "order",
+                                json!({"action": "repeg_error", "trade_id": tr.id, "symbol": tr.symbol, "order_id": oid, "to": px, "error": format!("{e:#}")}),
+                                &tr.versions,
+                            )?;
+                        }
                     }
                 }
+                Some(_) => {}
             }
             tokio::time::sleep(poll).await;
         }

@@ -98,7 +98,8 @@ def _vwap(rows: list[dict], key: str) -> float | None:
 
 
 def trades(root: Path) -> list[Trade]:
-    orders = [o for o in read(root, "order") if o.get("action") == "entry_done"]
+    # entries run with demo test hooks (--test-behind-bps / --test-window-secs) are mechanics tests, not trades
+    orders = [o for o in read(root, "order") if o.get("action") == "entry_done" and not o.get("test_hooks")]
     fills = read(root, "fill")
     closes = {c["trade_id"]: c for c in read(root, "position_update") if c.get("action") == "closed"}
     by_trade: dict[str, dict[str, list[dict]]] = defaultdict(lambda: {"entry": [], "exit": []})
