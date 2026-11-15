@@ -1,0 +1,226 @@
+{
+  "meta": {
+    "created_utc": "2026-11-14T11:34:06+00:00",
+    "hypotheses": [
+      "H-ARB1",
+      "H-ARB2"
+    ],
+    "seed": 20261114,
+    "window": [
+      "2026-08-03",
+      "2026-11-13"
+    ],
+    "segment": "clean_holdout (every day is after research.knowledge_cutoff 2026-07-01)",
+    "rules": "5 days per study instrument from day_pool(): weekdays (any day for crypto), listed >= 7 days, no US holiday for stocks/ETFs; where the Bybit 1 s book already exists in data/research/micro_days the pool is restricted to those days (no duplicate ob200 downloads; availability only). Sundays before sampled Mondays are added for FX / metals / energy (weekend reopen, descriptive only, never in H-ARB1/2 counts).",
+    "latency": {
+      "rtt_p50_s": 0.66,
+      "rtt_p90_s": 10.6,
+      "source": "Bybit demo order/create 2026-11-09 (slower venue); cTrader request RTT p50 0.12 s"
+    },
+    "pre_specified": {
+      "arb1_min_episode_s": "> 2 x rtt_p50 = 1.32 s",
+      "fill_delay_s": 1,
+      "sensitivity": "rtt_p90: episodes > 21.2 s, fill delay 11 s",
+      "fees": "round trip = 2 x (Bybit taker from config/fees.yaml + cTrader commission per side from symbol details)",
+      "exit": "gap halves, 60 min, or CFD session end",
+      "arb2_ci": "day-clustered bootstrap, 4000 draws"
+    },
+    "written_before_ctrader_data": true
+  },
+  "instruments": {
+    "XAUUSDT": {
+      "class": "metal",
+      "pool_size": 9,
+      "pool_from_cache": true,
+      "days": [
+        "2026-08-04",
+        "2026-08-17",
+        "2026-10-02",
+        "2026-10-09",
+        "2026-10-16"
+      ],
+      "reopen_sundays": [
+        "2026-08-16"
+      ]
+    },
+    "XAGUSDT": {
+      "class": "metal",
+      "pool_size": 75,
+      "pool_from_cache": false,
+      "days": [
+        "2026-08-28",
+        "2026-09-22",
+        "2026-10-05",
+        "2026-10-12",
+        "2026-11-11"
+      ],
+      "reopen_sundays": [
+        "2026-10-04",
+        "2026-10-11"
+      ]
+    },
+    "CLUSDT": {
+      "class": "energy",
+      "pool_size": 75,
+      "pool_from_cache": false,
+      "days": [
+        "2026-10-02",
+        "2026-10-06",
+        "2026-10-13",
+        "2026-11-02",
+        "2026-11-10"
+      ],
+      "reopen_sundays": [
+        "2026-11-01"
+      ]
+    },
+    "BZUSDT": {
+      "class": "energy",
+      "pool_size": 75,
+      "pool_from_cache": false,
+      "days": [
+        "2026-09-07",
+        "2026-09-10",
+        "2026-09-14",
+        "2026-10-22",
+        "2026-11-11"
+      ],
+      "reopen_sundays": [
+        "2026-09-06",
+        "2026-09-13"
+      ]
+    },
+    "EURUSDUSDT": {
+      "class": "fx",
+      "pool_size": 44,
+      "pool_from_cache": false,
+      "days": [
+        "2026-10-09",
+        "2026-10-19",
+        "2026-10-23",
+        "2026-10-27",
+        "2026-11-04"
+      ],
+      "reopen_sundays": [
+        "2026-10-18"
+      ]
+    },
+    "BTCUSDT": {
+      "class": "crypto",
+      "pool_size": 12,
+      "pool_from_cache": true,
+      "days": [
+        "2026-08-18",
+        "2026-09-23",
+        "2026-10-16",
+        "2026-11-02",
+        "2026-11-08"
+      ],
+      "reopen_sundays": []
+    },
+    "ETHUSDT": {
+      "class": "crypto",
+      "pool_size": 12,
+      "pool_from_cache": true,
+      "days": [
+        "2026-08-04",
+        "2026-08-18",
+        "2026-09-23",
+        "2026-10-16",
+        "2026-11-02"
+      ],
+      "reopen_sundays": []
+    },
+    "NVDAUSDT": {
+      "class": "stock",
+      "pool_size": 9,
+      "pool_from_cache": true,
+      "days": [
+        "2026-08-04",
+        "2026-08-18",
+        "2026-09-23",
+        "2026-10-09",
+        "2026-10-16"
+      ],
+      "reopen_sundays": []
+    },
+    "TSLAUSDT": {
+      "class": "stock",
+      "pool_size": 74,
+      "pool_from_cache": false,
+      "days": [
+        "2026-08-14",
+        "2026-08-18",
+        "2026-09-01",
+        "2026-09-25",
+        "2026-09-28"
+      ],
+      "reopen_sundays": []
+    },
+    "COINUSDT": {
+      "class": "stock",
+      "pool_size": 74,
+      "pool_from_cache": false,
+      "days": [
+        "2026-09-16",
+        "2026-09-28",
+        "2026-10-13",
+        "2026-10-14",
+        "2026-10-30"
+      ],
+      "reopen_sundays": []
+    },
+    "CRWVUSDT": {
+      "class": "stock",
+      "pool_size": 74,
+      "pool_from_cache": false,
+      "days": [
+        "2026-08-05",
+        "2026-08-06",
+        "2026-08-26",
+        "2026-09-30",
+        "2026-10-26"
+      ],
+      "reopen_sundays": []
+    },
+    "MSTRUSDT": {
+      "class": "stock",
+      "pool_size": 74,
+      "pool_from_cache": false,
+      "days": [
+        "2026-08-13",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-10-21",
+        "2026-11-13"
+      ],
+      "reopen_sundays": []
+    },
+    "GOOGLUSDT": {
+      "class": "stock",
+      "pool_size": 74,
+      "pool_from_cache": false,
+      "days": [
+        "2026-08-11",
+        "2026-08-21",
+        "2026-08-27",
+        "2026-08-28",
+        "2026-08-31"
+      ],
+      "reopen_sundays": []
+    },
+    "QQQUSDT": {
+      "class": "etf",
+      "pool_size": 9,
+      "pool_from_cache": true,
+      "days": [
+        "2026-08-18",
+        "2026-10-02",
+        "2026-10-09",
+        "2026-11-02",
+        "2026-11-10"
+      ],
+      "reopen_sundays": []
+    }
+  }
+}

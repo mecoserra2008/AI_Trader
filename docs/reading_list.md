@@ -81,3 +81,48 @@ Core method references (books and journals, not on arXiv). These are the specifi
 
 - **Tier 1 & 2 (design papers):** fetch → write a design-notes file in `docs/paper_notes/{ID}.md` (key finding, what we adopt, what we reject). The four-critic pipeline is built for strategy/backtest claims and fits these poorly.
 - **Tier 3 and any strategy/alpha papers:** full pipeline: `arxiv-paper-fetcher` → 4 critics in parallel → `bucket-classifier` → `bucket.json`. Only bucket A/B ideas become candidate tools.
+
+## Added 2026-11-11 (literature agent B6)
+
+Verified against the arXiv API and/or Crossref on 2026-11-10. Design notes are in `docs/paper_notes/<slug>.md`, and the synthesis and draft hypotheses are in `research/reports/literature_2026-11-11.md`.
+
+| Reference | Why it matters to us | Status |
+|---|---|---|
+| Sharpe (1992), Asset allocation: management style and performance measurement, JPM 18(2) | returns-based style analysis for H-PD2 | reviewed |
+| Fung & Hsieh (2001), The risk in hedge fund strategies: trend followers, RFS 14(2) | trend = long lookback straddle (convexity factor) | reviewed |
+| Meucci (2009), Managing Diversification, Risk | effective number of bets (H-PD1) | reviewed |
+| Kelly, Pruitt & Su (2019), Characteristics are covariances (IPCA), JFE 134(3) | conditional factor ranking (H-PD3) | reviewed |
+| Gu, Kelly & Xiu (2020), Empirical asset pricing via machine learning, RFS 33(5) | ML protocol; gains need a large cross-section | reviewed |
+| Liu, Tsyvinski & Wu (2022), Common risk factors in cryptocurrency, JF 77(2) | crypto market / size / momentum factors | reviewed |
+| Ehsani & Linnainmaa (2022), Factor momentum and the momentum factor, JF 77(3) | trailing-performance baseline for strategy ranking | reviewed |
+| Haddad, Kozak & Santosh (2020), Factor timing, RFS 33(5) | time the dominant PCs, not each strategy | reviewed |
+| Lou, Polk & Skouras (2019), A tug of war: overnight vs intraday, JFE 134(1) | H-TF2 night effect | reviewed |
+| Boyarchenko, Larsen & Whelan (2023), The overnight drift, RFS 36(9); and the 2026 Liberty Street post "The disappearing overnight drift" | inventory-driven session effect, decayed since 2021 | reviewed |
+| Gao, Han, Li & Zhou (2018), Market intraday momentum, JFE 129(2) | H-TF4 | reviewed |
+| Baltussen, Da, Lammers & Martens (2021), Hedging demand and market intraday momentum, JFE 142(1) | gamma-hedging flows; next-day reversal | reviewed |
+| Zarattini & Aziz (2023), Can day trading really be profitable? (ORB), SSRN 4416622 | H-TF3 (practitioner, zero slippage) | reviewed |
+| Lucca & Moench (2015), The pre-FOMC announcement drift, JF 70(1) | calendar effect, decayed (Kurov et al. 2021, FRL 40) | reviewed |
+| Ni, Pearson & Poteshman (2005), Stock price clustering on option expiration dates, JFE 78(1) | expiry pinning (H-NS2) | reviewed |
+| arXiv 2212.06888, He, Manela, Ross & von Wachter, Fundamentals of perpetual futures | perp no-arbitrage, basis decay | reviewed |
+| Schmeling, Schrimpf & Todorov, Crypto carry, Management Science (2026), doi 10.1287/mnsc.2024.05069 | carry = trend-chasing leverage demand vs limited arbitrage | reviewed |
+| arXiv 2109.12142, Hansen, Kim & Kimbrough, Periodicity in cryptocurrency volatility and liquidity (JFEc 22(1), 2024) | funding-time and minute-of-hour vol bursts (H-NS4) | reviewed |
+| arXiv 2607.27070, Garcia Seuma, Early-warning signals across seven crypto-perpetual liquidation cascades | cascade dynamics (weak, unrefereed) | reviewed |
+| Cont, Stoikov & Talreja (2010), A stochastic model for order book dynamics, Oper. Res. 58(3) | baseline queue model, fill probabilities | reviewed |
+| arXiv 1312.0563, Huang, Lehalle & Rosenbaum, The queue-reactive model (JASA 110(509), 2015) | state-dependent intensities; endogenous flow under-produces vol | reviewed |
+| arXiv 1502.04592, Bacry, Mastromatteo & Muzy, Hawkes processes in finance (MML 2015) | flow generator family | reviewed |
+| arXiv 1809.08060, Morariu-Patrichi & Pakkanen, State-dependent Hawkes processes (QF 22(3), 2022) | reaction functions coupled with book state | reviewed |
+| Lo, MacKinlay & Zhang (2002), Econometric models of limit-order executions, JFE 65(1) | survival fill model; touch is not a fill | reviewed |
+| arXiv 2306.05479, Arroyo, Cartea, Moreno-Pino & Zohren, Deep attentive survival analysis in LOBs (QF 24(1), 2024) | censored fill-time models, RCLL scoring | reviewed |
+| Kyle & Obizhaeva (2016), Market microstructure invariance: empirical hypotheses, Econometrica 84(4) | liquidity scaling for cross-market transfer | reviewed |
+| arXiv 1904.12066, Byrd, Hybinette & Balch, ABIDES (SIGSIM PADS 2020) | agent-based simulator design | reviewed |
+| arXiv 1912.04941, Vyetrenko et al., Get Real: realism metrics for LOB simulations (ICAIF 2020) | stylised-fact battery (H-SIM2) | reviewed |
+| arXiv 2110.13287, Coletta et al., Towards realistic market simulations: a GAN approach (ICAIF 2021) | responsive conditional generator | reviewed |
+| Bailey, Borwein, Lopez de Prado & Zhu (2017), The probability of backtest overfitting, J. Comput. Finance | CSCV / PBO | reviewed |
+| Bailey & Lopez de Prado (2014), The deflated Sharpe ratio, JPM | DSR (in use) | reviewed |
+| Harvey, Liu & Zhu (2016), ...and the cross-section of expected returns, RFS 29(1) | multiple-testing hurdles (t > 3, BHY) | reviewed |
+| Politis & Romano (1994), The stationary bootstrap, JASA 89(428) | resampling for B5 | reviewed |
+| arXiv 1408.1159, Carr & Lopez de Prado, Determining optimal trading rules without backtesting | exits chosen on synthetic paths | reviewed |
+| arXiv 1907.06673, Wiese et al., Quant GANs (QF 20(9), 2020) | neural market generator | reviewed |
+| arXiv 2006.14498, Buehler et al., A data-driven market simulator for small data environments | signature-VAE generator; path-law evaluation | reviewed |
+| arXiv 1901.01751, Koshiyama, Firoozye & Treleaven, GANs for trading strategy fine-tuning and combination (QF 21(5)) | selection on generated paths (H-SYN) | reviewed |
+| Arian, Norouzi Mobarekeh & Seco (2024), Backtest overfitting in the ML era, Knowledge-Based Systems 305 | CPCV vs walk-forward | reviewed |

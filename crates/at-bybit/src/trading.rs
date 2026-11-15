@@ -18,6 +18,8 @@ pub struct VenuePosition {
     pub stop_loss: f64,
     pub take_profit: f64,
     pub unrealised_pnl: f64,
+    /// Realised part of the open position (fees paid, funding, partial closes).
+    pub cur_realised_pnl: f64,
     pub created_ts: i64,
 }
 
@@ -100,11 +102,7 @@ impl<'a> Trading<'a> {
     pub async fn wallet(&self) -> anyhow::Result<WalletSummary> {
         let r = self.rest.get_private("/v5/account/wallet-balance", &[("accountType", "UNIFIED".to_string())]).await?;
         let a = r["list"].get(0).context("wallet: empty list")?;
-        Ok(WalletSummary {
-            total_equity: f(&a["totalEquity"]),
-            total_available: f(&a["totalAvailableBalance"]),
-            total_margin_balance: f(&a["totalMarginBalance"]),
-        })
+        Ok(WalletSummary { total_equity: f(&a["totalEquity"]), total_available: f(&a["totalAvailableBalance"]), total_margin_balance: f(&a["totalMarginBalance"]) })
     }
 
     pub async fn positions(&self) -> anyhow::Result<Vec<VenuePosition>> {
@@ -130,6 +128,7 @@ impl<'a> Trading<'a> {
                     stop_loss: f(&x["stopLoss"]),
                     take_profit: f(&x["takeProfit"]),
                     unrealised_pnl: f(&x["unrealisedPnl"]),
+                    cur_realised_pnl: f(&x["curRealisedPnl"]),
                     created_ts: x["createdTime"].as_str().and_then(|s| s.parse().ok()).unwrap_or(0),
                 });
             }
@@ -152,10 +151,7 @@ impl<'a> Trading<'a> {
 
     pub async fn create_order(&self, req: &OrderRequest) -> anyhow::Result<OrderAck> {
         let r = self.rest.post_private("/v5/order/create", &req.to_body(&self.category)).await?;
-        Ok(OrderAck {
-            order_id: r["orderId"].as_str().unwrap_or_default().to_string(),
-            order_link_id: r["orderLinkId"].as_str().unwrap_or_default().to_string(),
-        })
+        Ok(OrderAck { order_id: r["orderId"].as_str().unwrap_or_default().to_string(), order_link_id: r["orderLinkId"].as_str().unwrap_or_default().to_string() })
     }
 
     /// Move the position-level stop and/or target (used by the structural trailing rule).
@@ -193,26 +189,96 @@ impl<'a> Trading<'a> {
         self.rest.post_private("/v5/order/cancel-all", &body).await.map(|_| ())
     }
 
+    /// All open orders (paginated: the endpoint returns at most 50 per page and 20 by default).
     pub async fn open_orders(&self, symbol: Option<&str>) -> anyhow::Result<Vec<Value>> {
-        let mut p = vec![("category", self.category.clone())];
-        match symbol {
-            Some(s) => p.push(("symbol", s.to_string())),
-            None => p.push(("settleCoin", self.settle_coin.clone())),
+        let mut out = Vec::new();
+        let mut cursor = String::new();
+        loop {
+            let mut p = vec![("category", self.category.clone()), ("limit", "50".to_string())];
+            match symbol {
+                Some(s) => p.push(("symbol", s.to_string())),
+                None => p.push(("settleCoin", self.settle_coin.clone())),
+            }
+            if !cursor.is_empty() {
+                p.push(("cursor", cursor.clone()));
+            }
+            let r = self.rest.get_private("/v5/order/realtime", &p).await?;
+            let page = r["list"].as_array().cloned().unwrap_or_default();
+            let n = page.len();
+            out.extend(page);
+            cursor = r["nextPageCursor"].as_str().unwrap_or_default().to_string();
+            if cursor.is_empty() || n == 0 {
+                break;
+            }
         }
+        Ok(out)
+    }
+
+    /// One order by id: the open-orders endpoint first, then the order history (filled / cancelled orders).
+    pub async fn order_status(&self, symbol: &str, order_id: &str) -> anyhow::Result<Option<Value>> {
+        let p = [("category", self.category.clone()), ("symbol", symbol.to_string()), ("orderId", order_id.to_string())];
         let r = self.rest.get_private("/v5/order/realtime", &p).await?;
+        if let Some(o) = r["list"].as_array().and_then(|l| l.first()) {
+            return Ok(Some(o.clone()));
+        }
+        let r = self.rest.get_private("/v5/order/history", &p).await?;
+        Ok(r["list"].as_array().and_then(|l| l.first()).cloned())
+    }
+
+    /// Executions of one symbol, optionally of one order, from `start_ms` (paginated, newest first from the venue).
+    pub async fn executions_for(&self, symbol: &str, order_id: Option<&str>, start_ms: Option<i64>) -> anyhow::Result<Vec<Value>> {
+        let mut out = Vec::new();
+        let mut cursor = String::new();
+        loop {
+            let mut p = vec![("category", self.category.clone()), ("symbol", symbol.to_string()), ("limit", "100".to_string())];
+            if let Some(o) = order_id {
+                p.push(("orderId", o.to_string()));
+            }
+            if let Some(t) = start_ms {
+                p.push(("startTime", t.to_string()));
+            }
+            if !cursor.is_empty() {
+                p.push(("cursor", cursor.clone()));
+            }
+            let r = self.rest.get_private("/v5/execution/list", &p).await?;
+            let page = r["list"].as_array().cloned().unwrap_or_default();
+            let n = page.len();
+            out.extend(page);
+            let next = r["nextPageCursor"].as_str().unwrap_or_default().to_string();
+            // the venue returns a cursor even on the last page: stop on an empty or short page or a repeated cursor
+            if next.is_empty() || n < 100 || next == cursor {
+                break;
+            }
+            cursor = next;
+        }
+        Ok(out)
+    }
+
+    /// Closed-position P&L records of one symbol since `start_ms` (closedPnl is net of fees).
+    pub async fn closed_pnl(&self, symbol: &str, start_ms: i64) -> anyhow::Result<Vec<Value>> {
+        let p = [("category", self.category.clone()), ("symbol", symbol.to_string()), ("startTime", start_ms.to_string()), ("limit", "100".to_string())];
+        let r = self.rest.get_private("/v5/position/closed-pnl", &p).await?;
         Ok(r["list"].as_array().cloned().unwrap_or_default())
+    }
+
+    /// The account's (maker, taker) fee rates for a symbol in bp, if the venue reports them.
+    pub async fn fee_rate_bps(&self, symbol: &str) -> anyhow::Result<Option<(f64, f64)>> {
+        let r = self.rest.get_private("/v5/account/fee-rate", &[("category", self.category.clone()), ("symbol", symbol.to_string())]).await?;
+        Ok(r["list"].as_array().and_then(|l| l.first()).map(|x| (f(&x["makerFeeRate"]) * 1e4, f(&x["takerFeeRate"]) * 1e4)))
+    }
+
+    /// Unified-account coin row (walletBalance, equity, availableToWithdraw...) of the settle coin.
+    pub async fn settle_coin_row(&self) -> anyhow::Result<Option<Value>> {
+        let r = self.rest.get_private("/v5/account/wallet-balance", &[("accountType", "UNIFIED".to_string())]).await?;
+        let coins = r["list"].get(0).and_then(|a| a["coin"].as_array()).cloned().unwrap_or_default();
+        Ok(coins.into_iter().find(|c| c["coin"] == self.settle_coin.as_str()))
     }
 
     pub async fn executions(&self, start_ms: i64, end_ms: i64) -> anyhow::Result<Vec<Value>> {
         let mut out = Vec::new();
         let mut cursor = String::new();
         loop {
-            let mut p = vec![
-                ("category", self.category.clone()),
-                ("startTime", start_ms.to_string()),
-                ("endTime", end_ms.to_string()),
-                ("limit", "100".to_string()),
-            ];
+            let mut p = vec![("category", self.category.clone()), ("startTime", start_ms.to_string()), ("endTime", end_ms.to_string()), ("limit", "100".to_string())];
             if !cursor.is_empty() {
                 p.push(("cursor", cursor.clone()));
             }

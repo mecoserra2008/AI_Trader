@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BTC Network Monitor</title>
+<meta name="description" content="Local read-only monitor of the frozen BTC polynomial network: live price, its bands, its activations and Claude's read.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js" defer></script>
+<script src="pct.js" defer></script>
+<script src="app.js" defer></script>
+<script src="xs.js" defer></script>
+</head>
+<body>
+<header class="bar">
+  <div class="bar-id">
+    <span class="sym">BTCUSDT</span><span class="venue">Bybit linear perp</span>
+  </div>
+  <div class="bar-px">
+    <span id="px" class="px num">-</span>
+    <span id="px-chg" class="chg num"></span>
+  </div>
+  <dl class="bar-meta">
+    <div><dt>Line</dt><dd id="m-line" class="num">-</dd></div>
+    <div><dt>Window</dt><dd id="m-window" class="num">-</dd></div>
+    <div><dt>Closes in</dt><dd id="m-left" class="num">-</dd></div>
+    <div><dt>Feed</dt><dd id="m-ws"><span class="dot" id="ws-dot"></span><span id="ws-txt">connecting</span></dd></div>
+    <div><dt>State</dt><dd id="m-poll" class="num">-</dd></div>
+  </dl>
+  <a class="btn" href="brain.html" title="Live brain map: the network firing on intra-hour ticks (nowcast)">Brain map</a>
+  <button id="theme" class="btn" type="button" aria-label="Switch colour theme">Theme: auto</button>
+</header>
+
+<section id="regime" class="strip" aria-label="Regime and players"></section>
+
+<main class="grid">
+  <section class="card span-8 price" aria-labelledby="h-price">
+    <div class="card-h">
+      <h2 id="h-price">Live price and the network's bands</h2>
+      <div class="seg" role="group" aria-label="Chart window">
+        <button class="btn sm on" data-view="1h" type="button">Hour view</button>
+        <button class="btn sm" data-view="24h" type="button">24h cone</button>
+        <button class="btn sm" data-view="all" type="button">48h</button>
+      </div>
+    </div>
+    <div id="chart" class="chart-main" role="img" aria-label="1 minute BTCUSDT candles with the network's forecast cones"></div>
+    <ul class="legend" id="price-legend"></ul>
+    <p class="note" id="chart-note"></p>
+  </section>
+
+  <section class="card span-4 mind" aria-labelledby="h-mind">
+    <div class="card-h"><h2 id="h-mind">Where price is in the network's mind</h2></div>
+    <svg id="gauge" viewBox="0 0 320 178" role="img" aria-label="Percentile gauge"></svg>
+    <p id="mind-sentence" class="lead">Waiting for the live feed.</p>
+    <dl class="kv" id="mind-kv"></dl>
+    <svg id="ladder" viewBox="0 0 320 150" role="img" aria-label="Bands for this hour on one axis, with the live move"></svg>
+    <table class="tbl" id="touch-tbl" aria-label="Field touch probabilities"></table>
+  </section>
+
+  <section class="card span-8" aria-labelledby="h-net">
+    <div class="card-h">
+      <h2 id="h-net">Network firing</h2>
+      <div class="ctrls">
+        <div class="seg" role="group" aria-label="Network">
+          <button class="btn sm on" data-net="1h" type="button">1h net</button>
+          <button class="btn sm" data-net="24h" type="button">24h net</button>
+        </div>
+        <div class="seg" role="group" aria-label="Seed">
+          <button class="btn sm on" data-seed="0" type="button">Seed 1</button>
+          <button class="btn sm" data-seed="1" type="button">Seed 2</button>
+        </div>
+        <button class="btn sm" id="refire" type="button">Fire again</button>
+      </div>
+    </div>
+    <div class="net-wrap"><svg id="net" role="img" aria-label="The polynomial network as a layered graph"></svg></div>
+    <div class="net-key">
+      <span><i class="sw pos"></i>edge output above zero</span>
+      <span><i class="sw neg"></i>below zero</span>
+      <span>thickness: |edge output|, scaled per layer</span>
+      <span>node fill: standardised input</span>
+      <span id="net-check" class="num"></span>
+    </div>
+  </section>
+
+  <section class="card span-4" aria-labelledby="h-think">
+    <div class="card-h"><h2 id="h-think">What it's thinking</h2><span id="think-id" class="tag num"></span></div>
+    <ol class="think" id="think"></ol>
+    <figure class="claude">
+      <figcaption id="claude-cap">Claude's read</figcaption>
+      <blockquote id="claude-view">-</blockquote>
+      <p class="claude-band num" id="claude-band"></p>
+    </figure>
+    <div class="hlive">
+      <h3>H-LIVE running score <span class="muted">(Claude vs network, pinball 10/50/90)</span></h3>
+      <table class="tbl" id="hlive-tbl"></table>
+      <p class="note" id="hlive-note"></p>
+    </div>
+  </section>
+
+  <section class="card span-6" aria-labelledby="h-lat">
+    <div class="card-h"><h2 id="h-lat">Latent trajectory</h2><span class="muted">last 72 h, sd units, dotted = predicted next</span></div>
+    <div id="latent" class="chart-sm"></div>
+  </section>
+
+  <section class="card span-6" aria-labelledby="h-real">
+    <div class="card-h"><h2 id="h-real">Realised vs predicted</h2><span class="muted">last 48 h, return / network sigma</span></div>
+    <div id="realised" class="chart-sm"></div>
+    <p class="note" id="real-note"></p>
+  </section>
+  <section class="card span-12 xs" id="xs-panel" aria-labelledby="h-xs">
+    <div class="card-h">
+      <h2 id="h-xs">Cross-section v3: relative strength across 23 perps</h2>
+      <span class="xs-badge" role="note">Context only, not a signal (R-XS-2 / R-XS-3)</span>
+      <div class="seg" role="group" aria-label="Horizon">
+        <button class="btn sm on" data-xsh="4h" type="button">4h</button>
+        <button class="btn sm" data-xsh="24h" type="button">24h</button>
+      </div>
+    </div>
+    <p class="note num" id="xs-meta">loading the v3 line</p>
+    <div class="xs-grid">
+      <div class="xs-left"><div class="xs-scroll"><table class="tbl xs-tbl" id="xs-tbl" aria-label="v3 relative-return medians and bands per token, with the low-vol rank"></table></div></div>
+      <div class="xs-right">
+        <h3>Token map <span class="muted">(fixed projection; arrow = predicted relative move)</span></h3>
+        <svg id="xs-map" role="img" aria-label="2D map of the network's token representation, coloured by sector"></svg>
+        <h3>Attention <span class="muted">(descriptive; R-XS-4: it adds nothing to the forecasts)</span></h3>
+        <div class="xs-att">
+          <table class="tbl xs-hubs" id="xs-hubs" aria-label="Most attended keys"></table>
+          <svg id="xs-heat" role="img" aria-label="Attention heatmap, query token by key token"></svg>
+        </div>
+      </div>
+    </div>
+    <p class="note xs-foot" id="xs-foot"></p>
+    <p class="note num" id="xs-models"></p>
+  </section>
+</main>
+
+<footer class="foot">
+  <p id="foot-models" class="num"></p>
+  <p>Research only. This page reads the journals and models and streams public market data; it never writes, signs or places orders.
+     Times are UTC. Cones scale each band by the square root of elapsed time from the forecast hour's start.</p>
+</footer>
+<div id="tip" class="tip" role="tooltip" hidden></div>
+</body>
+</html>

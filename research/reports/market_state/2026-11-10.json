@@ -1,0 +1,7494 @@
+{
+ "meta": {
+  "as_of": "2026-11-10T22:56:02+00:00",
+  "generated": "2026-11-10T23:02:57+00:00",
+  "tool": "state.market_card",
+  "version": "0.1.0",
+  "n_symbols": 57,
+  "groups": {
+   "trend_zoo": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT",
+    "DOGEUSDT",
+    "ADAUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "BCHUSDT",
+    "AVAXUSDT",
+    "DOTUSDT",
+    "BNBUSDT",
+    "TRXUSDT",
+    "NEARUSDT",
+    "ATOMUSDT",
+    "ETCUSDT",
+    "FILUSDT",
+    "UNIUSDT",
+    "AAVEUSDT",
+    "XLMUSDT",
+    "SUIUSDT",
+    "ENAUSDT",
+    "HYPEUSDT"
+   ],
+   "tradfi_30d": [
+    "AAPLUSDT",
+    "BZUSDT",
+    "CLUSDT",
+    "GOOGLUSDT",
+    "INTCUSDT",
+    "MSTRUSDT",
+    "MUUSDT",
+    "NVDAUSDT",
+    "QQQUSDT",
+    "SOXLUSDT",
+    "SPCXUSDT",
+    "TSLAUSDT",
+    "XAGUSDT",
+    "XAUUSDT"
+   ],
+   "mm_multi": [
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT",
+    "HYPEUSDT",
+    "NEARUSDT",
+    "1000PEPEUSDT",
+    "ENAUSDT",
+    "DOGEUSDT",
+    "SUIUSDT",
+    "TRUMPUSDT",
+    "WLDUSDT",
+    "UNIUSDT",
+    "LINKUSDT",
+    "BNBUSDT",
+    "AAVEUSDT",
+    "ADAUSDT",
+    "AVAXUSDT",
+    "LTCUSDT",
+    "DOTUSDT",
+    "TRXUSDT",
+    "ATOMUSDT",
+    "ETCUSDT",
+    "FILUSDT",
+    "XLMUSDT",
+    "ZECUSDT",
+    "ONDOUSDT",
+    "INJUSDT",
+    "ARBUSDT",
+    "TAOUSDT",
+    "GRAMUSDT",
+    "MONUSDT",
+    "CARVUSDT",
+    "MAVIAUSDT",
+    "RENDERUSDT",
+    "WIFUSDT",
+    "KASUSDT",
+    "CRVUSDT",
+    "WLFIUSDT",
+    "ASTERUSDT",
+    "CLUSDT",
+    "BZUSDT",
+    "XAUUSDT",
+    "XAGUSDT",
+    "QQQUSDT",
+    "NVDAUSDT",
+    "TSLAUSDT",
+    "MSTRUSDT",
+    "COINUSDT",
+    "CRWVUSDT",
+    "GOOGLUSDT"
+   ]
+  },
+  "flow_source": "local",
+  "a4_error": null,
+  "flow_coverage_median": 0.36,
+  "flow_scored_minutes_median": 438,
+  "liquidations_first_ts": "2026-11-08T00:46:05.767000+00:00",
+  "instruments_not_pit": false,
+  "elapsed_s": 115.3,
+  "flow_elapsed_s": 33.0
+ },
+ "summary": {
+  "crypto": {
+   "n": 33,
+   "high_vol": [
+    [
+     "XRPUSDT",
+     0.878
+    ],
+    [
+     "ETHUSDT",
+     0.864
+    ],
+    [
+     "AVAXUSDT",
+     0.862
+    ],
+    [
+     "NEARUSDT",
+     0.836
+    ],
+    [
+     "BTCUSDT",
+     0.824
+    ]
+   ],
+   "vol_surprise": [
+    [
+     "AVAXUSDT",
+     1.984
+    ]
+   ],
+   "drawdown": [
+    [
+     "XLMUSDT",
+     1.95
+    ],
+    [
+     "ADAUSDT",
+     1.92
+    ],
+    [
+     "SOLUSDT",
+     1.9
+    ],
+    [
+     "XRPUSDT",
+     1.89
+    ],
+    [
+     "FILUSDT",
+     1.87
+    ],
+    [
+     "DOTUSDT",
+     1.68
+    ],
+    [
+     "NEARUSDT",
+     1.6
+    ],
+    [
+     "DOGEUSDT",
+     1.58
+    ],
+    [
+     "ETHUSDT",
+     1.58
+    ],
+    [
+     "ATOMUSDT",
+     1.52
+    ],
+    [
+     "LTCUSDT",
+     1.5
+    ]
+   ],
+   "anomalous_flow": [],
+   "crowded_funding": [],
+   "cells": {
+    "R8": 6,
+    "none": 10,
+    "R5": 1,
+    "R6": 2,
+    "R9": 13,
+    "R4": 1
+   },
+   "r24h_median": -0.58,
+   "flow_anom_rate_universe_median": 0.20319634703196346
+  },
+  "tradfi": {
+   "n": 16,
+   "high_vol": [
+    [
+     "NVDAUSDT",
+     0.99
+    ],
+    [
+     "QQQUSDT",
+     0.972
+    ],
+    [
+     "SOXLUSDT",
+     0.97
+    ],
+    [
+     "INTCUSDT",
+     0.954
+    ],
+    [
+     "GOOGLUSDT",
+     0.938
+    ],
+    [
+     "MUUSDT",
+     0.933
+    ],
+    [
+     "SPCXUSDT",
+     0.899
+    ],
+    [
+     "BZUSDT",
+     0.898
+    ],
+    [
+     "TSLAUSDT",
+     0.898
+    ],
+    [
+     "MSTRUSDT",
+     0.891
+    ],
+    [
+     "AAPLUSDT",
+     0.822
+    ],
+    [
+     "XAUUSDT",
+     0.81
+    ]
+   ],
+   "vol_surprise": [
+    [
+     "TSLAUSDT",
+     2.149
+    ],
+    [
+     "QQQUSDT",
+     1.895
+    ]
+   ],
+   "drawdown": [
+    [
+     "NVDAUSDT",
+     2.4
+    ],
+    [
+     "INTCUSDT",
+     2.05
+    ],
+    [
+     "BZUSDT",
+     1.76
+    ],
+    [
+     "SOXLUSDT",
+     1.71
+    ],
+    [
+     "GOOGLUSDT",
+     1.59
+    ],
+    [
+     "XAGUSDT",
+     1.57
+    ],
+    [
+     "MUUSDT",
+     1.53
+    ],
+    [
+     "CLUSDT",
+     1.52
+    ]
+   ],
+   "anomalous_flow": [],
+   "crowded_funding": [
+    [
+     "AAPLUSDT",
+     -2.98,
+     "shorts"
+    ]
+   ],
+   "cells": {
+    "R6": 9,
+    "R9": 4,
+    "none": 2,
+    "R5": 1
+   },
+   "r24h_median": -0.25,
+   "flow_anom_rate_universe_median": 0.20319634703196346
+  }
+ },
+ "data_gaps": {
+  "no_1h_bars": [
+   "1000PEPEUSDT",
+   "ARBUSDT",
+   "INJUSDT",
+   "ONDOUSDT",
+   "TAOUSDT",
+   "TRUMPUSDT",
+   "WLDUSDT",
+   "ZECUSDT"
+  ],
+  "short_history": [
+   "ASTERUSDT",
+   "CARVUSDT",
+   "CRVUSDT",
+   "GRAMUSDT",
+   "KASUSDT",
+   "MAVIAUSDT",
+   "MONUSDT",
+   "RENDERUSDT",
+   "WIFUSDT",
+   "WLFIUSDT",
+   "COINUSDT",
+   "CRWVUSDT"
+  ],
+  "stale_last_bar": [],
+  "no_flow": [],
+  "no_funding": [],
+  "no_oi": [],
+  "stale_oi": [],
+  "har_unavailable": [
+   "ASTERUSDT",
+   "CARVUSDT",
+   "CRVUSDT",
+   "GRAMUSDT",
+   "KASUSDT",
+   "MAVIAUSDT",
+   "MONUSDT",
+   "RENDERUSDT",
+   "WIFUSDT",
+   "WLFIUSDT",
+   "COINUSDT",
+   "CRWVUSDT"
+  ],
+  "errors": {}
+ },
+ "cards": [
+  {
+   "symbol": "1000PEPEUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": null,
+   "flags": [
+    "no_1h_bars"
+   ],
+   "data_max_ts": null,
+   "history_days": 0.0,
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 385,
+    "n_anom_24h": 113,
+    "n_anom_buy": 60,
+    "n_anom_sell": 53,
+    "n_anom_1h": 24,
+    "max_abs_z_24h": 542765.92,
+    "latest": {
+     "ts": "2026-11-10T22:55:00+00:00",
+     "z": -4.45,
+     "imbalance_usd": -16640.0,
+     "side": "sell",
+     "notional_usd": 26149.0,
+     "age_min": 1.0
+    },
+    "last_close": 0.005308,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   }
+  },
+  {
+   "symbol": "AAVEUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 124.22,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.006461,
+     "sigma_units": 0.84
+    },
+    "24h": {
+     "ret": -0.059535,
+     "sigma_units": -1.36
+    },
+    "7d": {
+     "ret": -0.026533,
+     "sigma_units": -0.35
+    }
+   },
+   "regime": {
+    "cell": "R8",
+    "label": "trend down",
+    "dir_state": "down",
+    "vol_state": "normal",
+    "dir_score": -0.987
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.007628,
+    "robust_sigma_1h_central": 0.007762,
+    "weekend_m": 0.757,
+    "robust_sigma_day": 0.03737,
+    "robust_sigma_ann": 0.713962,
+    "vol_pct_1y": 0.479,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.047622,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.047318,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.086,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.3303,
+    "drawdown_sigma30": 1.47,
+    "high_30d": 172.84,
+    "rs_neg_share_5d": 0.51,
+    "jv_share_5d": 0.176,
+    "sigma_30d_daily": 0.041145
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 4.9,
+    "n_jumps_lm_7d": 2
+   },
+   "funding": {
+    "rate": 4.873e-05,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0534,
+    "z_90d": 0.28,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 3.097e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 353121.02,
+    "oi_usd": 43864693.0,
+    "chg_24h_log": -0.0437,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 89.0,
+    "long_n": 2,
+    "short_usd": 157.0,
+    "short_n": 2,
+    "n_1h": 1,
+    "usd_1h": 144.0,
+    "largest": {
+     "usd": 144.0,
+     "side": "short",
+     "ts": "2026-11-10T22:05:08+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 128.16,
+     "hi": 130.11,
+     "score": 83.36,
+     "pivots": 13,
+     "dist_pct": 3.17,
+     "dist_sigma_day": 0.66
+    },
+    "inside": {
+     "lo": 122.27,
+     "hi": 124.23,
+     "score": 54.64
+    },
+    "n_bars_4h": 719,
+    "atr_4h": 3.32
+   },
+   "history_days": 1993.5,
+   "first_bar": "2021-05-27T09:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 382,
+    "n_anom_24h": 96,
+    "n_anom_buy": 49,
+    "n_anom_sell": 47,
+    "n_anom_1h": 26,
+    "max_abs_z_24h": 1503.66,
+    "latest": {
+     "ts": "2026-11-10T22:50:00+00:00",
+     "z": -7.14,
+     "imbalance_usd": -6961.0,
+     "side": "sell",
+     "notional_usd": 10712.0,
+     "age_min": 6.0
+    },
+    "last_close": 124.05,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 124.05,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "ADAUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 0.1741,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": -0.000574,
+     "sigma_units": -0.08
+    },
+    "24h": {
+     "ret": -0.020467,
+     "sigma_units": -0.53
+    },
+    "7d": {
+     "ret": -0.09369,
+     "sigma_units": -1.68
+    }
+   },
+   "regime": {
+    "cell": "R8",
+    "label": "trend down",
+    "dir_state": "down",
+    "vol_state": "normal",
+    "dir_score": -0.682
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.007098,
+    "robust_sigma_1h_central": 0.007253,
+    "weekend_m": 0.804,
+    "robust_sigma_day": 0.034772,
+    "robust_sigma_ann": 0.664326,
+    "vol_pct_1y": 0.478,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.041171,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.038328,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.904,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.3859,
+    "drawdown_sigma30": 1.92,
+    "high_30d": 0.2561,
+    "rs_neg_share_5d": 0.7,
+    "jv_share_5d": 0.249,
+    "sigma_30d_daily": 0.036704
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 4,
+    "max_abs_z_7d": 9.17,
+    "n_jumps_lm_7d": 3
+   },
+   "funding": {
+    "rate": -8.601e-05,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": -0.0942,
+    "z_90d": -1.63,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 3.819e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 255023169.0,
+    "oi_usd": 44399534.0,
+    "chg_24h_log": 0.0083,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 21075.0,
+    "long_n": 18,
+    "short_usd": 2189.0,
+    "short_n": 3,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 4699.0,
+     "side": "long",
+     "ts": "2026-11-10T15:35:24+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 0.1892,
+     "hi": 0.1914,
+     "score": 38.15,
+     "pivots": 4,
+     "dist_pct": 8.67,
+     "dist_sigma_day": 2.02
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 0.0038
+   },
+   "history_days": 2049.6,
+   "first_bar": "2021-04-01T07:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 89,
+    "n_anom_buy": 47,
+    "n_anom_sell": 42,
+    "n_anom_1h": 8,
+    "max_abs_z_24h": 70.1,
+    "latest": {
+     "ts": "2026-11-10T22:52:00+00:00",
+     "z": 9.75,
+     "imbalance_usd": 57497.0,
+     "side": "buy",
+     "notional_usd": 70438.0,
+     "age_min": 4.0
+    },
+    "last_close": 0.1737,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 0.1737,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "ARBUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": null,
+   "flags": [
+    "no_1h_bars"
+   ],
+   "data_max_ts": null,
+   "history_days": 0.0,
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 47,
+    "n_anom_buy": 26,
+    "n_anom_sell": 21,
+    "n_anom_1h": 6,
+    "max_abs_z_24h": 28.79,
+    "latest": {
+     "ts": "2026-11-10T22:51:00+00:00",
+     "z": 6.31,
+     "imbalance_usd": 25447.0,
+     "side": "buy",
+     "notional_usd": 36311.0,
+     "age_min": 5.0
+    },
+    "last_close": 0.16135,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   }
+  },
+  {
+   "symbol": "ASTERUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 0.6335,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.005064,
+     "sigma_units": 0.81
+    },
+    "24h": {
+     "ret": -0.024019,
+     "sigma_units": -0.67
+    },
+    "7d": {
+     "ret": null,
+     "sigma_units": null
+    }
+   },
+   "regime": {
+    "cell": null,
+    "label": null,
+    "dir_state": "down",
+    "vol_state": null,
+    "dir_score": -1.053
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.006174,
+    "robust_sigma_1h_central": 0.006609,
+    "weekend_m": 0.748,
+    "robust_sigma_day": 0.030245,
+    "robust_sigma_ann": 0.577835,
+    "vol_pct_1y": null,
+    "vol_pct_window_days": 4.0,
+    "har_sigma_day": null,
+    "har_for_day": null,
+    "rv_last_day": null,
+    "last_complete_day": null,
+    "vol_surprise": null,
+    "vol_surprise_day": null
+   },
+   "asymmetry": {
+    "drawdown_flag": null,
+    "drawdown_log": null,
+    "drawdown_sigma30": null,
+    "high_30d": null,
+    "rs_neg_share_5d": null,
+    "jv_share_5d": null
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 14.68,
+    "n_jumps_lm_7d": null
+   },
+   "funding": {
+    "rate": 2.414e-05,
+    "ts": "2026-11-10T20:00:00+00:00",
+    "rate_ann": 0.0529,
+    "z_90d": null,
+    "n_90d": 29,
+    "interval_min": 240,
+    "mean_90d": 1.953e-05,
+    "crowded": null,
+    "age_h": 2.93
+   },
+   "oi": {
+    "oi": 70935120.0,
+    "oi_usd": 44937399.0,
+    "chg_24h_log": 0.0007,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 40941.0,
+    "long_n": 24,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 9607.0,
+     "side": "long",
+     "ts": "2026-11-10T13:30:28+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 0.622525,
+     "hi": 0.624675,
+     "score": 4.85,
+     "pivots": 1,
+     "dist_pct": -1.39,
+     "dist_sigma_day": -0.46
+    },
+    "above": {
+     "lo": 0.655225,
+     "hi": 0.657375,
+     "score": 4.94,
+     "pivots": 1,
+     "dist_pct": 3.43,
+     "dist_sigma_day": 1.11
+    },
+    "inside": null,
+    "n_bars_4h": 30,
+    "atr_4h": 0.0086
+   },
+   "history_days": 5.0,
+   "first_bar": "2026-11-05T21:00:00+00:00",
+   "flags": [
+    "burn_in_skipped:history_starts_after_listing",
+    "short_history",
+    "vol_pct_unavailable",
+    "har_unavailable",
+    "funding_z_short",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 40,
+    "n_anom_buy": 20,
+    "n_anom_sell": 20,
+    "n_anom_1h": 7,
+    "max_abs_z_24h": 56.52,
+    "latest": {
+     "ts": "2026-11-10T22:42:00+00:00",
+     "z": -5.1,
+     "imbalance_usd": -8532.0,
+     "side": "sell",
+     "notional_usd": 11544.0,
+     "age_min": 14.0
+    },
+    "last_close": 0.6338,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 0.6338,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "ATOMUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 1.39,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": -0.003591,
+     "sigma_units": -0.53
+    },
+    "24h": {
+     "ret": 0.013034,
+     "sigma_units": 0.32
+    },
+    "7d": {
+     "ret": -0.021353,
+     "sigma_units": -0.29
+    }
+   },
+   "regime": {
+    "cell": "R5",
+    "label": "balanced range",
+    "dir_state": "range",
+    "vol_state": "normal",
+    "dir_score": -0.03
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.006607,
+    "robust_sigma_1h_central": 0.006693,
+    "weekend_m": 0.78,
+    "robust_sigma_day": 0.032365,
+    "robust_sigma_ann": 0.618337,
+    "vol_pct_1y": 0.495,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.043625,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.041552,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.976,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.3287,
+    "drawdown_sigma30": 1.52,
+    "high_30d": 1.931,
+    "rs_neg_share_5d": 0.61,
+    "jv_share_5d": 0.189,
+    "sigma_30d_daily": 0.039585
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 1,
+    "max_abs_z_7d": 7.65,
+    "n_jumps_lm_7d": 1
+   },
+   "funding": {
+    "rate": -7.426e-05,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": -0.0813,
+    "z_90d": -0.24,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": -3.689e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 8942064.4,
+    "oi_usd": 12429470.0,
+    "chg_24h_log": 0.0345,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 697.0,
+    "long_n": 3,
+    "short_usd": 1205.0,
+    "short_n": 1,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 1205.0,
+     "side": "short",
+     "ts": "2026-11-10T14:27:46+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 1.446,
+     "hi": 1.466,
+     "score": 50.84,
+     "pivots": 9,
+     "dist_pct": 4.03,
+     "dist_sigma_day": 0.91
+    },
+    "inside": {
+     "lo": 1.3866,
+     "hi": 1.4037,
+     "score": 71.06
+    },
+    "n_bars_4h": 719,
+    "atr_4h": 0.034
+   },
+   "history_days": 1842.8,
+   "first_bar": "2021-10-25T03:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 141,
+    "n_anom_buy": 68,
+    "n_anom_sell": 73,
+    "n_anom_1h": 15,
+    "max_abs_z_24h": 322.84,
+    "latest": {
+     "ts": "2026-11-10T22:54:00+00:00",
+     "z": -4.01,
+     "imbalance_usd": -2249.0,
+     "side": "sell",
+     "notional_usd": 2271.0,
+     "age_min": 2.0
+    },
+    "last_close": 1.394,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 1.394,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "AVAXUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 8.308,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.003014,
+     "sigma_units": 0.29
+    },
+    "24h": {
+     "ret": -0.039994,
+     "sigma_units": -0.58
+    },
+    "7d": {
+     "ret": -0.030465,
+     "sigma_units": -0.43
+    }
+   },
+   "regime": {
+    "cell": "R6",
+    "label": "whipsaw",
+    "dir_state": "range",
+    "vol_state": "high",
+    "dir_score": -0.28
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.009949,
+    "robust_sigma_1h_central": 0.009911,
+    "weekend_m": 1.044,
+    "robust_sigma_day": 0.04874,
+    "robust_sigma_ann": 0.931185,
+    "vol_pct_1y": 0.862,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.054143,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.080666,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.984,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.2907,
+    "drawdown_sigma30": 1.34,
+    "high_30d": 11.111,
+    "rs_neg_share_5d": 0.461,
+    "jv_share_5d": 0.13,
+    "sigma_30d_daily": 0.03959
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 3,
+    "max_abs_z_7d": 9.81,
+    "n_jumps_lm_7d": 4
+   },
+   "funding": {
+    "rate": -4.555e-05,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": -0.0499,
+    "z_90d": -1.24,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 3.757e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 7223615.7,
+    "oi_usd": 60013799.0,
+    "chg_24h_log": -0.0596,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 19777.0,
+    "long_n": 13,
+    "short_usd": 6877.0,
+    "short_n": 3,
+    "n_1h": 1,
+    "usd_1h": 1856.0,
+    "largest": {
+     "usd": 8182.0,
+     "side": "long",
+     "ts": "2026-11-10T15:35:24+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 8.196,
+     "hi": 8.276,
+     "score": 28.65,
+     "pivots": 5,
+     "dist_pct": -0.39,
+     "dist_sigma_day": -0.07
+    },
+    "above": {
+     "lo": 8.472,
+     "hi": 8.543,
+     "score": 24.52,
+     "pivots": 2,
+     "dist_pct": 1.97,
+     "dist_sigma_day": 0.36
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 0.1785
+   },
+   "history_days": 1868.6,
+   "first_bar": "2021-09-29T08:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 36,
+    "n_anom_buy": 22,
+    "n_anom_sell": 14,
+    "n_anom_1h": 4,
+    "max_abs_z_24h": 39.11,
+    "latest": {
+     "ts": "2026-11-10T22:33:00+00:00",
+     "z": -7.81,
+     "imbalance_usd": -37047.0,
+     "side": "sell",
+     "notional_usd": 42046.0,
+     "age_min": 23.0
+    },
+    "last_close": 8.351,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 8.351,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "BCHUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 230.66,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.001996,
+     "sigma_units": 0.26
+    },
+    "24h": {
+     "ret": -0.033969,
+     "sigma_units": -0.93
+    },
+    "7d": {
+     "ret": -0.177135,
+     "sigma_units": -3.11
+    }
+   },
+   "regime": {
+    "cell": "R8",
+    "label": "trend down",
+    "dir_state": "down",
+    "vol_state": "normal",
+    "dir_score": -1.328
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.007487,
+    "robust_sigma_1h_central": 0.007693,
+    "weekend_m": 0.84,
+    "robust_sigma_day": 0.03668,
+    "robust_sigma_ann": 0.700769,
+    "vol_pct_1y": 0.659,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.038888,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.029141,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.683,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.2786,
+    "drawdown_sigma30": 1.35,
+    "high_30d": 304.76,
+    "rs_neg_share_5d": 0.706,
+    "jv_share_5d": 0.236,
+    "sigma_30d_daily": 0.037813
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 4,
+    "max_abs_z_7d": 5.36,
+    "n_jumps_lm_7d": 1
+   },
+   "funding": {
+    "rate": 8.035e-05,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.088,
+    "z_90d": 0.69,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 2.49e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 121500.15,
+    "oi_usd": 28025225.0,
+    "chg_24h_log": -0.0671,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 14967.0,
+    "long_n": 2,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 8866.0,
+     "side": "long",
+     "ts": "2026-11-10T15:35:20+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 242.7,
+     "hi": 244.78,
+     "score": 47.7,
+     "pivots": 8,
+     "dist_pct": 5.22,
+     "dist_sigma_day": 1.31
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 5.45
+   },
+   "history_days": 2143.7,
+   "first_bar": "2020-12-28T06:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 77,
+    "n_anom_buy": 45,
+    "n_anom_sell": 32,
+    "n_anom_1h": 3,
+    "max_abs_z_24h": 186.21,
+    "latest": {
+     "ts": "2026-11-10T22:31:00+00:00",
+     "z": 4.97,
+     "imbalance_usd": 7883.0,
+     "side": "buy",
+     "notional_usd": 14847.0,
+     "age_min": 25.0
+    },
+    "last_close": 230.88,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 230.88,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "BNBUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 677.34,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.001611,
+     "sigma_units": 0.32
+    },
+    "24h": {
+     "ret": -0.018779,
+     "sigma_units": -0.91
+    },
+    "7d": {
+     "ret": -0.033792,
+     "sigma_units": -0.73
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -0.601
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.004952,
+    "robust_sigma_1h_central": 0.004975,
+    "weekend_m": 0.881,
+    "robust_sigma_day": 0.02426,
+    "robust_sigma_ann": 0.463486,
+    "vol_pct_1y": 0.717,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.022492,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.020239,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.837,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.118,
+    "drawdown_sigma30": 0.96,
+    "high_30d": 762.18,
+    "rs_neg_share_5d": 0.754,
+    "jv_share_5d": 0.219,
+    "sigma_30d_daily": 0.022386
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 11.84,
+    "n_jumps_lm_7d": 2
+   },
+   "funding": {
+    "rate": -4.48e-06,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": -0.0049,
+    "z_90d": -0.22,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 1.856e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 133123.69,
+    "oi_usd": 90170000.0,
+    "chg_24h_log": 0.0243,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 0.0,
+    "long_n": 0,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": null
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 689.4,
+     "hi": 692.6,
+     "score": 58.32,
+     "pivots": 4,
+     "dist_pct": 1.78,
+     "dist_sigma_day": 0.78
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 7.255
+   },
+   "history_days": 1946.6,
+   "first_bar": "2021-07-13T07:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 368,
+    "n_anom_24h": 112,
+    "n_anom_buy": 57,
+    "n_anom_sell": 55,
+    "n_anom_1h": 39,
+    "max_abs_z_24h": 2467409.84,
+    "latest": {
+     "ts": "2026-11-10T22:53:00+00:00",
+     "z": -9.16,
+     "imbalance_usd": -7681.0,
+     "side": "sell",
+     "notional_usd": 9472.0,
+     "age_min": 3.0
+    },
+    "last_close": 678.06,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 678.06,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "BTCUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 73824.2,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.000949,
+     "sigma_units": 0.16
+    },
+    "24h": {
+     "ret": -0.01567,
+     "sigma_units": -0.73
+    },
+    "7d": {
+     "ret": -0.053436,
+     "sigma_units": -1.57
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -0.596
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.005613,
+    "robust_sigma_1h_central": 0.005763,
+    "weekend_m": 0.581,
+    "robust_sigma_day": 0.027498,
+    "robust_sigma_ann": 0.525342,
+    "vol_pct_1y": 0.824,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.02259,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.021291,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.969,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.1396,
+    "drawdown_sigma30": 1.38,
+    "high_30d": 84880.0,
+    "rs_neg_share_5d": 0.8,
+    "jv_share_5d": 0.186,
+    "sigma_30d_daily": 0.018459
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 4,
+    "max_abs_z_7d": 11.83,
+    "n_jumps_lm_7d": 3
+   },
+   "funding": {
+    "rate": 4.137e-05,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0453,
+    "z_90d": -0.23,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 4.92e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 70072.47,
+    "oi_usd": 5173044114.0,
+    "chg_24h_log": 0.0084,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 4380763.0,
+    "long_n": 569,
+    "short_usd": 556844.0,
+    "short_n": 107,
+    "n_1h": 12,
+    "usd_1h": 66114.0,
+    "largest": {
+     "usd": 297715.0,
+     "side": "long",
+     "ts": "2026-11-10T15:41:46+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 75981.0,
+     "hi": 76425.0,
+     "score": 47.56,
+     "pivots": 10,
+     "dist_pct": 2.92,
+     "dist_sigma_day": 1.27
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 741.85
+   },
+   "history_days": 2407.5,
+   "first_bar": "2020-04-08T10:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 53,
+    "n_anom_buy": 25,
+    "n_anom_sell": 28,
+    "n_anom_1h": 4,
+    "max_abs_z_24h": 27.33,
+    "latest": {
+     "ts": "2026-11-10T22:40:00+00:00",
+     "z": 4.19,
+     "imbalance_usd": 2329837.0,
+     "side": "buy",
+     "notional_usd": 3616764.0,
+     "age_min": 16.0
+    },
+    "last_close": 73716.6,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 73716.6,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "CARVUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 0.02698,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.00297,
+     "sigma_units": 0.27
+    },
+    "24h": {
+     "ret": -0.049884,
+     "sigma_units": -0.96
+    },
+    "7d": {
+     "ret": null,
+     "sigma_units": null
+    }
+   },
+   "regime": {
+    "cell": null,
+    "label": null,
+    "dir_state": "down",
+    "vol_state": null,
+    "dir_score": -1.628
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.010506,
+    "robust_sigma_1h_central": 0.01142,
+    "weekend_m": 0.624,
+    "robust_sigma_day": 0.051467,
+    "robust_sigma_ann": 0.983281,
+    "vol_pct_1y": null,
+    "vol_pct_window_days": 4.0,
+    "har_sigma_day": null,
+    "har_for_day": null,
+    "rv_last_day": null,
+    "last_complete_day": null,
+    "vol_surprise": null,
+    "vol_surprise_day": null
+   },
+   "asymmetry": {
+    "drawdown_flag": null,
+    "drawdown_log": null,
+    "drawdown_sigma30": null,
+    "high_30d": null,
+    "rs_neg_share_5d": null,
+    "jv_share_5d": null
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 1,
+    "max_abs_z_7d": 5.19,
+    "n_jumps_lm_7d": null
+   },
+   "funding": {
+    "rate": 5e-05,
+    "ts": "2026-11-10T20:00:00+00:00",
+    "rate_ann": 0.1095,
+    "z_90d": null,
+    "n_90d": 29,
+    "interval_min": 240,
+    "mean_90d": -0.00070665,
+    "crowded": null,
+    "age_h": 2.93
+   },
+   "oi": {
+    "oi": 24913698.0,
+    "oi_usd": 672172.0,
+    "chg_24h_log": -0.0586,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 290.0,
+    "long_n": 2,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 261.0,
+     "side": "long",
+     "ts": "2026-11-10T16:02:13+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 0.027609,
+     "hi": 0.027831,
+     "score": 5.8,
+     "pivots": 1,
+     "dist_pct": 2.33,
+     "dist_sigma_day": 0.45
+    },
+    "inside": null,
+    "n_bars_4h": 30,
+    "atr_4h": 0.00089
+   },
+   "history_days": 5.0,
+   "first_bar": "2026-11-05T21:00:00+00:00",
+   "flags": [
+    "burn_in_skipped:history_starts_after_listing",
+    "short_history",
+    "vol_pct_unavailable",
+    "har_unavailable",
+    "funding_z_short",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 136,
+    "n_anom_buy": 54,
+    "n_anom_sell": 82,
+    "n_anom_1h": 6,
+    "max_abs_z_24h": 180.08,
+    "latest": {
+     "ts": "2026-11-10T22:41:00+00:00",
+     "z": 5.92,
+     "imbalance_usd": 270.0,
+     "side": "buy",
+     "notional_usd": 403.0,
+     "age_min": 15.0
+    },
+    "last_close": 0.02706,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 0.02706,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "CRVUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 0.2488,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.002012,
+     "sigma_units": 0.23
+    },
+    "24h": {
+     "ret": -0.046337,
+     "sigma_units": -1.2
+    },
+    "7d": {
+     "ret": null,
+     "sigma_units": null
+    }
+   },
+   "regime": {
+    "cell": null,
+    "label": null,
+    "dir_state": "down",
+    "vol_state": null,
+    "dir_score": -0.883
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.008533,
+    "robust_sigma_1h_central": 0.009065,
+    "weekend_m": 0.661,
+    "robust_sigma_day": 0.041805,
+    "robust_sigma_ann": 0.79869,
+    "vol_pct_1y": null,
+    "vol_pct_window_days": 4.0,
+    "har_sigma_day": null,
+    "har_for_day": null,
+    "rv_last_day": null,
+    "last_complete_day": null,
+    "vol_surprise": null,
+    "vol_surprise_day": null
+   },
+   "asymmetry": {
+    "drawdown_flag": null,
+    "drawdown_log": null,
+    "drawdown_sigma30": null,
+    "high_30d": null,
+    "rs_neg_share_5d": null,
+    "jv_share_5d": null
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 7.55,
+    "n_jumps_lm_7d": null
+   },
+   "funding": {
+    "rate": 0.0001,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.1095,
+    "z_90d": null,
+    "n_90d": 14,
+    "interval_min": 480,
+    "mean_90d": 7.182e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 65393334.6,
+    "oi_usd": 16269862.0,
+    "chg_24h_log": 0.0006,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 18272.0,
+    "long_n": 9,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 1,
+    "usd_1h": 1119.0,
+    "largest": {
+     "usd": 5032.0,
+     "side": "long",
+     "ts": "2026-11-10T15:41:48+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 0.246313,
+     "hi": 0.247488,
+     "score": 3.83,
+     "pivots": 1,
+     "dist_pct": -0.53,
+     "dist_sigma_day": -0.13
+    },
+    "above": {
+     "lo": 0.2684,
+     "hi": 0.2699,
+     "score": 7.44,
+     "pivots": 2,
+     "dist_pct": 7.88,
+     "dist_sigma_day": 1.81
+    },
+    "inside": null,
+    "n_bars_4h": 30,
+    "atr_4h": 0.0047
+   },
+   "history_days": 5.0,
+   "first_bar": "2026-11-05T21:00:00+00:00",
+   "flags": [
+    "burn_in_skipped:history_starts_after_listing",
+    "short_history",
+    "vol_pct_unavailable",
+    "har_unavailable",
+    "funding_z_short",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 77,
+    "n_anom_buy": 32,
+    "n_anom_sell": 45,
+    "n_anom_1h": 5,
+    "max_abs_z_24h": 100.65,
+    "latest": {
+     "ts": "2026-11-10T22:33:00+00:00",
+     "z": -16.12,
+     "imbalance_usd": -13892.0,
+     "side": "sell",
+     "notional_usd": 13892.0,
+     "age_min": 23.0
+    },
+    "last_close": 0.2478,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 0.2478,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "DOGEUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 0.06798,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.005162,
+     "sigma_units": 0.74
+    },
+    "24h": {
+     "ret": -0.028138,
+     "sigma_units": -0.83
+    },
+    "7d": {
+     "ret": -0.105713,
+     "sigma_units": -2.09
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -0.814
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.006946,
+    "robust_sigma_1h_central": 0.007089,
+    "weekend_m": 0.832,
+    "robust_sigma_day": 0.03403,
+    "robust_sigma_ann": 0.650135,
+    "vol_pct_1y": 0.642,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.037061,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.033916,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.86,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.2591,
+    "drawdown_sigma30": 1.58,
+    "high_30d": 0.08809,
+    "rs_neg_share_5d": 0.729,
+    "jv_share_5d": 0.299,
+    "sigma_30d_daily": 0.029958
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 3,
+    "max_abs_z_7d": 11.64,
+    "n_jumps_lm_7d": 3
+   },
+   "funding": {
+    "rate": -6.075e-05,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": -0.0665,
+    "z_90d": -1.66,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 3.142e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 1379789664.0,
+    "oi_usd": 93798101.0,
+    "chg_24h_log": 0.0096,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 0.0,
+    "long_n": 0,
+    "short_usd": 225.0,
+    "short_n": 2,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 218.0,
+     "side": "short",
+     "ts": "2026-11-10T13:04:18+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 0.0698,
+     "hi": 0.07034,
+     "score": 60.81,
+     "pivots": 5,
+     "dist_pct": 2.68,
+     "dist_sigma_day": 0.71
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 0.001075
+   },
+   "history_days": 1973.5,
+   "first_bar": "2021-06-16T10:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 378,
+    "n_anom_24h": 114,
+    "n_anom_buy": 51,
+    "n_anom_sell": 63,
+    "n_anom_1h": 31,
+    "max_abs_z_24h": 111800.89,
+    "latest": {
+     "ts": "2026-11-10T22:54:00+00:00",
+     "z": -4.76,
+     "imbalance_usd": -7287.0,
+     "side": "sell",
+     "notional_usd": 8767.0,
+     "age_min": 2.0
+    },
+    "last_close": 0.06787,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 0.06787,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "DOTUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 0.8431,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.008696,
+     "sigma_units": 1.06
+    },
+    "24h": {
+     "ret": -0.019847,
+     "sigma_units": -0.47
+    },
+    "7d": {
+     "ret": -0.111556,
+     "sigma_units": -1.81
+    }
+   },
+   "regime": {
+    "cell": "R8",
+    "label": "trend down",
+    "dir_state": "down",
+    "vol_state": "normal",
+    "dir_score": -0.724
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.008269,
+    "robust_sigma_1h_central": 0.008453,
+    "weekend_m": 0.797,
+    "robust_sigma_day": 0.040511,
+    "robust_sigma_ann": 0.773969,
+    "vol_pct_1y": 0.598,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.043013,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.040457,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.921,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.4196,
+    "drawdown_sigma30": 1.68,
+    "high_30d": 1.2827,
+    "rs_neg_share_5d": 0.642,
+    "jv_share_5d": 0.261,
+    "sigma_30d_daily": 0.04552
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 8.06,
+    "n_jumps_lm_7d": 2
+   },
+   "funding": {
+    "rate": 0.0001,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.1095,
+    "z_90d": 0.66,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 5.02e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 20895085.2,
+    "oi_usd": 17616646.0,
+    "chg_24h_log": 0.0665,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 1727.0,
+    "long_n": 6,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 837.0,
+     "side": "long",
+     "ts": "2026-11-10T15:40:28+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 0.8594,
+     "hi": 0.8728,
+     "score": 46.59,
+     "pivots": 8,
+     "dist_pct": 1.93,
+     "dist_sigma_day": 0.45
+    },
+    "inside": {
+     "lo": 0.8369,
+     "hi": 0.847,
+     "score": 60.39
+    },
+    "n_bars_4h": 719,
+    "atr_4h": 0.02445
+   },
+   "history_days": 2049.5,
+   "first_bar": "2021-04-01T09:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 82,
+    "n_anom_buy": 47,
+    "n_anom_sell": 35,
+    "n_anom_1h": 12,
+    "max_abs_z_24h": 51.84,
+    "latest": {
+     "ts": "2026-11-10T22:45:00+00:00",
+     "z": -8.86,
+     "imbalance_usd": -9194.0,
+     "side": "sell",
+     "notional_usd": 9556.0,
+     "age_min": 11.0
+    },
+    "last_close": 0.8443,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 0.8443,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "ENAUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 0.15038,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.013793,
+     "sigma_units": 1.22
+    },
+    "24h": {
+     "ret": -0.025928,
+     "sigma_units": -0.45
+    },
+    "7d": {
+     "ret": -0.163831,
+     "sigma_units": -1.24
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -0.631
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.011513,
+    "robust_sigma_1h_central": 0.01165,
+    "weekend_m": 0.873,
+    "robust_sigma_day": 0.056403,
+    "robust_sigma_ann": 1.077572,
+    "vol_pct_1y": 0.65,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.062209,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.059954,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.0,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.4975,
+    "drawdown_sigma30": 1.43,
+    "high_30d": 0.24732,
+    "rs_neg_share_5d": 0.669,
+    "jv_share_5d": 0.219,
+    "sigma_30d_daily": 0.063321
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 3,
+    "max_abs_z_7d": 6.63,
+    "n_jumps_lm_7d": 3
+   },
+   "funding": {
+    "rate": 5e-05,
+    "ts": "2026-11-10T20:00:00+00:00",
+    "rate_ann": 0.1095,
+    "z_90d": 0.53,
+    "n_90d": 540,
+    "interval_min": 240,
+    "mean_90d": 2.317e-05,
+    "crowded": null,
+    "age_h": 2.93
+   },
+   "oi": {
+    "oi": 314851492.0,
+    "oi_usd": 47347367.0,
+    "chg_24h_log": -0.0056,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 1141.0,
+    "long_n": 4,
+    "short_usd": 2836.0,
+    "short_n": 3,
+    "n_1h": 3,
+    "usd_1h": 2836.0,
+    "largest": {
+     "usd": 1426.0,
+     "side": "short",
+     "ts": "2026-11-10T22:07:43+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 0.14387,
+     "hi": 0.14723,
+     "score": 55.59,
+     "pivots": 7,
+     "dist_pct": -2.09,
+     "dist_sigma_day": -0.34
+    },
+    "above": {
+     "lo": 0.15326,
+     "hi": 0.15678,
+     "score": 55.45,
+     "pivots": 6,
+     "dist_pct": 1.92,
+     "dist_sigma_day": 0.3
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 0.006745
+   },
+   "history_days": 922.5,
+   "first_bar": "2024-05-02T11:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 399,
+    "n_anom_24h": 100,
+    "n_anom_buy": 59,
+    "n_anom_sell": 41,
+    "n_anom_1h": 24,
+    "max_abs_z_24h": 2251.62,
+    "latest": {
+     "ts": "2026-11-10T22:40:00+00:00",
+     "z": -6.42,
+     "imbalance_usd": -17984.0,
+     "side": "sell",
+     "notional_usd": 28195.0,
+     "age_min": 16.0
+    },
+    "last_close": 0.15109,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 0.15109,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "ETCUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 6.72,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.001191,
+     "sigma_units": 0.18
+    },
+    "24h": {
+     "ret": -0.019015,
+     "sigma_units": -0.54
+    },
+    "7d": {
+     "ret": -0.050914,
+     "sigma_units": -1.21
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -0.487
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.006578,
+    "robust_sigma_1h_central": 0.00668,
+    "weekend_m": 0.852,
+    "robust_sigma_day": 0.032228,
+    "robust_sigma_ann": 0.615706,
+    "vol_pct_1y": 0.586,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.035985,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.034809,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.928,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.2417,
+    "drawdown_sigma30": 1.43,
+    "high_30d": 8.557,
+    "rs_neg_share_5d": 0.661,
+    "jv_share_5d": 0.207,
+    "sigma_30d_daily": 0.03086
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 4,
+    "max_abs_z_7d": 11.5,
+    "n_jumps_lm_7d": 2
+   },
+   "funding": {
+    "rate": 5.417e-05,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0593,
+    "z_90d": 0.2,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 3.815e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 1014043.0,
+    "oi_usd": 6814369.0,
+    "chg_24h_log": 0.0234,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 1404.0,
+    "long_n": 2,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 1290.0,
+     "side": "long",
+     "ts": "2026-11-10T15:44:01+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 6.876,
+     "hi": 6.914,
+     "score": 37.0,
+     "pivots": 2,
+     "dist_pct": 2.32,
+     "dist_sigma_day": 0.64
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 0.114
+   },
+   "history_days": 1946.6,
+   "first_bar": "2021-07-13T07:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 82,
+    "n_anom_buy": 35,
+    "n_anom_sell": 47,
+    "n_anom_1h": 4,
+    "max_abs_z_24h": 321.51,
+    "latest": {
+     "ts": "2026-11-10T22:44:00+00:00",
+     "z": -4.52,
+     "imbalance_usd": -1928.0,
+     "side": "sell",
+     "notional_usd": 3165.0,
+     "age_min": 12.0
+    },
+    "last_close": 6.712,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 6.712,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "ETHUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 2055.78,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": -0.001327,
+     "sigma_units": -0.16
+    },
+    "24h": {
+     "ret": -0.034781,
+     "sigma_units": -1.35
+    },
+    "7d": {
+     "ret": -0.109345,
+     "sigma_units": -2.54
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -0.907
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.00813,
+    "robust_sigma_1h_central": 0.008468,
+    "weekend_m": 0.703,
+    "robust_sigma_day": 0.039826,
+    "robust_sigma_ann": 0.760881,
+    "vol_pct_1y": 0.864,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.028891,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.025583,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.772,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.2265,
+    "drawdown_sigma30": 1.58,
+    "high_30d": 2578.45,
+    "rs_neg_share_5d": 0.881,
+    "jv_share_5d": 0.43,
+    "sigma_30d_daily": 0.02623
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 4,
+    "max_abs_z_7d": 18.23,
+    "n_jumps_lm_7d": 5
+   },
+   "funding": {
+    "rate": 3.3e-07,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0004,
+    "z_90d": -0.86,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 3.899e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 729517.42,
+    "oi_usd": 1499727322.0,
+    "chg_24h_log": -0.0142,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 4506924.0,
+    "long_n": 621,
+    "short_usd": 760064.0,
+    "short_n": 67,
+    "n_1h": 6,
+    "usd_1h": 38324.0,
+    "largest": {
+     "usd": 302719.0,
+     "side": "short",
+     "ts": "2026-11-10T15:01:38+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 2338.21,
+     "hi": 2356.05,
+     "score": 32.4,
+     "pivots": 7,
+     "dist_pct": 13.74,
+     "dist_sigma_day": 4.46
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 30.48
+   },
+   "history_days": 2052.9,
+   "first_bar": "2021-03-29T00:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 61,
+    "n_anom_buy": 27,
+    "n_anom_sell": 34,
+    "n_anom_1h": 6,
+    "max_abs_z_24h": 67.06,
+    "latest": {
+     "ts": "2026-11-10T22:36:00+00:00",
+     "z": -6.26,
+     "imbalance_usd": -1924941.0,
+     "side": "sell",
+     "notional_usd": 2451807.0,
+     "age_min": 20.0
+    },
+    "last_close": 2048.31,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 2048.31,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "FILUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 0.751,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.004671,
+     "sigma_units": 0.63
+    },
+    "24h": {
+     "ret": -0.025894,
+     "sigma_units": -0.61
+    },
+    "7d": {
+     "ret": -0.146858,
+     "sigma_units": -2.04
+    }
+   },
+   "regime": {
+    "cell": "R8",
+    "label": "trend down",
+    "dir_state": "down",
+    "vol_state": "normal",
+    "dir_score": -0.921
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.007276,
+    "robust_sigma_1h_central": 0.007383,
+    "weekend_m": 0.873,
+    "robust_sigma_day": 0.035644,
+    "robust_sigma_ann": 0.680984,
+    "vol_pct_1y": 0.343,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.047887,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.041568,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.838,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.5217,
+    "drawdown_sigma30": 1.87,
+    "high_30d": 1.2654,
+    "rs_neg_share_5d": 0.719,
+    "jv_share_5d": 0.209,
+    "sigma_30d_daily": 0.050824
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 3,
+    "max_abs_z_7d": 7.16,
+    "n_jumps_lm_7d": 3
+   },
+   "funding": {
+    "rate": 0.0001,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.1095,
+    "z_90d": 0.88,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 2.129e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 15578323.2,
+    "oi_usd": 11699321.0,
+    "chg_24h_log": -0.0178,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 1779.0,
+    "long_n": 4,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 942.0,
+     "side": "long",
+     "ts": "2026-11-10T17:08:04+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 0.7096,
+     "hi": 0.7216,
+     "score": 49.84,
+     "pivots": 9,
+     "dist_pct": -3.91,
+     "dist_sigma_day": -0.83
+    },
+    "above": {
+     "lo": 0.758,
+     "hi": 0.7717,
+     "score": 43.53,
+     "pivots": 5,
+     "dist_pct": 0.93,
+     "dist_sigma_day": 0.19
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 0.02345
+   },
+   "history_days": 1946.6,
+   "first_bar": "2021-07-13T07:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 72,
+    "n_anom_buy": 37,
+    "n_anom_sell": 35,
+    "n_anom_1h": 7,
+    "max_abs_z_24h": 99.45,
+    "latest": {
+     "ts": "2026-11-10T22:28:00+00:00",
+     "z": -7.12,
+     "imbalance_usd": -4928.0,
+     "side": "sell",
+     "notional_usd": 5164.0,
+     "age_min": 28.0
+    },
+    "last_close": 0.7554,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 0.7554,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "GRAMUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 1.153,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.024584,
+     "sigma_units": 2.43
+    },
+    "24h": {
+     "ret": 0.115725,
+     "sigma_units": 3.23
+    },
+    "7d": {
+     "ret": null,
+     "sigma_units": null
+    }
+   },
+   "regime": {
+    "cell": null,
+    "label": null,
+    "dir_state": "up",
+    "vol_state": null,
+    "dir_score": 1.39
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.011573,
+    "robust_sigma_1h_central": 0.012252,
+    "weekend_m": 0.795,
+    "robust_sigma_day": 0.056697,
+    "robust_sigma_ann": 1.083198,
+    "vol_pct_1y": null,
+    "vol_pct_window_days": 4.0,
+    "har_sigma_day": null,
+    "har_for_day": null,
+    "rv_last_day": null,
+    "last_complete_day": null,
+    "vol_surprise": null,
+    "vol_surprise_day": null
+   },
+   "asymmetry": {
+    "drawdown_flag": null,
+    "drawdown_log": null,
+    "drawdown_sigma30": null,
+    "high_30d": null,
+    "rs_neg_share_5d": null,
+    "jv_share_5d": null
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 5.47,
+    "n_jumps_lm_7d": null
+   },
+   "funding": {
+    "rate": 3.09e-06,
+    "ts": "2026-11-10T20:00:00+00:00",
+    "rate_ann": 0.0068,
+    "z_90d": null,
+    "n_90d": 29,
+    "interval_min": 240,
+    "mean_90d": -6.369e-05,
+    "crowded": null,
+    "age_h": 2.93
+   },
+   "oi": {
+    "oi": 20944523.0,
+    "oi_usd": 24149035.0,
+    "chg_24h_log": 0.0301,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 3486.0,
+    "long_n": 11,
+    "short_usd": 5944.0,
+    "short_n": 11,
+    "n_1h": 3,
+    "usd_1h": 603.0,
+    "largest": {
+     "usd": 2464.0,
+     "side": "short",
+     "ts": "2026-11-10T20:44:25+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 1.11,
+     "hi": 1.12,
+     "score": 13.79,
+     "pivots": 3,
+     "dist_pct": -2.86,
+     "dist_sigma_day": -0.51
+    },
+    "above": null,
+    "inside": null,
+    "n_bars_4h": 30,
+    "atr_4h": 0.021
+   },
+   "history_days": 5.0,
+   "first_bar": "2026-11-05T21:00:00+00:00",
+   "flags": [
+    "burn_in_skipped:history_starts_after_listing",
+    "short_history",
+    "vol_pct_unavailable",
+    "har_unavailable",
+    "funding_z_short",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 105,
+    "n_anom_buy": 59,
+    "n_anom_sell": 46,
+    "n_anom_1h": 7,
+    "max_abs_z_24h": 170.93,
+    "latest": {
+     "ts": "2026-11-10T22:21:00+00:00",
+     "z": -4.75,
+     "imbalance_usd": -13713.0,
+     "side": "sell",
+     "notional_usd": 29837.0,
+     "age_min": 35.0
+    },
+    "last_close": 1.138,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 1.138,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "HYPEUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 72.686,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.006155,
+     "sigma_units": 0.66
+    },
+    "24h": {
+     "ret": -0.0363,
+     "sigma_units": -0.74
+    },
+    "7d": {
+     "ret": -0.167698,
+     "sigma_units": -1.77
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -1.01
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.009151,
+    "robust_sigma_1h_central": 0.009343,
+    "weekend_m": 0.664,
+    "robust_sigma_day": 0.044828,
+    "robust_sigma_ann": 0.856441,
+    "vol_pct_1y": 0.6,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.045276,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.051752,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.407,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.2891,
+    "drawdown_sigma30": 1.37,
+    "high_30d": 97.052,
+    "rs_neg_share_5d": 0.607,
+    "jv_share_5d": 0.21,
+    "sigma_30d_daily": 0.038446
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 7.2,
+    "n_jumps_lm_7d": 2
+   },
+   "funding": {
+    "rate": 0.0001,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.1095,
+    "z_90d": 0.91,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 4.002e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 3115505.92,
+    "oi_usd": 226453663.0,
+    "chg_24h_log": -0.037,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 33752.0,
+    "long_n": 31,
+    "short_usd": 1131.0,
+    "short_n": 9,
+    "n_1h": 3,
+    "usd_1h": 287.0,
+    "largest": {
+     "usd": 4953.0,
+     "side": "long",
+     "ts": "2026-11-10T14:32:30+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 76.056,
+     "hi": 76.96,
+     "score": 45.75,
+     "pivots": 7,
+     "dist_pct": 4.64,
+     "dist_sigma_day": 1.0
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 1.5095
+   },
+   "history_days": 675.4,
+   "first_bar": "2025-01-04T12:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 389,
+    "n_anom_24h": 100,
+    "n_anom_buy": 42,
+    "n_anom_sell": 58,
+    "n_anom_1h": 23,
+    "max_abs_z_24h": 14823.94,
+    "latest": {
+     "ts": "2026-11-10T22:54:00+00:00",
+     "z": -13.4,
+     "imbalance_usd": -75062.0,
+     "side": "sell",
+     "notional_usd": 164225.0,
+     "age_min": 2.0
+    },
+    "last_close": 72.28,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 72.28,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "INJUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": null,
+   "flags": [
+    "no_1h_bars"
+   ],
+   "data_max_ts": null,
+   "history_days": 0.0,
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 95,
+    "n_anom_buy": 43,
+    "n_anom_sell": 52,
+    "n_anom_1h": 7,
+    "max_abs_z_24h": 126.8,
+    "latest": {
+     "ts": "2026-11-10T22:27:00+00:00",
+     "z": -5.96,
+     "imbalance_usd": -25080.0,
+     "side": "sell",
+     "notional_usd": 27140.0,
+     "age_min": 29.0
+    },
+    "last_close": 8.027,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   }
+  },
+  {
+   "symbol": "KASUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 0.02968,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": -0.013719,
+     "sigma_units": -1.58
+    },
+    "24h": {
+     "ret": -0.006381,
+     "sigma_units": -0.15
+    },
+    "7d": {
+     "ret": null,
+     "sigma_units": null
+    }
+   },
+   "regime": {
+    "cell": null,
+    "label": null,
+    "dir_state": "range",
+    "vol_state": null,
+    "dir_score": -0.032
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.009098,
+    "robust_sigma_1h_central": 0.009594,
+    "weekend_m": 0.723,
+    "robust_sigma_day": 0.04457,
+    "robust_sigma_ann": 0.851512,
+    "vol_pct_1y": null,
+    "vol_pct_window_days": 4.0,
+    "har_sigma_day": null,
+    "har_for_day": null,
+    "rv_last_day": null,
+    "last_complete_day": null,
+    "vol_surprise": null,
+    "vol_surprise_day": null
+   },
+   "asymmetry": {
+    "drawdown_flag": null,
+    "drawdown_log": null,
+    "drawdown_sigma30": null,
+    "high_30d": null,
+    "rs_neg_share_5d": null,
+    "jv_share_5d": null
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 1,
+    "max_abs_z_7d": 6.58,
+    "n_jumps_lm_7d": null
+   },
+   "funding": {
+    "rate": 5e-05,
+    "ts": "2026-11-10T20:00:00+00:00",
+    "rate_ann": 0.1095,
+    "z_90d": null,
+    "n_90d": 29,
+    "interval_min": 240,
+    "mean_90d": 2.903e-05,
+    "crowded": null,
+    "age_h": 2.93
+   },
+   "oi": {
+    "oi": 189174820.0,
+    "oi_usd": 5614709.0,
+    "chg_24h_log": -0.0044,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 291.0,
+    "long_n": 2,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 244.0,
+     "side": "long",
+     "ts": "2026-11-10T15:41:29+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 0.029069,
+     "hi": 0.029211,
+     "score": 10.22,
+     "pivots": 1,
+     "dist_pct": -1.58,
+     "dist_sigma_day": -0.36
+    },
+    "above": {
+     "lo": 0.029789,
+     "hi": 0.029931,
+     "score": 11.28,
+     "pivots": 1,
+     "dist_pct": 0.37,
+     "dist_sigma_day": 0.08
+    },
+    "inside": null,
+    "n_bars_4h": 30,
+    "atr_4h": 0.00057
+   },
+   "history_days": 5.0,
+   "first_bar": "2026-11-05T21:00:00+00:00",
+   "flags": [
+    "burn_in_skipped:history_starts_after_listing",
+    "short_history",
+    "vol_pct_unavailable",
+    "har_unavailable",
+    "funding_z_short",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 142,
+    "n_anom_buy": 74,
+    "n_anom_sell": 68,
+    "n_anom_1h": 7,
+    "max_abs_z_24h": 320.39,
+    "latest": {
+     "ts": "2026-11-10T22:39:00+00:00",
+     "z": 21.6,
+     "imbalance_usd": 9668.0,
+     "side": "buy",
+     "notional_usd": 9668.0,
+     "age_min": 17.0
+    },
+    "last_close": 0.0296,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 0.0296,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "LINKUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 10.348,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.003194,
+     "sigma_units": 0.37
+    },
+    "24h": {
+     "ret": -0.03008,
+     "sigma_units": -0.81
+    },
+    "7d": {
+     "ret": -0.074018,
+     "sigma_units": -1.25
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -0.808
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.008487,
+    "robust_sigma_1h_central": 0.008574,
+    "weekend_m": 0.831,
+    "robust_sigma_day": 0.041577,
+    "robust_sigma_ann": 0.794329,
+    "vol_pct_1y": 0.792,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.03965,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.037209,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.916,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.2659,
+    "drawdown_sigma30": 1.34,
+    "high_30d": 13.5,
+    "rs_neg_share_5d": 0.699,
+    "jv_share_5d": 0.192,
+    "sigma_30d_daily": 0.036171
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 3,
+    "max_abs_z_7d": 9.17,
+    "n_jumps_lm_7d": 3
+   },
+   "funding": {
+    "rate": 9.515e-05,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.1042,
+    "z_90d": 0.97,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 3.965e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 5796865.8,
+    "oi_usd": 59985967.0,
+    "chg_24h_log": 0.0002,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 2931.0,
+    "long_n": 1,
+    "short_usd": 249.0,
+    "short_n": 1,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 2931.0,
+     "side": "long",
+     "ts": "2026-11-10T21:15:31+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 10.959,
+     "hi": 11.048,
+     "score": 46.47,
+     "pivots": 7,
+     "dist_pct": 5.9,
+     "dist_sigma_day": 1.45
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 0.2155
+   },
+   "history_days": 2197.5,
+   "first_bar": "2020-11-04T09:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 368,
+    "n_anom_24h": 90,
+    "n_anom_buy": 54,
+    "n_anom_sell": 36,
+    "n_anom_1h": 28,
+    "max_abs_z_24h": 300508.49,
+    "latest": {
+     "ts": "2026-11-10T22:55:00+00:00",
+     "z": 14.64,
+     "imbalance_usd": 12361.0,
+     "side": "buy",
+     "notional_usd": 32711.0,
+     "age_min": 1.0
+    },
+    "last_close": 10.296,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 10.296,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "LTCUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 50.55,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.004958,
+     "sigma_units": 0.72
+    },
+    "24h": {
+     "ret": -0.017453,
+     "sigma_units": -0.53
+    },
+    "7d": {
+     "ret": -0.078535,
+     "sigma_units": -1.51
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -0.617
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.006789,
+    "robust_sigma_1h_central": 0.006864,
+    "weekend_m": 0.827,
+    "robust_sigma_day": 0.033257,
+    "robust_sigma_ann": 0.63537,
+    "vol_pct_1y": 0.725,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.035766,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.034414,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.968,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.2643,
+    "drawdown_sigma30": 1.5,
+    "high_30d": 65.84,
+    "rs_neg_share_5d": 0.713,
+    "jv_share_5d": 0.39,
+    "sigma_30d_daily": 0.032098
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 3,
+    "max_abs_z_7d": 9.41,
+    "n_jumps_lm_7d": 4
+   },
+   "funding": {
+    "rate": -5.6e-07,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": -0.0006,
+    "z_90d": -0.65,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 3.857e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 1042860.8,
+    "oi_usd": 52716613.0,
+    "chg_24h_log": -0.0282,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 18326.0,
+    "long_n": 6,
+    "short_usd": 9594.0,
+    "short_n": 1,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 15008.0,
+     "side": "long",
+     "ts": "2026-11-10T15:44:04+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 49.09,
+     "hi": 49.57,
+     "score": 33.55,
+     "pivots": 5,
+     "dist_pct": -1.94,
+     "dist_sigma_day": -0.55
+    },
+    "above": {
+     "lo": 51.2,
+     "hi": 51.58,
+     "score": 43.09,
+     "pivots": 3,
+     "dist_pct": 1.29,
+     "dist_sigma_day": 0.36
+    },
+    "inside": {
+     "lo": 50.49,
+     "hi": 51.02,
+     "score": 36.67
+    },
+    "n_bars_4h": 719,
+    "atr_4h": 0.895
+   },
+   "history_days": 2197.5,
+   "first_bar": "2020-11-04T09:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 76,
+    "n_anom_buy": 39,
+    "n_anom_sell": 37,
+    "n_anom_1h": 4,
+    "max_abs_z_24h": 126.08,
+    "latest": {
+     "ts": "2026-11-10T22:49:00+00:00",
+     "z": 5.99,
+     "imbalance_usd": 11242.0,
+     "side": "buy",
+     "notional_usd": 11283.0,
+     "age_min": 7.0
+    },
+    "last_close": 50.58,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 50.58,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "MAVIAUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 0.02516,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.000398,
+     "sigma_units": 0.04
+    },
+    "24h": {
+     "ret": -0.006734,
+     "sigma_units": -0.1
+    },
+    "7d": {
+     "ret": null,
+     "sigma_units": null
+    }
+   },
+   "regime": {
+    "cell": null,
+    "label": null,
+    "dir_state": "range",
+    "vol_state": null,
+    "dir_score": -0.38
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.010431,
+    "robust_sigma_1h_central": 0.011777,
+    "weekend_m": 0.674,
+    "robust_sigma_day": 0.051102,
+    "robust_sigma_ann": 0.976302,
+    "vol_pct_1y": null,
+    "vol_pct_window_days": 4.0,
+    "har_sigma_day": null,
+    "har_for_day": null,
+    "rv_last_day": null,
+    "last_complete_day": null,
+    "vol_surprise": null,
+    "vol_surprise_day": null
+   },
+   "asymmetry": {
+    "drawdown_flag": null,
+    "drawdown_log": null,
+    "drawdown_sigma30": null,
+    "high_30d": null,
+    "rs_neg_share_5d": null,
+    "jv_share_5d": null
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 0,
+    "max_abs_z_7d": 3.88,
+    "n_jumps_lm_7d": null
+   },
+   "funding": {
+    "rate": 5e-05,
+    "ts": "2026-11-10T20:00:00+00:00",
+    "rate_ann": 0.1095,
+    "z_90d": null,
+    "n_90d": 29,
+    "interval_min": 240,
+    "mean_90d": 5e-05,
+    "crowded": null,
+    "age_h": 2.93
+   },
+   "oi": {
+    "oi": 39535678.2,
+    "oi_usd": 994718.0,
+    "chg_24h_log": 0.0066,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 167.0,
+    "long_n": 1,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 167.0,
+     "side": "long",
+     "ts": "2026-11-10T17:08:06+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 0.02457,
+     "hi": 0.02481,
+     "score": 9.59,
+     "pivots": 2,
+     "dist_pct": -1.39,
+     "dist_sigma_day": -0.27
+    },
+    "above": {
+     "lo": 0.02808,
+     "hi": 0.02837,
+     "score": 5.66,
+     "pivots": 2,
+     "dist_pct": 11.61,
+     "dist_sigma_day": 2.15
+    },
+    "inside": null,
+    "n_bars_4h": 30,
+    "atr_4h": 0.00086
+   },
+   "history_days": 5.0,
+   "first_bar": "2026-11-05T21:00:00+00:00",
+   "flags": [
+    "burn_in_skipped:history_starts_after_listing",
+    "short_history",
+    "vol_pct_unavailable",
+    "har_unavailable",
+    "funding_z_short",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 383,
+    "n_anom_24h": 145,
+    "n_anom_buy": 62,
+    "n_anom_sell": 83,
+    "n_anom_1h": 14,
+    "max_abs_z_24h": 14569.35,
+    "latest": {
+     "ts": "2026-11-10T22:52:00+00:00",
+     "z": -6.17,
+     "imbalance_usd": -92.0,
+     "side": "sell",
+     "notional_usd": 98.0,
+     "age_min": 4.0
+    },
+    "last_close": 0.02539,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 0.02539,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "MONUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 0.01646,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": -0.000607,
+     "sigma_units": -0.06
+    },
+    "24h": {
+     "ret": -0.01627,
+     "sigma_units": -0.27
+    },
+    "7d": {
+     "ret": null,
+     "sigma_units": null
+    }
+   },
+   "regime": {
+    "cell": null,
+    "label": null,
+    "dir_state": "range",
+    "vol_state": null,
+    "dir_score": -0.2
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.009915,
+    "robust_sigma_1h_central": 0.010643,
+    "weekend_m": 0.829,
+    "robust_sigma_day": 0.048572,
+    "robust_sigma_ann": 0.927974,
+    "vol_pct_1y": null,
+    "vol_pct_window_days": 4.0,
+    "har_sigma_day": null,
+    "har_for_day": null,
+    "rv_last_day": null,
+    "last_complete_day": null,
+    "vol_surprise": null,
+    "vol_surprise_day": null
+   },
+   "asymmetry": {
+    "drawdown_flag": null,
+    "drawdown_log": null,
+    "drawdown_sigma30": null,
+    "high_30d": null,
+    "rs_neg_share_5d": null,
+    "jv_share_5d": null
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 1,
+    "max_abs_z_7d": 7.67,
+    "n_jumps_lm_7d": null
+   },
+   "funding": {
+    "rate": 4.207e-05,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0461,
+    "z_90d": null,
+    "n_90d": 14,
+    "interval_min": 480,
+    "mean_90d": -4.21e-06,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 651346076.0,
+    "oi_usd": 10721156.0,
+    "chg_24h_log": 0.0276,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 0.0,
+    "long_n": 0,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": null
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 0.016264,
+     "hi": 0.016356,
+     "score": 11.2,
+     "pivots": 2,
+     "dist_pct": -0.63,
+     "dist_sigma_day": -0.13
+    },
+    "above": {
+     "lo": 0.017194,
+     "hi": 0.017286,
+     "score": 4.87,
+     "pivots": 1,
+     "dist_pct": 4.46,
+     "dist_sigma_day": 0.9
+    },
+    "inside": null,
+    "n_bars_4h": 30,
+    "atr_4h": 0.00037
+   },
+   "history_days": 5.0,
+   "first_bar": "2026-11-05T21:00:00+00:00",
+   "flags": [
+    "burn_in_skipped:history_starts_after_listing",
+    "short_history",
+    "vol_pct_unavailable",
+    "har_unavailable",
+    "funding_z_short",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 74,
+    "n_anom_buy": 38,
+    "n_anom_sell": 36,
+    "n_anom_1h": 4,
+    "max_abs_z_24h": 96.34,
+    "latest": {
+     "ts": "2026-11-10T22:29:00+00:00",
+     "z": 9.89,
+     "imbalance_usd": 8964.0,
+     "side": "buy",
+     "notional_usd": 9006.0,
+     "age_min": 27.0
+    },
+    "last_close": 0.01642,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 0.01642,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "NEARUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 3.593,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.010914,
+     "sigma_units": 0.75
+    },
+    "24h": {
+     "ret": -0.015192,
+     "sigma_units": -0.25
+    },
+    "7d": {
+     "ret": -0.078135,
+     "sigma_units": -0.8
+    }
+   },
+   "regime": {
+    "cell": "R6",
+    "label": "whipsaw",
+    "dir_state": "range",
+    "vol_state": "high",
+    "dir_score": -0.443
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.014401,
+    "robust_sigma_1h_central": 0.01482,
+    "weekend_m": 0.788,
+    "robust_sigma_day": 0.07055,
+    "robust_sigma_ann": 1.347856,
+    "vol_pct_1y": 0.836,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.056839,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.055669,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.999,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.5194,
+    "drawdown_sigma30": 1.6,
+    "high_30d": 6.04,
+    "rs_neg_share_5d": 0.61,
+    "jv_share_5d": 0.161,
+    "sigma_30d_daily": 0.059271
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 4.23,
+    "n_jumps_lm_7d": 0
+   },
+   "funding": {
+    "rate": 6.05e-06,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0066,
+    "z_90d": -0.45,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 4.445e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 30099214.0,
+    "oi_usd": 108146476.0,
+    "chg_24h_log": 0.0247,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 6039.0,
+    "long_n": 8,
+    "short_usd": 7259.0,
+    "short_n": 6,
+    "n_1h": 1,
+    "usd_1h": 3040.0,
+    "largest": {
+     "usd": 3252.0,
+     "side": "short",
+     "ts": "2026-11-10T21:47:46+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 3.615,
+     "hi": 3.696,
+     "score": 33.22,
+     "pivots": 4,
+     "dist_pct": 0.61,
+     "dist_sigma_day": 0.11
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 0.149
+   },
+   "history_days": 1842.8,
+   "first_bar": "2021-10-25T04:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 388,
+    "n_anom_24h": 94,
+    "n_anom_buy": 46,
+    "n_anom_sell": 48,
+    "n_anom_1h": 24,
+    "max_abs_z_24h": 4631.45,
+    "latest": {
+     "ts": "2026-11-10T22:54:00+00:00",
+     "z": -8.37,
+     "imbalance_usd": -50645.0,
+     "side": "sell",
+     "notional_usd": 50745.0,
+     "age_min": 2.0
+    },
+    "last_close": 3.564,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 3.564,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "ONDOUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": null,
+   "flags": [
+    "no_1h_bars"
+   ],
+   "data_max_ts": null,
+   "history_days": 0.0,
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 62,
+    "n_anom_buy": 24,
+    "n_anom_sell": 38,
+    "n_anom_1h": 9,
+    "max_abs_z_24h": 84.08,
+    "latest": {
+     "ts": "2026-11-10T22:33:00+00:00",
+     "z": -4.6,
+     "imbalance_usd": -23740.0,
+     "side": "sell",
+     "notional_usd": 32887.0,
+     "age_min": 23.0
+    },
+    "last_close": 0.3659,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   }
+  },
+  {
+   "symbol": "RENDERUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 1.594,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.015808,
+     "sigma_units": 1.4
+    },
+    "24h": {
+     "ret": -0.000627,
+     "sigma_units": -0.01
+    },
+    "7d": {
+     "ret": null,
+     "sigma_units": null
+    }
+   },
+   "regime": {
+    "cell": null,
+    "label": null,
+    "dir_state": "range",
+    "vol_state": null,
+    "dir_score": 0.155
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.011604,
+    "robust_sigma_1h_central": 0.012209,
+    "weekend_m": 0.674,
+    "robust_sigma_day": 0.056848,
+    "robust_sigma_ann": 1.086072,
+    "vol_pct_1y": null,
+    "vol_pct_window_days": 4.0,
+    "har_sigma_day": null,
+    "har_for_day": null,
+    "rv_last_day": null,
+    "last_complete_day": null,
+    "vol_surprise": null,
+    "vol_surprise_day": null
+   },
+   "asymmetry": {
+    "drawdown_flag": null,
+    "drawdown_log": null,
+    "drawdown_sigma30": null,
+    "high_30d": null,
+    "rs_neg_share_5d": null,
+    "jv_share_5d": null
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 1,
+    "max_abs_z_7d": 6.45,
+    "n_jumps_lm_7d": null
+   },
+   "funding": {
+    "rate": 3.144e-05,
+    "ts": "2026-11-10T20:00:00+00:00",
+    "rate_ann": 0.0689,
+    "z_90d": null,
+    "n_90d": 29,
+    "interval_min": 240,
+    "mean_90d": 4.23e-05,
+    "crowded": null,
+    "age_h": 2.93
+   },
+   "oi": {
+    "oi": 5146927.8,
+    "oi_usd": 8204203.0,
+    "chg_24h_log": -0.0191,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 20908.0,
+    "long_n": 5,
+    "short_usd": 537.0,
+    "short_n": 2,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 10981.0,
+     "side": "long",
+     "ts": "2026-11-10T15:40:41+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 1.520625,
+     "hi": 1.531375,
+     "score": 13.21,
+     "pivots": 2,
+     "dist_pct": -3.93,
+     "dist_sigma_day": -0.71
+    },
+    "above": {
+     "lo": 1.613,
+     "hi": 1.632,
+     "score": 7.82,
+     "pivots": 2,
+     "dist_pct": 1.19,
+     "dist_sigma_day": 0.21
+    },
+    "inside": null,
+    "n_bars_4h": 30,
+    "atr_4h": 0.043
+   },
+   "history_days": 5.0,
+   "first_bar": "2026-11-05T21:00:00+00:00",
+   "flags": [
+    "burn_in_skipped:history_starts_after_listing",
+    "short_history",
+    "vol_pct_unavailable",
+    "har_unavailable",
+    "funding_z_short",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 109,
+    "n_anom_buy": 58,
+    "n_anom_sell": 51,
+    "n_anom_1h": 11,
+    "max_abs_z_24h": 75.87,
+    "latest": {
+     "ts": "2026-11-10T22:52:00+00:00",
+     "z": 10.14,
+     "imbalance_usd": 11362.0,
+     "side": "buy",
+     "notional_usd": 12660.0,
+     "age_min": 4.0
+    },
+    "last_close": 1.608,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 1.608,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "SOLUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 83.3,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.00024,
+     "sigma_units": 0.03
+    },
+    "24h": {
+     "ret": -0.036886,
+     "sigma_units": -1.24
+    },
+    "7d": {
+     "ret": -0.117116,
+     "sigma_units": -2.35
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -1.108
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.007154,
+    "robust_sigma_1h_central": 0.007357,
+    "weekend_m": 0.761,
+    "robust_sigma_day": 0.035046,
+    "robust_sigma_ann": 0.669548,
+    "vol_pct_1y": 0.695,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.034557,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.031111,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.833,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.3085,
+    "drawdown_sigma30": 1.9,
+    "high_30d": 113.4,
+    "rs_neg_share_5d": 0.767,
+    "jv_share_5d": 0.286,
+    "sigma_30d_daily": 0.029569
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 3,
+    "max_abs_z_7d": 9.55,
+    "n_jumps_lm_7d": 3
+   },
+   "funding": {
+    "rate": -3.129e-05,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": -0.0343,
+    "z_90d": -0.92,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 2.665e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 6280544.6,
+    "oi_usd": 523169365.0,
+    "chg_24h_log": 0.0404,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 55859.0,
+    "long_n": 12,
+    "short_usd": 24075.0,
+    "short_n": 16,
+    "n_1h": 5,
+    "usd_1h": 39693.0,
+    "largest": {
+     "usd": 30761.0,
+     "side": "long",
+     "ts": "2026-11-10T22:32:23+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 94.84,
+     "hi": 95.69,
+     "score": 31.07,
+     "pivots": 4,
+     "dist_pct": 13.85,
+     "dist_sigma_day": 3.75
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 1.485
+   },
+   "history_days": 1838.9,
+   "first_bar": "2021-10-29T00:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 393,
+    "n_anom_24h": 111,
+    "n_anom_buy": 63,
+    "n_anom_sell": 48,
+    "n_anom_1h": 28,
+    "max_abs_z_24h": 1026.41,
+    "latest": {
+     "ts": "2026-11-10T22:49:00+00:00",
+     "z": 8.15,
+     "imbalance_usd": 147525.0,
+     "side": "buy",
+     "notional_usd": 255191.0,
+     "age_min": 7.0
+    },
+    "last_close": 82.93,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 82.93,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "SUIUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 0.8215,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.006105,
+     "sigma_units": 0.7
+    },
+    "24h": {
+     "ret": -0.027968,
+     "sigma_units": -0.61
+    },
+    "7d": {
+     "ret": -0.091263,
+     "sigma_units": -1.46
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -0.585
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.008662,
+    "robust_sigma_1h_central": 0.00871,
+    "weekend_m": 0.86,
+    "robust_sigma_day": 0.042435,
+    "robust_sigma_ann": 0.810726,
+    "vol_pct_1y": 0.581,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.046077,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.047223,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.063,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.3286,
+    "drawdown_sigma30": 1.5,
+    "high_30d": 1.1411,
+    "rs_neg_share_5d": 0.658,
+    "jv_share_5d": 0.275,
+    "sigma_30d_daily": 0.040006
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 3,
+    "max_abs_z_7d": 9.1,
+    "n_jumps_lm_7d": 3
+   },
+   "funding": {
+    "rate": -2.589e-05,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": -0.0283,
+    "z_90d": -1.06,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 4.532e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 76990700.0,
+    "oi_usd": 63247860.0,
+    "chg_24h_log": -0.0097,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 41.0,
+    "long_n": 2,
+    "short_usd": 17.0,
+    "short_n": 1,
+    "n_1h": 1,
+    "usd_1h": 17.0,
+    "largest": {
+     "usd": 24.0,
+     "side": "long",
+     "ts": "2026-11-10T14:32:29+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 0.7943,
+     "hi": 0.8023,
+     "score": 39.3,
+     "pivots": 4,
+     "dist_pct": -2.34,
+     "dist_sigma_day": -0.51
+    },
+    "above": {
+     "lo": 0.8238,
+     "hi": 0.834,
+     "score": 34.88,
+     "pivots": 3,
+     "dist_pct": 0.28,
+     "dist_sigma_day": 0.06
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 0.0206
+   },
+   "history_days": 1257.4,
+   "first_bar": "2023-06-02T13:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 377,
+    "n_anom_24h": 98,
+    "n_anom_buy": 51,
+    "n_anom_sell": 47,
+    "n_anom_1h": 26,
+    "max_abs_z_24h": 4515.41,
+    "latest": {
+     "ts": "2026-11-10T22:54:00+00:00",
+     "z": 7.39,
+     "imbalance_usd": 12133.0,
+     "side": "buy",
+     "notional_usd": 17953.0,
+     "age_min": 2.0
+    },
+    "last_close": 0.8213,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 0.8213,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "TAOUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": null,
+   "flags": [
+    "no_1h_bars"
+   ],
+   "data_max_ts": null,
+   "history_days": 0.0,
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 91,
+    "n_anom_buy": 49,
+    "n_anom_sell": 42,
+    "n_anom_1h": 5,
+    "max_abs_z_24h": 139.01,
+    "latest": {
+     "ts": "2026-11-10T22:25:00+00:00",
+     "z": -4.78,
+     "imbalance_usd": -9622.0,
+     "side": "sell",
+     "notional_usd": 12126.0,
+     "age_min": 31.0
+    },
+    "last_close": 217.35,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   }
+  },
+  {
+   "symbol": "TRUMPUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": null,
+   "flags": [
+    "no_1h_bars"
+   ],
+   "data_max_ts": null,
+   "history_days": 0.0,
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 325,
+    "n_anom_24h": 105,
+    "n_anom_buy": 49,
+    "n_anom_sell": 56,
+    "n_anom_1h": 44,
+    "max_abs_z_24h": 10109.01,
+    "latest": {
+     "ts": "2026-11-10T22:53:00+00:00",
+     "z": -11.09,
+     "imbalance_usd": -3009.0,
+     "side": "sell",
+     "notional_usd": 14110.0,
+     "age_min": 3.0
+    },
+    "last_close": 1.143,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   }
+  },
+  {
+   "symbol": "TRXUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 0.3178,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.000315,
+     "sigma_units": 0.14
+    },
+    "24h": {
+     "ret": 0.003783,
+     "sigma_units": 0.4
+    },
+    "7d": {
+     "ret": -0.01623,
+     "sigma_units": -0.38
+    }
+   },
+   "regime": {
+    "cell": "R4",
+    "label": "compression",
+    "dir_state": "range",
+    "vol_state": "low",
+    "dir_score": 0.725
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.002193,
+    "robust_sigma_1h_central": 0.002281,
+    "weekend_m": 0.803,
+    "robust_sigma_day": 0.010741,
+    "robust_sigma_ann": 0.205216,
+    "vol_pct_1y": 0.626,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.009047,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.007014,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.897,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.1529,
+    "drawdown_sigma30": 1.18,
+    "high_30d": 0.3703,
+    "rs_neg_share_5d": 0.578,
+    "jv_share_5d": 0.162,
+    "sigma_30d_daily": 0.023585
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 0,
+    "max_abs_z_7d": 3.14,
+    "n_jumps_lm_7d": 0
+   },
+   "funding": {
+    "rate": -2.468e-05,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": -0.027,
+    "z_90d": 0.43,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": -0.00012808,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 186671892.0,
+    "oi_usd": 59324327.0,
+    "chg_24h_log": -0.0062,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 4572.0,
+    "long_n": 1,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 4572.0,
+     "side": "long",
+     "ts": "2026-11-10T17:07:41+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 0.327,
+     "hi": 0.32757,
+     "score": 45.96,
+     "pivots": 7,
+     "dist_pct": 2.89,
+     "dist_sigma_day": 3.15
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 0.0015
+   },
+   "history_days": 1883.4,
+   "first_bar": "2021-09-14T13:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 159,
+    "n_anom_buy": 72,
+    "n_anom_sell": 87,
+    "n_anom_1h": 16,
+    "max_abs_z_24h": 8057.05,
+    "latest": {
+     "ts": "2026-11-10T22:54:00+00:00",
+     "z": 18.23,
+     "imbalance_usd": 3706.0,
+     "side": "buy",
+     "notional_usd": 3706.0,
+     "age_min": 2.0
+    },
+    "last_close": 0.3176,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 0.3176,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "UNIUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 6.725,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.006564,
+     "sigma_units": 0.62
+    },
+    "24h": {
+     "ret": -0.049321,
+     "sigma_units": -1.21
+    },
+    "7d": {
+     "ret": -0.062818,
+     "sigma_units": -0.62
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -0.642
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.010328,
+    "robust_sigma_1h_central": 0.01046,
+    "weekend_m": 0.81,
+    "robust_sigma_day": 0.050596,
+    "robust_sigma_ann": 0.966627,
+    "vol_pct_1y": 0.694,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.049969,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.041248,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.795,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.1526,
+    "drawdown_sigma30": 0.58,
+    "high_30d": 7.834,
+    "rs_neg_share_5d": 0.682,
+    "jv_share_5d": 0.2,
+    "sigma_30d_daily": 0.048277
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 3,
+    "max_abs_z_7d": 7.3,
+    "n_jumps_lm_7d": 2
+   },
+   "funding": {
+    "rate": 2.231e-05,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0244,
+    "z_90d": -0.27,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 4.161e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 7371912.4,
+    "oi_usd": 49576111.0,
+    "chg_24h_log": -0.0177,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 656.0,
+    "long_n": 2,
+    "short_usd": 662.0,
+    "short_n": 1,
+    "n_1h": 2,
+    "usd_1h": 656.0,
+    "largest": {
+     "usd": 662.0,
+     "side": "short",
+     "ts": "2026-11-10T21:08:06+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 6.512,
+     "hi": 6.612,
+     "score": 28.76,
+     "pivots": 6,
+     "dist_pct": -1.68,
+     "dist_sigma_day": -0.34
+    },
+    "above": {
+     "lo": 6.76,
+     "hi": 6.855,
+     "score": 49.42,
+     "pivots": 6,
+     "dist_pct": 0.52,
+     "dist_sigma_day": 0.1
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 0.198
+   },
+   "history_days": 1792.9,
+   "first_bar": "2021-12-14T00:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 375,
+    "n_anom_24h": 90,
+    "n_anom_buy": 46,
+    "n_anom_sell": 44,
+    "n_anom_1h": 20,
+    "max_abs_z_24h": 1918.13,
+    "latest": {
+     "ts": "2026-11-10T22:55:00+00:00",
+     "z": -12.99,
+     "imbalance_usd": -17010.0,
+     "side": "sell",
+     "notional_usd": 28750.0,
+     "age_min": 1.0
+    },
+    "last_close": 6.656,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 6.656,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "WIFUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 0.1562,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.00064,
+     "sigma_units": 0.09
+    },
+    "24h": {
+     "ret": -0.007018,
+     "sigma_units": -0.19
+    },
+    "7d": {
+     "ret": null,
+     "sigma_units": null
+    }
+   },
+   "regime": {
+    "cell": null,
+    "label": null,
+    "dir_state": "range",
+    "vol_state": null,
+    "dir_score": -0.336
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.006816,
+    "robust_sigma_1h_central": 0.00738,
+    "weekend_m": 0.753,
+    "robust_sigma_day": 0.033391,
+    "robust_sigma_ann": 0.637928,
+    "vol_pct_1y": null,
+    "vol_pct_window_days": 4.0,
+    "har_sigma_day": null,
+    "har_for_day": null,
+    "rv_last_day": null,
+    "last_complete_day": null,
+    "vol_surprise": null,
+    "vol_surprise_day": null
+   },
+   "asymmetry": {
+    "drawdown_flag": null,
+    "drawdown_log": null,
+    "drawdown_sigma30": null,
+    "high_30d": null,
+    "rs_neg_share_5d": null,
+    "jv_share_5d": null
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 1,
+    "max_abs_z_7d": 11.59,
+    "n_jumps_lm_7d": null
+   },
+   "funding": {
+    "rate": -9.431e-05,
+    "ts": "2026-11-10T20:00:00+00:00",
+    "rate_ann": -0.2065,
+    "z_90d": null,
+    "n_90d": 29,
+    "interval_min": 240,
+    "mean_90d": 2.346e-05,
+    "crowded": null,
+    "age_h": 2.93
+   },
+   "oi": {
+    "oi": 57018764.0,
+    "oi_usd": 8906331.0,
+    "chg_24h_log": 0.0045,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 4964.0,
+    "long_n": 4,
+    "short_usd": 1590.0,
+    "short_n": 1,
+    "n_1h": 1,
+    "usd_1h": 1590.0,
+    "largest": {
+     "usd": 4775.0,
+     "side": "long",
+     "ts": "2026-11-10T15:40:37+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 0.14995,
+     "hi": 0.15065,
+     "score": 2.88,
+     "pivots": 1,
+     "dist_pct": -3.55,
+     "dist_sigma_day": -1.08
+    },
+    "above": {
+     "lo": 0.16135,
+     "hi": 0.16205,
+     "score": 7.79,
+     "pivots": 1,
+     "dist_pct": 3.3,
+     "dist_sigma_day": 0.97
+    },
+    "inside": null,
+    "n_bars_4h": 30,
+    "atr_4h": 0.0028
+   },
+   "history_days": 5.0,
+   "first_bar": "2026-11-05T21:00:00+00:00",
+   "flags": [
+    "burn_in_skipped:history_starts_after_listing",
+    "short_history",
+    "vol_pct_unavailable",
+    "har_unavailable",
+    "funding_z_short",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 107,
+    "n_anom_buy": 54,
+    "n_anom_sell": 53,
+    "n_anom_1h": 7,
+    "max_abs_z_24h": 232.43,
+    "latest": {
+     "ts": "2026-11-10T22:32:00+00:00",
+     "z": -4.28,
+     "imbalance_usd": -2628.0,
+     "side": "sell",
+     "notional_usd": 2648.0,
+     "age_min": 24.0
+    },
+    "last_close": 0.1568,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 0.1568,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "WLDUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": null,
+   "flags": [
+    "no_1h_bars"
+   ],
+   "data_max_ts": null,
+   "history_days": 0.0,
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 366,
+    "n_anom_24h": 101,
+    "n_anom_buy": 59,
+    "n_anom_sell": 42,
+    "n_anom_1h": 30,
+    "max_abs_z_24h": 5088.31,
+    "latest": {
+     "ts": "2026-11-10T22:53:00+00:00",
+     "z": -6.65,
+     "imbalance_usd": -7336.0,
+     "side": "sell",
+     "notional_usd": 9034.0,
+     "age_min": 3.0
+    },
+    "last_close": 0.3079,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   }
+  },
+  {
+   "symbol": "WLFIUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 0.0474,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": -0.002949,
+     "sigma_units": -0.63
+    },
+    "24h": {
+     "ret": -0.017566,
+     "sigma_units": -0.56
+    },
+    "7d": {
+     "ret": null,
+     "sigma_units": null
+    }
+   },
+   "regime": {
+    "cell": null,
+    "label": null,
+    "dir_state": "range",
+    "vol_state": null,
+    "dir_score": -0.039
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.004577,
+    "robust_sigma_1h_central": 0.00476,
+    "weekend_m": 0.607,
+    "robust_sigma_day": 0.022424,
+    "robust_sigma_ann": 0.428416,
+    "vol_pct_1y": null,
+    "vol_pct_window_days": 4.0,
+    "har_sigma_day": null,
+    "har_for_day": null,
+    "rv_last_day": null,
+    "last_complete_day": null,
+    "vol_surprise": null,
+    "vol_surprise_day": null
+   },
+   "asymmetry": {
+    "drawdown_flag": null,
+    "drawdown_log": null,
+    "drawdown_sigma30": null,
+    "high_30d": null,
+    "rs_neg_share_5d": null,
+    "jv_share_5d": null
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 1,
+    "max_abs_z_7d": 4.16,
+    "n_jumps_lm_7d": null
+   },
+   "funding": {
+    "rate": 5e-05,
+    "ts": "2026-11-10T20:00:00+00:00",
+    "rate_ann": 0.1095,
+    "z_90d": null,
+    "n_90d": 29,
+    "interval_min": 240,
+    "mean_90d": -7.92e-06,
+    "crowded": null,
+    "age_h": 2.93
+   },
+   "oi": {
+    "oi": 444562672.0,
+    "oi_usd": 21072271.0,
+    "chg_24h_log": -0.1029,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 4876.0,
+    "long_n": 6,
+    "short_usd": 772.0,
+    "short_n": 2,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 1869.0,
+     "side": "long",
+     "ts": "2026-11-10T13:41:01+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 0.047088,
+     "hi": 0.047242,
+     "score": 11.41,
+     "pivots": 2,
+     "dist_pct": -0.33,
+     "dist_sigma_day": -0.15
+    },
+    "above": {
+     "lo": 0.048872,
+     "hi": 0.049028,
+     "score": 3.92,
+     "pivots": 1,
+     "dist_pct": 3.11,
+     "dist_sigma_day": 1.36
+    },
+    "inside": null,
+    "n_bars_4h": 30,
+    "atr_4h": 0.00062
+   },
+   "history_days": 5.0,
+   "first_bar": "2026-11-05T21:00:00+00:00",
+   "flags": [
+    "burn_in_skipped:history_starts_after_listing",
+    "short_history",
+    "vol_pct_unavailable",
+    "har_unavailable",
+    "funding_z_short",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 40,
+    "n_anom_buy": 19,
+    "n_anom_sell": 21,
+    "n_anom_1h": 3,
+    "max_abs_z_24h": 70.29,
+    "latest": {
+     "ts": "2026-11-10T22:26:00+00:00",
+     "z": -4.3,
+     "imbalance_usd": -4820.0,
+     "side": "sell",
+     "notional_usd": 5128.0,
+     "age_min": 30.0
+    },
+    "last_close": 0.04726,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 0.04726,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "XLMUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 0.1451,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.006916,
+     "sigma_units": 0.85
+    },
+    "24h": {
+     "ret": -0.015727,
+     "sigma_units": -0.46
+    },
+    "7d": {
+     "ret": -0.122443,
+     "sigma_units": -1.83
+    }
+   },
+   "regime": {
+    "cell": "R8",
+    "label": "trend down",
+    "dir_state": "down",
+    "vol_state": "normal",
+    "dir_score": -0.755
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.008077,
+    "robust_sigma_1h_central": 0.008171,
+    "weekend_m": 0.763,
+    "robust_sigma_day": 0.039571,
+    "robust_sigma_ann": 0.756011,
+    "vol_pct_1y": 0.694,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.038003,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.033142,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.8,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.3417,
+    "drawdown_sigma30": 1.95,
+    "high_30d": 0.2042,
+    "rs_neg_share_5d": 0.719,
+    "jv_share_5d": 0.22,
+    "sigma_30d_daily": 0.031933
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 3,
+    "max_abs_z_7d": 9.95,
+    "n_jumps_lm_7d": 3
+   },
+   "funding": {
+    "rate": -4.585e-05,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": -0.0502,
+    "z_90d": -1.07,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 4.622e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 193152186.0,
+    "oi_usd": 28026382.0,
+    "chg_24h_log": 0.0033,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 18135.0,
+    "long_n": 10,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 7582.0,
+     "side": "long",
+     "ts": "2026-11-10T13:15:43+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 0.16537,
+     "hi": 0.167,
+     "score": 43.22,
+     "pivots": 9,
+     "dist_pct": 13.97,
+     "dist_sigma_day": 3.44
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 0.0028
+   },
+   "history_days": 1883.7,
+   "first_bar": "2021-09-14T06:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 91,
+    "n_anom_buy": 41,
+    "n_anom_sell": 50,
+    "n_anom_1h": 6,
+    "max_abs_z_24h": 124.19,
+    "latest": {
+     "ts": "2026-11-10T22:40:00+00:00",
+     "z": -9.33,
+     "imbalance_usd": -11612.0,
+     "side": "sell",
+     "notional_usd": 12153.0,
+     "age_min": 16.0
+    },
+    "last_close": 0.1449,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 0.1449,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "XRPUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": 1.0607,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.001887,
+     "sigma_units": 0.2
+    },
+    "24h": {
+     "ret": -0.032647,
+     "sigma_units": -0.87
+    },
+    "7d": {
+     "ret": -0.189492,
+     "sigma_units": -4.06
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -1.075
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.008975,
+    "robust_sigma_1h_central": 0.009069,
+    "weekend_m": 0.693,
+    "robust_sigma_day": 0.043968,
+    "robust_sigma_ann": 0.84001,
+    "vol_pct_1y": 0.878,
+    "vol_pct_window_days": 365.0,
+    "har_sigma_day": 0.040539,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.039287,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.0,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.2927,
+    "drawdown_sigma30": 1.89,
+    "high_30d": 1.4214,
+    "rs_neg_share_5d": 0.742,
+    "jv_share_5d": 0.3,
+    "sigma_30d_daily": 0.028297
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 11.22,
+    "n_jumps_lm_7d": 3
+   },
+   "funding": {
+    "rate": 5.702e-05,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0624,
+    "z_90d": 0.37,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 3.534e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 245829351.8,
+    "oi_usd": 260751193.0,
+    "chg_24h_log": 0.0081,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 41440.0,
+    "long_n": 26,
+    "short_usd": 4633.0,
+    "short_n": 3,
+    "n_1h": 4,
+    "usd_1h": 8256.0,
+    "largest": {
+     "usd": 12584.0,
+     "side": "long",
+     "ts": "2026-11-10T14:27:39+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 1.069,
+     "hi": 1.0756,
+     "score": 35.88,
+     "pivots": 3,
+     "dist_pct": 0.78,
+     "dist_sigma_day": 0.19
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 0.0181
+   },
+   "history_days": 1993.5,
+   "first_bar": "2021-05-27T09:00:00+00:00",
+   "flags": [
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 391,
+    "n_anom_24h": 88,
+    "n_anom_buy": 47,
+    "n_anom_sell": 41,
+    "n_anom_1h": 26,
+    "max_abs_z_24h": 19835.7,
+    "latest": {
+     "ts": "2026-11-10T22:54:00+00:00",
+     "z": -5.3,
+     "imbalance_usd": -73933.0,
+     "side": "sell",
+     "notional_usd": 113547.0,
+     "age_min": 2.0
+    },
+    "last_close": 1.0583,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 1.0583,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "ZECUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "crypto",
+   "symbol_type": "",
+   "version": "0.1.0",
+   "price": null,
+   "flags": [
+    "no_1h_bars"
+   ],
+   "data_max_ts": null,
+   "history_days": 0.0,
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 94,
+    "n_anom_buy": 43,
+    "n_anom_sell": 51,
+    "n_anom_1h": 11,
+    "max_abs_z_24h": 149.34,
+    "latest": {
+     "ts": "2026-11-10T22:55:00+00:00",
+     "z": -13.8,
+     "imbalance_usd": -789781.0,
+     "side": "sell",
+     "notional_usd": 1140159.0,
+     "age_min": 1.0
+    },
+    "last_close": 1047.19,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   }
+  },
+  {
+   "symbol": "AAPLUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "tradfi",
+   "symbol_type": "stock",
+   "version": "0.1.0",
+   "price": 349.32,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.000888,
+     "sigma_units": 0.23
+    },
+    "24h": {
+     "ret": -0.004826,
+     "sigma_units": -0.25
+    },
+    "7d": {
+     "ret": 0.054626,
+     "sigma_units": 0.6
+    }
+   },
+   "regime": {
+    "cell": "R6",
+    "label": "whipsaw",
+    "dir_state": "range",
+    "vol_state": "high",
+    "dir_score": 0.218
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.003729,
+    "robust_sigma_1h_central": 0.003833,
+    "weekend_m": 0.413,
+    "robust_sigma_day": 0.01827,
+    "robust_sigma_ann": 0.349046,
+    "vol_pct_1y": 0.822,
+    "vol_pct_window_days": 165.0,
+    "har_sigma_day": 0.019522,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.017142,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 0.983,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.0176,
+    "drawdown_sigma30": 0.2,
+    "high_30d": 355.53,
+    "rs_neg_share_5d": 0.449,
+    "jv_share_5d": 0.004,
+    "sigma_30d_daily": 0.016075
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 6.14,
+    "n_jumps_lm_7d": 2
+   },
+   "funding": {
+    "rate": -0.00023305,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": -0.2552,
+    "z_90d": -2.98,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": -9.83e-06,
+    "crowded": "shorts",
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 55976.4,
+    "oi_usd": 19553676.0,
+    "chg_24h_log": 0.0785,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 76.0,
+    "long_n": 2,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 48.0,
+     "side": "long",
+     "ts": "2026-11-10T15:20:20+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 345.88625,
+     "hi": 346.39375,
+     "score": 7.29,
+     "pivots": 1,
+     "dist_pct": -0.84,
+     "dist_sigma_day": -0.43
+    },
+    "above": {
+     "lo": 352.09625,
+     "hi": 352.60375,
+     "score": 5.86,
+     "pivots": 1,
+     "dist_pct": 0.79,
+     "dist_sigma_day": 0.41
+    },
+    "inside": null,
+    "n_bars_4h": 36,
+    "atr_4h": 2.03
+   },
+   "history_days": 166.5,
+   "first_bar": "2026-05-28T09:00:00+00:00",
+   "flags": [
+    "vol_pct_window_short",
+    "har_short_fit",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 77,
+    "n_anom_buy": 39,
+    "n_anom_sell": 38,
+    "n_anom_1h": 3,
+    "max_abs_z_24h": 206.98,
+    "latest": {
+     "ts": "2026-11-10T22:44:00+00:00",
+     "z": -5.01,
+     "imbalance_usd": -8045.0,
+     "side": "sell",
+     "notional_usd": 17629.0,
+     "age_min": 12.0
+    },
+    "last_close": 349.29,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 349.29,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "BZUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "tradfi",
+   "symbol_type": "commodity",
+   "version": "0.1.0",
+   "price": 90.91,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.00077,
+     "sigma_units": 0.11
+    },
+    "24h": {
+     "ret": -0.006906,
+     "sigma_units": -0.15
+    },
+    "7d": {
+     "ret": -0.139413,
+     "sigma_units": -1.31
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -1.197
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.006958,
+    "robust_sigma_1h_central": 0.007031,
+    "weekend_m": 0.647,
+    "robust_sigma_day": 0.034086,
+    "robust_sigma_ann": 0.651215,
+    "vol_pct_1y": 0.898,
+    "vol_pct_window_days": 150.0,
+    "har_sigma_day": 0.037053,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.04061,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.186,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.229,
+    "drawdown_sigma30": 1.76,
+    "high_30d": 114.3,
+    "rs_neg_share_5d": 0.618,
+    "jv_share_5d": 0.056,
+    "sigma_30d_daily": 0.0238
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 3,
+    "max_abs_z_7d": 6.23,
+    "n_jumps_lm_7d": 1
+   },
+   "funding": {
+    "rate": -0.00133278,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": -1.4594,
+    "z_90d": -1.21,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": -0.00039538,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 184361.48,
+    "oi_usd": 16760302.0,
+    "chg_24h_log": 0.2578,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 0.0,
+    "long_n": 0,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": null
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 95.84,
+     "hi": 96.48,
+     "score": 45.24,
+     "pivots": 7,
+     "dist_pct": 5.42,
+     "dist_sigma_day": 1.43
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 1.12
+   },
+   "history_days": 151.6,
+   "first_bar": "2026-06-12T08:00:00+00:00",
+   "flags": [
+    "vol_pct_window_short",
+    "har_short_fit",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 72,
+    "n_anom_buy": 42,
+    "n_anom_sell": 30,
+    "n_anom_1h": 1,
+    "max_abs_z_24h": 111.85,
+    "latest": {
+     "ts": "2026-11-10T22:43:00+00:00",
+     "z": 4.24,
+     "imbalance_usd": 17586.0,
+     "side": "buy",
+     "notional_usd": 18974.0,
+     "age_min": 13.0
+    },
+    "last_close": 90.87,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 90.87,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "CLUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "tradfi",
+   "symbol_type": "commodity",
+   "version": "0.1.0",
+   "price": 85.77,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.000816,
+     "sigma_units": 0.12
+    },
+    "24h": {
+     "ret": -0.003259,
+     "sigma_units": -0.08
+    },
+    "7d": {
+     "ret": -0.121288,
+     "sigma_units": -1.32
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -0.964
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.006655,
+    "robust_sigma_1h_central": 0.006888,
+    "weekend_m": 0.617,
+    "robust_sigma_day": 0.032605,
+    "robust_sigma_ann": 0.622917,
+    "vol_pct_1y": 0.796,
+    "vol_pct_window_days": 200.0,
+    "har_sigma_day": 0.034794,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.038763,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.137,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.2028,
+    "drawdown_sigma30": 1.52,
+    "high_30d": 105.05,
+    "rs_neg_share_5d": 0.535,
+    "jv_share_5d": 0.064,
+    "sigma_30d_daily": 0.024416
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 3,
+    "max_abs_z_7d": 9.41,
+    "n_jumps_lm_7d": 3
+   },
+   "funding": {
+    "rate": -0.00077841,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": -0.8524,
+    "z_90d": -0.83,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": -0.00028293,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 388034.94,
+    "oi_usd": 33281757.0,
+    "chg_24h_log": 0.1356,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 11.0,
+    "long_n": 1,
+    "short_usd": 1043.0,
+    "short_n": 3,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 682.0,
+     "side": "short",
+     "ts": "2026-11-10T16:20:12+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 86.655,
+     "hi": 86.945,
+     "score": 35.23,
+     "pivots": 4,
+     "dist_pct": 1.03,
+     "dist_sigma_day": 0.3
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 1.16
+   },
+   "history_days": 201.6,
+   "first_bar": "2026-04-23T08:00:00+00:00",
+   "flags": [
+    "vol_pct_window_short",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 53,
+    "n_anom_buy": 37,
+    "n_anom_sell": 16,
+    "n_anom_1h": 3,
+    "max_abs_z_24h": 61.44,
+    "latest": {
+     "ts": "2026-11-10T22:31:00+00:00",
+     "z": 4.31,
+     "imbalance_usd": 50911.0,
+     "side": "buy",
+     "notional_usd": 57183.0,
+     "age_min": 25.0
+    },
+    "last_close": 85.71,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 85.71,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "COINUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "tradfi",
+   "symbol_type": "stock",
+   "version": "0.1.0",
+   "price": 132.46,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.000529,
+     "sigma_units": 0.05
+    },
+    "24h": {
+     "ret": -0.030923,
+     "sigma_units": -0.76
+    },
+    "7d": {
+     "ret": null,
+     "sigma_units": null
+    }
+   },
+   "regime": {
+    "cell": null,
+    "label": null,
+    "dir_state": "range",
+    "vol_state": null,
+    "dir_score": -0.343
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.010214,
+    "robust_sigma_1h_central": 0.010393,
+    "weekend_m": 0.593,
+    "robust_sigma_day": 0.050039,
+    "robust_sigma_ann": 0.955988,
+    "vol_pct_1y": null,
+    "vol_pct_window_days": 4.0,
+    "har_sigma_day": null,
+    "har_for_day": null,
+    "rv_last_day": null,
+    "last_complete_day": null,
+    "vol_surprise": null,
+    "vol_surprise_day": null
+   },
+   "asymmetry": {
+    "drawdown_flag": null,
+    "drawdown_log": null,
+    "drawdown_sigma30": null,
+    "high_30d": null,
+    "rs_neg_share_5d": null,
+    "jv_share_5d": null
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 3,
+    "max_abs_z_7d": 8.22,
+    "n_jumps_lm_7d": null
+   },
+   "funding": {
+    "rate": 0.0,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0,
+    "z_90d": null,
+    "n_90d": 14,
+    "interval_min": 480,
+    "mean_90d": -5.169e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 38225.24,
+    "oi_usd": 5063315.0,
+    "chg_24h_log": -0.0609,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 1731.0,
+    "long_n": 3,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 1481.0,
+     "side": "long",
+     "ts": "2026-11-10T16:55:42+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 131.6975,
+     "hi": 132.1625,
+     "score": 8.21,
+     "pivots": 1,
+     "dist_pct": -0.22,
+     "dist_sigma_day": -0.04
+    },
+    "above": {
+     "lo": 133.68,
+     "hi": 134.63,
+     "score": 12.37,
+     "pivots": 3,
+     "dist_pct": 0.92,
+     "dist_sigma_day": 0.18
+    },
+    "inside": null,
+    "n_bars_4h": 30,
+    "atr_4h": 1.86
+   },
+   "history_days": 5.0,
+   "first_bar": "2026-11-05T21:00:00+00:00",
+   "flags": [
+    "burn_in_skipped:history_starts_after_listing",
+    "short_history",
+    "vol_pct_unavailable",
+    "har_unavailable",
+    "funding_z_short",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 89,
+    "n_anom_buy": 50,
+    "n_anom_sell": 39,
+    "n_anom_1h": 3,
+    "max_abs_z_24h": 170.88,
+    "latest": {
+     "ts": "2026-11-10T22:44:00+00:00",
+     "z": 13.32,
+     "imbalance_usd": 3027.0,
+     "side": "buy",
+     "notional_usd": 3228.0,
+     "age_min": 12.0
+    },
+    "last_close": 132.3,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 132.3,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "CRWVUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "tradfi",
+   "symbol_type": "stock",
+   "version": "0.1.0",
+   "price": 49.3,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.00876,
+     "sigma_units": 0.49
+    },
+    "24h": {
+     "ret": -0.017692,
+     "sigma_units": -0.28
+    },
+    "7d": {
+     "ret": null,
+     "sigma_units": null
+    }
+   },
+   "regime": {
+    "cell": null,
+    "label": null,
+    "dir_state": "range",
+    "vol_state": null,
+    "dir_score": 0.113
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.017598,
+    "robust_sigma_1h_central": 0.017844,
+    "weekend_m": 0.573,
+    "robust_sigma_day": 0.086211,
+    "robust_sigma_ann": 1.647057,
+    "vol_pct_1y": null,
+    "vol_pct_window_days": 4.0,
+    "har_sigma_day": null,
+    "har_for_day": null,
+    "rv_last_day": null,
+    "last_complete_day": null,
+    "vol_surprise": null,
+    "vol_surprise_day": null
+   },
+   "asymmetry": {
+    "drawdown_flag": null,
+    "drawdown_log": null,
+    "drawdown_sigma30": null,
+    "high_30d": null,
+    "rs_neg_share_5d": null,
+    "jv_share_5d": null
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 8.15,
+    "n_jumps_lm_7d": null
+   },
+   "funding": {
+    "rate": 0.0,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0,
+    "z_90d": null,
+    "n_90d": 14,
+    "interval_min": 480,
+    "mean_90d": -3.969e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 77258.38,
+    "oi_usd": 3808838.0,
+    "chg_24h_log": 0.1552,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 61494.0,
+    "long_n": 5,
+    "short_usd": 1324.0,
+    "short_n": 3,
+    "n_1h": 3,
+    "usd_1h": 45885.0,
+    "largest": {
+     "usd": 45324.0,
+     "side": "long",
+     "ts": "2026-11-10T22:21:12+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 48.94625,
+     "hi": 49.27375,
+     "score": 8.17,
+     "pivots": 1,
+     "dist_pct": -0.05,
+     "dist_sigma_day": -0.01
+    },
+    "above": null,
+    "inside": null,
+    "n_bars_4h": 30,
+    "atr_4h": 1.31
+   },
+   "history_days": 5.0,
+   "first_bar": "2026-11-05T21:00:00+00:00",
+   "flags": [
+    "burn_in_skipped:history_starts_after_listing",
+    "short_history",
+    "vol_pct_unavailable",
+    "har_unavailable",
+    "funding_z_short",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 149,
+    "n_anom_buy": 70,
+    "n_anom_sell": 79,
+    "n_anom_1h": 31,
+    "max_abs_z_24h": 113.56,
+    "latest": {
+     "ts": "2026-11-10T22:51:00+00:00",
+     "z": -5.01,
+     "imbalance_usd": -9735.0,
+     "side": "sell",
+     "notional_usd": 10885.0,
+     "age_min": 5.0
+    },
+    "last_close": 49.74,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 49.74,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "GOOGLUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "tradfi",
+   "symbol_type": "stock",
+   "version": "0.1.0",
+   "price": 288.63,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.002324,
+     "sigma_units": 0.37
+    },
+    "24h": {
+     "ret": -0.008315,
+     "sigma_units": -0.24
+    },
+    "7d": {
+     "ret": 0.027182,
+     "sigma_units": 0.43
+    }
+   },
+   "regime": {
+    "cell": "R6",
+    "label": "whipsaw",
+    "dir_state": "range",
+    "vol_state": "high",
+    "dir_score": 0.075
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.006199,
+    "robust_sigma_1h_central": 0.006508,
+    "weekend_m": 0.432,
+    "robust_sigma_day": 0.030369,
+    "robust_sigma_ann": 0.580203,
+    "vol_pct_1y": 0.938,
+    "vol_pct_window_days": 166.0,
+    "har_sigma_day": 0.027102,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.028505,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.139,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.2207,
+    "drawdown_sigma30": 1.59,
+    "high_30d": 359.92,
+    "rs_neg_share_5d": 0.567,
+    "jv_share_5d": 0.077,
+    "sigma_30d_daily": 0.025422
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 6.58,
+    "n_jumps_lm_7d": 2
+   },
+   "funding": {
+    "rate": 0.0,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0,
+    "z_90d": -0.61,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 8.216e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 132587.87,
+    "oi_usd": 38268837.0,
+    "chg_24h_log": -0.0368,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 0.0,
+    "long_n": 0,
+    "short_usd": 295.0,
+    "short_n": 1,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 295.0,
+     "side": "short",
+     "ts": "2026-11-10T14:58:39+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 283.42875,
+     "hi": 284.21125,
+     "score": 13.06,
+     "pivots": 1,
+     "dist_pct": -1.53,
+     "dist_sigma_day": -0.57
+    },
+    "above": {
+     "lo": 290.54875,
+     "hi": 291.33125,
+     "score": 9.99,
+     "pivots": 1,
+     "dist_pct": 0.66,
+     "dist_sigma_day": 0.24
+    },
+    "inside": null,
+    "n_bars_4h": 36,
+    "atr_4h": 3.13
+   },
+   "history_days": 167.6,
+   "first_bar": "2026-05-27T08:00:00+00:00",
+   "flags": [
+    "vol_pct_window_short",
+    "har_short_fit",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 46,
+    "n_anom_buy": 22,
+    "n_anom_sell": 24,
+    "n_anom_1h": 2,
+    "max_abs_z_24h": 37.21,
+    "latest": {
+     "ts": "2026-11-10T22:54:00+00:00",
+     "z": -6.46,
+     "imbalance_usd": -14531.0,
+     "side": "sell",
+     "notional_usd": 14531.0,
+     "age_min": 2.0
+    },
+    "last_close": 288.81,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 288.81,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "INTCUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "tradfi",
+   "symbol_type": "stock",
+   "version": "0.1.0",
+   "price": 58.34,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.002403,
+     "sigma_units": 0.14
+    },
+    "24h": {
+     "ret": -0.024718,
+     "sigma_units": -0.4
+    },
+    "7d": {
+     "ret": -0.062941,
+     "sigma_units": -0.36
+    }
+   },
+   "regime": {
+    "cell": "R6",
+    "label": "whipsaw",
+    "dir_state": "range",
+    "vol_state": "high",
+    "dir_score": -0.17
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.016401,
+    "robust_sigma_1h_central": 0.016431,
+    "weekend_m": 0.448,
+    "robust_sigma_day": 0.080346,
+    "robust_sigma_ann": 1.535007,
+    "vol_pct_1y": 0.954,
+    "vol_pct_window_days": 171.0,
+    "har_sigma_day": 0.062605,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.054139,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.202,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.5986,
+    "drawdown_sigma30": 2.05,
+    "high_30d": 106.15,
+    "rs_neg_share_5d": 0.536,
+    "jv_share_5d": 0.34,
+    "sigma_30d_daily": 0.053243
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 5.01,
+    "n_jumps_lm_7d": 1
+   },
+   "funding": {
+    "rate": 0.0,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0,
+    "z_90d": -0.42,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 9.662e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 655501.16,
+    "oi_usd": 38241938.0,
+    "chg_24h_log": -0.066,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 98.0,
+    "long_n": 1,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 98.0,
+     "side": "long",
+     "ts": "2026-11-10T12:30:28+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 57.2475,
+     "hi": 57.5925,
+     "score": 7.29,
+     "pivots": 1,
+     "dist_pct": -1.28,
+     "dist_sigma_day": -0.21
+    },
+    "above": {
+     "lo": 59.9475,
+     "hi": 60.2925,
+     "score": 4.9,
+     "pivots": 1,
+     "dist_pct": 2.76,
+     "dist_sigma_day": 0.43
+    },
+    "inside": null,
+    "n_bars_4h": 36,
+    "atr_4h": 1.38
+   },
+   "history_days": 172.5,
+   "first_bar": "2026-05-22T09:00:00+00:00",
+   "flags": [
+    "vol_pct_window_short",
+    "har_short_fit",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 65,
+    "n_anom_buy": 32,
+    "n_anom_sell": 33,
+    "n_anom_1h": 2,
+    "max_abs_z_24h": 52.83,
+    "latest": {
+     "ts": "2026-11-10T22:13:00+00:00",
+     "z": 4.32,
+     "imbalance_usd": 12179.0,
+     "side": "buy",
+     "notional_usd": 26290.0,
+     "age_min": 43.0
+    },
+    "last_close": 58.13,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 58.13,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "MSTRUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "tradfi",
+   "symbol_type": "stock",
+   "version": "0.1.0",
+   "price": 121.53,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.002802,
+     "sigma_units": 0.22
+    },
+    "24h": {
+     "ret": -0.03739,
+     "sigma_units": -0.71
+    },
+    "7d": {
+     "ret": -0.115357,
+     "sigma_units": -1.07
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -0.549
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.012343,
+    "robust_sigma_1h_central": 0.012522,
+    "weekend_m": 0.447,
+    "robust_sigma_day": 0.060466,
+    "robust_sigma_ann": 1.155206,
+    "vol_pct_1y": 0.891,
+    "vol_pct_window_days": 164.0,
+    "har_sigma_day": 0.049776,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.050181,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.167,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.2705,
+    "drawdown_sigma30": 1.18,
+    "high_30d": 159.28,
+    "rs_neg_share_5d": 0.732,
+    "jv_share_5d": 0.121,
+    "sigma_30d_daily": 0.0417
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 6.58,
+    "n_jumps_lm_7d": 3
+   },
+   "funding": {
+    "rate": 0.00013669,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.1497,
+    "z_90d": 0.15,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 8.919e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 225536.86,
+    "oi_usd": 27409495.0,
+    "chg_24h_log": 0.1889,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 0.0,
+    "long_n": 0,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": null
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 121.7325,
+     "hi": 122.3875,
+     "score": 5.8,
+     "pivots": 1,
+     "dist_pct": 0.17,
+     "dist_sigma_day": 0.03
+    },
+    "inside": null,
+    "n_bars_4h": 36,
+    "atr_4h": 2.62
+   },
+   "history_days": 165.6,
+   "first_bar": "2026-05-29T08:00:00+00:00",
+   "flags": [
+    "vol_pct_window_short",
+    "har_short_fit",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 76,
+    "n_anom_buy": 51,
+    "n_anom_sell": 25,
+    "n_anom_1h": 1,
+    "max_abs_z_24h": 88.66,
+    "latest": {
+     "ts": "2026-11-10T22:13:00+00:00",
+     "z": -5.95,
+     "imbalance_usd": -21695.0,
+     "side": "sell",
+     "notional_usd": 24324.0,
+     "age_min": 43.0
+    },
+    "last_close": 121.36,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 121.36,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "MUUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "tradfi",
+   "symbol_type": "stock",
+   "version": "0.1.0",
+   "price": 725.68,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": -0.000331,
+     "sigma_units": -0.02
+    },
+    "24h": {
+     "ret": -0.016225,
+     "sigma_units": -0.26
+    },
+    "7d": {
+     "ret": -0.18251,
+     "sigma_units": -1.63
+    }
+   },
+   "regime": {
+    "cell": "R6",
+    "label": "whipsaw",
+    "dir_state": "range",
+    "vol_state": "high",
+    "dir_score": -0.247
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.015498,
+    "robust_sigma_1h_central": 0.015952,
+    "weekend_m": 0.439,
+    "robust_sigma_day": 0.075927,
+    "robust_sigma_ann": 1.450579,
+    "vol_pct_1y": 0.933,
+    "vol_pct_window_days": 156.0,
+    "har_sigma_day": 0.07375,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.063473,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.108,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.363,
+    "drawdown_sigma30": 1.53,
+    "high_30d": 1043.31,
+    "rs_neg_share_5d": 0.638,
+    "jv_share_5d": 0.096,
+    "sigma_30d_daily": 0.04323
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 1,
+    "max_abs_z_7d": 5.54,
+    "n_jumps_lm_7d": 3
+   },
+   "funding": {
+    "rate": 0.0,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0,
+    "z_90d": -0.22,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 3.939e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 39841.6,
+    "oi_usd": 28912252.0,
+    "chg_24h_log": 0.0374,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 9660.0,
+    "long_n": 4,
+    "short_usd": 0.0,
+    "short_n": 0,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 9409.0,
+     "side": "long",
+     "ts": "2026-11-10T12:29:56+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 703.4,
+     "hi": 708.04,
+     "score": 15.28,
+     "pivots": 2,
+     "dist_pct": -2.43,
+     "dist_sigma_day": -0.33
+    },
+    "above": {
+     "lo": 743.61,
+     "hi": 748.25,
+     "score": 5.86,
+     "pivots": 1,
+     "dist_pct": 2.47,
+     "dist_sigma_day": 0.33
+    },
+    "inside": {
+     "lo": 723.87,
+     "hi": 728.51,
+     "score": 7.27
+    },
+    "n_bars_4h": 36,
+    "atr_4h": 18.56
+   },
+   "history_days": 157.6,
+   "first_bar": "2026-06-06T08:00:00+00:00",
+   "flags": [
+    "vol_pct_window_short",
+    "har_short_fit",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 55,
+    "n_anom_buy": 25,
+    "n_anom_sell": 30,
+    "n_anom_1h": 1,
+    "max_abs_z_24h": 118.28,
+    "latest": {
+     "ts": "2026-11-10T21:57:00+00:00",
+     "z": -6.69,
+     "imbalance_usd": -46977.0,
+     "side": "sell",
+     "notional_usd": 49562.0,
+     "age_min": 59.0
+    },
+    "last_close": 726.38,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 726.38,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "NVDAUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "tradfi",
+   "symbol_type": "stock",
+   "version": "0.1.0",
+   "price": 169.89,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.004247,
+     "sigma_units": 0.42
+    },
+    "24h": {
+     "ret": -0.056694,
+     "sigma_units": -1.42
+    },
+    "7d": {
+     "ret": -0.212623,
+     "sigma_units": -3.15
+    }
+   },
+   "regime": {
+    "cell": "R9",
+    "label": "liquidation",
+    "dir_state": "down",
+    "vol_state": "high",
+    "dir_score": -1.243
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.009938,
+    "robust_sigma_1h_central": 0.010445,
+    "weekend_m": 0.407,
+    "robust_sigma_day": 0.048685,
+    "robust_sigma_ann": 0.930133,
+    "vol_pct_1y": 0.99,
+    "vol_pct_window_days": 157.0,
+    "har_sigma_day": 0.036213,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.04067,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.323,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.3098,
+    "drawdown_sigma30": 2.4,
+    "high_30d": 231.59,
+    "rs_neg_share_5d": 0.694,
+    "jv_share_5d": 0.119,
+    "sigma_30d_daily": 0.023577
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 4,
+    "max_abs_z_7d": 7.74,
+    "n_jumps_lm_7d": 3
+   },
+   "funding": {
+    "rate": 0.00031438,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.3442,
+    "z_90d": 1.85,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 2.828e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 325271.74,
+    "oi_usd": 55260416.0,
+    "chg_24h_log": 0.4141,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 37569.0,
+    "long_n": 31,
+    "short_usd": 1599.0,
+    "short_n": 3,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 4973.0,
+     "side": "long",
+     "ts": "2026-11-10T14:42:35+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 170.31125,
+     "hi": 171.30875,
+     "score": 4.87,
+     "pivots": 1,
+     "dist_pct": 0.25,
+     "dist_sigma_day": 0.07
+    },
+    "inside": null,
+    "n_bars_4h": 36,
+    "atr_4h": 3.99
+   },
+   "history_days": 158.5,
+   "first_bar": "2026-06-05T09:00:00+00:00",
+   "flags": [
+    "vol_pct_window_short",
+    "har_short_fit",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 71,
+    "n_anom_buy": 38,
+    "n_anom_sell": 33,
+    "n_anom_1h": 3,
+    "max_abs_z_24h": 58.27,
+    "latest": {
+     "ts": "2026-11-10T22:24:00+00:00",
+     "z": -17.47,
+     "imbalance_usd": -473536.0,
+     "side": "sell",
+     "notional_usd": 519625.0,
+     "age_min": 32.0
+    },
+    "last_close": 169.46,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 169.46,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "QQQUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "tradfi",
+   "symbol_type": "ETF",
+   "version": "0.1.0",
+   "price": 677.54,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.002497,
+     "sigma_units": 0.49
+    },
+    "24h": {
+     "ret": -0.004991,
+     "sigma_units": -0.21
+    },
+    "7d": {
+     "ret": -0.017411,
+     "sigma_units": -0.53
+    }
+   },
+   "regime": {
+    "cell": "R6",
+    "label": "whipsaw",
+    "dir_state": "range",
+    "vol_state": "high",
+    "dir_score": 0.072
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.004979,
+    "robust_sigma_1h_central": 0.005072,
+    "weekend_m": 0.426,
+    "robust_sigma_day": 0.024392,
+    "robust_sigma_ann": 0.466011,
+    "vol_pct_1y": 0.972,
+    "vol_pct_window_days": 156.0,
+    "har_sigma_day": 0.020139,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.025353,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.895,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.1088,
+    "drawdown_sigma30": 1.38,
+    "high_30d": 755.39,
+    "rs_neg_share_5d": 0.666,
+    "jv_share_5d": 0.072,
+    "sigma_30d_daily": 0.014345
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 7.25,
+    "n_jumps_lm_7d": 3
+   },
+   "funding": {
+    "rate": 0.0,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0,
+    "z_90d": -0.44,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 4.361e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 40943.64,
+    "oi_usd": 27740954.0,
+    "chg_24h_log": 0.0038,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 0.0,
+    "long_n": 0,
+    "short_usd": 178.0,
+    "short_n": 1,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 178.0,
+     "side": "short",
+     "ts": "2026-11-10T13:04:18+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 664.87125,
+     "hi": 666.26875,
+     "score": 4.54,
+     "pivots": 1,
+     "dist_pct": -1.66,
+     "dist_sigma_day": -0.83
+    },
+    "above": {
+     "lo": 681.58125,
+     "hi": 682.97875,
+     "score": 6.87,
+     "pivots": 1,
+     "dist_pct": 0.6,
+     "dist_sigma_day": 0.3
+    },
+    "inside": null,
+    "n_bars_4h": 36,
+    "atr_4h": 5.59
+   },
+   "history_days": 157.5,
+   "first_bar": "2026-06-06T09:00:00+00:00",
+   "flags": [
+    "vol_pct_window_short",
+    "har_short_fit",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 124,
+    "n_anom_buy": 69,
+    "n_anom_sell": 55,
+    "n_anom_1h": 2,
+    "max_abs_z_24h": 306.37,
+    "latest": {
+     "ts": "2026-11-10T22:34:00+00:00",
+     "z": 34.47,
+     "imbalance_usd": 112177.0,
+     "side": "buy",
+     "notional_usd": 112177.0,
+     "age_min": 22.0
+    },
+    "last_close": 676.57,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 676.57,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "SOXLUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "tradfi",
+   "symbol_type": "ETF",
+   "version": "0.1.0",
+   "price": 56.62,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.011368,
+     "sigma_units": 0.31
+    },
+    "24h": {
+     "ret": -0.008442,
+     "sigma_units": -0.06
+    },
+    "7d": {
+     "ret": -0.314818,
+     "sigma_units": -1.08
+    }
+   },
+   "regime": {
+    "cell": "R6",
+    "label": "whipsaw",
+    "dir_state": "range",
+    "vol_state": "high",
+    "dir_score": 0.027
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.036164,
+    "robust_sigma_1h_central": 0.038048,
+    "weekend_m": 0.431,
+    "robust_sigma_day": 0.177165,
+    "robust_sigma_ann": 3.384733,
+    "vol_pct_1y": 0.97,
+    "vol_pct_window_days": 144.0,
+    "har_sigma_day": 0.165954,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.164218,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.406,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.9287,
+    "drawdown_sigma30": 1.71,
+    "high_30d": 143.32,
+    "rs_neg_share_5d": 0.65,
+    "jv_share_5d": 0.06,
+    "sigma_30d_daily": 0.099245
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 4,
+    "max_abs_z_7d": 4.96,
+    "n_jumps_lm_7d": 4
+   },
+   "funding": {
+    "rate": 0.0,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0,
+    "z_90d": -0.15,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 6.147e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 1384921.21,
+    "oi_usd": 78414239.0,
+    "chg_24h_log": -0.0207,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 46181.0,
+    "long_n": 53,
+    "short_usd": 140403.0,
+    "short_n": 62,
+    "n_1h": 6,
+    "usd_1h": 7866.0,
+    "largest": {
+     "usd": 11976.0,
+     "side": "short",
+     "ts": "2026-11-10T14:35:49+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 49.3225,
+     "hi": 50.0775,
+     "score": 5.45,
+     "pivots": 1,
+     "dist_pct": -11.56,
+     "dist_sigma_day": -0.74
+    },
+    "above": null,
+    "inside": null,
+    "n_bars_4h": 36,
+    "atr_4h": 3.02
+   },
+   "history_days": 145.5,
+   "first_bar": "2026-06-18T09:00:00+00:00",
+   "flags": [
+    "vol_pct_window_short",
+    "har_short_fit",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 20,
+    "n_anom_buy": 12,
+    "n_anom_sell": 8,
+    "n_anom_1h": 0,
+    "max_abs_z_24h": 15.7,
+    "latest": {
+     "ts": "2026-11-10T17:03:00+00:00",
+     "z": -4.64,
+     "imbalance_usd": -396456.0,
+     "side": "sell",
+     "notional_usd": 1033867.0,
+     "age_min": 353.0
+    },
+    "last_close": 56.05,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 56.05,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "SPCXUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "tradfi",
+   "symbol_type": "stock",
+   "version": "0.1.0",
+   "price": 143.18,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": -0.000977,
+     "sigma_units": -0.09
+    },
+    "24h": {
+     "ret": 0.005112,
+     "sigma_units": 0.11
+    },
+    "7d": {
+     "ret": 0.006657,
+     "sigma_units": 0.08
+    }
+   },
+   "regime": {
+    "cell": "R6",
+    "label": "whipsaw",
+    "dir_state": "range",
+    "vol_state": "high",
+    "dir_score": 0.302
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.010641,
+    "robust_sigma_1h_central": 0.010863,
+    "weekend_m": 0.406,
+    "robust_sigma_day": 0.05213,
+    "robust_sigma_ann": 0.995935,
+    "vol_pct_1y": 0.899,
+    "vol_pct_window_days": 117.0,
+    "har_sigma_day": 0.055273,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.05142,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.325,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.1555,
+    "drawdown_sigma30": 0.8,
+    "high_30d": 167.27,
+    "rs_neg_share_5d": 0.489,
+    "jv_share_5d": 0.197,
+    "sigma_30d_daily": 0.035618
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 3,
+    "max_abs_z_7d": 5.53,
+    "n_jumps_lm_7d": 3
+   },
+   "funding": {
+    "rate": 0.0,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0,
+    "z_90d": -0.12,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 1.581e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 328632.27,
+    "oi_usd": 47053568.0,
+    "chg_24h_log": -0.0118,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 11420.0,
+    "long_n": 5,
+    "short_usd": 32.0,
+    "short_n": 1,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 9599.0,
+     "side": "long",
+     "ts": "2026-11-10T12:53:43+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 137.20125,
+     "hi": 137.75875,
+     "score": 5.51,
+     "pivots": 1,
+     "dist_pct": -3.79,
+     "dist_sigma_day": -0.7
+    },
+    "above": null,
+    "inside": {
+     "lo": 143.07125,
+     "hi": 143.62875,
+     "score": 4.87
+    },
+    "n_bars_4h": 36,
+    "atr_4h": 2.23
+   },
+   "history_days": 118.5,
+   "first_bar": "2026-07-15T09:00:00+00:00",
+   "flags": [
+    "vol_pct_window_short",
+    "har_short_fit",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 86,
+    "n_anom_buy": 45,
+    "n_anom_sell": 41,
+    "n_anom_1h": 4,
+    "max_abs_z_24h": 53.17,
+    "latest": {
+     "ts": "2026-11-10T22:34:00+00:00",
+     "z": 6.82,
+     "imbalance_usd": 45155.0,
+     "side": "buy",
+     "notional_usd": 51490.0,
+     "age_min": 22.0
+    },
+    "last_close": 142.9,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 142.9,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "TSLAUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "tradfi",
+   "symbol_type": "stock",
+   "version": "0.1.0",
+   "price": 379.86,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": -0.00029,
+     "sigma_units": -0.04
+    },
+    "24h": {
+     "ret": 0.00079,
+     "sigma_units": 0.02
+    },
+    "7d": {
+     "ret": -0.047026,
+     "sigma_units": -0.73
+    }
+   },
+   "regime": {
+    "cell": "R6",
+    "label": "whipsaw",
+    "dir_state": "range",
+    "vol_state": "high",
+    "dir_score": 0.184
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.006644,
+    "robust_sigma_1h_central": 0.006784,
+    "weekend_m": 0.384,
+    "robust_sigma_day": 0.032548,
+    "robust_sigma_ann": 0.621824,
+    "vol_pct_1y": 0.898,
+    "vol_pct_window_days": 172.0,
+    "har_sigma_day": 0.038853,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.055356,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 2.149,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.0875,
+    "drawdown_sigma30": 0.52,
+    "high_30d": 414.59,
+    "rs_neg_share_5d": 0.637,
+    "jv_share_5d": 0.541,
+    "sigma_30d_daily": 0.030503
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 12.37,
+    "n_jumps_lm_7d": 2
+   },
+   "funding": {
+    "rate": 0.0,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "rate_ann": 0.0,
+    "z_90d": -0.17,
+    "n_90d": 270,
+    "interval_min": 480,
+    "mean_90d": 3.047e-05,
+    "crowded": null,
+    "age_h": 6.93
+   },
+   "oi": {
+    "oi": 33820.69,
+    "oi_usd": 12847127.0,
+    "chg_24h_log": -0.1763,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 22.0,
+    "long_n": 2,
+    "short_usd": 364.0,
+    "short_n": 2,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 258.0,
+     "side": "short",
+     "ts": "2026-11-10T16:20:12+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 363.8625,
+     "hi": 365.0975,
+     "score": 4.58,
+     "pivots": 1,
+     "dist_pct": -3.89,
+     "dist_sigma_day": -1.02
+    },
+    "above": {
+     "lo": 381.8025,
+     "hi": 383.0375,
+     "score": 3.92,
+     "pivots": 1,
+     "dist_pct": 0.51,
+     "dist_sigma_day": 0.13
+    },
+    "inside": null,
+    "n_bars_4h": 36,
+    "atr_4h": 4.94
+   },
+   "history_days": 173.4,
+   "first_bar": "2026-05-21T12:00:00+00:00",
+   "flags": [
+    "vol_pct_window_short",
+    "har_short_fit",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 91,
+    "n_anom_buy": 45,
+    "n_anom_sell": 46,
+    "n_anom_1h": 3,
+    "max_abs_z_24h": 376.84,
+    "latest": {
+     "ts": "2026-11-10T22:20:00+00:00",
+     "z": -50.5,
+     "imbalance_usd": -100078.0,
+     "side": "sell",
+     "notional_usd": 101157.0,
+     "age_min": 36.0
+    },
+    "last_close": 379.65,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 379.65,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "XAGUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "tradfi",
+   "symbol_type": "commodity",
+   "version": "0.1.0",
+   "price": 51.65,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.000581,
+     "sigma_units": 0.14
+    },
+    "24h": {
+     "ret": -0.035752,
+     "sigma_units": -1.62
+    },
+    "7d": {
+     "ret": 0.034469,
+     "sigma_units": 0.46
+    }
+   },
+   "regime": {
+    "cell": "R5",
+    "label": "balanced range",
+    "dir_state": "range",
+    "vol_state": "normal",
+    "dir_score": -0.456
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.004171,
+    "robust_sigma_1h_central": 0.004252,
+    "weekend_m": 0.39,
+    "robust_sigma_day": 0.020436,
+    "robust_sigma_ann": 0.390429,
+    "vol_pct_1y": 0.523,
+    "vol_pct_window_days": 216.0,
+    "har_sigma_day": 0.034235,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.031838,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.293,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": true,
+    "drawdown_log": 0.1755,
+    "drawdown_sigma30": 1.57,
+    "high_30d": 61.56,
+    "rs_neg_share_5d": 0.367,
+    "jv_share_5d": 0.12,
+    "sigma_30d_daily": 0.020375
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 2,
+    "max_abs_z_7d": 11.51,
+    "n_jumps_lm_7d": 2
+   },
+   "funding": {
+    "rate": 1.997e-05,
+    "ts": "2026-11-10T20:00:00+00:00",
+    "rate_ann": 0.0437,
+    "z_90d": -0.39,
+    "n_90d": 540,
+    "interval_min": 240,
+    "mean_90d": 4.701e-05,
+    "crowded": null,
+    "age_h": 2.93
+   },
+   "oi": {
+    "oi": 887916.14,
+    "oi_usd": 45860869.0,
+    "chg_24h_log": -0.0753,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 15050.0,
+    "long_n": 8,
+    "short_usd": 764.0,
+    "short_n": 1,
+    "n_1h": 1,
+    "usd_1h": 9959.0,
+    "largest": {
+     "usd": 9959.0,
+     "side": "long",
+     "ts": "2026-11-10T22:21:12+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": null,
+    "above": {
+     "lo": 52.26,
+     "hi": 52.48,
+     "score": 21.38,
+     "pivots": 2,
+     "dist_pct": 1.18,
+     "dist_sigma_day": 0.34
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 0.52
+   },
+   "history_days": 216.8,
+   "first_bar": "2026-04-08T02:00:00+00:00",
+   "flags": [
+    "vol_pct_window_short",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 107,
+    "n_anom_buy": 53,
+    "n_anom_sell": 54,
+    "n_anom_1h": 12,
+    "max_abs_z_24h": 136.02,
+    "latest": {
+     "ts": "2026-11-10T22:32:00+00:00",
+     "z": -18.21,
+     "imbalance_usd": -50197.0,
+     "side": "sell",
+     "notional_usd": 62340.0,
+     "age_min": 24.0
+    },
+    "last_close": 51.65,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 51.65,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  },
+  {
+   "symbol": "XAUUSDT",
+   "as_of": "2026-11-10T22:56:02+00:00",
+   "asset_class": "tradfi",
+   "symbol_type": "commodity",
+   "version": "0.1.0",
+   "price": 4039.97,
+   "last_bar": "2026-11-10T21:00:00+00:00",
+   "last_bar_age_h": 0.93,
+   "returns": {
+    "1h": {
+     "ret": 0.000317,
+     "sigma_units": 0.11
+    },
+    "24h": {
+     "ret": -0.026391,
+     "sigma_units": -1.95
+    },
+    "7d": {
+     "ret": 0.025684,
+     "sigma_units": 0.68
+    }
+   },
+   "regime": {
+    "cell": "R6",
+    "label": "whipsaw",
+    "dir_state": "range",
+    "vol_state": "high",
+    "dir_score": -0.496
+   },
+   "vol": {
+    "robust_sigma_1h_risk": 0.00284,
+    "robust_sigma_1h_central": 0.00293,
+    "weekend_m": 0.361,
+    "robust_sigma_day": 0.013916,
+    "robust_sigma_ann": 0.265855,
+    "vol_pct_1y": 0.81,
+    "vol_pct_window_days": 216.0,
+    "har_sigma_day": 0.018232,
+    "har_for_day": "2026-11-10",
+    "rv_last_day": 0.017551,
+    "last_complete_day": "2026-11-09",
+    "vol_surprise": 1.331,
+    "vol_surprise_day": "2026-11-09"
+   },
+   "asymmetry": {
+    "drawdown_flag": false,
+    "drawdown_log": 0.0444,
+    "drawdown_sigma30": 0.74,
+    "high_30d": 4223.34,
+    "rs_neg_share_5d": 0.375,
+    "jv_share_5d": 0.181,
+    "sigma_30d_daily": 0.010884
+   },
+   "jumps": {
+    "n_exceed_4sigma_7d": 1,
+    "max_abs_z_7d": 9.01,
+    "n_jumps_lm_7d": 1
+   },
+   "funding": {
+    "rate": 6.234e-05,
+    "ts": "2026-11-10T20:00:00+00:00",
+    "rate_ann": 0.1365,
+    "z_90d": 0.21,
+    "n_90d": 540,
+    "interval_min": 240,
+    "mean_90d": 4.621e-05,
+    "crowded": null,
+    "age_h": 2.93
+   },
+   "oi": {
+    "oi": 29733.29,
+    "oi_usd": 120121596.0,
+    "chg_24h_log": -0.0342,
+    "ts": "2026-11-10T16:00:00+00:00",
+    "age_h": 2.93
+   },
+   "liquidations_24h": {
+    "long_usd": 37870.0,
+    "long_n": 21,
+    "short_usd": 8619.0,
+    "short_n": 9,
+    "n_1h": 0,
+    "usd_1h": 0.0,
+    "largest": {
+     "usd": 9027.0,
+     "side": "long",
+     "ts": "2026-11-10T14:42:28+00:00"
+    }
+   },
+   "zones_4h": {
+    "below": {
+     "lo": 4029.72,
+     "hi": 4039.58,
+     "score": 39.96,
+     "pivots": 3,
+     "dist_pct": -0.01,
+     "dist_sigma_day": -0.01
+    },
+    "above": {
+     "lo": 4042.38875,
+     "hi": 4047.37125,
+     "score": 51.76,
+     "pivots": 4,
+     "dist_pct": 0.06,
+     "dist_sigma_day": 0.03
+    },
+    "inside": null,
+    "n_bars_4h": 719,
+    "atr_4h": 19.93
+   },
+   "history_days": 216.8,
+   "first_bar": "2026-04-08T02:00:00+00:00",
+   "flags": [
+    "vol_pct_window_short",
+    "flow_coverage_low"
+   ],
+   "data_max_ts": "2026-11-10T22:56:00+00:00",
+   "flow": {
+    "source": "local",
+    "minutes_24h": 519,
+    "coverage_24h": 0.36,
+    "n_scored_24h": 438,
+    "n_anom_24h": 65,
+    "n_anom_buy": 37,
+    "n_anom_sell": 28,
+    "n_anom_1h": 3,
+    "max_abs_z_24h": 46.49,
+    "latest": {
+     "ts": "2026-11-10T22:55:00+00:00",
+     "z": -4.1,
+     "imbalance_usd": -64622.0,
+     "side": "sell",
+     "notional_usd": 89803.0,
+     "age_min": 1.0
+    },
+    "last_close": 4041.54,
+    "last_ts": "2026-11-10T22:56:00+00:00",
+    "known_max": "2026-11-10T22:56:00+00:00"
+   },
+   "price_flow": 4041.54,
+   "price_flow_ts": "2026-11-10T22:56:00+00:00"
+  }
+ ]
+}

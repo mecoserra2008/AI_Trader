@@ -119,3 +119,56 @@ events:
     reaction: {note: "weekend"}
     status: active
     sources: ["Big News Network via Google News, 2026-11-08"]
+
+  - id: E-2026-11-08-hormuz-three-tankers
+    ts_utc: 2026-11-08T12:00
+    ts_quality: headline time
+    narrative: war_oil
+    kind: unscheduled
+    label: risk_off
+    summary: "IRGC: a third 'violating' tanker exploded in Hormuz since dawn; a crew abandoned a tanker; a Filipino sailor killed; the US struck / disabled a bulk carrier ('blockade runner') in the Gulf of Oman; Houthis target Riyadh; talks 'hang in the balance'. Record 1.28 bn barrels of oil afloat; US gasoline above 4 USD/gal."
+    reaction: {BTC: 0.3, ETH: 0.1, ALTS: -0.6, note: "weekend: TradFi closed; first oil read at the CME reopen Sun 23:00 UTC"}
+    status: active
+    sources: ["Al Arabiya English, ISNA, Seatrade Maritime News, IBTimes AU, Iran International, ABC News, 24/7 Wall St. (Google News, 2026-11-08)"]
+
+  - id: E-2026-11-08-ai-weekend-takes
+    ts_utc: 2026-11-08
+    ts_quality: day
+    narrative: ai
+    kind: unscheduled
+    label: mixed
+    summary: "Weekend commentary splits: 'a 70 bn USD forced deleveraging, not a bubble' (22V's Visser, buying Micron); Goldman executive: closer to LTCM 1998 than the 2000 bubble; Krugman, Martin Wolf, Jefferies on bubble risk; Korean coverage of a semis rebound; an unverified report that Anthropic's valuation was halved as tech slumps."
+    reaction: {note: "weekend"}
+    status: active
+    sources: ["BigGo Finance, Futu, Chatham House, Paul Krugman Substack, Chosun Ilbo, SBS (Google News, 2026-11-08); valuation report not verified"]
+
+  - id: E-2026-11-06-btc-etf-outflows
+    ts_utc: 2026-11-06
+    ts_quality: day (reported Sunday)
+    narrative: crypto
+    kind: unscheduled
+    label: risk_off
+    summary: "Spot bitcoin ETFs lose ~430M USD going into the weekend; Saylor hints at another Strategy purchase (STRC preferred back to par)."
+    reaction: {BTC: -0.3}
+    status: resolved
+    sources: ["Altcoin Buzz, BigGo Finance, Moomoo (Google News, 2026-11-08)"]
+
+  - id: C-2026-11-08-cpi-yoy
+    corrects: background.inflation_fed
+    ts_utc: 2026-11-08T17:40
+    narrative: inflation_fed
+    kind: correction
+    summary: "Correction: September 2026 CPI was 3.7% y/y headline and 2.6% core (finviz / BLS prior values), not 4.0% / 2.8%. FRED has no October 2025 CPI observation (cancelled in the 2025 shutdown), so a 12-row lookback on the FRED series spanned 13 months. The 3-month annualised rates (headline 4.6%, core 3.4%) and the +0.6% / +0.3% September m/m prints were right. Real wages: AHE +3.1% y/y vs CPI 3.7%, still negative."
+    sources: ["https://finviz.com/calendar/economic?dateFrom=2026-11-09", "FRED CPIAUCSL / CPILFESL"]
+
+  - id: E-2026-11-10-cpi-october-hot
+    ts_utc: 2026-11-10T13:30
+    ts_quality: scheduled release
+    narrative: inflation_fed
+    kind: scheduled
+    label: risk_off
+    summary: "October CPI hot: headline +0.4% m/m (consensus +0.3%), core +0.3% m/m (consensus +0.2%, third straight 0.3%); core surprise +0.1 pp. Drivers cited: recreation, medical care, car insurance, airfares. No y/y figures published (October 2025 missing from the 2025 shutdown). DXY +0.3% to 102.0. Polymarket December 2026 FOMC: any hike 92.0% before (25 bp 87.5% + 50 bp+ 4.5%) -> 97.2% at 14:00 -> 95.2% at 16:15 (50 bp+ 4.5% -> 11.7% -> 10.7%; hold 6.5% -> 2.6% -> 4.4%)."
+    reaction: {BTC: -1.60, ETH: -3.68, QQQ: -0.62, NVDA: -5.06, XAU: -0.92, CL: 0.93,
+               note: "Bybit perps, log %, open of the 13:00 UTC 1h bar to 16:00 UTC; z vs 30d 3h sigma: BTC -2.4, ETH -4.0, QQQ -1.2, NVDA -6.0 (likely also AI-specific news; not separated), XAU -2.3, CL +1.1. QQQ dipped at the print, rallied into the cash open (14:00 bar +1.3%) and faded in the 15:00 bar."}
+    status: active
+    sources: ["https://www.morningstar.com/economy/october-cpi-report-shows-inflation-04-monthly-rate-above-forecasts", "https://www.axios.com/2026/11/10/cpi-october-inflation-fed", "https://fxstreet.com/news/us-cpi-data-set-to-ease-in-october-as-markets-reassess-fed-rate-hike-expectations-202611100930", "Polymarket CLOB prices-history, event fed-decision-in-december-20260729232808632", "lake 1h bars (bybit)"]

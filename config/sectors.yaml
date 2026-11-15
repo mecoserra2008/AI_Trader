@@ -1,0 +1,211 @@
+source: CoinGecko public categories, primary sector by priority (scripts/sector_study.py)
+priority:
+- meme
+- ai
+- gaming
+- rwa
+- privacy
+- oracle
+- infra
+- infra
+- exchange
+- l2
+- defi
+- l1
+- l1
+updated: '2026-11-08'
+sectors:
+  1000BONKUSDT: meme
+  1000NEIROCTOUSDT: other
+  1000PEPEUSDT: meme
+  AAVEUSDT: other
+  ACTUSDT: meme
+  ADAUSDT: l1
+  AEROUSDT: exchange
+  AKEUSDT: ai
+  ALGOUSDT: rwa
+  APTUSDT: l1
+  ARBUSDT: l2
+  ARKUSDT: l1
+  ASTERUSDT: exchange
+  ATOMUSDT: l1
+  AVAXUSDT: l1
+  BATUSDT: other
+  BCHUSDT: l1
+  BEAMUSDT: gaming
+  BNBUSDT: exchange
+  BTCUSDT: meme
+  CARVUSDT: ai
+  CCUSDT: l1
+  CHIPUSDT: other
+  CRVUSDT: exchange
+  CYBERUSDT: ai
+  DASHUSDT: l1
+  DOGEUSDT: meme
+  DOTUSDT: ai
+  EDGEUSDT: ai
+  EGLDUSDT: ai
+  ENAUSDT: other
+  ERAUSDT: other
+  ETCUSDT: l1
+  ETHFIUSDT: other
+  ETHUSDT: l1
+  FARTCOINUSDT: meme
+  FILUSDT: infra
+  FOGOUSDT: l1
+  GALAUSDT: gaming
+  GRASSUSDT: ai
+  HBARUSDT: l1
+  HMSTRUSDT: gaming
+  HNTUSDT: infra
+  HUMAUSDT: other
+  HUSDT: l1
+  HYPEUSDT: exchange
+  ICNTUSDT: infra
+  ICPUSDT: ai
+  INITUSDT: l1
+  INJUSDT: rwa
+  JUPUSDT: exchange
+  LDOUSDT: other
+  LINKUSDT: rwa
+  LITUSDT: other
+  LSKUSDT: l1
+  LTCUSDT: l1
+  LYNUSDT: ai
+  MAVIAUSDT: gaming
+  MEGAUSDT: l2
+  MERLUSDT: other
+  METUSDT: exchange
+  MNTUSDT: l2
+  MONUSDT: gaming
+  NEARUSDT: ai
+  ONDOUSDT: rwa
+  OPUSDT: l2
+  PAXGUSDT: rwa
+  PENDLEUSDT: exchange
+  PENGUUSDT: meme
+  PIEVERSEUSDT: ai
+  POLUSDT: l2
+  PUMPFUNUSDT: other
+  PYTHUSDT: oracle
+  QNTUSDT: rwa
+  QUSDT: ai
+  RAYDIUMUSDT: other
+  RENDERUSDT: ai
+  RSRUSDT: rwa
+  RUNEUSDT: exchange
+  SANDUSDT: gaming
+  SEIUSDT: l1
+  SHIB1000USDT: meme
+  SIGNUSDT: l1
+  SOLUSDT: l1
+  SOONUSDT: other
+  SOPHUSDT: gaming
+  SPXUSDT: meme
+  STRKUSDT: l2
+  STXUSDT: l2
+  SUIUSDT: l1
+  TAOUSDT: ai
+  TIAUSDT: l1
+  TRUMPUSDT: meme
+  TRUTHUSDT: ai
+  TRXUSDT: l1
+  UAIUSDT: ai
+  UNIUSDT: exchange
+  USELESSUSDT: meme
+  VIRTUALUSDT: ai
+  VVVUSDT: ai
+  WIFUSDT: meme
+  WLDUSDT: l1
+  WLFIUSDT: other
+  XAUTUSDT: rwa
+  XLMUSDT: rwa
+  XMRUSDT: privacy
+  XPLUSDT: l1
+  XRPUSDT: l1
+  XTZUSDT: l1
+  ZAMAUSDT: other
+  ZECUSDT: privacy
+  ZROUSDT: l1
+overrides_note: 'Manual primary-sector overrides (2026-11-08) applied on top of CoinGecko:
+  fixes ticker collisions (BTC->meme, DOT->ai, MON->gaming), the DeFi category lost
+  to rate limits, and gold tokens; unknown new tokens keep the CoinGecko mapping.'
+overrides:
+  BTCUSDT: btc
+  ETHUSDT: l1
+  DOTUSDT: l1
+  EGLDUSDT: l1
+  ICPUSDT: l1
+  NEARUSDT: l1
+  ALGOUSDT: l1
+  INJUSDT: l1
+  MONUSDT: l1
+  SOLUSDT: l1
+  ADAUSDT: l1
+  AVAXUSDT: l1
+  ATOMUSDT: l1
+  SUIUSDT: l1
+  APTUSDT: l1
+  SEIUSDT: l1
+  TRXUSDT: l1
+  HBARUSDT: l1
+  ETCUSDT: l1
+  XTZUSDT: l1
+  XRPUSDT: payments
+  XLMUSDT: payments
+  LTCUSDT: payments
+  BCHUSDT: payments
+  DASHUSDT: payments
+  LINKUSDT: oracle
+  PYTHUSDT: oracle
+  AAVEUSDT: defi
+  UNIUSDT: defi
+  CRVUSDT: defi
+  PENDLEUSDT: defi
+  LDOUSDT: defi
+  ENAUSDT: defi
+  ETHFIUSDT: defi
+  JUPUSDT: defi
+  RUNEUSDT: defi
+  AEROUSDT: defi
+  RAYDIUMUSDT: defi
+  RSRUSDT: defi
+  WLFIUSDT: defi
+  HUMAUSDT: defi
+  BNBUSDT: exchange
+  HYPEUSDT: exchange
+  ASTERUSDT: exchange
+  ARBUSDT: l2
+  OPUSDT: l2
+  MNTUSDT: l2
+  STRKUSDT: l2
+  POLUSDT: l2
+  STXUSDT: l2
+  LSKUSDT: l2
+  TIAUSDT: infra
+  ZROUSDT: infra
+  FILUSDT: infra
+  HNTUSDT: infra
+  QNTUSDT: infra
+  TAOUSDT: ai
+  RENDERUSDT: ai
+  VIRTUALUSDT: ai
+  WLDUSDT: ai
+  DOGEUSDT: meme
+  1000PEPEUSDT: meme
+  1000BONKUSDT: meme
+  SHIB1000USDT: meme
+  WIFUSDT: meme
+  TRUMPUSDT: meme
+  FARTCOINUSDT: meme
+  PENGUUSDT: meme
+  PUMPFUNUSDT: meme
+  BEAMUSDT: gaming
+  GALAUSDT: gaming
+  SANDUSDT: gaming
+  MAVIAUSDT: gaming
+  ONDOUSDT: rwa
+  PAXGUSDT: gold
+  XAUTUSDT: gold
+  XMRUSDT: privacy
+  ZECUSDT: privacy

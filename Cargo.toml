@@ -41,6 +41,8 @@ at-filters = { path = "crates/at-filters" }
 at-risk = { path = "crates/at-risk" }
 at-exec = { path = "crates/at-exec" }
 at-flow = { path = "crates/at-flow" }
+at-match = { path = "crates/at-match" }
+at-ctrader = { path = "crates/at-ctrader" }
 
 [profile.release]
 lto = "thin"

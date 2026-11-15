@@ -1,0 +1,23 @@
+# cTrader name candidates for the vecopen CFD universe (config/baseline.yaml assets.cfd.candidates).
+# Format of config/xvenue.yaml, read by `atx ctrader symbols --resolve --config vecopen/config/ctrader_candidates.yaml
+# --map-out vecopen/data/ctrader_map.json`: exact candidate first (case-insensitive), then "<ticker><sep><suffix>".
+# Unresolved rows print their hits: add the right name here and rerun. The resolved mapping is copied into
+# vecopen/data/manifest.json by `python -m vecopen data cfd-download`.
+version: 1
+instruments:
+  - {asset: EURUSD, ticker: EURUSD, ctrader_candidates: [EURUSD, "EUR/USD"]}
+  - {asset: GBPUSD, ticker: GBPUSD, ctrader_candidates: [GBPUSD, "GBP/USD"]}
+  - {asset: USDJPY, ticker: USDJPY, ctrader_candidates: [USDJPY, "USD/JPY"]}
+  - {asset: AUDUSD, ticker: AUDUSD, ctrader_candidates: [AUDUSD, "AUD/USD"]}
+  - {asset: USDCAD, ticker: USDCAD, ctrader_candidates: [USDCAD, "USD/CAD"]}
+  - {asset: XAUUSD, ticker: XAUUSD, ctrader_candidates: [XAUUSD, "XAU/USD", GOLD]}
+  - {asset: XAGUSD, ticker: XAGUSD, ctrader_candidates: [XAGUSD, "XAG/USD", SILVER]}
+  - {asset: USOIL, ticker: USOIL, ctrader_candidates: [USOIL, XTIUSD, WTI, USOUSD, WTIUSD, SpotCrude, USOil]}
+  - {asset: UKOIL, ticker: UKOIL, ctrader_candidates: [UKOIL, XBRUSD, BRENT, UKOUSD, BRENTUSD, SpotBrent, UKOil]}
+  - {asset: US500, ticker: US500, ctrader_candidates: [US500, SPX500, US500.cash, SP500, USA500]}
+  - {asset: US30, ticker: US30, ctrader_candidates: [US30, DJ30, WS30, US30.cash, USA30]}
+  - {asset: NAS100, ticker: NAS100, ctrader_candidates: [NAS100, USTEC, NDX100, US100, NAS100.cash, USA100]}
+  - {asset: GER40, ticker: GER40, ctrader_candidates: [GER40, DE40, GER30, DAX40, GER40.cash, DE30]}
+  - {asset: UK100, ticker: UK100, ctrader_candidates: [UK100, FTSE100, UK100.cash]}
+  - {asset: JPN225, ticker: JPN225, ctrader_candidates: [JPN225, JP225, NIKKEI225, JPN225.cash, JAP225]}
+  - {asset: BUND, ticker: BUND, ctrader_candidates: [BUND, EUBUND, GERBUND, BUND10Y, FGBL, DE10YB, EURBUND]}

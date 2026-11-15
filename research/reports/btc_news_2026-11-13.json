@@ -1,0 +1,528 @@
+{
+ "as_of": "2026-11-13T00:00:00+00:00",
+ "cutoff": "2026-07-01",
+ "symbol": "BTCUSDT",
+ "n_days": 2408,
+ "date_range": [
+  "2020-04-09",
+  "2026-11-11"
+ ],
+ "coverage": {
+  "events/table": {
+   "chunks": 1,
+   "rows": 264,
+   "first": null,
+   "last": null,
+   "status": {
+    "ok": 1
+   }
+  },
+  "gdelt/timelinetone/bitcoin": {
+   "chunks": 1,
+   "rows": 3556,
+   "first": "2017-01-01 00:00:00+00:00",
+   "last": "2026-11-12 00:00:00+00:00",
+   "status": {
+    "ok": 1
+   }
+  },
+  "gdelt/timelinetone/crypto": {
+   "chunks": 1,
+   "rows": 0,
+   "first": null,
+   "last": null,
+   "status": {
+    "failed": 1
+   }
+  },
+  "gdelt/timelinevolraw/bitcoin": {
+   "chunks": 1,
+   "rows": 3556,
+   "first": "2017-01-01 00:00:00+00:00",
+   "last": "2026-11-12 00:00:00+00:00",
+   "status": {
+    "ok": 1
+   }
+  },
+  "gdelt/timelinevolraw/crypto": {
+   "chunks": 1,
+   "rows": 3556,
+   "first": "2017-01-01 00:00:00+00:00",
+   "last": "2026-11-12 00:00:00+00:00",
+   "status": {
+    "ok": 1
+   }
+  },
+  "onchain/hash-rate": {
+   "chunks": 1,
+   "rows": 6520,
+   "first": "2009-01-03T00:00:00+00:00",
+   "last": "2026-11-12T00:00:00+00:00",
+   "status": {
+    "ok": 1
+   }
+  },
+  "onchain/mempool-size": {
+   "chunks": 1,
+   "rows": 365005,
+   "first": "2016-06-14T14:45:00+00:00",
+   "last": "2026-11-12T23:45:00+00:00",
+   "status": {
+    "ok": 1
+   }
+  },
+  "onchain/n-transactions": {
+   "chunks": 1,
+   "rows": 6506,
+   "first": "2009-01-17T00:00:00+00:00",
+   "last": "2026-11-12T00:00:00+00:00",
+   "status": {
+    "ok": 1
+   }
+  },
+  "onchain/transaction-fees-usd": {
+   "chunks": 1,
+   "rows": 6509,
+   "first": "2009-01-17T00:00:00+00:00",
+   "last": "2026-11-12T00:00:00+00:00",
+   "status": {
+    "ok": 1
+   }
+  },
+  "rss/last_poll": {
+   "chunks": 1,
+   "rows": 75,
+   "first": null,
+   "last": null,
+   "status": {
+    "ok": 1
+   }
+  },
+  "_bytes": 3469691
+ },
+ "status": "provisional (GDELT daily missing: crypto/timelinetone, blockchain/timelinevolraw, blockchain/timelinetone, hack/timelinevolraw, hack/timelinetone, regulation/timelinevolraw, regulation/timelinetone, etf/timelinevolraw, etf/timelinetone, stablecoin/timelinevolraw, stablecoin/timelinetone, binance/timelinevolraw, binance/timelinetone, coinbase/timelinevolraw, coinbase/timelinetone, tether/timelinevolraw, tether/timelinetone)",
+ "gdelt_missing": [
+  "crypto/timelinetone",
+  "blockchain/timelinevolraw",
+  "blockchain/timelinetone",
+  "hack/timelinevolraw",
+  "hack/timelinetone",
+  "regulation/timelinevolraw",
+  "regulation/timelinetone",
+  "etf/timelinevolraw",
+  "etf/timelinetone",
+  "stablecoin/timelinevolraw",
+  "stablecoin/timelinetone",
+  "binance/timelinevolraw",
+  "binance/timelinetone",
+  "coinbase/timelinevolraw",
+  "coinbase/timelinetone",
+  "tether/timelinevolraw",
+  "tether/timelinetone"
+ ],
+ "block_nonnull_share": {
+  "att_btc": 0.9883817427385893,
+  "att_btc7": 0.9883817427385893,
+  "att_ind": 0.0,
+  "att_max": 0.9883817427385893,
+  "tone_btc": 0.9883817427385893,
+  "tone_ind": 0.0,
+  "ev_macro_next": 1.0,
+  "ev_crypto_next": 1.0,
+  "ev_macro_today": 1.0,
+  "oc_ntx": 0.9987551867219917,
+  "oc_fees": 1.0,
+  "oc_mempool": 1.0,
+  "oc_hash": 0.9975103734439834
+ },
+ "att_btc_null_share_by_segment": {
+  "llm_in_sample": 0.00785751702462022,
+  "clean_holdout": 0.09558823529411764
+ },
+ "hourly_table": {
+  "rows": 2017,
+  "cols": [
+   "asof",
+   "ev_next_1h",
+   "h_to_event",
+   "h_since_event",
+   "kt_mempool",
+   "mempool",
+   "rss_n",
+   "rss_first_poll",
+   "d_asof",
+   "d_att_btc",
+   "d_att_btc7",
+   "d_att_ind",
+   "d_att_max",
+   "d_tone_btc",
+   "d_tone_ind",
+   "d_ev_macro_next",
+   "d_ev_crypto_next",
+   "d_ev_macro_today",
+   "d_oc_ntx",
+   "d_oc_fees",
+   "d_oc_mempool",
+   "d_oc_hash"
+  ]
+ },
+ "H-NEWS1": {
+  "baseline": "loghar + forecast-weekday dummies",
+  "block": [
+   "att_btc",
+   "att_btc7",
+   "att_ind",
+   "att_max",
+   "tone_btc",
+   "tone_ind",
+   "ev_macro_next",
+   "ev_crypto_next",
+   "ev_macro_today",
+   "oc_ntx",
+   "oc_fees",
+   "oc_mempool",
+   "oc_hash"
+  ],
+  "variants": {
+   "primary": {
+    "llm_in_sample": {
+     "n": 1908,
+     "qlike_aug": 0.35967078425411775,
+     "qlike_base": 0.35376212584128036,
+     "diff": 0.005908658412837362,
+     "nw_t": 1.4915802398080975,
+     "rel": 0.016702348785320092,
+     "verdict": "contradicts"
+    },
+    "clean_holdout": {
+     "n": 134,
+     "qlike_aug": 0.3632174297014312,
+     "qlike_base": 0.35482214203983226,
+     "diff": 0.008395287661598964,
+     "nw_t": 0.7627558574923019,
+     "rel": 0.02366055177203826,
+     "verdict": "contradicts"
+    }
+   },
+   "news_l1": {
+    "llm_in_sample": {
+     "n": 1908,
+     "qlike_aug": 0.3596952701054118,
+     "qlike_base": 0.35376212584128036,
+     "diff": 0.005933144264131415,
+     "nw_t": 1.6459424520211778,
+     "rel": 0.016771564366936758
+    },
+    "clean_holdout": {
+     "n": 134,
+     "qlike_aug": 0.3701061371825865,
+     "qlike_base": 0.35482214203983226,
+     "diff": 0.015283995142754206,
+     "nw_t": 1.1264810764590187,
+     "rel": 0.04307508842285955
+    }
+   },
+   "news_only": {
+    "llm_in_sample": {
+     "n": 1908,
+     "qlike_aug": 0.3537156556842951,
+     "qlike_base": 0.35376212584128036,
+     "diff": -4.6470156985317074e-05,
+     "nw_t": -0.027535643522504708,
+     "rel": -0.00013135989861776912
+    },
+    "clean_holdout": {
+     "n": 134,
+     "qlike_aug": 0.3517988620900944,
+     "qlike_base": 0.35482214203983226,
+     "diff": -0.0030232799497378984,
+     "nw_t": -0.26375727176119323,
+     "rel": -0.008520550415364174
+    }
+   },
+   "events_only": {
+    "llm_in_sample": {
+     "n": 1908,
+     "qlike_aug": 0.35214063443959037,
+     "qlike_base": 0.35376212584128036,
+     "diff": -0.0016214914016900357,
+     "nw_t": -0.8381924189227898,
+     "rel": -0.004583564161465768
+    },
+    "clean_holdout": {
+     "n": 134,
+     "qlike_aug": 0.36166596850618354,
+     "qlike_base": 0.35482214203983226,
+     "diff": 0.006843826466351217,
+     "nw_t": 1.0547728029959809,
+     "rel": 0.019288047885080775
+    }
+   },
+   "onchain_only": {
+    "llm_in_sample": {
+     "n": 1908,
+     "qlike_aug": 0.3615643054703157,
+     "qlike_base": 0.35376212584128036,
+     "diff": 0.007802179629035318,
+     "nw_t": 2.215520737397766,
+     "rel": 0.02205487546322542
+    },
+    "clean_holdout": {
+     "n": 134,
+     "qlike_aug": 0.3592741352131341,
+     "qlike_base": 0.35482214203983226,
+     "diff": 0.0044519931733017415,
+     "nw_t": 1.4774745880026345,
+     "rel": 0.012547112048046769
+    }
+   }
+  },
+  "coefs_at_cutoff": {
+   "const": {
+    "coef": -0.2719781137587444,
+    "t_ols": -1.4636619694375668
+   },
+   "lrv_d": {
+    "coef": 0.2683636285606553,
+    "t_ols": 11.357944785575246
+   },
+   "lrv_w": {
+    "coef": 0.4439062680491568,
+    "t_ols": 10.238691110177799
+   },
+   "lrv_m": {
+    "coef": 0.18777676146645295,
+    "t_ols": 4.49365162247092
+   },
+   "tue": {
+    "coef": -0.33198026566646227,
+    "t_ols": -4.995302095057764
+   },
+   "wed": {
+    "coef": -0.3259708248577352,
+    "t_ols": -4.81282856080994
+   },
+   "thu": {
+    "coef": -0.35249904969016393,
+    "t_ols": -5.209217218402164
+   },
+   "fri": {
+    "coef": -0.3816641024602218,
+    "t_ols": -5.670352330734819
+   },
+   "sat": {
+    "coef": -1.4780772581141854,
+    "t_ols": -22.060831903243713
+   },
+   "sun": {
+    "coef": -0.6227802292223609,
+    "t_ols": -9.761538114318258
+   },
+   "att_btc": {
+    "coef": 0.18345445883222009,
+    "t_ols": 1.7976586426756964
+   },
+   "att_btc7": {
+    "coef": -0.08096653382900326,
+    "t_ols": -1.1216319749667765
+   },
+   "att_ind": {
+    "coef": 1.6653345369377348e-16,
+    "t_ols": NaN
+   },
+   "att_max": {
+    "coef": -0.08475204096038443,
+    "t_ols": -0.7906762948851715
+   },
+   "tone_btc": {
+    "coef": -0.06978436335229406,
+    "t_ols": -2.9637544021034095
+   },
+   "tone_ind": {
+    "coef": 0.0,
+    "t_ols": NaN
+   },
+   "ev_macro_next": {
+    "coef": 0.21847706476346715,
+    "t_ols": 3.4636578875103967
+   },
+   "ev_crypto_next": {
+    "coef": 0.23439327010088581,
+    "t_ols": 0.7868982607065347
+   },
+   "ev_macro_today": {
+    "coef": -0.006737728275096748,
+    "t_ols": -0.10629287638784601
+   },
+   "oc_ntx": {
+    "coef": -0.049480481207142116,
+    "t_ols": -0.45047919871191694
+   },
+   "oc_fees": {
+    "coef": 0.0035527795418046878,
+    "t_ols": 0.08763802171945914
+   },
+   "oc_mempool": {
+    "coef": 0.03952432749046337,
+    "t_ols": 1.680742456140936
+   },
+   "oc_hash": {
+    "coef": -0.04211221371006715,
+    "t_ols": -0.3050481899585762
+   }
+  },
+  "coefs_full": {
+   "const": {
+    "coef": -0.24773133348274276,
+    "t_ols": -1.376213579553844
+   },
+   "lrv_d": {
+    "coef": 0.270039719689777,
+    "t_ols": 11.778612488943777
+   },
+   "lrv_w": {
+    "coef": 0.44160405205233466,
+    "t_ols": 10.445646807165799
+   },
+   "lrv_m": {
+    "coef": 0.19149871027218715,
+    "t_ols": 4.709317612997035
+   },
+   "tue": {
+    "coef": -0.347447725539283,
+    "t_ols": -5.394176423767747
+   },
+   "wed": {
+    "coef": -0.327426220491757,
+    "t_ols": -4.993985993816517
+   },
+   "thu": {
+    "coef": -0.3438270780465202,
+    "t_ols": -5.237966810825863
+   },
+   "fri": {
+    "coef": -0.3834618246000952,
+    "t_ols": -5.870414095490163
+   },
+   "sat": {
+    "coef": -1.516934201273306,
+    "t_ols": -23.301922907151113
+   },
+   "sun": {
+    "coef": -0.6341681055380999,
+    "t_ols": -10.221835765449034
+   },
+   "att_btc": {
+    "coef": 0.11827001424209171,
+    "t_ols": 1.3040042745178466
+   },
+   "att_btc7": {
+    "coef": -0.06114088899875777,
+    "t_ols": -0.8665069557417513
+   },
+   "att_ind": {
+    "coef": -5.551115123125783e-17,
+    "t_ols": -0.17498544985682776
+   },
+   "att_max": {
+    "coef": -0.023202453649214846,
+    "t_ols": -0.2447457637956152
+   },
+   "tone_btc": {
+    "coef": -0.07302389110597021,
+    "t_ols": -3.2298931449688575
+   },
+   "tone_ind": {
+    "coef": 2.7755575615628914e-17,
+    "t_ols": 0.1447931003252976
+   },
+   "ev_macro_next": {
+    "coef": 0.20408998514867768,
+    "t_ols": 3.3428864325672536
+   },
+   "ev_crypto_next": {
+    "coef": 0.24025122211329,
+    "t_ols": 0.8076333359933235
+   },
+   "ev_macro_today": {
+    "coef": -0.04466716983589778,
+    "t_ols": -0.7279473905551264
+   },
+   "oc_ntx": {
+    "coef": -0.026137282768678417,
+    "t_ols": -0.24603075511657166
+   },
+   "oc_fees": {
+    "coef": 0.006284809215503567,
+    "t_ols": 0.15744538901784758
+   },
+   "oc_mempool": {
+    "coef": 0.028804003658709387,
+    "t_ols": 1.2965798078836062
+   },
+   "oc_hash": {
+    "coef": -0.07939957438363299,
+    "t_ols": -0.5861556122138313
+   }
+  }
+ },
+ "H-NEWS2": {
+  "model": "L2 logistic (C=1) on the standardised block",
+  "segments": {
+   "llm_in_sample": {
+    "n": 1908,
+    "brier_model": 0.25416438109532774,
+    "brier_base": 0.25146133540028626,
+    "skill": -0.010749349162322286,
+    "ci95": [
+     -0.01946736710849274,
+     -0.002147272704378135
+    ],
+    "hit_rate": 0.4942348008385744,
+    "verdict": "supports"
+   },
+   "clean_holdout": {
+    "n": 134,
+    "brier_model": 0.2519813314887419,
+    "brier_base": 0.249532274496578,
+    "skill": -0.009814590105046594,
+    "ci95": [
+     -0.024235363210536244,
+     0.005558269246769443
+    ],
+    "hit_rate": 0.5074626865671642,
+    "verdict": "inconclusive"
+   }
+  }
+ },
+ "rules": [
+  {
+   "id": "R-NEWS-1",
+   "when": "next_day_vol for BTC",
+   "rule": "keep log-HAR x weekday; do not add GDELT news intensity, tone, event flags or on-chain activity as daily vol regressors",
+   "evidence": "H-NEWS1 in-sample contradicts (QLIKE diff 0.0059, NW t 1.49); holdout contradicts (diff 0.0084, t 0.76)",
+   "confidence": "B"
+  },
+  {
+   "id": "R-NEWS-2",
+   "when": "a scheduled CPI / NFP / FOMC release falls on the forecast day",
+   "rule": "read the vol forecast with the macro-day multiplier exp(b) = 1.24 from the in-sample fit (OLS t 3.5) as context, not as a regressor unless the events-only variant beats the baseline",
+   "evidence": "events-only QLIKE diff in-sample -0.0016 (t -0.84), holdout 0.0068 (t 1.05)",
+   "confidence": "C"
+  },
+  {
+   "id": "R-NEWS-3",
+   "when": "any BTC direction call",
+   "rule": "never use news volume, tone, event flags or on-chain activity as a directional signal",
+   "evidence": "H-NEWS2 Brier skill in-sample -0.0107 CI [-0.0195, -0.0021], holdout -0.0098 CI [-0.0242, +0.0056]",
+   "confidence": "B"
+  },
+  {
+   "id": "R-NEWS-4",
+   "when": "reading GDELT counts after 2026-09",
+   "rule": "use log share of monitored volume and its trailing z, never raw article counts; GDELT's monitored total fell about 7x between July and November 2026",
+   "evidence": "manifest: bitcoin norm monthly mean 146k (2026-07) to 21k (2026-11)",
+   "confidence": "A"
+  }
+ ]
+}

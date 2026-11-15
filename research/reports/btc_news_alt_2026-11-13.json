@@ -1,0 +1,697 @@
+{
+ "as_of": "2026-11-13T00:00:00+00:00",
+ "cutoff": "2026-07-01",
+ "symbol": "BTCUSDT",
+ "n_days": 2408,
+ "date_range": [
+  "2020-04-09",
+  "2026-11-11"
+ ],
+ "block": [
+  "wp_btc",
+  "wp_ind",
+  "wp_max",
+  "wp_edits",
+  "hn_story",
+  "hn_comment",
+  "fng",
+  "fng_chg",
+  "ev_macro_next",
+  "ev_crypto_next",
+  "ev_macro_today",
+  "oc_ntx",
+  "oc_fees",
+  "oc_mempool",
+  "oc_hash"
+ ],
+ "coverage": {
+  "edits": {
+   "Bitcoin": {
+    "chunks": 1,
+    "rows": 4334,
+    "first": "2015-01-01",
+    "last": "2026-11-12",
+    "status": "ok",
+    "requests": 16,
+    "edits": 7653
+   },
+   "Cryptocurrency": {
+    "chunks": 1,
+    "rows": 4334,
+    "first": "2015-01-01",
+    "last": "2026-11-12",
+    "status": "ok",
+    "requests": 6,
+    "edits": 2800
+   }
+  },
+  "fng": {
+   "index": {
+    "chunks": 1,
+    "rows": 3204,
+    "first": "2018-02-01",
+    "last": "2026-11-13",
+    "status": "ok"
+   }
+  },
+  "guardian": {
+   "status": {
+    "chunks": 1,
+    "rows": 0,
+    "first": null,
+    "last": null,
+    "status": "refused"
+   }
+  },
+  "hn": {
+   "bitcoin_comment": {
+    "chunks": 10,
+    "rows": 3603,
+    "first": "2017-01-01",
+    "last": "2026-11-12",
+    "status": "ok",
+    "requests": 275,
+    "approx_days": 0,
+    "items": 119195
+   },
+   "bitcoin_story": {
+    "chunks": 10,
+    "rows": 3603,
+    "first": "2017-01-01",
+    "last": "2026-11-12",
+    "status": "ok",
+    "requests": 119,
+    "approx_days": 0,
+    "items": 14749
+   },
+   "crypto_comment": {
+    "chunks": 10,
+    "rows": 3603,
+    "first": "2017-01-01",
+    "last": "2026-11-12",
+    "status": "ok",
+    "requests": 287,
+    "approx_days": 0,
+    "items": 130423
+   },
+   "crypto_story": {
+    "chunks": 10,
+    "rows": 3603,
+    "first": "2017-01-01",
+    "last": "2026-11-12",
+    "status": "ok",
+    "requests": 119,
+    "approx_days": 0,
+    "items": 15944
+   },
+   "ethereum_comment": {
+    "chunks": 10,
+    "rows": 3603,
+    "first": "2017-01-01",
+    "last": "2026-11-12",
+    "status": "ok",
+    "requests": 119,
+    "approx_days": 0,
+    "items": 22399
+   },
+   "ethereum_story": {
+    "chunks": 10,
+    "rows": 3603,
+    "first": "2017-01-01",
+    "last": "2026-11-12",
+    "status": "ok",
+    "requests": 119,
+    "approx_days": 0,
+    "items": 4176
+   }
+  },
+  "wiki": {
+   "pv_Binance": {
+    "chunks": 1,
+    "rows": 4153,
+    "first": "2015-07-01",
+    "last": "2026-11-12",
+    "status": "ok"
+   },
+   "pv_Bitcoin": {
+    "chunks": 1,
+    "rows": 4153,
+    "first": "2015-07-01",
+    "last": "2026-11-12",
+    "status": "ok"
+   },
+   "pv_Blockchain": {
+    "chunks": 1,
+    "rows": 4153,
+    "first": "2015-07-01",
+    "last": "2026-11-12",
+    "status": "ok"
+   },
+   "pv_Coinbase": {
+    "chunks": 1,
+    "rows": 4153,
+    "first": "2015-07-01",
+    "last": "2026-11-12",
+    "status": "ok"
+   },
+   "pv_Cryptocurrency": {
+    "chunks": 1,
+    "rows": 4153,
+    "first": "2015-07-01",
+    "last": "2026-11-12",
+    "status": "ok"
+   },
+   "pv_Cryptocurrency_bubble": {
+    "chunks": 1,
+    "rows": 4153,
+    "first": "2015-07-01",
+    "last": "2026-11-12",
+    "status": "ok"
+   },
+   "pv_Cryptocurrency_exchange": {
+    "chunks": 1,
+    "rows": 4153,
+    "first": "2015-07-01",
+    "last": "2026-11-12",
+    "status": "ok"
+   },
+   "pv_Dogecoin": {
+    "chunks": 1,
+    "rows": 4153,
+    "first": "2015-07-01",
+    "last": "2026-11-12",
+    "status": "ok"
+   },
+   "pv_Ethereum": {
+    "chunks": 1,
+    "rows": 4153,
+    "first": "2015-07-01",
+    "last": "2026-11-12",
+    "status": "ok"
+   },
+   "pv_FTX": {
+    "chunks": 1,
+    "rows": 4153,
+    "first": "2015-07-01",
+    "last": "2026-11-12",
+    "status": "ok"
+   },
+   "pv_FTX_(company)": {
+    "chunks": 1,
+    "rows": 4153,
+    "first": "2015-07-01",
+    "last": "2026-11-12",
+    "status": "ok"
+   },
+   "pv_MicroStrategy": {
+    "chunks": 1,
+    "rows": 4153,
+    "first": "2015-07-01",
+    "last": "2026-11-12",
+    "status": "ok"
+   },
+   "pv_Satoshi_Nakamoto": {
+    "chunks": 1,
+    "rows": 4153,
+    "first": "2015-07-01",
+    "last": "2026-11-12",
+    "status": "ok"
+   },
+   "pv_Stablecoin": {
+    "chunks": 1,
+    "rows": 4153,
+    "first": "2015-07-01",
+    "last": "2026-11-12",
+    "status": "ok"
+   },
+   "pv_Strategy_(company)": {
+    "chunks": 1,
+    "rows": 4153,
+    "first": "2015-07-01",
+    "last": "2026-11-12",
+    "status": "ok"
+   },
+   "pv_Tether_(cryptocurrency)": {
+    "chunks": 1,
+    "rows": 4153,
+    "first": "2015-07-01",
+    "last": "2026-11-12",
+    "status": "ok"
+   }
+  },
+  "_bytes": 506409
+ },
+ "block_nonnull_share": {
+  "llm_in_sample": {
+   "wp_btc": 1.0,
+   "wp_ind": 1.0,
+   "wp_max": 1.0,
+   "wp_edits": 1.0,
+   "hn_story": 1.0,
+   "hn_comment": 1.0,
+   "fng": 1.0,
+   "fng_chg": 0.9994761655316919,
+   "ev_macro_next": 1.0,
+   "ev_crypto_next": 1.0,
+   "ev_macro_today": 1.0,
+   "oc_ntx": 0.9984284965950759,
+   "oc_fees": 1.0,
+   "oc_mempool": 1.0,
+   "oc_hash": 0.9968569931901519
+  },
+  "clean_holdout": {
+   "wp_btc": 1.0,
+   "wp_ind": 1.0,
+   "wp_max": 1.0,
+   "wp_edits": 1.0,
+   "hn_story": 1.0,
+   "hn_comment": 1.0,
+   "fng": 1.0,
+   "fng_chg": 1.0,
+   "ev_macro_next": 1.0,
+   "ev_crypto_next": 1.0,
+   "ev_macro_today": 1.0,
+   "oc_ntx": 1.0,
+   "oc_fees": 1.0,
+   "oc_mempool": 1.0,
+   "oc_hash": 1.0
+  }
+ },
+ "guardian": {
+  "error": "HTTP 401 content.guardianapis.com",
+  "fetched_at": "2026-11-13T22:57:50+00:00",
+  "key_kind": "test",
+  "path": null,
+  "rows": 0,
+  "status": "refused"
+ },
+ "H-NEWS3": {
+  "baseline": "loghar + forecast-weekday dummies",
+  "block": [
+   "wp_btc",
+   "wp_ind",
+   "wp_max",
+   "wp_edits",
+   "hn_story",
+   "hn_comment",
+   "fng",
+   "fng_chg",
+   "ev_macro_next",
+   "ev_crypto_next",
+   "ev_macro_today",
+   "oc_ntx",
+   "oc_fees",
+   "oc_mempool",
+   "oc_hash"
+  ],
+  "variants": {
+   "primary": {
+    "llm_in_sample": {
+     "n": 1908,
+     "qlike_aug": 0.36585677784929505,
+     "qlike_base": 0.35376212584128036,
+     "diff": 0.012094652008014678,
+     "nw_t": 1.4998011287344601,
+     "rel": 0.034188657079251866,
+     "verdict": "contradicts"
+    },
+    "clean_holdout": {
+     "n": 134,
+     "qlike_aug": 0.3701028200062317,
+     "qlike_base": 0.35482214203983226,
+     "diff": 0.015280677966399396,
+     "nw_t": 1.4644247575970613,
+     "rel": 0.043065739580265515,
+     "verdict": "contradicts"
+    }
+   },
+   "alt_only": {
+    "llm_in_sample": {
+     "n": 1908,
+     "qlike_aug": 0.35503920811928613,
+     "qlike_base": 0.35376212584128036,
+     "diff": 0.001277082278005756,
+     "nw_t": 0.2901312989917105,
+     "rel": 0.0036100028372701896
+    },
+    "clean_holdout": {
+     "n": 134,
+     "qlike_aug": 0.35866170653652263,
+     "qlike_base": 0.35482214203983226,
+     "diff": 0.0038395644966903127,
+     "nw_t": 0.5726856290559328,
+     "rel": 0.010821096097941046
+    }
+   },
+   "wiki_only": {
+    "llm_in_sample": {
+     "n": 1908,
+     "qlike_aug": 0.3540969930656572,
+     "qlike_base": 0.35376212584128036,
+     "diff": 0.00033486722437680856,
+     "nw_t": 0.13618537172580256,
+     "rel": 0.0009465886818168059
+    },
+    "clean_holdout": {
+     "n": 134,
+     "qlike_aug": 0.35596749386051085,
+     "qlike_base": 0.35482214203983226,
+     "diff": 0.0011453518206785336,
+     "nw_t": 0.31467634286160995,
+     "rel": 0.0032279603919136385
+    }
+   },
+   "hn_only": {
+    "llm_in_sample": {
+     "n": 1908,
+     "qlike_aug": 0.35135931329108927,
+     "qlike_base": 0.35376212584128036,
+     "diff": -0.002402812550191062,
+     "nw_t": -0.7862822889537265,
+     "rel": -0.0067921701467531116
+    },
+    "clean_holdout": {
+     "n": 134,
+     "qlike_aug": 0.3490505032894962,
+     "qlike_base": 0.35482214203983226,
+     "diff": -0.005771638750336075,
+     "nw_t": -0.6725226088625024,
+     "rel": -0.01626628687024879
+    }
+   },
+   "fng_only": {
+    "llm_in_sample": {
+     "n": 1908,
+     "qlike_aug": 0.3566907423186326,
+     "qlike_base": 0.35376212584128036,
+     "diff": 0.002928616477352233,
+     "nw_t": 1.058545230762237,
+     "rel": 0.00827849072420543
+    },
+    "clean_holdout": {
+     "n": 134,
+     "qlike_aug": 0.3624787381774531,
+     "qlike_base": 0.35482214203983226,
+     "diff": 0.007656596137620741,
+     "nw_t": 1.4087774091329155,
+     "rel": 0.021578687546396733
+    }
+   },
+   "events_onchain": {
+    "llm_in_sample": {
+     "n": 1908,
+     "qlike_aug": 0.3599799561451258,
+     "qlike_base": 0.35376212584128036,
+     "diff": 0.0062178303038454,
+     "nw_t": 1.6259405372361395,
+     "rel": 0.017576302972113822
+    },
+    "clean_holdout": {
+     "n": 134,
+     "qlike_aug": 0.36628484677718753,
+     "qlike_base": 0.35482214203983226,
+     "diff": 0.011462704737355231,
+     "nw_t": 1.9154467780825162,
+     "rel": 0.03230549444140504
+    }
+   }
+  },
+  "coefs_at_cutoff": {
+   "const": {
+    "coef": -0.06370102451112802,
+    "t_ols": -0.3278064548086599
+   },
+   "lrv_d": {
+    "coef": 0.27262673982587227,
+    "t_ols": 11.676247724970976
+   },
+   "lrv_w": {
+    "coef": 0.39374619541155004,
+    "t_ols": 8.86956615639088
+   },
+   "lrv_m": {
+    "coef": 0.2489388078082076,
+    "t_ols": 5.56819421167123
+   },
+   "tue": {
+    "coef": -0.31108616291318975,
+    "t_ols": -4.80285759710526
+   },
+   "wed": {
+    "coef": -0.38700946001571984,
+    "t_ols": -5.48415504412073
+   },
+   "thu": {
+    "coef": -0.43293087869388963,
+    "t_ols": -6.030045174341726
+   },
+   "fri": {
+    "coef": -0.46487247520156505,
+    "t_ols": -6.563696146635659
+   },
+   "sat": {
+    "coef": -1.5500768919512677,
+    "t_ols": -21.931682896337513
+   },
+   "sun": {
+    "coef": -0.6839596067967426,
+    "t_ols": -10.3157510975075
+   },
+   "wp_btc": {
+    "coef": 0.19053950491185476,
+    "t_ols": 2.0857641783463223
+   },
+   "wp_ind": {
+    "coef": 0.35389917506711255,
+    "t_ols": 2.081288948359876
+   },
+   "wp_max": {
+    "coef": -0.1014772573488841,
+    "t_ols": -2.278418877467556
+   },
+   "wp_edits": {
+    "coef": -0.026378756505493334,
+    "t_ols": -1.118313244198083
+   },
+   "hn_story": {
+    "coef": 0.17066891235750217,
+    "t_ols": 3.208013073444728
+   },
+   "hn_comment": {
+    "coef": -0.05660819623769001,
+    "t_ols": -1.9491007846653785
+   },
+   "fng": {
+    "coef": -0.041723539605085645,
+    "t_ols": -1.0648118170973189
+   },
+   "fng_chg": {
+    "coef": -0.22909513875700296,
+    "t_ols": -1.643054154316797
+   },
+   "ev_macro_next": {
+    "coef": 0.21872254761281354,
+    "t_ols": 3.477857690604867
+   },
+   "ev_crypto_next": {
+    "coef": 0.18350484495445005,
+    "t_ols": 0.6165853817635099
+   },
+   "ev_macro_today": {
+    "coef": -0.00985948445944181,
+    "t_ols": -0.1564255993832274
+   },
+   "oc_ntx": {
+    "coef": -0.07118895797850348,
+    "t_ols": -0.6489693437920189
+   },
+   "oc_fees": {
+    "coef": -0.01205885021414047,
+    "t_ols": -0.29016807907691183
+   },
+   "oc_mempool": {
+    "coef": 0.03724005999757557,
+    "t_ols": 1.5764423760698978
+   },
+   "oc_hash": {
+    "coef": -0.04690907242336067,
+    "t_ols": -0.3408508613288457
+   }
+  },
+  "coefs_full": {
+   "const": {
+    "coef": -0.011498786548621933,
+    "t_ols": -0.06118372128203442
+   },
+   "lrv_d": {
+    "coef": 0.2748277552282118,
+    "t_ols": 12.126427780546168
+   },
+   "lrv_w": {
+    "coef": 0.3933744773502691,
+    "t_ols": 9.093140080622135
+   },
+   "lrv_m": {
+    "coef": 0.2527193527988709,
+    "t_ols": 5.796565891552551
+   },
+   "tue": {
+    "coef": -0.3269556401569206,
+    "t_ols": -5.193934146624569
+   },
+   "wed": {
+    "coef": -0.38746163354053237,
+    "t_ols": -5.669803625487094
+   },
+   "thu": {
+    "coef": -0.42186255782760285,
+    "t_ols": -6.071583978843282
+   },
+   "fri": {
+    "coef": -0.4645075644646218,
+    "t_ols": -6.774673082551678
+   },
+   "sat": {
+    "coef": -1.5861555082146763,
+    "t_ols": -23.169517996425405
+   },
+   "sun": {
+    "coef": -0.6959398411207521,
+    "t_ols": -10.828618437191246
+   },
+   "wp_btc": {
+    "coef": 0.17289347798348031,
+    "t_ols": 2.063453393551273
+   },
+   "wp_ind": {
+    "coef": 0.3863145019288243,
+    "t_ols": 2.385396453269252
+   },
+   "wp_max": {
+    "coef": -0.1087065648886804,
+    "t_ols": -2.5249492057235408
+   },
+   "wp_edits": {
+    "coef": -0.021525995566821932,
+    "t_ols": -0.9235462168980746
+   },
+   "hn_story": {
+    "coef": 0.17005475821443625,
+    "t_ols": 3.289469048709128
+   },
+   "hn_comment": {
+    "coef": -0.060605239494663156,
+    "t_ols": -2.125805069853534
+   },
+   "fng": {
+    "coef": -0.029601985065856512,
+    "t_ols": -0.7766664618200037
+   },
+   "fng_chg": {
+    "coef": -0.16498339553514688,
+    "t_ols": -1.221167448599066
+   },
+   "ev_macro_next": {
+    "coef": 0.20215413566129609,
+    "t_ols": 3.3200181319101847
+   },
+   "ev_crypto_next": {
+    "coef": 0.18059790903398756,
+    "t_ols": 0.6074003789911383
+   },
+   "ev_macro_today": {
+    "coef": -0.04883745820535076,
+    "t_ols": -0.8002659497143833
+   },
+   "oc_ntx": {
+    "coef": -0.049629479914568675,
+    "t_ols": -0.46787608817858756
+   },
+   "oc_fees": {
+    "coef": -0.01191768868774607,
+    "t_ols": -0.29074284245877974
+   },
+   "oc_mempool": {
+    "coef": 0.02900869499565579,
+    "t_ols": 1.2971132129278204
+   },
+   "oc_hash": {
+    "coef": -0.08372872122444924,
+    "t_ols": -0.6197388019460043
+   }
+  }
+ },
+ "H-NEWS4": {
+  "model": "L2 logistic (C=1) on the standardised block",
+  "segments": {
+   "llm_in_sample": {
+    "n": 1908,
+    "brier_model": 0.2560169296333485,
+    "brier_base": 0.25146133540028626,
+    "skill": -0.01811647991851495,
+    "ci95": [
+     -0.030522111855018574,
+     -0.005480625994690997
+    ],
+    "hit_rate": 0.4910901467505241,
+    "verdict": "supports"
+   },
+   "clean_holdout": {
+    "n": 134,
+    "brier_model": 0.25403290210862095,
+    "brier_base": 0.249532274496578,
+    "skill": -0.01803625451305968,
+    "ci95": [
+     -0.036357454183091664,
+     0.0006951195965399193
+    ],
+    "hit_rate": 0.44029850746268656,
+    "verdict": "supports"
+   }
+  }
+ },
+ "rules": [
+  {
+   "id": "R-NEWS-5",
+   "kind": "avoid",
+   "rule": "WHEN forecasting next-day BTC volatility THEN do not add daily news-attention counts (Wikipedia, Hacker News, Fear and Greed) or event / on-chain flags to log-HAR x weekday",
+   "when": "next-day BTC vol forecast",
+   "then": "keep log-HAR x weekday; read attention spikes as context only",
+   "effect": "QLIKE diff in-sample 0.0121 (NW t 1.50, contradicts); holdout 0.0153 (t 1.46, contradicts)",
+   "confidence": "B",
+   "status": "active",
+   "scope": {
+    "assets": [
+     "BTCUSDT"
+    ],
+    "horizon": "1d",
+    "sides": "both"
+   },
+   "evidence": [
+    "H-NEWS3"
+   ],
+   "review": "re-run scripts/news_alt_study.py when the clean holdout has >= 250 days; flip if the holdout verdict changes"
+  },
+  {
+   "id": "R-NEWS-7",
+   "kind": "avoid",
+   "rule": "WHEN making a BTC direction call THEN do not use news attention, Fear and Greed level or change, event flags or on-chain activity as a directional signal",
+   "when": "any next-day BTC direction view",
+   "then": "direction from these inputs is no better than the base rate",
+   "effect": "H-NEWS4 Brier skill in-sample -0.0181 CI [-0.0305, -0.0055] (supports); holdout -0.0180 CI [-0.0364, +0.0007] (supports)",
+   "confidence": "B",
+   "status": "active",
+   "scope": {
+    "assets": [
+     "BTCUSDT"
+    ],
+    "horizon": "1d",
+    "sides": "both"
+   },
+   "evidence": [
+    "H-NEWS4"
+   ],
+   "review": "re-run scripts/news_alt_study.py when the clean holdout has >= 250 days; flip if the holdout verdict changes"
+  }
+ ]
+}

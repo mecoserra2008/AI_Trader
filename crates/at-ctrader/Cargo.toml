@@ -1,0 +1,21 @@
+[package]
+name = "at-ctrader"
+description = "Read-only cTrader Open API client (protobuf over TLS): auth, symbols, historical ticks, live spots"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+at-core.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+arrow.workspace = true
+parquet.workspace = true
+prost = "0.13"
+native-tls = "0.2"
+tokio-native-tls = "0.3"

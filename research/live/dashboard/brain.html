@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BTC Brain Map</title>
+<meta name="description" content="The frozen 1h BTC polynomial network firing live on intra-hour ticks: an intra-hour nowcast, not the official hourly forecast.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .nowcast-tag { font: 600 11px/1 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--surface);
+    background: var(--v2); border-radius: 3px; padding: 4px 6px; }
+  .banner { margin: 10px 16px 0; padding: 8px 12px; border: 1px solid var(--rule); border-left: 4px solid var(--v2);
+    background: var(--surface); border-radius: 4px; font-size: 13px; color: var(--ink-2); }
+  .banner b { color: var(--ink); }
+  .brain-wrap { position: relative; width: 100%; }
+  #brain { width: 100%; height: 600px; display: block; }
+  #raster { width: 100%; height: 330px; display: block; }
+  #meters { width: 100%; height: 330px; display: block; }
+  #price { width: 100%; height: 210px; display: block; }
+  #qplot { width: 100%; height: 210px; display: block; }
+  .tip { position: absolute; pointer-events: none; z-index: 8; max-width: 380px; padding: 8px 10px; font: 400 12px/1.4 var(--mono);
+    color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+    white-space: pre-wrap; display: none; }
+  .why { font-size: 14px; line-height: 1.5; margin: 0; }
+  .why li { margin: 0 0 6px; }
+  .why .num { font-size: 13px; }
+  .legend-row { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; color: var(--ink-3); margin-top: 6px; }
+  .legend-row i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+  .ctrl-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .ctrl-row select { font: 500 12px/1 var(--sans); background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--rule); border-radius: 4px; padding: 5px; }
+  .cpu { font: 400 11px/1 var(--mono); color: var(--ink-3); }
+  .stack { display: grid; gap: 12px; align-content: start; }
+  .rasterbox { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 1fr); gap: 8px; }
+  a.btn { text-decoration: none; display: inline-block; }
+  @media (max-width: 760px) { #brain { height: 460px; } .rasterbox { grid-template-columns: 1fr; } }
+</style>
+<script src="brain_core.js" defer></script>
+<script src="brain.js" defer></script>
+</head>
+<body>
+<header class="bar">
+  <div class="bar-id">
+    <span class="sym">BTCUSDT brain</span><span class="venue">frozen 1h PNN, 2 seeds</span>
+  </div>
+  <div class="bar-px">
+    <span id="px" class="px num">-</span>
+    <span id="px-chg" class="chg num"></span>
+  </div>
+  <span class="nowcast-tag" title="Inputs rebuilt from the partial hour (brain_recipe.v1); the official forecast is the hh:03 v1 line">Intra-hour nowcast</span>
+  <dl class="bar-meta">
+    <div><dt>Base line</dt><dd id="m-line" class="num">-</dd></div>
+    <div><dt>Hour elapsed</dt><dd id="m-f" class="num">-</dd></div>
+    <div><dt>Feed</dt><dd><span class="dot" id="ws-dot"></span><span id="ws-txt">connecting</span></dd></div>
+    <div><dt>Passes</dt><dd id="m-hz" class="num">-</dd></div>
+    <div><dt>Recorder</dt><dd id="m-rec" class="num">-</dd></div>
+  </dl>
+  <div class="ctrl-row">
+    <button id="pause" class="btn" type="button" aria-pressed="false">Pause</button>
+    <button id="replay" class="btn" type="button" title="Replay the last 15 minutes of firing">Replay 15 min</button>
+    <select id="speed" aria-label="Replay speed"><option value="10">x10</option><option value="30" selected>x30</option><option value="60">x60</option></select>
+    <a class="btn" href="/" title="Back to the network monitor">Monitor</a>
+    <button id="theme" class="btn" type="button" aria-label="Switch colour theme">Theme: auto</button>
+  </div>
+</header>
+
+<p class="banner"><b>Intra-hour nowcast, not the official hourly forecast.</b> The frozen network is re-run on every tick
+  (up to about 6 passes a second, throttled) with 5 of its 19 inputs rebuilt from the partial hour (pre-declared H-BR1 recipe: the partial-hour return,
+  scaled to an hourly equivalent, and the partial-hour range replace the last-bar terms); the other 14 stay frozen at the last close.
+  Whether this adds information is the open hypothesis H-BR1. <span id="state-note"></span></p>
+
+<main class="grid">
+  <section class="card span-8" aria-labelledby="h-brain">
+    <div class="card-h">
+      <h2 id="h-brain">Brain map <span class="muted" id="brain-sub">sensory inputs, polynomial synapses, latent core, head, quantiles</span></h2>
+      <span class="cpu" id="cpu"></span>
+    </div>
+    <div class="brain-wrap" id="brain-wrap">
+      <canvas id="brain" role="img" aria-label="Network map: inputs on the left arc, the two seed hemispheres' latent cores in the middle, quantile outputs on the right; spikes travel along edges when inputs change"></canvas>
+      <div class="tip" id="tip"></div>
+    </div>
+    <div class="legend-row" id="legend"></div>
+    <p class="note">Edges carry polynomial edge functions phi(x) = w silu(x) + sum c_d T_d(tanh(x/2)); the bead on each edge is that
+      hidden polynomial unit. A spike leaves an input when its standardised value moves by more than 0.01 sd; its brightness and speed scale
+      with the change in that edge's output (in units of the edge's 2025-26 sd). Node fill = activation vs its 2025-26 mean (blue above,
+      red below); halo = |change|, decaying. Hover anything for its formula and value.</p>
+  </section>
+
+  <div class="span-4 stack">
+    <section class="card" aria-labelledby="h-price">
+      <div class="card-h"><h2 id="h-price">Price and this hour's bands</h2></div>
+      <canvas id="price" role="img" aria-label="Live price this hour with the frozen top-of-hour bands and the nowcast band for the rest of the hour"></canvas>
+      <p class="note" id="price-note"></p>
+    </section>
+    <section class="card" aria-labelledby="h-q">
+      <div class="card-h"><h2 id="h-q">Rest of the hour: nowcast vs frozen</h2></div>
+      <canvas id="qplot" role="img" aria-label="Seven quantiles of the remaining-hour return: nowcast (filled) against the frozen top-of-hour quantiles scaled by the square root of the remaining fraction (hollow)"></canvas>
+      <p class="note" id="q-note"></p>
+    </section>
+    <section class="card" aria-labelledby="h-why">
+      <div class="card-h"><h2 id="h-why">What is firing and why</h2></div>
+      <ul class="why" id="why"><li>Waiting for the live feed.</li></ul>
+    </section>
+  </div>
+
+  <section class="card span-12" aria-labelledby="h-raster">
+    <div class="card-h">
+      <h2 id="h-raster">Raster: spike trains, last 15 minutes <span class="muted">one row per neuron, 1 s bins; brightness = size of the change</span></h2>
+      <span class="muted" id="raster-note"></span>
+    </div>
+    <div class="rasterbox">
+      <canvas id="raster" role="img" aria-label="Raster plot of spikes per neuron over the last 15 minutes"></canvas>
+      <canvas id="meters" role="img" aria-label="Firing-rate meters, spikes per minute per neuron"></canvas>
+    </div>
+  </section>
+</main>
+</body>
+</html>

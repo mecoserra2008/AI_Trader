@@ -1,0 +1,3 @@
+# The trial registry is hash-chained byte for byte: never let git convert its line endings.
+trials/registry.jsonl -text
+trials/registry.head.json -text

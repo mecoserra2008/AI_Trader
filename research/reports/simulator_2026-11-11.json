@@ -1,0 +1,2615 @@
+{
+ "as_of": "2026-11-10T23:00:00+00:00",
+ "segment": "clean_holdout",
+ "method": {
+  "data": "flow_3s Bybit linear, Lake.read_asof per symbol with column projection at a fixed as_of; complete 3 s grid; candles missing (collector gaps) or without a valid book (mid / spread null) are not ok and never zero-filled; lags and ACFs never cross a gap",
+  "classes": "major = BTC, ETH, SOL, XRP, BNB, DOGE; tradfi = instrument symbol_type in ETF/stock/commodity or the TradFi stream list (incl. XAUT, PAXG); alt = the rest",
+  "H-SIM1": "live mm quotes (orderLinkId 'mm...', deduplicated across the 5 pulls by orderId) with at-risk candles [created, cancel) or [created, fill candle]; usable when >= 95% of at-risk weight is in the lake, the fill candle is present and the 60 s markout mid is known; train = first half of usable quotes by creation time, test = second half; MLE of (theta0, b, eps) per variant (touch / strict); primary variant = lower train AIC; predicted fill rate = compensator sum of hazards / quotes; predicted markout = hazard-weighted; observed CIs: 30-min block bootstrap of the test half (B = 2000); markout = side * (mid at the close of the candle 60 s after the fill candle - quote price) / price in bps",
+  "H-SIM3": "per symbol-day OLS of y = signed taker notional / day median depth_25 on lagged returns (sigma units; lags 1, 2-5, 6-20), obi_5, flow lags and recent vol; intensity log(1+trades) on lagged log spread, vol and activity lags; momentum = b1 + 4 b2 + 15 b3; 5-minute clock clusters; sign stability = share of symbol-days with the modal sign for each primary response (momentum, obi, spread); equality: per symbol pooled over days, stacked cluster influence across symbols, Wald H0 equal (momentum, obi, spread) within class; supports = all three sign shares >= 0.80 and no rejection at 5% in >= 2 of 3 classes; symbol-days with < 2000 usable 3 s rows dropped",
+  "H-SIM2": "generator (sim/flow_sim.py) fitted per symbol on 2026-11-08 + 2026-11-09, 10 paths of the 2026-11-10 ok-candle count each; facts: excess kurtosis of 3 s mid returns, mean ACF of |r| lags 1-60, mean ACF of signed flow lags 1-20, standardised impact slope corr(r_t, F_t), spread median and p90 (both must pass); class value = median over symbols (sim: of each symbol's median over paths); envelope = [min over the 3 real days of the 2.5% bootstrap quantile, max of the 97.5%] of the class median, 1 h block bootstrap within each symbol-day (B = 300); supports = >= 4 of 5 facts inside for every class; contradicts = some class has <= 2 inside",
+  "H-SIM4": "atx mm quote rule ported (sim/replay.py) with config/mm_multi.yaml values, one symbol at a time, decisions every 3 candles (9 s), no structural levels; grid ask {0.2, 0.45, 0.9} x bid {0.2, 0.45, 0.9} x take-profit {0.3, 0.9} x requote {0.15, 0.5} sigma = 36 sets; replay on the real 2026-11-10 paths of the mm_multi symbols (warm-up from earlier candles) with the H-SIM1 primary fill model, 3 fill seeds; simulator: the H-SIM2 model of each symbol, 3 paths of the same ok-candle count, same fill model; metric = pooled net P&L / turnover (bps) per parameter set; Spearman of the 36 rankings, bootstrap over symbols (B = 2000); supports = rho > 0.5 with the 95% CI excluding 0",
+  "fees": "maker 2 bps, taker 5.5 bps; market orders pay half-spread + 10 bps * sqrt(notional / depth_25)"
+ },
+ "coverage": {
+  "2026-11-07": {
+   "symbols": 50,
+   "median": 7394.0,
+   "max": 7394.0
+  },
+  "2026-11-08": {
+   "symbols": 104,
+   "median": 3417.0,
+   "max": 24384.0
+  },
+  "2026-11-09": {
+   "symbols": 104,
+   "median": 15923.0,
+   "max": 15923.0
+  },
+  "2026-11-10": {
+   "symbols": 104,
+   "median": 10186.0,
+   "max": 10186.0
+  }
+ },
+ "storage_estimate": {
+  "bytes_per_trade": 24.833400405653393,
+  "trades_day_all": 12451401.298797635,
+  "trades_day_mm50": 7593089.923357334,
+  "book_updates_day_12": 5644274.545294145,
+  "flow3s_gb_per_day": 0.15930430272727272,
+  "lake_gb_now": 0.839578067,
+  "trades_gb_4w_mm50": 5.279742786720212,
+  "book_gb_4w_12_lo": 6.321587490729443,
+  "book_gb_4w_12_hi": 18.964762472188326,
+  "rep_symbols": [
+   "BTCUSDT",
+   "ETHUSDT",
+   "SOLUSDT",
+   "XRPUSDT",
+   "HYPEUSDT",
+   "ENAUSDT",
+   "MAVIAUSDT",
+   "WIFUSDT",
+   "TSLAUSDT",
+   "NVDAUSDT",
+   "XAUUSDT",
+   "CLUSDT"
+  ],
+  "text": "The v0 bottlenecks are (1) the fill model sees candles, not queues; (2) 23 held-out live fills; (3) three gappy days. Proposed v1 data, for the user to decide (storage budget 30 GB, lake today 0.84 GB):\n\n| item | scope | estimate for 4 weeks |\n|---|---|---|\n| raw trades (trades_raw: ts, side, price, size, id) | the 50 mm_multi symbols, 7.6 M prints/day at 25 B/print (measured on BTC trades_raw) | 5.3 GB |\n| L2 book deltas (orderbook.50 or .200 updates, levels within 25-100 bp) | 12 representative symbols (4 majors, 4 alts, 4 TradFi: BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, HYPEUSDT, ENAUSDT, MAVIAUSDT, WIFUSDT, TSLAUSDT, NVDAUSDT, XAUUSDT, CLUSDT), 5.6 M update messages/day (the collector's book_updates count) at an assumed 40-120 B/message | 6.3-19.0 GB |\n| flow_3s as today (all symbols) | ongoing, 0.16 GB/day | 4.5 GB |\n| total incl. the current lake | | 17-30 GB |\n\nWith raw trades and book deltas the fill model can track queue position (our size vs the size ahead at our price, depletion by prints at that price, cancels), the generator can be a proper marked Hawkes on events instead of 3 s aggregates, and reaction functions can be estimated on event time. The book-delta byte cost is an assumption: measure it with a one-day pilot on 2-3 symbols before committing, and keep the deltas on a rolling retention (like trades_raw) after the derived features are stored. A further cheap gain: run the live quoter with a few deliberate parameter variants (paired, same symbols) to collect hundreds of fills per variant, which is what H-SIM1 and H-SIM4 lack most."
+ },
+ "sim1": {
+  "live": {
+   "dirs": [
+    "mainnet-20261108T2258",
+    "mainnet-20261109T0003",
+    "mainnet-20261109T0005",
+    "mainnet-20261109T0006",
+    "mainnet-20261109T0817"
+   ],
+   "orders_all": 5167,
+   "execs_all": 220,
+   "mm_quotes": 5128,
+   "mm_filled": 161,
+   "mm_fills": 162
+  },
+  "rejected_post_only_or_other": 42,
+  "quotes_considered": 5086,
+  "coverage": {
+   "usable": 5086
+  },
+  "usable": 5086,
+  "usable_share": 1.0,
+  "usable_filled": 161,
+  "split_ms": 1794188564244.5,
+  "split_utc": "2026-11-09T01:42:44.244500+00:00",
+  "train": {
+   "quotes": 2543,
+   "fills": 138
+  },
+  "test": {
+   "quotes": 2543,
+   "fills": 23,
+   "obs_fill_rate": 0.009044435705859222,
+   "ci_fill_rate": [
+    0.003713762509027133,
+    0.01476059576163745
+   ],
+   "obs_markout_bps": -0.11642175732528938,
+   "ci_markout_bps": [
+    -11.268625449683395,
+    7.560049330814847
+   ],
+   "blocks": 14
+  },
+  "variants": {
+   "touch": {
+    "params": {
+     "variant": "touch",
+     "theta0": 0.4536232059154747,
+     "b": 20.085536923187668,
+     "eps": 1.928114514392912e-13
+    },
+    "fit": {
+     "nll": 84.51236472061419,
+     "aic": 175.02472944122837,
+     "rows": 151644,
+     "converged": true
+    },
+    "test_ll": -20.455847941058444,
+    "pred_fill_rate": 0.010196211533034464,
+    "pred_markout_bps": 2.449588023039221,
+    "train_pred_fill_rate": 0.054289893619771844,
+    "train_obs_fill_rate": 0.05426661423515533,
+    "naive_theta1_fill_rate": 0.0166876393386845,
+    "naive_theta1_markout_bps": 1.723651372535221,
+    "rate_inside": true,
+    "markout_inside": true
+   },
+   "strict": {
+    "params": {
+     "variant": "strict",
+     "theta0": 0.9999999998684073,
+     "b": 20.085536923187668,
+     "eps": 0.00036219814783127006
+    },
+    "fit": {
+     "nll": 483.93317755938017,
+     "aic": 973.8663551187603,
+     "rows": 151644,
+     "converged": true
+    },
+    "test_ll": -148.68009712280343,
+    "pred_fill_rate": 0.02889776777161881,
+    "pred_markout_bps": 69.73343713020961,
+    "train_pred_fill_rate": 0.05414283277577622,
+    "train_obs_fill_rate": 0.05426661423515533,
+    "naive_theta1_fill_rate": 0.004806789948224409,
+    "naive_theta1_markout_bps": 4.54196387192205,
+    "rate_inside": false,
+    "markout_inside": false
+   }
+  },
+  "primary_variant": "touch",
+  "self_print_share": 0.006211180124223602,
+  "self_print_n": 161,
+  "by_symbol_top": [
+   {
+    "symbol": "MAVIAUSDT",
+    "quotes": 571,
+    "usable": 571,
+    "filled": 2
+   },
+   {
+    "symbol": "XRPUSDT",
+    "quotes": 398,
+    "usable": 398,
+    "filled": 9
+   },
+   {
+    "symbol": "FILUSDT",
+    "quotes": 319,
+    "usable": 319,
+    "filled": 3
+   },
+   {
+    "symbol": "ADAUSDT",
+    "quotes": 309,
+    "usable": 309,
+    "filled": 7
+   },
+   {
+    "symbol": "SOLUSDT",
+    "quotes": 272,
+    "usable": 272,
+    "filled": 13
+   },
+   {
+    "symbol": "DOGEUSDT",
+    "quotes": 224,
+    "usable": 224,
+    "filled": 8
+   },
+   {
+    "symbol": "NEARUSDT",
+    "quotes": 208,
+    "usable": 208,
+    "filled": 1
+   },
+   {
+    "symbol": "ENAUSDT",
+    "quotes": 200,
+    "usable": 200,
+    "filled": 3
+   },
+   {
+    "symbol": "WLDUSDT",
+    "quotes": 200,
+    "usable": 200,
+    "filled": 5
+   },
+   {
+    "symbol": "XLMUSDT",
+    "quotes": 162,
+    "usable": 162,
+    "filled": 5
+   },
+   {
+    "symbol": "ARBUSDT",
+    "quotes": 153,
+    "usable": 153,
+    "filled": 2
+   },
+   {
+    "symbol": "TRUMPUSDT",
+    "quotes": 121,
+    "usable": 121,
+    "filled": 3
+   },
+   {
+    "symbol": "MONUSDT",
+    "quotes": 121,
+    "usable": 121,
+    "filled": 4
+   },
+   {
+    "symbol": "1000PEPEUSDT",
+    "quotes": 117,
+    "usable": 117,
+    "filled": 0
+   },
+   {
+    "symbol": "UNIUSDT",
+    "quotes": 109,
+    "usable": 109,
+    "filled": 5
+   }
+  ],
+  "verdict": "inconclusive"
+ },
+ "sim2": {
+  "fit_days": [
+   "2026-11-08",
+   "2026-11-09"
+  ],
+  "val_day": "2026-11-10",
+  "symbols": 104,
+  "skipped": {},
+  "classes": {
+   "major": {
+    "symbols": 6,
+    "sim": [
+     62.75953713459455,
+     0.05976356654902001,
+     0.0010669950973900672,
+     0.4012334555223973,
+     0.5130956611145845,
+     0.528994208248634,
+     0.5010450347420781
+    ],
+    "env_lo": [
+     4.142036400645257,
+     0.053317277794139466,
+     0.0061565509297504,
+     0.2860868679705174,
+     0.49875994473831536,
+     0.5053264777009492,
+     0.5402149859287699
+    ],
+    "env_hi": [
+     491.2609631353758,
+     0.36431023208028657,
+     0.04390198471855199,
+     0.48023872540569246,
+     0.5419252354011486,
+     0.5491212801215597,
+     0.5922687697083524
+    ],
+    "real_by_day": {
+     "2026-11-08": [
+      369.8455485372624,
+      0.3155155593118937,
+      0.026059951761615473,
+      0.43336440158791434,
+      0.5053264777009492,
+      0.5130956611145845,
+      0.5698347808336117
+     ],
+     "2026-11-09": [
+      5.647601119756397,
+      0.18583389756712163,
+      0.010824927984702007,
+      0.3074146690645812,
+      0.5267397481342002,
+      0.5348381516319257,
+      0.5459505837878115
+     ],
+     "2026-11-10": [
+      10.863726819776613,
+      0.08402069316991753,
+      0.019965866398894028,
+      0.35770342416909995,
+      0.5419252354011486,
+      0.5491212801215597,
+      0.5503508540526281
+     ]
+    },
+    "facts_inside": {
+     "kurtosis": true,
+     "absr_acf": true,
+     "flow_acf": false,
+     "impact": true,
+     "spread": true
+    },
+    "n_inside": 4,
+    "continuation_inside": false,
+    "jump_variant": {
+     "sim": [
+      159.79274444074292,
+      0.0480193270374621,
+      0.0006089246755223209,
+      0.48449507964468036,
+      0.5130956611145845,
+      0.528994208248634,
+      0.5001807010952495
+     ],
+     "facts_inside": {
+      "kurtosis": true,
+      "absr_acf": false,
+      "flow_acf": false,
+      "impact": false,
+      "spread": true
+     },
+     "n_inside": 2,
+     "continuation_inside": false,
+     "jump_lam_median": 0.0004222156395666967
+    },
+    "model_median": {
+     "sigma": 2.0998055144170773,
+     "act_persist": 0.5,
+     "impact_lin": 4.367260903602823,
+     "impact_sqrt": 32.130693159286295,
+     "ret_ar": -0.019044657196763737,
+     "dir_mom1": 0.001858955276142419,
+     "dir_mom2_20": -0.0005092879036521225,
+     "dir_q1": 0.1288913490223153,
+     "dir_obi": 0.15368641689898047,
+     "ret_df": 17.105420581669392,
+     "spread_rho": 0.838020421768324
+    }
+   },
+   "alt": {
+    "symbols": 60,
+    "sim": [
+     106.43083994772951,
+     0.039679451317083156,
+     -0.00016358203222025013,
+     0.4440619128615607,
+     2.543642597994049,
+     2.808104265791018,
+     0.5015044917895991
+    ],
+    "env_lo": [
+     6.90751092196191,
+     0.06990205344086202,
+     0.002027247254080173,
+     0.2870212522895747,
+     2.30314902817598,
+     2.765584558962567,
+     0.527772610032561
+    ],
+    "env_hi": [
+     51.098772214716824,
+     0.2508917851984282,
+     0.010886643634016884,
+     0.4387560234150801,
+     2.4118623900323075,
+     3.1246202406584342,
+     0.5435002574528938
+    ],
+    "real_by_day": {
+     "2026-11-08": [
+      61.98493938632416,
+      0.24899291333599516,
+      0.010645385543465908,
+      0.4132648296809872,
+      2.3930454081914045,
+      3.054009952346033,
+      0.5378810944538431
+     ],
+     "2026-11-09": [
+      9.126894631608987,
+      0.1070202345286596,
+      0.0035734043397862435,
+      0.2991416729559172,
+      2.338558981975045,
+      2.895451887668778,
+      0.5325220871807052
+     ],
+     "2026-11-10": [
+      10.377250599566874,
+      0.09260123831797232,
+      0.003199396095955648,
+      0.3248677231551098,
+      2.320583890742747,
+      2.8516095820609135,
+      0.5350807751160847
+     ]
+    },
+    "facts_inside": {
+     "kurtosis": false,
+     "absr_acf": false,
+     "flow_acf": false,
+     "impact": false,
+     "spread": false
+    },
+    "n_inside": 0,
+    "continuation_inside": false,
+    "jump_variant": {
+     "sim": [
+      141.97336162951325,
+      0.0355996642160539,
+      -0.00014898047418933352,
+      0.46923681520231914,
+      2.543642597994049,
+      2.808104265791018,
+      0.5014000561533527
+     ],
+     "facts_inside": {
+      "kurtosis": false,
+      "absr_acf": false,
+      "flow_acf": false,
+      "impact": false,
+      "spread": false
+     },
+     "n_inside": 0,
+     "continuation_inside": false,
+     "jump_lam_median": 0.00027716686466676963
+    },
+    "model_median": {
+     "sigma": 2.966052560528679,
+     "act_persist": 0.5,
+     "impact_lin": 0.0,
+     "impact_sqrt": 40.311966355101035,
+     "ret_ar": -0.008879911772517346,
+     "dir_mom1": 0.002820750702845143,
+     "dir_mom2_20": -0.005312504862296466,
+     "dir_q1": 0.15595053700073996,
+     "dir_obi": 0.3143617763215937,
+     "ret_df": 12.12337134807573,
+     "spread_rho": 0.6043944790346796
+    }
+   },
+   "tradfi": {
+    "symbols": 38,
+    "sim": [
+     50.830663134382036,
+     0.030549291615023972,
+     1.3109118074821353e-05,
+     0.29937673064609555,
+     2.122510057516153,
+     3.2223757687420744,
+     0.49789951385352954
+    ],
+    "env_lo": [
+     11.954818400723328,
+     0.1064570120080834,
+     0.00024022755373711194,
+     0.1855395860688209,
+     1.8471671128693838,
+     2.677433319595569,
+     0.49326936393863297
+    ],
+    "env_hi": [
+     73.33959173467093,
+     0.20378993781796295,
+     0.00876236818195184,
+     0.258270188358978,
+     2.710927701681654,
+     4.308025081363518,
+     0.5169002953604396
+    ],
+    "real_by_day": {
+     "2026-11-08": [
+      61.45890161444065,
+      0.1924570713350694,
+      0.005278282801852943,
+      0.21071649648674207,
+      1.8887753360596544,
+      2.9409948412846383,
+      0.5042653090005469
+     ],
+     "2026-11-09": [
+      22.043278582175418,
+      0.15092863273753326,
+      0.0022749408027322804,
+      0.2035523403833578,
+      2.3393755701563013,
+      3.5319106854782776,
+      0.49713648097727126
+     ],
+     "2026-11-10": [
+      15.14471223429298,
+      0.13553053638317678,
+      0.005816014651450265,
+      0.22915920496206882,
+      2.3930454081914045,
+      4.0389014455895325,
+      0.5121518501758918
+     ]
+    },
+    "facts_inside": {
+     "kurtosis": true,
+     "absr_acf": false,
+     "flow_acf": false,
+     "impact": false,
+     "spread": true
+    },
+    "n_inside": 2,
+    "continuation_inside": true,
+    "jump_variant": {
+     "sim": [
+      72.0874600637245,
+      0.024713728468359605,
+      -6.140860701753493e-05,
+      0.3229880619875886,
+      2.122510057516153,
+      3.2223757687420744,
+      0.4995844157649359
+     ],
+     "facts_inside": {
+      "kurtosis": true,
+      "absr_acf": false,
+      "flow_acf": false,
+      "impact": false,
+      "spread": true
+     },
+     "n_inside": 2,
+     "continuation_inside": true,
+     "jump_lam_median": 0.00045296049240266506
+    },
+    "model_median": {
+     "sigma": 1.9736621454346164,
+     "act_persist": 0.5,
+     "impact_lin": 0.0,
+     "impact_sqrt": 24.78761759797706,
+     "ret_ar": -0.006669240966029832,
+     "dir_mom1": -0.0344600921489148,
+     "dir_mom2_20": -0.006701949343838151,
+     "dir_q1": 0.16523558209140382,
+     "dir_obi": 0.12622200274217987,
+     "ret_df": 7.9354455493435445,
+     "spread_rho": 0.7800541527185947
+    }
+   }
+  },
+  "symbol_pass_share": {
+   "major": {
+    "kurtosis": 1.0,
+    "absr_acf": 1.0,
+    "flow_acf": 0.8333333333333334,
+    "impact": 0.6666666666666666,
+    "spread_med": 1.0,
+    "spread_p90": 0.5,
+    "continuation": 0.0
+   },
+   "alt": {
+    "kurtosis": 0.5333333333333333,
+    "absr_acf": 0.6833333333333333,
+    "flow_acf": 0.9333333333333333,
+    "impact": 0.6333333333333333,
+    "spread_med": 0.6666666666666666,
+    "spread_p90": 0.8,
+    "continuation": 0.35
+   },
+   "tradfi": {
+    "kurtosis": 0.8947368421052632,
+    "absr_acf": 0.5789473684210527,
+    "flow_acf": 0.9473684210526315,
+    "impact": 0.8157894736842105,
+    "spread_med": 0.8157894736842105,
+    "spread_p90": 0.8947368421052632,
+    "continuation": 0.7894736842105263
+   }
+  },
+  "fact_keys": [
+   "kurtosis",
+   "absr_acf",
+   "flow_acf",
+   "impact",
+   "spread_med",
+   "spread_p90",
+   "continuation"
+  ],
+  "verdict": "contradicts"
+ },
+ "sim3": {
+  "symbol_days_3s": 358,
+  "symbols": 103,
+  "days": [
+   "2026-11-07",
+   "2026-11-08",
+   "2026-11-09",
+   "2026-11-10"
+  ],
+  "sign_stability_3s": {
+   "momentum": {
+    "n": 358,
+    "modal_sign": 1,
+    "share": 0.7681564245810056,
+    "median": 0.0006405804978141226
+   },
+   "obi": {
+    "n": 358,
+    "modal_sign": -1,
+    "share": 0.7039106145251397,
+    "median": -0.00022724313453682907
+   },
+   "spread": {
+    "n": 358,
+    "modal_sign": -1,
+    "share": 0.723463687150838,
+    "median": -0.09352207392295783
+   }
+  },
+  "sign_stability_1m": {
+   "momentum": {
+    "n": 358,
+    "modal_sign": 1,
+    "share": 0.664804469273743,
+    "median": 0.005205118882657018
+   },
+   "obi": {
+    "n": 358,
+    "modal_sign": -1,
+    "share": 0.717877094972067,
+    "median": -0.0049797846261578765
+   },
+   "spread": {
+    "n": 358,
+    "modal_sign": 1,
+    "share": 0.5111731843575419,
+    "median": 0.007655430659890787
+   }
+  },
+  "sign_by_class_3s": {
+   "major": {
+    "momentum": {
+     "n": 24,
+     "modal_sign": 1,
+     "share": 0.9166666666666666,
+     "median": 0.0006703021202844672
+    },
+    "obi": {
+     "n": 24,
+     "modal_sign": -1,
+     "share": 0.5833333333333333,
+     "median": -5.3387384854965464e-05
+    },
+    "spread": {
+     "n": 24,
+     "modal_sign": 1,
+     "share": 0.875,
+     "median": 1.033272506728343
+    }
+   },
+   "alt": {
+    "momentum": {
+     "n": 210,
+     "modal_sign": 1,
+     "share": 0.861904761904762,
+     "median": 0.0010829960965737576
+    },
+    "obi": {
+     "n": 210,
+     "modal_sign": -1,
+     "share": 0.7095238095238094,
+     "median": -0.00034151003604070314
+    },
+    "spread": {
+     "n": 210,
+     "modal_sign": -1,
+     "share": 0.7238095238095238,
+     "median": -0.1497176114799591
+    }
+   },
+   "tradfi": {
+    "momentum": {
+     "n": 124,
+     "modal_sign": 1,
+     "share": 0.5806451612903226,
+     "median": 9.928841098972815e-05
+    },
+    "obi": {
+     "n": 124,
+     "modal_sign": -1,
+     "share": 0.717741935483871,
+     "median": -0.00014808111347885359
+    },
+    "spread": {
+     "n": 124,
+     "modal_sign": -1,
+     "share": 0.8387096774193549,
+     "median": -0.07107653199119757
+    }
+   }
+  },
+  "components": [
+   {
+    "class": "all",
+    "freq": "3s",
+    "component": "dir.r1",
+    "label": "3 s momentum (lag 1)",
+    "n": 358,
+    "median": 9.950714520999746e-05,
+    "share_pos": 0.6927374301675978,
+    "sig_pos": 0.21787709497206703,
+    "sig_neg": 0.036312849162011177
+   },
+   {
+    "class": "all",
+    "freq": "3s",
+    "component": "dir.r2_5",
+    "label": "momentum lags 2-5",
+    "n": 358,
+    "median": 4.392827043657425e-05,
+    "share_pos": 0.7318435754189944,
+    "sig_pos": 0.2346368715083799,
+    "sig_neg": 0.027932960893854747
+   },
+   {
+    "class": "all",
+    "freq": "3s",
+    "component": "dir.r6_20",
+    "label": "momentum lags 6-20 (to 1 min)",
+    "n": 358,
+    "median": 2.241952974037992e-05,
+    "share_pos": 0.7430167597765364,
+    "sig_pos": 0.25977653631284914,
+    "sig_neg": 0.013966480446927373
+   },
+   {
+    "class": "all",
+    "freq": "3s",
+    "component": "dir.obi5",
+    "label": "book-imbalance takers (obi_5)",
+    "n": 358,
+    "median": -0.00022724313453682907,
+    "share_pos": 0.29608938547486036,
+    "sig_pos": 0.055865921787709494,
+    "sig_neg": 0.23743016759776536
+   },
+   {
+    "class": "all",
+    "freq": "3s",
+    "component": "dir.y1",
+    "label": "flow persistence lag 1 (order splitting / herding)",
+    "n": 358,
+    "median": 0.01722523980365885,
+    "share_pos": 0.7178770949720671,
+    "sig_pos": 0.15921787709497207,
+    "sig_neg": 0.04189944134078212
+   },
+   {
+    "class": "all",
+    "freq": "3s",
+    "component": "dir.y2_5",
+    "label": "flow persistence lags 2-5",
+    "n": 358,
+    "median": 0.0015622744691486034,
+    "share_pos": 0.5670391061452514,
+    "sig_pos": 0.11452513966480447,
+    "sig_neg": 0.05865921787709497
+   },
+   {
+    "class": "all",
+    "freq": "3s",
+    "component": "dir.vol",
+    "label": "signed flow on recent vol",
+    "n": 358,
+    "median": -3.0026372314171074e-05,
+    "share_pos": 0.4441340782122905,
+    "sig_pos": 0.036312849162011177,
+    "sig_neg": 0.09497206703910614
+   },
+   {
+    "class": "all",
+    "freq": "3s",
+    "component": "int.log_spread",
+    "label": "intensity on log spread (liquidity-sensitive)",
+    "n": 358,
+    "median": -0.09352207392295783,
+    "share_pos": 0.276536312849162,
+    "sig_pos": 0.12011173184357542,
+    "sig_neg": 0.5335195530726257
+   },
+   {
+    "class": "all",
+    "freq": "3s",
+    "component": "int.vol",
+    "label": "intensity on recent vol",
+    "n": 358,
+    "median": 0.11721638682928115,
+    "share_pos": 0.8770949720670391,
+    "sig_pos": 0.5754189944134078,
+    "sig_neg": 0.036312849162011177
+   },
+   {
+    "class": "all",
+    "freq": "3s",
+    "component": "var_flow_to_ret",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 358,
+    "median": 0.0002797983880817391,
+    "share_pos": 0.7262569832402235,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "all",
+    "freq": "3s",
+    "component": "var_ret_to_flow",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 358,
+    "median": -0.21175295837667066,
+    "share_pos": 0.4692737430167598,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "all",
+    "freq": "3s",
+    "component": "var_flow_persist",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 358,
+    "median": 0.03727759431261237,
+    "share_pos": 0.7150837988826816,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "all",
+    "freq": "1m",
+    "component": "dir.r1",
+    "label": "3 s momentum (lag 1)",
+    "n": 358,
+    "median": 0.00171033986467101,
+    "share_pos": 0.6843575418994413,
+    "sig_pos": 0.17039106145251395,
+    "sig_neg": 0.0223463687150838
+   },
+   {
+    "class": "all",
+    "freq": "1m",
+    "component": "dir.r2_5",
+    "label": "momentum lags 2-5",
+    "n": 358,
+    "median": 0.00047809342265708193,
+    "share_pos": 0.6675977653631285,
+    "sig_pos": 0.09497206703910614,
+    "sig_neg": 0.0335195530726257
+   },
+   {
+    "class": "all",
+    "freq": "1m",
+    "component": "dir.r6_20",
+    "label": "momentum lags 6-20 (to 1 min)",
+    "n": 358,
+    "median": 3.412410607907136e-05,
+    "share_pos": 0.5335195530726257,
+    "sig_pos": 0.04189944134078212,
+    "sig_neg": 0.027932960893854747
+   },
+   {
+    "class": "all",
+    "freq": "1m",
+    "component": "dir.obi5",
+    "label": "book-imbalance takers (obi_5)",
+    "n": 358,
+    "median": -0.0049797846261578765,
+    "share_pos": 0.28212290502793297,
+    "sig_pos": 0.002793296089385475,
+    "sig_neg": 0.12290502793296089
+   },
+   {
+    "class": "all",
+    "freq": "1m",
+    "component": "dir.y1",
+    "label": "flow persistence lag 1 (order splitting / herding)",
+    "n": 358,
+    "median": -0.012335271759337662,
+    "share_pos": 0.44692737430167595,
+    "sig_pos": 0.09217877094972067,
+    "sig_neg": 0.09776536312849161
+   },
+   {
+    "class": "all",
+    "freq": "1m",
+    "component": "dir.y2_5",
+    "label": "flow persistence lags 2-5",
+    "n": 358,
+    "median": -0.007595072058728107,
+    "share_pos": 0.40782122905027934,
+    "sig_pos": 0.061452513966480445,
+    "sig_neg": 0.0782122905027933
+   },
+   {
+    "class": "all",
+    "freq": "1m",
+    "component": "dir.vol",
+    "label": "signed flow on recent vol",
+    "n": 358,
+    "median": 0.0014820033600519652,
+    "share_pos": 0.5949720670391061,
+    "sig_pos": 0.05307262569832402,
+    "sig_neg": 0.036312849162011177
+   },
+   {
+    "class": "all",
+    "freq": "1m",
+    "component": "int.log_spread",
+    "label": "intensity on log spread (liquidity-sensitive)",
+    "n": 358,
+    "median": 0.007655430659890787,
+    "share_pos": 0.5111731843575419,
+    "sig_pos": 0.14804469273743018,
+    "sig_neg": 0.12290502793296089
+   },
+   {
+    "class": "all",
+    "freq": "1m",
+    "component": "int.vol",
+    "label": "intensity on recent vol",
+    "n": 358,
+    "median": 0.10283557655778389,
+    "share_pos": 0.659217877094972,
+    "sig_pos": 0.15363128491620112,
+    "sig_neg": 0.019553072625698324
+   },
+   {
+    "class": "all",
+    "freq": "1m",
+    "component": "var_flow_to_ret",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 306,
+    "median": 0.003067626915457532,
+    "share_pos": 0.696078431372549,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "all",
+    "freq": "1m",
+    "component": "var_ret_to_flow",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 306,
+    "median": 0.021166788450450353,
+    "share_pos": 0.5032679738562091,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "all",
+    "freq": "1m",
+    "component": "var_flow_persist",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 306,
+    "median": 0.00952477701913335,
+    "share_pos": 0.5196078431372549,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "major",
+    "freq": "3s",
+    "component": "dir.r1",
+    "label": "3 s momentum (lag 1)",
+    "n": 24,
+    "median": 0.00014896234831206272,
+    "share_pos": 0.9166666666666666,
+    "sig_pos": 0.4166666666666667,
+    "sig_neg": 0.0
+   },
+   {
+    "class": "major",
+    "freq": "3s",
+    "component": "dir.r2_5",
+    "label": "momentum lags 2-5",
+    "n": 24,
+    "median": 2.9571557451360333e-05,
+    "share_pos": 0.7916666666666666,
+    "sig_pos": 0.4166666666666667,
+    "sig_neg": 0.0
+   },
+   {
+    "class": "major",
+    "freq": "3s",
+    "component": "dir.r6_20",
+    "label": "momentum lags 6-20 (to 1 min)",
+    "n": 24,
+    "median": 2.5867608923261967e-05,
+    "share_pos": 0.8333333333333334,
+    "sig_pos": 0.4166666666666667,
+    "sig_neg": 0.0
+   },
+   {
+    "class": "major",
+    "freq": "3s",
+    "component": "dir.obi5",
+    "label": "book-imbalance takers (obi_5)",
+    "n": 24,
+    "median": -5.3387384854965464e-05,
+    "share_pos": 0.4166666666666667,
+    "sig_pos": 0.041666666666666664,
+    "sig_neg": 0.08333333333333333
+   },
+   {
+    "class": "major",
+    "freq": "3s",
+    "component": "dir.y1",
+    "label": "flow persistence lag 1 (order splitting / herding)",
+    "n": 24,
+    "median": 0.03881472994460675,
+    "share_pos": 0.7916666666666666,
+    "sig_pos": 0.25,
+    "sig_neg": 0.0
+   },
+   {
+    "class": "major",
+    "freq": "3s",
+    "component": "dir.y2_5",
+    "label": "flow persistence lags 2-5",
+    "n": 24,
+    "median": 0.009635986662298413,
+    "share_pos": 0.75,
+    "sig_pos": 0.20833333333333334,
+    "sig_neg": 0.0
+   },
+   {
+    "class": "major",
+    "freq": "3s",
+    "component": "dir.vol",
+    "label": "signed flow on recent vol",
+    "n": 24,
+    "median": 9.169685540521085e-08,
+    "share_pos": 0.5,
+    "sig_pos": 0.041666666666666664,
+    "sig_neg": 0.125
+   },
+   {
+    "class": "major",
+    "freq": "3s",
+    "component": "int.log_spread",
+    "label": "intensity on log spread (liquidity-sensitive)",
+    "n": 24,
+    "median": 1.033272506728343,
+    "share_pos": 0.875,
+    "sig_pos": 0.5416666666666666,
+    "sig_neg": 0.041666666666666664
+   },
+   {
+    "class": "major",
+    "freq": "3s",
+    "component": "int.vol",
+    "label": "intensity on recent vol",
+    "n": 24,
+    "median": 0.07902208711532208,
+    "share_pos": 0.9166666666666666,
+    "sig_pos": 0.20833333333333334,
+    "sig_neg": 0.0
+   },
+   {
+    "class": "major",
+    "freq": "3s",
+    "component": "var_flow_to_ret",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 24,
+    "median": 0.00022723279149227603,
+    "share_pos": 0.9166666666666666,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "major",
+    "freq": "3s",
+    "component": "var_ret_to_flow",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 24,
+    "median": -1.453178322592167,
+    "share_pos": 0.4583333333333333,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "major",
+    "freq": "3s",
+    "component": "var_flow_persist",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 24,
+    "median": 0.10954211941321869,
+    "share_pos": 0.875,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "major",
+    "freq": "1m",
+    "component": "dir.r1",
+    "label": "3 s momentum (lag 1)",
+    "n": 24,
+    "median": 0.002045756319323552,
+    "share_pos": 0.8333333333333334,
+    "sig_pos": 0.2916666666666667,
+    "sig_neg": 0.0
+   },
+   {
+    "class": "major",
+    "freq": "1m",
+    "component": "dir.r2_5",
+    "label": "momentum lags 2-5",
+    "n": 24,
+    "median": 0.0005489873147697325,
+    "share_pos": 0.75,
+    "sig_pos": 0.08333333333333333,
+    "sig_neg": 0.0
+   },
+   {
+    "class": "major",
+    "freq": "1m",
+    "component": "dir.r6_20",
+    "label": "momentum lags 6-20 (to 1 min)",
+    "n": 24,
+    "median": 0.00024734698989320155,
+    "share_pos": 0.75,
+    "sig_pos": 0.0,
+    "sig_neg": 0.0
+   },
+   {
+    "class": "major",
+    "freq": "1m",
+    "component": "dir.obi5",
+    "label": "book-imbalance takers (obi_5)",
+    "n": 24,
+    "median": -0.0028926609283735087,
+    "share_pos": 0.2916666666666667,
+    "sig_pos": 0.0,
+    "sig_neg": 0.08333333333333333
+   },
+   {
+    "class": "major",
+    "freq": "1m",
+    "component": "dir.y1",
+    "label": "flow persistence lag 1 (order splitting / herding)",
+    "n": 24,
+    "median": 0.014023048858674664,
+    "share_pos": 0.5416666666666666,
+    "sig_pos": 0.041666666666666664,
+    "sig_neg": 0.041666666666666664
+   },
+   {
+    "class": "major",
+    "freq": "1m",
+    "component": "dir.y2_5",
+    "label": "flow persistence lags 2-5",
+    "n": 24,
+    "median": 0.014377184877216703,
+    "share_pos": 0.6666666666666666,
+    "sig_pos": 0.125,
+    "sig_neg": 0.08333333333333333
+   },
+   {
+    "class": "major",
+    "freq": "1m",
+    "component": "dir.vol",
+    "label": "signed flow on recent vol",
+    "n": 24,
+    "median": 0.0020446185813920896,
+    "share_pos": 0.75,
+    "sig_pos": 0.125,
+    "sig_neg": 0.0
+   },
+   {
+    "class": "major",
+    "freq": "1m",
+    "component": "int.log_spread",
+    "label": "intensity on log spread (liquidity-sensitive)",
+    "n": 24,
+    "median": 4.500823256654476,
+    "share_pos": 0.9166666666666666,
+    "sig_pos": 0.375,
+    "sig_neg": 0.0
+   },
+   {
+    "class": "major",
+    "freq": "1m",
+    "component": "int.vol",
+    "label": "intensity on recent vol",
+    "n": 24,
+    "median": -0.01134952365018838,
+    "share_pos": 0.5,
+    "sig_pos": 0.125,
+    "sig_neg": 0.0
+   },
+   {
+    "class": "major",
+    "freq": "1m",
+    "component": "var_flow_to_ret",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 24,
+    "median": 0.00393086383911176,
+    "share_pos": 0.7916666666666666,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "major",
+    "freq": "1m",
+    "component": "var_ret_to_flow",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 24,
+    "median": -1.3217294339119063,
+    "share_pos": 0.4166666666666667,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "major",
+    "freq": "1m",
+    "component": "var_flow_persist",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 24,
+    "median": 0.11750928418927162,
+    "share_pos": 0.7083333333333334,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "alt",
+    "freq": "3s",
+    "component": "dir.r1",
+    "label": "3 s momentum (lag 1)",
+    "n": 210,
+    "median": 0.00018306042902562479,
+    "share_pos": 0.7714285714285715,
+    "sig_pos": 0.2714285714285714,
+    "sig_neg": 0.01904761904761905
+   },
+   {
+    "class": "alt",
+    "freq": "3s",
+    "component": "dir.r2_5",
+    "label": "momentum lags 2-5",
+    "n": 210,
+    "median": 7.569337752388193e-05,
+    "share_pos": 0.8095238095238095,
+    "sig_pos": 0.2857142857142857,
+    "sig_neg": 0.014285714285714285
+   },
+   {
+    "class": "alt",
+    "freq": "3s",
+    "component": "dir.r6_20",
+    "label": "momentum lags 6-20 (to 1 min)",
+    "n": 210,
+    "median": 3.5093445355668126e-05,
+    "share_pos": 0.7857142857142857,
+    "sig_pos": 0.3142857142857143,
+    "sig_neg": 0.009523809523809525
+   },
+   {
+    "class": "alt",
+    "freq": "3s",
+    "component": "dir.obi5",
+    "label": "book-imbalance takers (obi_5)",
+    "n": 210,
+    "median": -0.00034151003604070314,
+    "share_pos": 0.2904761904761905,
+    "sig_pos": 0.06666666666666667,
+    "sig_neg": 0.22380952380952382
+   },
+   {
+    "class": "alt",
+    "freq": "3s",
+    "component": "dir.y1",
+    "label": "flow persistence lag 1 (order splitting / herding)",
+    "n": 210,
+    "median": 0.016397227181181615,
+    "share_pos": 0.7047619047619048,
+    "sig_pos": 0.10952380952380952,
+    "sig_neg": 0.05238095238095238
+   },
+   {
+    "class": "alt",
+    "freq": "3s",
+    "component": "dir.y2_5",
+    "label": "flow persistence lags 2-5",
+    "n": 210,
+    "median": 0.0007076405267987907,
+    "share_pos": 0.5190476190476191,
+    "sig_pos": 0.06666666666666667,
+    "sig_neg": 0.05714285714285714
+   },
+   {
+    "class": "alt",
+    "freq": "3s",
+    "component": "dir.vol",
+    "label": "signed flow on recent vol",
+    "n": 210,
+    "median": -0.00014213829433269853,
+    "share_pos": 0.38095238095238093,
+    "sig_pos": 0.023809523809523808,
+    "sig_neg": 0.13333333333333333
+   },
+   {
+    "class": "alt",
+    "freq": "3s",
+    "component": "int.log_spread",
+    "label": "intensity on log spread (liquidity-sensitive)",
+    "n": 210,
+    "median": -0.1497176114799591,
+    "share_pos": 0.2761904761904762,
+    "sig_pos": 0.12380952380952381,
+    "sig_neg": 0.49523809523809526
+   },
+   {
+    "class": "alt",
+    "freq": "3s",
+    "component": "int.vol",
+    "label": "intensity on recent vol",
+    "n": 210,
+    "median": 0.1588269909115992,
+    "share_pos": 0.8714285714285714,
+    "sig_pos": 0.6,
+    "sig_neg": 0.02857142857142857
+   },
+   {
+    "class": "alt",
+    "freq": "3s",
+    "component": "var_flow_to_ret",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 210,
+    "median": 0.0005856132580789465,
+    "share_pos": 0.8047619047619048,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "alt",
+    "freq": "3s",
+    "component": "var_ret_to_flow",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 210,
+    "median": -0.7739942950023775,
+    "share_pos": 0.4,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "alt",
+    "freq": "3s",
+    "component": "var_flow_persist",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 210,
+    "median": 0.03134967897610441,
+    "share_pos": 0.7047619047619048,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "alt",
+    "freq": "1m",
+    "component": "dir.r1",
+    "label": "3 s momentum (lag 1)",
+    "n": 210,
+    "median": 0.002950803781971996,
+    "share_pos": 0.7333333333333333,
+    "sig_pos": 0.20476190476190476,
+    "sig_neg": 0.023809523809523808
+   },
+   {
+    "class": "alt",
+    "freq": "1m",
+    "component": "dir.r2_5",
+    "label": "momentum lags 2-5",
+    "n": 210,
+    "median": 0.0008331552883848952,
+    "share_pos": 0.7285714285714285,
+    "sig_pos": 0.11904761904761904,
+    "sig_neg": 0.014285714285714285
+   },
+   {
+    "class": "alt",
+    "freq": "1m",
+    "component": "dir.r6_20",
+    "label": "momentum lags 6-20 (to 1 min)",
+    "n": 210,
+    "median": 0.00018952712142539363,
+    "share_pos": 0.580952380952381,
+    "sig_pos": 0.06666666666666667,
+    "sig_neg": 0.01904761904761905
+   },
+   {
+    "class": "alt",
+    "freq": "1m",
+    "component": "dir.obi5",
+    "label": "book-imbalance takers (obi_5)",
+    "n": 210,
+    "median": -0.008180855219761921,
+    "share_pos": 0.2857142857142857,
+    "sig_pos": 0.0,
+    "sig_neg": 0.13333333333333333
+   },
+   {
+    "class": "alt",
+    "freq": "1m",
+    "component": "dir.y1",
+    "label": "flow persistence lag 1 (order splitting / herding)",
+    "n": 210,
+    "median": -0.01692509404774086,
+    "share_pos": 0.40476190476190477,
+    "sig_pos": 0.08095238095238096,
+    "sig_neg": 0.11428571428571428
+   },
+   {
+    "class": "alt",
+    "freq": "1m",
+    "component": "dir.y2_5",
+    "label": "flow persistence lags 2-5",
+    "n": 210,
+    "median": -0.0056872982636962405,
+    "share_pos": 0.4238095238095238,
+    "sig_pos": 0.05238095238095238,
+    "sig_neg": 0.06190476190476191
+   },
+   {
+    "class": "alt",
+    "freq": "1m",
+    "component": "dir.vol",
+    "label": "signed flow on recent vol",
+    "n": 210,
+    "median": 0.0020813001900836943,
+    "share_pos": 0.5714285714285714,
+    "sig_pos": 0.047619047619047616,
+    "sig_neg": 0.01904761904761905
+   },
+   {
+    "class": "alt",
+    "freq": "1m",
+    "component": "int.log_spread",
+    "label": "intensity on log spread (liquidity-sensitive)",
+    "n": 210,
+    "median": 0.06131930122738474,
+    "share_pos": 0.5428571428571428,
+    "sig_pos": 0.14761904761904762,
+    "sig_neg": 0.08571428571428572
+   },
+   {
+    "class": "alt",
+    "freq": "1m",
+    "component": "int.vol",
+    "label": "intensity on recent vol",
+    "n": 210,
+    "median": 0.09870532485603697,
+    "share_pos": 0.6428571428571429,
+    "sig_pos": 0.11904761904761904,
+    "sig_neg": 0.014285714285714285
+   },
+   {
+    "class": "alt",
+    "freq": "1m",
+    "component": "var_flow_to_ret",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 180,
+    "median": 0.004273398195915081,
+    "share_pos": 0.7722222222222223,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "alt",
+    "freq": "1m",
+    "component": "var_ret_to_flow",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 180,
+    "median": 0.17834171911761648,
+    "share_pos": 0.5555555555555556,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "alt",
+    "freq": "1m",
+    "component": "var_flow_persist",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 180,
+    "median": -0.0016814825843361023,
+    "share_pos": 0.49444444444444446,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "tradfi",
+    "freq": "3s",
+    "component": "dir.r1",
+    "label": "3 s momentum (lag 1)",
+    "n": 124,
+    "median": 9.459031031523983e-06,
+    "share_pos": 0.5161290322580645,
+    "sig_pos": 0.08870967741935484,
+    "sig_neg": 0.07258064516129033
+   },
+   {
+    "class": "tradfi",
+    "freq": "3s",
+    "component": "dir.r2_5",
+    "label": "momentum lags 2-5",
+    "n": 124,
+    "median": 8.254988394397302e-06,
+    "share_pos": 0.5887096774193549,
+    "sig_pos": 0.11290322580645161,
+    "sig_neg": 0.056451612903225805
+   },
+   {
+    "class": "tradfi",
+    "freq": "3s",
+    "component": "dir.r6_20",
+    "label": "momentum lags 6-20 (to 1 min)",
+    "n": 124,
+    "median": 5.2888332196671e-06,
+    "share_pos": 0.6532258064516129,
+    "sig_pos": 0.13709677419354838,
+    "sig_neg": 0.024193548387096774
+   },
+   {
+    "class": "tradfi",
+    "freq": "3s",
+    "component": "dir.obi5",
+    "label": "book-imbalance takers (obi_5)",
+    "n": 124,
+    "median": -0.00014808111347885359,
+    "share_pos": 0.28225806451612906,
+    "sig_pos": 0.04032258064516129,
+    "sig_neg": 0.2903225806451613
+   },
+   {
+    "class": "tradfi",
+    "freq": "3s",
+    "component": "dir.y1",
+    "label": "flow persistence lag 1 (order splitting / herding)",
+    "n": 124,
+    "median": 0.01616555838042662,
+    "share_pos": 0.7258064516129032,
+    "sig_pos": 0.22580645161290322,
+    "sig_neg": 0.03225806451612903
+   },
+   {
+    "class": "tradfi",
+    "freq": "3s",
+    "component": "dir.y2_5",
+    "label": "flow persistence lags 2-5",
+    "n": 124,
+    "median": 0.003629922768162006,
+    "share_pos": 0.6129032258064516,
+    "sig_pos": 0.1774193548387097,
+    "sig_neg": 0.07258064516129033
+   },
+   {
+    "class": "tradfi",
+    "freq": "3s",
+    "component": "dir.vol",
+    "label": "signed flow on recent vol",
+    "n": 124,
+    "median": 1.6774838231292197e-05,
+    "share_pos": 0.5403225806451613,
+    "sig_pos": 0.056451612903225805,
+    "sig_neg": 0.024193548387096774
+   },
+   {
+    "class": "tradfi",
+    "freq": "3s",
+    "component": "int.log_spread",
+    "label": "intensity on log spread (liquidity-sensitive)",
+    "n": 124,
+    "median": -0.07107653199119757,
+    "share_pos": 0.16129032258064516,
+    "sig_pos": 0.03225806451612903,
+    "sig_neg": 0.6935483870967742
+   },
+   {
+    "class": "tradfi",
+    "freq": "3s",
+    "component": "int.vol",
+    "label": "intensity on recent vol",
+    "n": 124,
+    "median": 0.0837596756596998,
+    "share_pos": 0.8790322580645161,
+    "sig_pos": 0.6048387096774194,
+    "sig_neg": 0.056451612903225805
+   },
+   {
+    "class": "tradfi",
+    "freq": "3s",
+    "component": "var_flow_to_ret",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 124,
+    "median": 3.909798514967543e-05,
+    "share_pos": 0.5564516129032258,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "tradfi",
+    "freq": "3s",
+    "component": "var_ret_to_flow",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 124,
+    "median": 0.758739475957517,
+    "share_pos": 0.5887096774193549,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "tradfi",
+    "freq": "3s",
+    "component": "var_flow_persist",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 124,
+    "median": 0.04561952345375446,
+    "share_pos": 0.7016129032258065,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "tradfi",
+    "freq": "1m",
+    "component": "dir.r1",
+    "label": "3 s momentum (lag 1)",
+    "n": 124,
+    "median": 0.00021160997142759944,
+    "share_pos": 0.5725806451612904,
+    "sig_pos": 0.08870967741935484,
+    "sig_neg": 0.024193548387096774
+   },
+   {
+    "class": "tradfi",
+    "freq": "1m",
+    "component": "dir.r2_5",
+    "label": "momentum lags 2-5",
+    "n": 124,
+    "median": 9.347308886138809e-05,
+    "share_pos": 0.5483870967741935,
+    "sig_pos": 0.056451612903225805,
+    "sig_neg": 0.07258064516129033
+   },
+   {
+    "class": "tradfi",
+    "freq": "1m",
+    "component": "dir.r6_20",
+    "label": "momentum lags 6-20 (to 1 min)",
+    "n": 124,
+    "median": -7.871613197919156e-05,
+    "share_pos": 0.4112903225806452,
+    "sig_pos": 0.008064516129032258,
+    "sig_neg": 0.04838709677419355
+   },
+   {
+    "class": "tradfi",
+    "freq": "1m",
+    "component": "dir.obi5",
+    "label": "book-imbalance takers (obi_5)",
+    "n": 124,
+    "median": -0.0027991390177895077,
+    "share_pos": 0.27419354838709675,
+    "sig_pos": 0.008064516129032258,
+    "sig_neg": 0.11290322580645161
+   },
+   {
+    "class": "tradfi",
+    "freq": "1m",
+    "component": "dir.y1",
+    "label": "flow persistence lag 1 (order splitting / herding)",
+    "n": 124,
+    "median": -0.0013415057018410764,
+    "share_pos": 0.5,
+    "sig_pos": 0.12096774193548387,
+    "sig_neg": 0.08064516129032258
+   },
+   {
+    "class": "tradfi",
+    "freq": "1m",
+    "component": "dir.y2_5",
+    "label": "flow persistence lags 2-5",
+    "n": 124,
+    "median": -0.015270420931606646,
+    "share_pos": 0.33064516129032256,
+    "sig_pos": 0.06451612903225806,
+    "sig_neg": 0.10483870967741936
+   },
+   {
+    "class": "tradfi",
+    "freq": "1m",
+    "component": "dir.vol",
+    "label": "signed flow on recent vol",
+    "n": 124,
+    "median": 0.0009062444089691238,
+    "share_pos": 0.6048387096774194,
+    "sig_pos": 0.04838709677419355,
+    "sig_neg": 0.07258064516129033
+   },
+   {
+    "class": "tradfi",
+    "freq": "1m",
+    "component": "int.log_spread",
+    "label": "intensity on log spread (liquidity-sensitive)",
+    "n": 124,
+    "median": -0.05115540343371147,
+    "share_pos": 0.3790322580645161,
+    "sig_pos": 0.10483870967741936,
+    "sig_neg": 0.20967741935483872
+   },
+   {
+    "class": "tradfi",
+    "freq": "1m",
+    "component": "int.vol",
+    "label": "intensity on recent vol",
+    "n": 124,
+    "median": 0.1229065420047037,
+    "share_pos": 0.717741935483871,
+    "sig_pos": 0.21774193548387097,
+    "sig_neg": 0.03225806451612903
+   },
+   {
+    "class": "tradfi",
+    "freq": "1m",
+    "component": "var_flow_to_ret",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 102,
+    "median": 0.0003786274653617314,
+    "share_pos": 0.5392156862745098,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "tradfi",
+    "freq": "1m",
+    "component": "var_ret_to_flow",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 102,
+    "median": -0.502871117531119,
+    "share_pos": 0.43137254901960786,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   },
+   {
+    "class": "tradfi",
+    "freq": "1m",
+    "component": "var_flow_persist",
+    "label": "VAR(5) cumulative 20-step response",
+    "n": 102,
+    "median": 0.008740590367021857,
+    "share_pos": 0.5196078431372549,
+    "sig_pos": NaN,
+    "sig_neg": NaN
+   }
+  ],
+  "wald": {
+   "major": {
+    "joint": {
+     "W": 197.5447467593866,
+     "df": 15,
+     "p": 6.697935124343592e-34,
+     "symbols": 6,
+     "clusters": 579
+    },
+    "momentum": {
+     "W": 31.77285109425153,
+     "df": 5,
+     "p": 6.589370597909621e-06,
+     "symbols": 6,
+     "clusters": 579
+    },
+    "obi": {
+     "W": 16.36683678123883,
+     "df": 5,
+     "p": 0.005871164561583693,
+     "symbols": 6,
+     "clusters": 579
+    },
+    "spread": {
+     "W": 56.80806978606434,
+     "df": 5,
+     "p": 5.53917237564084e-11,
+     "symbols": 6,
+     "clusters": 579
+    },
+    "scaled_coef": {
+     "momentum": {
+      "median": 0.0016110514684912936,
+      "iqr": [
+       0.0009986632708122109,
+       0.0017425513013747547
+      ]
+     },
+     "obi": {
+      "median": -0.000480350842093557,
+      "iqr": [
+       -0.0006423715474643918,
+       -7.402832700719407e-06
+      ]
+     },
+     "spread": {
+      "median": 0.7437975156452747,
+      "iqr": [
+       0.2703641844369727,
+       1.2410049945065285
+      ]
+     }
+    }
+   },
+   "alt": {
+    "joint": {
+     "W": 3258.014008050666,
+     "df": 177,
+     "p": 0.0,
+     "symbols": 60,
+     "clusters": 580
+    },
+    "momentum": {
+     "W": 452.5324386753881,
+     "df": 59,
+     "p": 4.843713268735613e-62,
+     "symbols": 60,
+     "clusters": 580
+    },
+    "obi": {
+     "W": 443.8082279118786,
+     "df": 59,
+     "p": 2.1871831290542699e-60,
+     "symbols": 60,
+     "clusters": 580
+    },
+    "spread": {
+     "W": 1120.6304738735266,
+     "df": 59,
+     "p": 6.275797397058915e-196,
+     "symbols": 60,
+     "clusters": 580
+    },
+    "scaled_coef": {
+     "momentum": {
+      "median": 0.001814887075791259,
+      "iqr": [
+       0.0009600525382872963,
+       0.0030097810477207466
+      ]
+     },
+     "obi": {
+      "median": -0.0004483713449264418,
+      "iqr": [
+       -0.0009003057459842478,
+       -0.00011230746804997101
+      ]
+     },
+     "spread": {
+      "median": -0.10969178502236092,
+      "iqr": [
+       -0.18542643545035306,
+       0.13064225013674086
+      ]
+     }
+    }
+   },
+   "tradfi": {
+    "joint": {
+     "W": 3201.2347780979117,
+     "df": 108,
+     "p": 0.0,
+     "symbols": 37,
+     "clusters": 575
+    },
+    "momentum": {
+     "W": 170.24568345785502,
+     "df": 36,
+     "p": 2.4353149326994776e-19,
+     "symbols": 37,
+     "clusters": 575
+    },
+    "obi": {
+     "W": 194.51859341946025,
+     "df": 36,
+     "p": 1.2215429827676602e-23,
+     "symbols": 37,
+     "clusters": 575
+    },
+    "spread": {
+     "W": 1502.379450782484,
+     "df": 36,
+     "p": 1.2854359095976256e-292,
+     "symbols": 37,
+     "clusters": 575
+    },
+    "scaled_coef": {
+     "momentum": {
+      "median": 0.0002672730838788875,
+      "iqr": [
+       -7.140548318363618e-05,
+       0.0005539326727238776
+      ]
+     },
+     "obi": {
+      "median": -0.00019324377875814012,
+      "iqr": [
+       -0.0007202249078957251,
+       -1.5402561939524904e-05
+      ]
+     },
+     "spread": {
+      "median": -0.0699266639788409,
+      "iqr": [
+       -0.118486494981882,
+       -0.02126246545612236
+      ]
+     }
+    }
+   }
+  },
+  "classes": {
+   "major": 6,
+   "alt": 60,
+   "tradfi": 38
+  },
+  "r2_dir_median": 0.006107697118406974,
+  "r2_int_median": 0.15631293912367394,
+  "sign_ok": false,
+  "classes_not_rejected": 0,
+  "verdict": "contradicts"
+ },
+ "sim4": {
+  "symbols": 50,
+  "grid": 36,
+  "fill_model": {
+   "variant": "touch",
+   "theta0": 0.4536232059154747,
+   "b": 20.085536923187668,
+   "eps": 1.928114514392912e-13
+  },
+  "spearman": -0.0900900900900901,
+  "ci": [
+   -0.7265510421881354,
+   0.4357230204015896
+  ],
+  "by_class": {
+   "major": {
+    "symbols": 5,
+    "rho": 0.2037955235803383
+   },
+   "alt": {
+    "symbols": 34,
+    "rho": -0.20669240669240674
+   },
+   "tradfi": {
+    "symbols": 11,
+    "rho": 0.3614369501466275
+   }
+  },
+  "table": [
+   {
+    "params": "a0.2_b0.2_tp0.3_rq0.15",
+    "real_bps": -2.546861411459989,
+    "sim_bps": -1.3468961531307502,
+    "real_pnl_usd": -5.3055288147524,
+    "sim_pnl_usd": -5.05935056334529,
+    "real_turnover": 20831.635325264924,
+    "sim_turnover": 37563.03373192686,
+    "real_fills": 3305.0,
+    "sim_fills": 5769.999999999999,
+    "real_pos_symbols": 3
+   },
+   {
+    "params": "a0.2_b0.2_tp0.3_rq0.5",
+    "real_bps": -3.02303318029444,
+    "sim_bps": -1.605915629826371,
+    "real_pnl_usd": -7.415089598964525,
+    "sim_pnl_usd": -5.958454779080858,
+    "real_turnover": 24528.6411254087,
+    "sim_turnover": 37103.162011849134,
+    "real_fills": 3728.9999999999995,
+    "sim_fills": 5557.333333333332,
+    "real_pos_symbols": 4
+   },
+   {
+    "params": "a0.2_b0.2_tp0.9_rq0.15",
+    "real_bps": -2.571292560263505,
+    "sim_bps": -1.351869388563963,
+    "real_pnl_usd": -5.338621041681428,
+    "sim_pnl_usd": -5.073095812011961,
+    "real_turnover": 20762.40224151828,
+    "sim_turnover": 37526.52330859351,
+    "real_fills": 3288.0,
+    "sim_fills": 5761.333333333333,
+    "real_pos_symbols": 3
+   },
+   {
+    "params": "a0.2_b0.2_tp0.9_rq0.5",
+    "real_bps": -2.9838030482931,
+    "sim_bps": -1.6056359856532982,
+    "real_pnl_usd": -7.3166630766312,
+    "sim_pnl_usd": -5.958531833214194,
+    "real_turnover": 24521.266847075363,
+    "sim_turnover": 37110.10394918246,
+    "real_fills": 3730.6666666666665,
+    "sim_fills": 5557.999999999999,
+    "real_pos_symbols": 4
+   },
+   {
+    "params": "a0.2_b0.45_tp0.3_rq0.15",
+    "real_bps": 1.2083376691297545,
+    "sim_bps": -1.0720836029395637,
+    "real_pnl_usd": 0.7757497293758158,
+    "sim_pnl_usd": -1.5582054398587488,
+    "real_turnover": 6419.9747239073595,
+    "sim_turnover": 14534.365002750528,
+    "real_fills": 988.6666666666667,
+    "sim_fills": 2091.666666666667,
+    "real_pos_symbols": 36
+   },
+   {
+    "params": "a0.2_b0.45_tp0.3_rq0.5",
+    "real_bps": -1.4401919747738214,
+    "sim_bps": -1.447751291390929,
+    "real_pnl_usd": -1.676781297912871,
+    "sim_pnl_usd": -2.7021110717293513,
+    "real_turnover": 11642.762404478786,
+    "sim_turnover": 18664.1938280248,
+    "real_fills": 1723.6666666666667,
+    "sim_fills": 2653.6666666666665,
+    "real_pos_symbols": 16
+   },
+   {
+    "params": "a0.2_b0.45_tp0.9_rq0.15",
+    "real_bps": 2.3091133981461045,
+    "sim_bps": -1.0733390413363368,
+    "real_pnl_usd": 1.321328214189023,
+    "sim_pnl_usd": -1.4439003861582955,
+    "real_turnover": 5722.231810918705,
+    "sim_turnover": 13452.416529641923,
+    "real_fills": 863.0000000000002,
+    "sim_fills": 1880.3333333333335,
+    "real_pos_symbols": 34
+   },
+   {
+    "params": "a0.2_b0.45_tp0.9_rq0.5",
+    "real_bps": -1.550783409916397,
+    "sim_bps": -1.43764886915562,
+    "real_pnl_usd": -1.7800568318365968,
+    "sim_pnl_usd": -2.675344247985418,
+    "real_turnover": 11478.436127534791,
+    "sim_turnover": 18609.163234390737,
+    "real_fills": 1680.3333333333335,
+    "sim_fills": 2632.333333333333,
+    "real_pos_symbols": 18
+   },
+   {
+    "params": "a0.2_b0.9_tp0.3_rq0.15",
+    "real_bps": 8.296112474755962,
+    "sim_bps": -3.2750810353399835,
+    "real_pnl_usd": 3.164344618291959,
+    "sim_pnl_usd": -2.3233278602931566,
+    "real_turnover": 3814.249900686214,
+    "sim_turnover": 7093.955341022498,
+    "real_fills": 606.3333333333334,
+    "sim_fills": 972.3333333333331,
+    "real_pos_symbols": 43
+   },
+   {
+    "params": "a0.2_b0.9_tp0.3_rq0.5",
+    "real_bps": 5.502158232405322,
+    "sim_bps": -3.898906306460371,
+    "real_pnl_usd": 3.045712589673548,
+    "sim_pnl_usd": -3.365571338453957,
+    "real_turnover": 5535.487096200949,
+    "sim_turnover": 8632.090832440128,
+    "real_fills": 760.3333333333334,
+    "sim_fills": 1144.6666666666665,
+    "real_pos_symbols": 36
+   },
+   {
+    "params": "a0.2_b0.9_tp0.9_rq0.15",
+    "real_bps": 14.217634100390082,
+    "sim_bps": -4.467536253432865,
+    "real_pnl_usd": 3.8415539006611072,
+    "sim_pnl_usd": -2.3232278196264784,
+    "real_turnover": 2701.964246326826,
+    "sim_turnover": 5200.243910368506,
+    "real_fills": 395.33333333333337,
+    "sim_fills": 654.3333333333334,
+    "real_pos_symbols": 43
+   },
+   {
+    "params": "a0.2_b0.9_tp0.9_rq0.5",
+    "real_bps": 10.450108958886428,
+    "sim_bps": -4.227206374908807,
+    "real_pnl_usd": 4.591205928261861,
+    "sim_pnl_usd": -3.1596893620279984,
+    "real_turnover": 4393.45268678529,
+    "sim_turnover": 7474.651298746118,
+    "real_fills": 576.3333333333334,
+    "sim_fills": 934.3333333333331,
+    "real_pos_symbols": 39
+   },
+   {
+    "params": "a0.45_b0.2_tp0.3_rq0.15",
+    "real_bps": -3.050142454034143,
+    "sim_bps": -0.19857482934170562,
+    "real_pnl_usd": -2.626386657933299,
+    "sim_pnl_usd": -0.369654778845717,
+    "real_turnover": 8610.701622999999,
+    "sim_turnover": 18615.38947666014,
+    "real_fills": 1304.9999999999998,
+    "sim_fills": 2690.000000000001,
+    "real_pos_symbols": 12
+   },
+   {
+    "params": "a0.45_b0.2_tp0.3_rq0.5",
+    "real_bps": -2.8363167977846317,
+    "sim_bps": -0.8432676181925374,
+    "real_pnl_usd": -3.6705982219825963,
+    "sim_pnl_usd": -1.7077054195412398,
+    "real_turnover": 12941.425389609505,
+    "sim_turnover": 20251.04940234206,
+    "real_fills": 1916.3333333333333,
+    "sim_fills": 2929.9999999999995,
+    "real_pos_symbols": 9
+   },
+   {
+    "params": "a0.45_b0.2_tp0.9_rq0.15",
+    "real_bps": -3.1875621429903047,
+    "sim_bps": -0.18514235933750267,
+    "real_pnl_usd": -2.6364081430376505,
+    "sim_pnl_usd": -0.33561445119754507,
+    "real_turnover": 8270.923121719574,
+    "sim_turnover": 18127.372493171126,
+    "real_fills": 1244.666666666667,
+    "sim_fills": 2598.3333333333335,
+    "real_pos_symbols": 11
+   },
+   {
+    "params": "a0.45_b0.2_tp0.9_rq0.5",
+    "real_bps": -2.7404519704925168,
+    "sim_bps": -0.8530851425153049,
+    "real_pnl_usd": -3.5606424790090507,
+    "sim_pnl_usd": -1.7226878538079005,
+    "real_turnover": 12992.902329060445,
+    "sim_turnover": 20193.62157367539,
+    "real_fills": 1919.9999999999998,
+    "sim_fills": 2916.9999999999995,
+    "real_pos_symbols": 11
+   },
+   {
+    "params": "a0.45_b0.45_tp0.3_rq0.15",
+    "real_bps": 3.6913247512260283,
+    "sim_bps": 0.7562580949250597,
+    "real_pnl_usd": 0.15321768653768741,
+    "sim_pnl_usd": 0.27269550763640865,
+    "real_turnover": 415.07506617183446,
+    "sim_turnover": 3605.8524129044995,
+    "real_fills": 70.66666666666667,
+    "sim_fills": 541.3333333333336,
+    "real_pos_symbols": 10
+   },
+   {
+    "params": "a0.45_b0.45_tp0.3_rq0.5",
+    "real_bps": 0.4459719835567454,
+    "sim_bps": -0.8473719574163747,
+    "real_pnl_usd": 0.16217096676626117,
+    "sim_pnl_usd": -0.6475324562546562,
+    "real_turnover": 3636.3487561013253,
+    "sim_turnover": 7641.655480657793,
+    "real_fills": 567.6666666666666,
+    "sim_fills": 1148.6666666666665,
+    "real_pos_symbols": 27
+   },
+   {
+    "params": "a0.45_b0.45_tp0.9_rq0.15",
+    "real_bps": 1.6759402624651178,
+    "sim_bps": 1.308396537764766,
+    "real_pnl_usd": 0.06956269653768835,
+    "sim_pnl_usd": 0.4515968114091021,
+    "real_turnover": 415.06668283850115,
+    "sim_turnover": 3451.528633518089,
+    "real_fills": 71.33333333333333,
+    "sim_fills": 513.3333333333333,
+    "real_pos_symbols": 9
+   },
+   {
+    "params": "a0.45_b0.45_tp0.9_rq0.5",
+    "real_bps": 0.57401772737646,
+    "sim_bps": -0.716098502033192,
+    "real_pnl_usd": 0.20319895476626235,
+    "sim_pnl_usd": -0.5372001439239756,
+    "real_turnover": 3539.9421494346584,
+    "sim_turnover": 7501.763268582787,
+    "real_fills": 549.9999999999999,
+    "sim_fills": 1124.6666666666667,
+    "real_pos_symbols": 27
+   },
+   {
+    "params": "a0.45_b0.9_tp0.3_rq0.15",
+    "real_bps": -12.751623297666711,
+    "sim_bps": -7.415329855125427,
+    "real_pnl_usd": -0.19331309599999602,
+    "sim_pnl_usd": -1.332241867572391,
+    "real_turnover": 151.59881333333334,
+    "sim_turnover": 1796.6049974857885,
+    "real_fills": 27.666666666666664,
+    "sim_fills": 265.66666666666674,
+    "real_pos_symbols": 8
+   },
+   {
+    "params": "a0.45_b0.9_tp0.3_rq0.5",
+    "real_bps": 5.152923120832588,
+    "sim_bps": -5.254359085725545,
+    "real_pnl_usd": 0.7415563269193588,
+    "sim_pnl_usd": -1.6277841894275111,
+    "real_turnover": 1439.0983710223516,
+    "sim_turnover": 3097.9690631530934,
+    "real_fills": 217.66666666666666,
+    "sim_fills": 468.66666666666663,
+    "real_pos_symbols": 31
+   },
+   {
+    "params": "a0.45_b0.9_tp0.9_rq0.15",
+    "real_bps": -2.2872286904030292,
+    "sim_bps": -5.956730868559806,
+    "real_pnl_usd": -0.03458636599999802,
+    "sim_pnl_usd": -0.9609174338912337,
+    "real_turnover": 151.21516333333335,
+    "sim_turnover": 1613.1624125626486,
+    "real_fills": 27.666666666666664,
+    "sim_fills": 233.99999999999994,
+    "real_pos_symbols": 7
+   },
+   {
+    "params": "a0.45_b0.9_tp0.9_rq0.5",
+    "real_bps": 12.614251301231482,
+    "sim_bps": -5.771015253104507,
+    "real_pnl_usd": 1.600790375676582,
+    "sim_pnl_usd": -1.534137846832866,
+    "real_turnover": 1269.0332049436045,
+    "sim_turnover": 2658.3500121708726,
+    "real_fills": 185.33333333333334,
+    "sim_fills": 387.33333333333337,
+    "real_pos_symbols": 33
+   },
+   {
+    "params": "a0.9_b0.2_tp0.3_rq0.15",
+    "real_bps": -4.093007020195599,
+    "sim_bps": 0.13629371096743695,
+    "real_pnl_usd": -1.3697404201611183,
+    "sim_pnl_usd": 0.11207355665183429,
+    "real_turnover": 3346.5381647345926,
+    "sim_turnover": 8222.944100378241,
+    "real_fills": 486.66666666666674,
+    "sim_fills": 1088.666666666667,
+    "real_pos_symbols": 24
+   },
+   {
+    "params": "a0.9_b0.2_tp0.3_rq0.5",
+    "real_bps": -2.799430461644848,
+    "sim_bps": 0.3987489172092438,
+    "real_pnl_usd": -1.6063160973466648,
+    "sim_pnl_usd": 0.37499454672142124,
+    "real_turnover": 5738.010353730484,
+    "sim_turnover": 9404.277492361003,
+    "real_fills": 763.6666666666666,
+    "sim_fills": 1260.6666666666665,
+    "real_pos_symbols": 28
+   },
+   {
+    "params": "a0.9_b0.2_tp0.9_rq0.15",
+    "real_bps": -7.6804009294283455,
+    "sim_bps": 1.4240255577480136,
+    "real_pnl_usd": -1.6977379504663273,
+    "sim_pnl_usd": 0.8851824203351064,
+    "real_turnover": 2210.4808929456376,
+    "sim_turnover": 6216.05711722586,
+    "real_fills": 301.0,
+    "sim_fills": 747.0,
+    "real_pos_symbols": 20
+   },
+   {
+    "params": "a0.9_b0.2_tp0.9_rq0.5",
+    "real_bps": -5.869084169350991,
+    "sim_bps": 0.20082087228938417,
+    "real_pnl_usd": -2.7956460600478543,
+    "sim_pnl_usd": 0.16629527000454877,
+    "real_turnover": 4763.342932866814,
+    "sim_turnover": 8280.77620163487,
+    "real_fills": 593.3333333333334,
+    "sim_fills": 1053.666666666667,
+    "real_pos_symbols": 22
+   },
+   {
+    "params": "a0.9_b0.45_tp0.3_rq0.15",
+    "real_bps": -62.10757423592749,
+    "sim_bps": 1.6749433684277122,
+    "real_pnl_usd": -1.3825706087327445,
+    "sim_pnl_usd": 0.3812580573642499,
+    "real_turnover": 222.60901761849303,
+    "sim_turnover": 2276.244466236139,
+    "real_fills": 36.33333333333333,
+    "sim_fills": 326.0000000000001,
+    "real_pos_symbols": 10
+   },
+   {
+    "params": "a0.9_b0.45_tp0.3_rq0.5",
+    "real_bps": 0.9825133222330907,
+    "sim_bps": 0.14316861165320952,
+    "real_pnl_usd": 0.15356402019129867,
+    "sim_pnl_usd": 0.051508603744583374,
+    "real_turnover": 1562.971378772483,
+    "sim_turnover": 3597.758136353952,
+    "real_fills": 243.66666666666666,
+    "sim_fills": 515.3333333333334,
+    "real_pos_symbols": 33
+   },
+   {
+    "params": "a0.9_b0.45_tp0.9_rq0.15",
+    "real_bps": -54.67738646687199,
+    "sim_bps": 2.226252321221277,
+    "real_pnl_usd": -1.2180633620660781,
+    "sim_pnl_usd": 0.4339771312702713,
+    "real_turnover": 222.77278428515967,
+    "sim_turnover": 1949.3618361830625,
+    "real_fills": 36.33333333333333,
+    "sim_fills": 270.6666666666667,
+    "real_pos_symbols": 9
+   },
+   {
+    "params": "a0.9_b0.45_tp0.9_rq0.5",
+    "real_bps": 4.39193400168128,
+    "sim_bps": -0.05158269052710722,
+    "real_pnl_usd": 0.5913496694579754,
+    "sim_pnl_usd": -0.015870748581463305,
+    "real_turnover": 1346.4447991058162,
+    "sim_turnover": 3076.758583021773,
+    "real_fills": 207.66666666666666,
+    "sim_fills": 424.0,
+    "real_pos_symbols": 32
+   },
+   {
+    "params": "a0.9_b0.9_tp0.3_rq0.15",
+    "real_bps": -31.149992324460094,
+    "sim_bps": -15.583757624401253,
+    "real_pnl_usd": -0.1027695931130651,
+    "sim_pnl_usd": -0.9117632085241746,
+    "real_turnover": 32.991851825390896,
+    "sim_turnover": 585.0727600489139,
+    "real_fills": 6.0,
+    "sim_fills": 86.33333333333334,
+    "real_pos_symbols": 1
+   },
+   {
+    "params": "a0.9_b0.9_tp0.3_rq0.5",
+    "real_bps": -22.574766044998352,
+    "sim_bps": -5.5997369206686365,
+    "real_pnl_usd": -0.04875253999999858,
+    "sim_pnl_usd": -0.38836801548307853,
+    "real_turnover": 21.59603333333333,
+    "sim_turnover": 693.5468951221827,
+    "real_fills": 4.333333333333334,
+    "sim_fills": 104.66666666666664,
+    "real_pos_symbols": 0
+   },
+   {
+    "params": "a0.9_b0.9_tp0.9_rq0.15",
+    "real_bps": -30.60284252480412,
+    "sim_bps": -11.984111310255484,
+    "real_pnl_usd": -0.10096995311306534,
+    "sim_pnl_usd": -0.6836963562932089,
+    "real_turnover": 32.99365182539089,
+    "sim_turnover": 570.5023414695182,
+    "real_fills": 6.0,
+    "sim_fills": 83.66666666666669,
+    "real_pos_symbols": 1
+   },
+   {
+    "params": "a0.9_b0.9_tp0.9_rq0.5",
+    "real_bps": -58.91665808021152,
+    "sim_bps": -7.290367877850844,
+    "real_pnl_usd": -0.12770165999999816,
+    "sim_pnl_usd": -0.47317459133720646,
+    "real_turnover": 21.674966666666663,
+    "sim_turnover": 649.0407607204253,
+    "real_fills": 5.0,
+    "sim_fills": 95.66666666666667,
+    "real_pos_symbols": 0
+   },
+   {
+    "params": "live mm_multi (a0.45_b0.9_tp0.6_rq0.3)",
+    "real_bps": 7.521193770192756,
+    "sim_bps": -6.1126141764703945,
+    "real_pnl_usd": 0.21256557533333154,
+    "sim_pnl_usd": -1.1749743130623007,
+    "real_turnover": 282.6221233333333,
+    "sim_turnover": 1922.2124595810265,
+    "real_fills": 47.66666666666667,
+    "sim_fills": 287.0,
+    "real_pos_symbols": 17
+   }
+  ],
+  "best_real": [
+   {
+    "params": "a0.2_b0.9_tp0.9_rq0.15",
+    "real_bps": 14.217634100390082,
+    "sim_bps": -4.467536253432865,
+    "real_pnl_usd": 3.8415539006611072,
+    "sim_pnl_usd": -2.3232278196264784,
+    "real_turnover": 2701.964246326826,
+    "sim_turnover": 5200.243910368506,
+    "real_fills": 395.33333333333337,
+    "sim_fills": 654.3333333333334,
+    "real_pos_symbols": 43
+   },
+   {
+    "params": "a0.45_b0.9_tp0.9_rq0.5",
+    "real_bps": 12.614251301231482,
+    "sim_bps": -5.771015253104507,
+    "real_pnl_usd": 1.600790375676582,
+    "sim_pnl_usd": -1.534137846832866,
+    "real_turnover": 1269.0332049436045,
+    "sim_turnover": 2658.3500121708726,
+    "real_fills": 185.33333333333334,
+    "sim_fills": 387.33333333333337,
+    "real_pos_symbols": 33
+   },
+   {
+    "params": "a0.2_b0.9_tp0.9_rq0.5",
+    "real_bps": 10.450108958886428,
+    "sim_bps": -4.227206374908807,
+    "real_pnl_usd": 4.591205928261861,
+    "sim_pnl_usd": -3.1596893620279984,
+    "real_turnover": 4393.45268678529,
+    "sim_turnover": 7474.651298746118,
+    "real_fills": 576.3333333333334,
+    "sim_fills": 934.3333333333331,
+    "real_pos_symbols": 39
+   },
+   {
+    "params": "a0.2_b0.9_tp0.3_rq0.15",
+    "real_bps": 8.296112474755962,
+    "sim_bps": -3.2750810353399835,
+    "real_pnl_usd": 3.164344618291959,
+    "sim_pnl_usd": -2.3233278602931566,
+    "real_turnover": 3814.249900686214,
+    "sim_turnover": 7093.955341022498,
+    "real_fills": 606.3333333333334,
+    "sim_fills": 972.3333333333331,
+    "real_pos_symbols": 43
+   },
+   {
+    "params": "a0.2_b0.9_tp0.3_rq0.5",
+    "real_bps": 5.502158232405322,
+    "sim_bps": -3.898906306460371,
+    "real_pnl_usd": 3.045712589673548,
+    "sim_pnl_usd": -3.365571338453957,
+    "real_turnover": 5535.487096200949,
+    "sim_turnover": 8632.090832440128,
+    "real_fills": 760.3333333333334,
+    "sim_fills": 1144.6666666666665,
+    "real_pos_symbols": 36
+   }
+  ],
+  "worst_real": [
+   {
+    "params": "a0.9_b0.45_tp0.9_rq0.15",
+    "real_bps": -54.67738646687199,
+    "sim_bps": 2.226252321221277,
+    "real_pnl_usd": -1.2180633620660781,
+    "sim_pnl_usd": 0.4339771312702713,
+    "real_turnover": 222.77278428515967,
+    "sim_turnover": 1949.3618361830625,
+    "real_fills": 36.33333333333333,
+    "sim_fills": 270.6666666666667,
+    "real_pos_symbols": 9
+   },
+   {
+    "params": "a0.9_b0.9_tp0.9_rq0.5",
+    "real_bps": -58.91665808021152,
+    "sim_bps": -7.290367877850844,
+    "real_pnl_usd": -0.12770165999999816,
+    "sim_pnl_usd": -0.47317459133720646,
+    "real_turnover": 21.674966666666663,
+    "sim_turnover": 649.0407607204253,
+    "real_fills": 5.0,
+    "sim_fills": 95.66666666666667,
+    "real_pos_symbols": 0
+   },
+   {
+    "params": "a0.9_b0.45_tp0.3_rq0.15",
+    "real_bps": -62.10757423592749,
+    "sim_bps": 1.6749433684277122,
+    "real_pnl_usd": -1.3825706087327445,
+    "sim_pnl_usd": 0.3812580573642499,
+    "real_turnover": 222.60901761849303,
+    "sim_turnover": 2276.244466236139,
+    "real_fills": 36.33333333333333,
+    "sim_fills": 326.0000000000001,
+    "real_pos_symbols": 10
+   }
+  ],
+  "rank_corr_turnover": 0.9842985842985844,
+  "rank_corr_fills": 0.9804981839468926,
+  "symbols_list": [
+   "ETHUSDT",
+   "SOLUSDT",
+   "XRPUSDT",
+   "HYPEUSDT",
+   "NEARUSDT",
+   "1000PEPEUSDT",
+   "ENAUSDT",
+   "DOGEUSDT",
+   "SUIUSDT",
+   "TRUMPUSDT",
+   "WLDUSDT",
+   "UNIUSDT",
+   "LINKUSDT",
+   "BNBUSDT",
+   "AAVEUSDT",
+   "ADAUSDT",
+   "AVAXUSDT",
+   "LTCUSDT",
+   "DOTUSDT",
+   "TRXUSDT",
+   "ATOMUSDT",
+   "ETCUSDT",
+   "FILUSDT",
+   "XLMUSDT",
+   "ZECUSDT",
+   "ONDOUSDT",
+   "INJUSDT",
+   "ARBUSDT",
+   "TAOUSDT",
+   "GRAMUSDT",
+   "MONUSDT",
+   "CARVUSDT",
+   "MAVIAUSDT",
+   "RENDERUSDT",
+   "WIFUSDT",
+   "KASUSDT",
+   "CRVUSDT",
+   "WLFIUSDT",
+   "ASTERUSDT",
+   "CLUSDT",
+   "BZUSDT",
+   "XAUUSDT",
+   "XAGUSDT",
+   "QQQUSDT",
+   "NVDAUSDT",
+   "TSLAUSDT",
+   "MSTRUSDT",
+   "COINUSDT",
+   "CRWVUSDT",
+   "GOOGLUSDT"
+  ],
+  "verdict": "contradicts"
+ },
+ "invariance": {
+  "symbols": 104,
+  "trade_size_vs_W": {
+   "n": 104,
+   "slope": 0.3128234075726416,
+   "se": 0.06562572364091543,
+   "r2": 0.4896314787120791,
+   "invariance": 0.3333333333333333
+  },
+  "trades_vs_W": {
+   "n": 104,
+   "slope": 0.6619917805823509,
+   "se": 0.02102133815441161,
+   "r2": 0.916543665902959,
+   "invariance": 0.6666666666666666
+  },
+  "spread_vs_illiq": {
+   "n": 104,
+   "slope": 1.6933335624640389,
+   "se": 0.13285367260495476,
+   "r2": 0.7042119871850743,
+   "invariance": 1.0
+  },
+  "depth_vs_W": {
+   "n": 104,
+   "slope": 0.6575363986773755,
+   "se": 0.1025740931237527,
+   "r2": 0.46630539349723277,
+   "invariance": null
+  },
+  "impact10k_vs_illiq": {
+   "n": 104,
+   "slope": 1.4365488529526764,
+   "se": 0.045946083157786,
+   "r2": 0.9280704393803659,
+   "invariance": 1.0
+  }
+ }
+}

@@ -1,0 +1,3264 @@
+# Decision rules (schema and validation: src/ai_trader/research/rules.py; human view: research/RULES.md, generated).
+# Seeded 2026-11-10 from BELIEFS.md v1 (each line traces to recorded hypothesis results). Program 2026-11-10 adds
+# rules from research/plans/2026-11-10_volatility_program.md after its tests are recorded. Rules never size positions.
+# 2026-11-10 late: merged rule candidates from the program reports (leverage, vol_tournament, vol_signals, trend_state_space,
+# decision_budget, flow_anomaly); grades checked against the recorded verdicts by the orchestrator.
+# 2026-11-11: merged Program 2 rule candidates (strategy_map, pnl_decomposition, tradfi_sessions, new_strategies,
+# synthetic_robustness, simulator); status follows grade (A/B active, C provisional); R-PX-9 corrected (TradFi perps trade on weekends).
+# 2026-11-12: merged microstructure pilot rule candidates (microstructure_laws R-MS-1.., book_spillover renumbered R-MS-11..,
+# population_simulator R-SIM-10..); one day of data, so all are grade C / provisional.
+# 2026-11-12 23:20 UTC: applied the clear fixes of research/reports/rules_audit_2026-11-12.md (see diary).
+
+rules:
+- id: R-VOL-1
+  kind: expect
+  rule: WHEN in the TradFi weekend window (Fri 17:00 ET to Sun 18:00 ET) THEN expect realised vol of about 0.6-0.8x the Friday sigma estimate
+  when: calendar.weekend == true
+  then: central (expected) sigma is weekend-scaled (sigma_rb_next, m about 0.57 for BTC)
+  scope:
+    assets: all
+    horizon: weekend
+    sides: both
+  effect: rv_ratio median < 0.9, > 60% of weekends below 1, both segments
+  confidence: A
+  evidence:
+  - H-W1
+  review: a holdout quarter with median rv_ratio > 1
+  status: active
+- id: R-VOL-2
+  kind: prefer
+  rule: WHEN setting stops or risk across a weekend THEN use the unshrunk risk sigma, because weekends are jump-prone
+  when: horizon spans a weekend
+  then: stops and risk use sigma_risk_next (no weekend shrink); only expectations use the weekend-scaled sigma
+  scope:
+    assets: all
+    horizon: 1d-3d
+    sides: both
+  effect: weekend shrink worsened QLIKE in both segments
+  confidence: A
+  evidence:
+  - H-V2
+  review: a shrink variant that wins on QLIKE and tail loss
+  status: active
+- id: R-VOL-3
+  kind: expect
+  rule: WHEN a volatility spike or jump has just happened THEN expect the excess variance to decay with a half-life of about 2-3 hours
+  when: jump or |z| >= 4 bar within the last few hours
+  then: prefer the jump-robust bias-corrected EWMA (robust_bc); the plain EWMA over-forecasts post-jump vol by about 27%
+  scope:
+    assets: all
+    horizon: 1h-24h
+    sides: both
+  effect: half-life 2-3 h; robust_bc QLIKE -0.05 both segments
+  confidence: A
+  evidence:
+  - H-S4
+  - H-V1b
+  review: holdout half-life > 6 h
+  status: active
+- id: R-VOL-4
+  kind: prefer
+  rule: WHEN forecasting daily risk THEN prefer the multi-scale HAR (1d / 7d / 30d) over a single-lambda EWMA
+  when: daily risk budget or 24h horizon
+  then: daily risk forecast = vol.har; per-bar sigma = vol.robust_bc
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: QLIKE -0.08 vs EWMA, both segments
+  confidence: A
+  evidence:
+  - H-VCL1
+  - H-VM5
+  review: refined by R-VOL-20..23 (2026-11-10 tournament)
+  status: active
+- id: R-VOL-5
+  kind: expect
+  rule: WHEN a vector candle or an Amihud illiquidity spike appears THEN do not expect extra volatility beyond the robust forecast
+  when: vector candle or illiquidity z high
+  then: no special vol regime after them
+  scope:
+    assets: crypto
+    horizon: 24h
+    sides: both
+  effect: no QLIKE gain from adding them
+  confidence: A
+  evidence:
+  - H-VC4
+  - H-LC2
+  review: a holdout test with a significant gain
+  status: active
+- id: R-VOL-6
+  kind: prefer
+  rule: WHEN forecasting 7-day BTC or ETH variance THEN add implied vol (DVOL) to HAR; it helps a little
+  when: symbol in BTC, ETH and DVOL available
+  then: use DVOL as an extra HAR regressor
+  scope:
+    assets:
+    - BTCUSDT
+    - ETHUSDT
+    horizon: 7d
+    sides: both
+  effect: -3% loss in-sample (weak), -19% holdout
+  confidence: B
+  evidence:
+  - H-VCL4
+  review: holdout gain disappears
+  status: active
+- id: R-VOL-7
+  kind: expect
+  rule: WHEN modelling crypto volatility THEN do not add downside semivariance, BTC vol spillover or compression terms to HAR; none improved forecasts
+  when: asset_class == crypto
+  then: 'HAR stays plain (log-HAR for crypto 1d, R-VOL-20); the 2026-11-10 panel tests confirmed: no leverage asymmetry (H-LEV2), SHAR no better (H-LEV4), common factor explains alt
+    vol but adds no forecast gain (H-VM4)'
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: no QLIKE gain in either segment
+  confidence: A
+  evidence:
+  - H-VCL2
+  - H-VCL3
+  - H-VCL5
+  - H-LEV2
+  - H-LEV4
+  - H-VM4
+  review: H-LEV6 / H-VM6 forward tests
+  status: active
+- id: R-VOL-8
+  kind: expect
+  rule: WHEN the v0 regime is in its high-vol state THEN expect next-week realised vol to come in 13-31% further below the EWMA forecast than in low-vol states
+  when: regime.vol_state == high
+  then: don't plan quotes or stops off plain EWMA after spikes (use robust_bc or HAR); liquidity provision after spikes has the wind at its back, but tails still apply
+  scope:
+    assets: all
+    horizon: 7d
+    sides: both
+  effect: t -10.9 in-sample, -5.0 holdout, 9 assets
+  confidence: A
+  evidence:
+  - H-RL2
+  review: holdout t > -2
+  status: active
+- id: R-VOL-9
+  kind: expect
+  rule: WHEN it is the Monday US cash open for a TradFi perp, or the Sunday CME reopen for oil, THEN widen risk expectations, but apply no blanket Monday multiplier to TradFi
+  when: calendar.monday_us_open or (oil and sunday_cme_reopen)
+  then: TradFi equities are not more volatile per trading day on Mondays; WTI Mondays were 2.3x in the war-weekend holdout. For crypto next-day vol the weekday factor applies (R-ML-1,
+    R-DS-2)
+  scope:
+    assets: tradfi
+    horizon: intraday
+    sides: both
+  effect: mixed by asset and segment
+  confidence: C
+  evidence:
+  - H-DOW2
+  - H-W5b
+  review: more holdout Mondays
+  status: provisional
+- id: R-PX-1
+  kind: expect
+  rule: WHEN a large hourly shock hits a calm market (low vol state) THEN expect continuation; WHEN it hits a volatile market THEN expect reversal
+  when: '|z_1h| >= 4 and regime.vol_state'
+  then: 'the vol state at shock time decides; shock_regime is the first forward-tested strategy; precedence until H-S3 is recorded: do not fade 2-sigma hourly moves (R-PX-2) - the reversal
+    leg in volatile markets is not yet confirmed forward'
+  scope:
+    assets: crypto
+    horizon: 6h-24h
+    sides: both
+  effect: forward-supported once
+  confidence: B
+  evidence:
+  - H-S2
+  review: H-S3 forward result
+  status: active
+- id: R-PX-2
+  kind: avoid
+  rule: WHEN an hourly move deviates 2 sigma or more from trend THEN do not fade it; such moves tend to keep going
+  when: 1h deviation from trend >= 2 sigma
+  then: intraday mean reversion stays off
+  scope:
+    assets: crypto
+    horizon: 1h-24h
+    sides: both
+  effect: fading loses even before costs
+  confidence: B
+  evidence:
+  - H-T1
+  review: a holdout where fading wins net
+  status: active
+- id: R-PX-3
+  kind: expect
+  rule: WHEN considering trend-following THEN treat it as a thin edge at best (Sharpe about 0.2-0.3 before the cutoff, negative Jul-Nov 2026), better at 4h than 1h, with no reliable
+    way to pick the trending periods
+  when: trend signal present
+  then: trend is a low-weight baseline sleeve, not a core edge; no walk-forward model selection
+  scope:
+    assets: crypto
+    horizon: 4h-1d
+    sides: both
+  effect: best zoo variant DSR 0.72 < 0.95; ensemble +0.33 in-sample, negative holdout
+  confidence: B
+  evidence:
+  - H-X2b
+  - H-TR1
+  - H-TR2
+  - H-TR3
+  - H-TR4
+  review: holdout ensemble Sharpe > 0.5 over 6 months
+  status: active
+- id: R-PX-4
+  kind: expect
+  rule: WHEN price approaches a structural level (vector-candle open, swing pivot, CME gap, swept zone) THEN expect a break slightly more often than a hold
+  when: distance to level < 1 sigma
+  then: pi_break >= 0.5 by default; levels mark where a move may continue, not where to fade it
+  scope:
+    assets: all
+    horizon: 1h-1d
+    sides: both
+  effect: break rate 0.52-0.55
+  confidence: B
+  evidence:
+  - H-VZ1
+  - H-VZ2
+  - H-VZ3
+  - H-VC2
+  - H-VC3
+  - H-GT3
+  - H-W4
+  review: a level family that holds > 0.55 in holdout
+  status: active
+- id: R-PX-5
+  kind: avoid
+  rule: WHEN auction balance (value-area overlap) or the variance ratio says balance or imbalance THEN do not switch between trend and mean reversion on it
+  when: market-profile or variance-ratio regime label
+  then: value-area and POC levels behave like random-walk levels
+  scope:
+    assets: crypto
+    horizon: 1h-1d
+    sides: both
+  effect: all four AU rules and RG1 failed
+  confidence: B
+  evidence:
+  - H-AU1
+  - H-AU2
+  - H-AU3
+  - H-AU4
+  - H-RG1
+  review: '-'
+  status: active
+- id: R-PX-6
+  kind: avoid
+  rule: WHEN it is Monday, or the regime cell is known, THEN do not tilt direction on it; there is no Monday drift and regime cells carry no next-week direction
+  when: day of week or regime cell
+  then: no day-of-week or regime-direction tilts
+  scope:
+    assets: all
+    horizon: 1d-7d
+    sides: both
+  effect: up minus down 0.03 sigma, t 1.0, 37k obs; Holm-adjusted Monday drift null in 9 assets
+  confidence: B
+  evidence:
+  - H-DOW1
+  - H-RL1
+  review: '-'
+  status: active
+- id: R-PX-7
+  kind: expect
+  rule: WHEN a TradFi asset had a week below -1 sigma THEN expect a slight up-lean on Monday (context only, not tradable)
+  when: asset_class == tradfi and last week return < -1 sigma
+  then: context only; crypto shows nothing
+  scope:
+    assets: tradfi
+    horizon: 1d
+    sides: long
+  effect: +0.12 sigma pooled, t 2.3, in-sample only
+  confidence: C
+  evidence:
+  - H-DOW3
+  review: holdout events (about 6 a year)
+  status: provisional
+- id: R-PX-8
+  kind: expect
+  rule: WHEN a liquidation regime (R9) ends THEN expect high-vol whipsaw next (about 62%), not a clean trend; regime episodes last about 5-7 days
+  when: regime.cell == R9 or recently exited
+  then: describes the path of the state, not returns
+  scope:
+    assets: all
+    horizon: 1d-7d
+    sides: both
+  effect: daily stay probability 0.84-0.89; duration dependence z 4.2 in-sample
+  confidence: B
+  evidence:
+  - H-RL3
+  review: holdout transition matrix drifts
+  status: active
+- id: R-PX-9
+  kind: avoid
+  rule: WHEN it is the weekend THEN do not trade direction from weekend price or volume; weekend moves carry no information about Monday
+  when: calendar.weekend == true
+  then: no weekend directional trades; note Bybit TradFi perps keep trading on weekends at about 0.1-0.15x weekday turnover and 0.25-0.33x hourly |r| (not frozen; corrected 2026-11-11,
+    R-TF-7)
+  scope:
+    assets: all
+    horizon: weekend
+    sides: both
+  effect: W2/W3/W6 not supported in both segments
+  confidence: B
+  evidence:
+  - H-W2
+  - H-W3
+  - H-W6
+  - H-TP1
+  review: '-'
+  status: active
+- id: R-CARRY-1
+  kind: expect
+  rule: WHEN considering funding carry THEN treat it as a leverage-mania premium that has decayed, not a standing one
+  when: funding carry candidate
+  then: only as a small overlay scaled by trailing 30d funding (H-C1b forward)
+  scope:
+    assets: crypto
+    horizon: 30d
+    sides: both
+  effect: 57%/yr in 2021, 0.5% in 2025, -4.8% in 2026 H1
+  confidence: B
+  evidence:
+  - H-C1
+  review: H-C1b forward
+  status: active
+- id: R-AVOID-1
+  kind: avoid
+  rule: WHEN a candidate is funding contrarian, OI-price divergence, taker-cost relative value, stablecoin growth, VRP direction, pivot-geometry trend or vector-candle continuation THEN
+    do not spend capital on it; each failed its test
+  when: strategy family in the failed list
+  then: skip
+  scope:
+    assets: all
+    horizon: any
+    sides: both
+  effect: failed in both segments or after costs
+  confidence: B
+  evidence:
+  - H-P1
+  - H-P2
+  - H-RV1
+  - H-RV2
+  - H-RV3
+  - H-FU1
+  - H-FU2
+  - H-GT1
+  - H-GT2
+  - H-VC1
+  - H-VC5
+  review: a new registered variant
+  status: active
+- id: R-AVOID-2
+  kind: avoid
+  rule: WHEN tempted to sell weekend options from Friday morning THEN do not; the premium is real but not harvestable as tested
+  when: weekend short-vol candidate
+  then: only the US-close entry with band hedging remains (H-OPT4, forward)
+  scope:
+    assets:
+    - BTCUSDT
+    - ETHUSDT
+    horizon: weekend
+    sides: short
+  effect: H-OPT1-3 failed in both segments; V2 premium t -17 / -7.7
+  confidence: B
+  evidence:
+  - H-W7
+  - H-OPT1
+  - H-OPT2
+  - H-OPT3
+  review: H-OPT4 forward
+  status: active
+- id: R-EXEC-1
+  kind: prefer
+  rule: WHEN placing a protective stop THEN prefer a resting exchange stop (MarkPrice trigger) over a close-confirmed stop
+  when: any position
+  then: keep resting stops
+  scope:
+    assets: all
+    horizon: any
+    sides: both
+  effect: close-confirmed worst -1.9R vs -1.0R
+  confidence: B
+  evidence:
+  - H-X1
+  review: '-'
+  status: active
+- id: R-EXEC-2
+  kind: prefer
+  rule: WHEN estimating the probability that a target is hit before a stop THEN prefer the jump-aware first-passage model over a Gaussian diffusion
+  when: bracket evaluation (p_tp for the net-E[R] gate)
+  then: use the jump-diffusion Monte-Carlo p_tp
+  scope:
+    assets: crypto
+    horizon: 1d-7d
+    sides: both
+  effect: Brier -0.0022 in-sample, -0.0014 holdout (CIs below 0)
+  confidence: B
+  evidence:
+  - H-JD4
+  review: holdout CI crosses 0
+  status: active
+- id: R-EXEC-3
+  kind: expect
+  rule: WHEN a jump has just occurred THEN expect another within 24 h more often than a constant rate implies (jumps cluster)
+  when: jump detected in the last 24 h
+  then: use the Hawkes intensity for next-24h jump risk
+  scope:
+    assets: crypto
+    horizon: 24h
+    sides: both
+  effect: Hawkes beats constant rate in both segments
+  confidence: B
+  evidence:
+  - H-JD2
+  review: '-'
+  status: active
+- id: R-MM-1
+  kind: prefer
+  rule: WHEN clearing market-making inventory THEN prefer passive resting exits; market-order exits gave back the whole edge
+  when: inventory in profit or wind-down
+  then: reduce-only quotes at the touch; never a panic market flatten outside the predefined rules
+  scope:
+    assets: all
+    horizon: minutes
+    sides: both
+  effect: passive exits 95 trips about +1.4 c each, 84-88% winners; market exits 42 trips -0.54 USD (2 mainnet runs)
+  confidence: C
+  evidence:
+  - H-MM2
+  review: 10 run-days (H-MM2 success criterion)
+  status: provisional
+- id: R-MM-2
+  kind: expect
+  rule: WHEN quoting many crypto contracts at once THEN expect their fills to be one correlated bet (5m return correlations 0.85-0.96), so many same-side fills can arrive in one move
+  when: multi-symbol quoting
+  then: watch the portfolio net, counting resting adding orders as if filled
+  scope:
+    assets: crypto
+    horizon: minutes
+    sides: both
+  effect: 38 shorts filled in 2 minutes on 2026-11-08
+  confidence: C
+  evidence:
+  - H-MM2
+  review: more runs
+  status: provisional
+- id: R-LEV-1
+  kind: expect
+  rule: WHEN a crypto perp had a down day THEN don't expect higher next-day vol than after an up day with the same realised variance; forecast vol from total RV (plain HAR), not from
+    the sign of the move
+  when: asset_class == crypto; any regime cell; daily or 4h horizon
+  then: treat downside and upside semivariance as equally informative; no leverage uplift on vol forecasts, stops or quote widths after down moves
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: b(RS-) - b(RS+) = -0.03 (t -0.28, 2252 dates) in-sample, -0.20 (t -1.57) holdout; 4h -0.003 (t -0.04); median GJR gamma 0.004 (0/23 with t > 2)
+  confidence: A
+  evidence:
+  - H-LEV2
+  - H-VCL2
+  - research/reports/leverage_2026-11-10.md
+  review: re-test if holdout diff t > 2 (leverage appears) or t < -2 (inverse asymmetry becomes significant)
+  status: active
+- id: R-LEV-2
+  kind: expect
+  rule: WHEN a TradFi equity/index perp had a down day THEN don't expect the textbook leverage-effect vol rise on Bybit perps; if anything, big up days were followed by more vol in the
+    2026 holdout
+  when: asset_class == tradfi equity/index perp (TSLA INTC GOOGL AAPL MSTR NVDA MU QQQ SOXL)
+  then: no asymmetric vol uplift after down days; use the symmetric vol forecast
+  scope:
+    assets: tradfi
+    horizon: 1d
+    sides: both
+  effect: holdout b(RS-) 0.23 vs b(RS+) 0.51, diff t -2.11 (levels); log diff t +0.22; with weekday dummies t -1.79; GJR n/a (< 250 days)
+  confidence: C
+  evidence:
+  - H-LEV1
+  - research/reports/leverage_2026-11-10.md
+  review: holdout dates double (>= 260) or equity GJR becomes estimable (>= 250 days per asset); a diff t > 2 in logs and levels would reinstate the leverage prior
+  status: provisional
+- id: R-LEV-3
+  kind: expect
+  rule: WHEN an asset is in a 30-day drawdown (close below its 30d max close by > 1.5 sigma_30d sqrt(30)) THEN don't expect down moves to raise next-day vol more than they do outside
+    drawdowns
+  when: drawdown flag on (about 8% of crypto days, 6% of TradFi days)
+  then: no state-dependent asymmetry adjustment; the drawdown flag is not a vol-forecast input
+  scope:
+    assets: all
+    horizon: 1d
+    sides: both
+  effect: crypto RS- x D +0.10 (t 0.59) in-sample, +0.03 (t 0.24) holdout; TradFi +0.61 (t 1.28) in-sample, -0.17 (t -2.20) holdout
+  confidence: B
+  evidence:
+  - H-LEV3
+  - research/reports/leverage_2026-11-10.md
+  review: crypto interaction t > 2 in a fresh holdout year, or TradFi holdout sign turns positive with n_dd_dates >= 100
+  status: active
+- id: R-LEV-4
+  kind: prefer
+  rule: WHEN choosing the daily vol model for risk or quoting THEN prefer the plain (log) HAR over a semivariance SHAR for both crypto and TradFi perps
+  when: model selection for next-day variance
+  then: do not split RV into RS-/RS+; the out-of-sample gain is zero or negative in logs and below 0.5% of QLIKE in levels
+  scope:
+    assets: all
+    horizon: 1d
+    sides: both
+  effect: 'log form QLIKE(SHAR)-QLIKE(HAR): crypto +0.0025 (t 1.95) in-sample, +0.0022 (t 1.00) holdout; TradFi +0.0056 (t 2.22) holdout; level form crypto -0.0017 (t -2.27)'
+  confidence: B
+  evidence:
+  - H-LEV4
+  - research/reports/leverage_2026-11-10.md
+  review: the H-VM tournament (vol_tournament_2026-11-10) picks a SHAR variant inside the holdout MCS
+  status: active
+- id: R-LEV-5
+  kind: expect
+  rule: WHEN a crypto perp's funding is crowded (funding z vs trailing 90d high) and it has a down day THEN don't expect a liquidation-style vol amplification beyond what the down day
+    itself implies; high funding z alone does point to somewhat higher next-day vol
+  when: asset_class == crypto; funding_z (latest print vs trailing 90d) known at the decision time
+  then: no extra vol uplift for down moves under crowded longs (the interaction is negative); treat funding z > 0 as a mild upward vol tilt (exploratory, not yet registered)
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: RS- x fz -0.050 (t -2.30) in-sample, -0.103 (t -1.23) holdout; fz main effect +0.069 x mean RV per z unit (t 2.36) in-sample, +0.153 (t 2.71) holdout
+  confidence: C
+  evidence:
+  - H-LEV5
+  - research/reports/leverage_2026-11-10.md
+  review: register a funding-z main-effect hypothesis and test it forward; retire the 'mild upward tilt' clause if that test fails
+  status: provisional
+- id: R-VOL-20
+  kind: prefer
+  rule: WHEN forecasting next-day variance for a crypto perp with at least 180 days of history THEN prefer the per-asset log-HAR (vol.har) over robust_bc x 24, EWMA, GARCH-family and
+    SV-on-r^2 forecasts
+  when: asset_class == crypto and complete daily history >= 180 days; horizon next UTC day
+  then: use log-HAR (lognormal back-transform) as the daily risk forecast; robust_bc stays the per-bar sigma
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: QLIKE -12.1% vs level HAR (t -5.0) and -17.6% vs robust_bc x 24 in-sample; holdout -4.5% vs HAR and -18% vs robust_bc x 24; in-sample winner, in the holdout 90% MCS (p 0.17)
+  confidence: B
+  evidence:
+  - H-VM5
+  - H-VM2
+  - H-VCL1
+  - research/reports/vol_tournament_2026-11-10.md
+  review: holdout doubles and the holdout MCS shrinks enough to exclude log-HAR, or the HAR-Q/log-HAR ordering flips in the holdout
+  status: active
+- id: R-VOL-21
+  kind: avoid
+  rule: WHEN a 5-day (or multi-day) variance forecast is needed THEN don't scale the 1h robust_bc sigma flat over the horizon; use a direct 5d HAR (panel log-HAR for crypto)
+  when: horizon >= 2 days, any asset
+  then: use the direct 5d panel log-HAR (crypto) or level panel HAR (TradFi); expect robust_bc x 24 per day to be badly calibrated
+  scope:
+    assets: all
+    horizon: 5d
+    sides: both
+  effect: robust_bc x 24 flat has 1.51x (in-sample) / 2.27x (holdout) the QLIKE of level HAR for crypto, and 8.6x for TradFi (holdout); panel log-HAR is the crypto in-sample 5d winner
+    (-15.5% vs HAR) and in the holdout MCS
+  confidence: B
+  evidence:
+  - H-VM5
+  - H-VM1
+  - research/reports/vol_tournament_2026-11-10.md
+  review: a weekday-aware robust_bc term structure closes the gap
+  status: active
+- id: R-VOL-22
+  kind: prefer
+  rule: WHEN forecasting daily risk for a short-history perp (TradFi perps, or any listing with < 180 days) THEN prefer the panel HAR pooled over crypto and TradFi (HAR-Q or log form,
+    symbol fixed effects) over robust_bc and EWMA
+  when: complete daily history < 180 days, or asset_class == tradfi; panel needs >= 30 own training pairs (~60-90 days)
+  then: use the panel HAR-Q (p_harq) for TradFi 1d and the level panel HAR for TradFi 5d; panel log-HAR for young crypto listings
+  scope:
+    assets: tradfi
+    horizon: 1d|5d
+    sides: both
+  effect: 'TradFi holdout QLIKE 0.70x robust_bc x 24 at 1d and 0.21x at 5d (15 symbols, 131 days); crypto < 180 days: panel log-HAR -27.5% vs robust_bc (t -5.2) holdout'
+  confidence: C
+  evidence:
+  - H-VM1
+  - H-VM5
+  - research/reports/vol_tournament_2026-11-10.md
+  review: 'TradFi model choice was made on the holdout: re-test when the TradFi sample doubles; a weekday-aware HAR (proposed H-VM6) may replace it'
+  status: provisional
+- id: R-VOL-23
+  kind: prefer
+  rule: WHEN a level (non-log) HAR is used THEN prefer the HAR-Q variant (RV_d coefficient falling with sqrt(RQ_d)) over plain HAR
+  when: model family = level HAR, per-asset or panel
+  then: add the RV_d x sqrt(RQ_d) term; expect smaller over-reaction after noisy, jumpy days
+  scope:
+    assets: all
+    horizon: 1d|5d
+    sides: both
+  effect: next-day QLIKE -5.1% (t -6.8) in-sample, -4.7% (t -3.3) holdout per asset; panel -4.2% (t -7.9) / -3.7% (t -4.1); HAR-Q is the crypto 5d holdout leader
+  confidence: B
+  evidence:
+  - H-VM2
+  - research/reports/vol_tournament_2026-11-10.md
+  review: sign flips in a larger holdout
+  status: active
+- id: R-VOL-24
+  kind: avoid
+  rule: WHEN choosing inputs for a daily variance forecast from 1h bars THEN don't expect range estimators (Garman-Klass, Parkinson) to beat 1h realised variance
+  when: only 1h OHLC available
+  then: keep RV (sum of squared 1h returns) as the HAR input; GK/PK add nothing
+  scope:
+    assets: all
+    horizon: 1d|5d
+    sides: both
+  effect: GK-HAR QLIKE +5.4% (t 4.9) in-sample, +15.7% (t 4.8) holdout vs RV-HAR at 1d; RV+GK no better than RV
+  confidence: A
+  evidence:
+  - H-VM3
+  - research/reports/vol_tournament_2026-11-10.md
+  review: re-test with 5m ranges once enough history exists
+  status: active
+- id: R-VOL-25
+  kind: expect
+  rule: WHEN reading alt volatility THEN expect it to move mostly with the market-wide crypto vol factor, but don't expect the factor to improve the alt's own HAR forecast
+  when: factor = cross-sectional mean log RV over the 23-perp crypto universe
+  then: use the factor to describe the market vol state (one regime for all alts); forecast each alt from its own panel log-HAR
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: median alt R^2 of log RV on the factor 0.72 in-sample / 0.68 holdout (leave-one-out 0.70 / 0.65); forecast gain -0.1% (t -0.6) / -1.0% (t -1.6)
+  confidence: B
+  evidence:
+  - H-VM4
+  - H-VCL3
+  - research/reports/vol_tournament_2026-11-10.md
+  review: holdout gain reaches t < -2 as the holdout grows
+  status: active
+- id: R-SIG-1
+  kind: avoid
+  rule: WHEN forecast variance is high or low THEN do not expect variance-managed exposure (c / HAR forecast variance, Moreira-Muir) to beat the fixed-risk-per-trade rule on risk-adjusted
+    returns
+  when: asset_class crypto (universe L) or TradFi perps; exposure scaled by 1 / next-day HAR variance of the EW index or of the symbol
+  then: keep the risk engine's fixed-risk rule unchanged; forecast variance informs stop distance and expectations, not extra timing of exposure
+  scope:
+    assets: all
+    horizon: 1d
+    sides: both
+  effect: 'spanning alpha t: long-only -1.24 (L in-sample), +1.00 ensemble (L in-sample); holdout t -0.56 / +0.14 (L), -0.25 / -0.49 (T)'
+  confidence: B
+  evidence:
+  - H-VB1
+  - research/reports/vol_signals_2026-11-10.md
+  review: holdout ensemble alpha t > 2 with the in-sample-fixed variant, or a registered test of a capped/real-time variant
+  status: active
+- id: R-SIG-2
+  kind: expect
+  rule: WHEN a day's realised variance exceeds 1.5x the HAR forecast and the day moved more than 1 sigma THEN don't expect the move to continue over the next 1-3 days; the surprise informs
+    volatility, not direction
+  when: RV_t / HAR F_t > 1.5 and |ret_t| > sqrt(F_t), daily, any v0 vol state
+  then: no directional preference after a daily vol surprise; use the raised vol forecast for stops and expectations
+  scope:
+    assets: all
+    horizon: 1d
+    sides: both
+  effect: signed next-3d return net -0.008 sigma (t -0.25, 2620 events) in-sample; holdout +0.15 sigma (t 1.14, 345 events); low-vol-state subset +0.06 (t 1.2)
+  confidence: B
+  evidence:
+  - H-VB2
+  - research/reports/vol_signals_2026-11-10.md
+  review: holdout 3d mean stays > 0 with t > 2 as n doubles (driven by TradFi, t 2.1), or a registered low-vol-state variant (P1 analogue) passes
+  status: active
+- id: R-SIG-3
+  kind: avoid
+  rule: WHEN a 4h Bollinger/Keltner squeeze releases with a close outside the bands THEN don't expect directional follow-through over the next 24h net of costs; plain Bollinger breakouts
+    lose too
+  when: 4h, BB(20,2) inside KC(EMA20, 1.5 ATR20) for >= 6 bars, first close outside BB within 20 bars of release
+  then: 'don''t treat squeeze releases or BB closes as entry signals; compression is not a directional edge (with H-VCL5: not a vol edge either)'
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: signed next-6-bar return net -0.079 sigma (t -2.07, 2262 events) in-sample vs plain -0.068 (t -2.90); diff +0.02 (t 0.48); holdout diff +0.30 (t 1.82)
+  confidence: B
+  evidence:
+  - H-VB3
+  - research/reports/vol_signals_2026-11-10.md
+  review: holdout squeeze-minus-plain diff reaches t > 2 with n >= 400 squeeze events; TradFi squeezes (+0.29 sigma, t 1.4, 69 events) need a weekend-robust sigma before re-test
+  status: active
+- id: R-SIG-4
+  kind: prefer
+  rule: WHEN judging the chance of more 2-sigma hourly bars in the next 24h THEN prefer the HAR daily variance mapped through a Student-t (df ~3.4) against the current hourly sigma over
+    a self-exciting (Hawkes) count; don't expect exceedances to cluster once returns are scaled by the robust sigma
+  when: 1h bars, threshold |r| > 2 x sigma_risk (robust EWMA, known at t-1), decision at 00:00 UTC
+  then: expected next-24h count = 24 x P(|t_3.4| > 2 sigma_0 / sqrt(F/24)), shaded down ~10% (it over-predicts); a recent exceedance adds little (branching ~0.05, half-life ~2h)
+  scope:
+    assets: all
+    horizon: 1d
+    sides: both
+  effect: log score Hawkes - HAR-t -0.014 nats/symbol-day (t -2.14) in-sample, -0.019 (t -0.70) holdout; corr(count, rate) 0.31 / 0.48 HAR-t vs 0.03 / 0.09 Hawkes
+  confidence: B
+  evidence:
+  - H-VB4
+  - research/reports/vol_signals_2026-11-10.md
+  review: a Hawkes on raw (unstandardised) exceedances or a HAR-t with intraday seasonality is registered and tested; holdout sign flips with t > 2
+  status: active
+- id: R-PX-10
+  kind: avoid
+  rule: WHEN price makes its first 1h close beyond the prior UTC day's floor pivot R1 or S1 THEN don't expect continuation beyond a generic k-sigma move, and don't treat R1/S1 as support
+    or resistance
+  when: first 1h close beyond R1/S1 (P=(H+L+C)/3 of the prior UTC day); typical distance ~3.3 sigma_1h from the prior close
+  then: expect ~0 gross signed drift over the next 4-12h (net of taker costs it is negative); pivots carry no information beyond the sigma distance; don't enter breakouts or fades on
+    pivots alone
+  scope:
+    assets: all
+    horizon: 4h-12h
+    sides: both
+  effect: pivot minus placebo +0.005 sigma (t 0.5) at 4h in-sample, 26k events; holdout -0.05 (t -1.3) crypto, +0.04 (t 0.6) TradFi; pivot gross +0.02 sigma at 4h, net -0.09 (t -5.1)
+  confidence: A
+  evidence:
+  - H-BO1
+  - research/reports/trend_state_space_2026-11-10.md
+  review: a pivot-minus-placebo t > 2 in the growing holdout (TradFi n doubles), or a registered session-timing variant
+  status: active
+- id: R-AVOID-3
+  kind: avoid
+  rule: WHEN a WaveTrend / Market Cipher B green or red dot prints (with or without the money-flow filter) THEN don't expect a positive net trade; don't use Cipher dots as entry or timing
+    signals
+  when: LazyBear WaveTrend(9,12,4) cross with wt2 <= -53 (green) or >= 53 (red), 1h or 4h bars
+  then: expect net trade return <= 0; the 1h variants lose more than random entries with the same side and holding
+  scope:
+    assets: all
+    horizon: 12h-2d (12 bars of 1h or 4h)
+    sides: both
+  effect: in-sample DSR 0.00 for all 4 variants (best daily Sharpe 0.26 vs SR0 1.6); best in-sample variant (4h + MF) holdout -0.60 risk units per trade (t -2.8, worse than random p
+    0.97); 1h unfiltered -0.30 (t -9.7) in-sample, -0.44 (t -4.9) holdout
+  confidence: A
+  evidence:
+  - H-MC1
+  - research/reports/trend_state_space_2026-11-10.md
+  review: any variant with holdout DSR > 0.95 or a positive holdout mean with t > 2 after n >= 500 trades
+  status: active
+- id: R-SIG-5
+  kind: prefer
+  rule: WHEN reading a Kalman / local-linear-trend slope THEN prefer the vol-adaptive gain (measurement variance = robust sigma^2) over a fixed gain only as a tie-breaker; don't expect
+    it to turn trend into an edge
+  when: 4h trend sleeve built from an LLT slope (q 1e-4..1e-2); adaptive R_t = sigma_risk_next^2, Q scaled to the trailing-median variance
+  then: expect at most ~+0.1 annual Sharpe vs the fixed-gain filter; both are negative in Jul-Nov 2026 at q >= 1e-3, consistent with P3/P7
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: paired daily diff +0.011 risk units (t 1.5) in-sample at q=1e-3, 78% of symbols better; holdout +0.022 (t 1.3); signal correlation 0.96
+  confidence: C
+  evidence:
+  - H-KF1
+  - research/reports/trend_state_space_2026-11-10.md
+  review: re-test after 12 holdout months; becomes B if the holdout diff has t > 2
+  status: provisional
+- id: R-PX-11
+  kind: avoid
+  rule: WHEN asking 'is this market trending enough for trend-following?' THEN don't use a rolling MLE signal-to-noise ratio (LLT slope variance) to answer it
+  when: q_hat = var(slope noise)/var(level noise) from a 180-day 4h LLT fit, ranked across symbols monthly
+  then: expect no cross-sectional information about the next 30 days of trend-ensemble P&L (if anything a negative sign); q_hat is at its zero bound in ~2/3 of fits
+  scope:
+    assets: crypto
+    horizon: 30d
+    sides: both
+  effect: mean Spearman IC -0.02 (t -0.6, 55 months) in-sample, -0.15 over 4 holdout months; 65% of fits at q_hat = 0
+  confidence: B
+  evidence:
+  - H-KF2
+  - research/reports/trend_state_space_2026-11-10.md
+  review: a registered variant with a longer window or daily bars (where q_hat is identifiable) showing IC > 0 with t > 2
+  status: active
+- id: R-BUDGET-1
+  kind: prefer
+  rule: WHEN judging next-day direction from the standard state features THEN don't expect any of them (or more of them) to help; prefer a short card and never add inputs to make a directional
+    call
+  when: daily decision, crypto universe L, features = returns in sigma, vol state, regime features, funding/OI, calendar, range
+  then: treat next-24h direction as ~50/50 from these features; show <= 8 tested context lines; more inputs lowered OOS skill
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: Brier skill k=1 +0.0004 [-0.004, +0.005], k=32 -0.015 [-0.023, -0.007] in-sample; holdout all CIs contain 0 (best k=8 +0.007)
+  confidence: B
+  evidence:
+  - H-IC1
+  - research/reports/decision_budget_2026-11-10.md
+  review: H-IC4 forward A/B (compact vs full card); a holdout k with CI > 0; a registered vol-target version of H-IC1
+  status: active
+- id: R-BUDGET-2
+  kind: prefer
+  rule: WHEN estimating model parameters (vol HAR, classifiers) THEN prefer 1-2 years or expanding history over recent-only windows; don't let a 90-day summary override them
+  when: any fitted tool parameter; daily data; crypto
+  then: use 730d-or-expanding fits; read recent state as a deviation from the long-window estimate
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: panel HAR QLIKE 90d window +0.0129 vs expanding (t 3.1) in-sample; 730d vs expanding -0.0002 (t -0.4); logit 365d -0.0006 (t -1.7)
+  confidence: C
+  evidence:
+  - H-IC2
+  - research/reports/decision_budget_2026-11-10.md
+  review: a shorter window winning with t < -2 in the holdout as it grows; a regime break making expanding fits worse
+  status: provisional
+- id: R-BUDGET-3
+  kind: expect
+  rule: WHEN the candidate is a slow (4h) trend signal THEN deliberation of several hours costs little edge; there is no need to rush execution
+  when: trend_zoo ensemble / 4h trend candidates
+  then: latency up to 4-8h is acceptable; expect >= ~90% of the edge to remain at 4h
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: edge ratio R(4h) 0.97 [0.79, 1.09], R(8h) 0.88 [0.49, 1.05], half-life > 8h (llm_in_sample); holdout edge(0) < 0 so undefined
+  confidence: C
+  evidence:
+  - H-IC3
+  - research/reports/decision_budget_2026-11-10.md
+  review: holdout edge(0) turning positive with R(4) < 0.5; re-run on a longer holdout
+  status: provisional
+- id: R-BUDGET-4
+  kind: prefer
+  rule: WHEN the candidate is a shock signal (shock_regime) THEN don't delay it for LLM review; the deterministic layer executes at the bar close and the LLM may only veto
+  when: shock_regime entry on a 1h bar (|z| >= 4, declustered)
+  then: expect most of the edge to be gone within ~1-2h of the shock-bar close
+  scope:
+    assets: crypto
+    horizon: 1h
+    sides: both
+  effect: 'point estimates R(1h) 0.61, R(2h) 0.10, half-life ~1.2h, but edge(0) t 1.05 and CIs include 0.5 (in-sample, contaminated: strategy designed after seeing it)'
+  confidence: C
+  evidence:
+  - H-IC3
+  - research/reports/decision_budget_2026-11-10.md
+  review: forward shock_regime record (H-S3) with edge(0) t > 2; re-run H-IC3 when the forward record has >= 100 shocks
+  status: provisional
+- id: R-FLOW-1
+  kind: avoid
+  rule: WHEN 1m signed taker imbalance has |robust z| > 4 (trailing 24h median/MAD) THEN do not read it as a volatility or direction signal; it fires on about 1 minute in 5
+  when: flow_anomaly z_imbalance |z| > 4 (latest_anomalies type imbalance)
+  then: expect next 5-15m |return| about the same as a normal minute of that hour and a coin-flip direction; use it as an activity gauge only
+  scope:
+    assets: all
+    horizon: 15m
+    sides: both
+  effect: fwd |ret| ratio 5m 1.14 (CI 0.99-1.40), 15m 1.05 (CI 0.93-1.21); sign rate 5m 0.513, 15m 0.505; firing rate 21.6%
+  confidence: C
+  evidence:
+  - H-OF1
+  - H-OF2
+  - research/reports/flow_anomaly_2026-11-10.md
+  review: a forward month of flow data, or a pre-registered selective detector (per-symbol top-1% |z|) showing a ratio >= 1.5 with CI excluding 1
+  status: provisional
+- id: R-FLOW-2
+  kind: avoid
+  rule: WHEN a liquidation cluster prints (1m liquidation notional > trailing-24h 99th percentile and >= 3 prints) THEN do not fade it expecting a reversal within 60 minutes
+  when: latest_anomalies type liq_cluster (side = liquidated side)
+  then: prefer no counter-trend entry on the cluster; in the first sample the move continued in the liquidation direction
+  scope:
+    assets: all
+    horizon: 1h
+    sides: both
+  effect: signed (reversal-positive) 60m return -1.85 sigma (t -1.92, n 142, 17 hour clusters), -82 bp; mostly long liquidations in the 2026-11-10 sell-off
+  confidence: C
+  evidence:
+  - H-OF3
+  - research/reports/flow_anomaly_2026-11-10.md
+  review: holdout reaches >= 300 declustered clusters across >= 10 separate sell-offs/squeezes, or short-liquidation clusters show the opposite sign
+  status: provisional
+- id: R-FLOW-3
+  kind: expect
+  rule: WHEN BTC shows a flow anomaly THEN do not expect alt flow anomalies to follow with a 1-3 minute lead; flow shocks hit BTC and alts together
+  when: BTCUSDT latest_anomalies imbalance anomaly
+  then: watch the cross-section at the same minute rather than BTC first; no BTC-leads-alts timing edge
+  scope:
+    assets: crypto
+    horizon: 3m
+    sides: both
+  effect: lift BTC->alt 1.32 (CI 1.16-1.49) vs alt->BTC 1.28 (CI 1.14-1.44); same-minute lift 1.71
+  confidence: C
+  evidence:
+  - H-OF5
+  - research/reports/flow_anomaly_2026-11-10.md
+  review: a selective detector (top 1% |z|) with >= 100 BTC events shows BTC->alt lift >= 2 and > alt->BTC
+  status: provisional
+- id: R-FLOW-4
+  kind: expect
+  rule: WHEN the multivariate flow score (robust Mahalanobis over 7 flow z) is high THEN treat it as no better than the imbalance z for anticipating a 2-sigma 15m move
+  when: latest_anomalies type multivariate (distance > training q99.9)
+  then: descriptive flag only; do not raise vol expectations on it beyond what the vol model already says
+  scope:
+    assets: all
+    horizon: 15m
+    sides: both
+  effect: test AUC 0.583 vs imbalance 0.603 (diff -0.021, CI -0.065 to +0.073)
+  confidence: C
+  evidence:
+  - H-OF4
+  - research/reports/flow_anomaly_2026-11-10.md
+  review: refit on >= 2 weeks of gap-free flow; AUC difference CI excluding 0 in a forward window
+  status: provisional
+- id: R-MAP-1
+  kind: expect
+  rule: WHEN choosing a strategy because of the current v0 regime cell THEN don't expect the in-sample per-cell ranking of the registered strategies to carry over; the regime map is
+    not a reliable selector of winners
+  when: any v0 cell (R1-R9) on crypto universe L; strategy x cell shrunk mean net P&L from research/reports/strategy_map_2026-11-11.md
+  then: treat per-cell 'this strategy pays here' claims as unproven; no family x cell has a positive net mean graded A or B; only negative cells (where strategies lose) are stable
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: Spearman of in-sample vs holdout shrunk cell means 0.09, 95% CI [-0.11, 0.21] (144 pairs, 16 strategies, episode bootstrap); sign agreement 53%; within-strategy cell ordering
+    0.13
+  confidence: B
+  evidence:
+  - H-RC1
+  - research/reports/strategy_map_2026-11-11.md
+  review: re-test when the holdout reaches 12 months; becomes A-negative if the CI stays around 0, retired if Spearman > 0 with CI excluding 0
+  status: active
+- id: R-MAP-2
+  kind: prefer
+  rule: WHEN combining the registered deterministic strategies THEN prefer dropping, per v0 cell, the strategies whose in-sample shrunk cell mean is negative over holding all of them
+    equally, as loss avoidance rather than an edge
+  when: book of the 16 bar-runnable strategies on crypto universe L; start-of-day v0 cell per symbol
+  then: expect the cell-filtered book to lose less than the equal-weight book; don't expect it to make money (all three books lost in Jul-Nov 2026)
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: holdout annualised Sharpe -0.77 conditional vs -2.48 equal weight (diff +1.71, CI [0.78, 2.65], Holm p 0.006) and -1.56 unconditional (diff +0.79, CI [0.06, 1.99], Holm p 0.04);
+    without shock_regime +1.60 [0.69, 2.63] vs EW but +0.69 [-0.19, 2.11] vs unconditional; books correlate 0.94
+  confidence: C
+  evidence:
+  - H-RC2
+  - research/reports/strategy_map_2026-11-11.md
+  review: re-test at 12 holdout months; the gain vs the unconditional selection must survive without shock_regime
+  status: provisional
+- id: R-MAP-3
+  kind: avoid
+  rule: WHEN the v0 cell is R1 (quiet trend up), R2 (trend up), R4 (compression) or R7 (grind down) THEN don't run 1h mean reversion (zscore_reversion, rsi_reversion); it loses net in
+    both segments
+  when: start-of-day v0 cell in {R1, R2, R4, R7}; 1h fades of 2-sigma EMA deviations or RSI 30/70
+  then: expect negative net P&L from fading; consistent with R-PX-2 (don't fade hourly deviations)
+  scope:
+    assets: crypto
+    horizon: 1h-1d
+    sides: both
+  effect: 'family shrunk mean x100 daily-sigma per active symbol-day: R1 -3.4 / -3.5 (IS t -3.2, HO t -1.7), R2 -2.0 / -2.5, R4 -3.0 / -8.0; rsi_reversion R4 -1.7 / -4.1 (t -2.5 / -2.2,
+    grade A), R7 -3.7 / -2.6 (t -3.3 / -2.1, A)'
+  confidence: B
+  evidence:
+  - H-RC1
+  - H-T1
+  - research/reports/strategy_map_2026-11-11.md
+  review: a holdout cell mean > 0 with t > 1 in two consecutive quarters
+  status: active
+- id: R-MAP-4
+  kind: avoid
+  rule: WHEN the v0 cell is R5 (balanced range) or R6 (whipsaw) THEN don't expect 1h trend-following (tsmom, ema_stack) to pay; it loses net in both segments
+  when: start-of-day v0 cell in {R5, R6}; 1h-parameterised trend signals
+  then: expect negative net P&L from 1h trend entries in range cells
+  scope:
+    assets: crypto
+    horizon: 1h-1d
+    sides: both
+  effect: ema_stack R6 -0.66 / -2.01 x100 (t -2.0 / -2.3, A), R5 -0.62 / -0.66 (B); tsmom R5 -3.9 / -0.9 (t -4.4 / -1.8, B), R6 -3.6 / -3.6 (t -3.4 / -1.6, B)
+  confidence: B
+  evidence:
+  - H-RC1
+  - research/reports/strategy_map_2026-11-11.md
+  review: holdout t > 0 for either strategy in R5/R6 over 12 months
+  status: active
+- id: R-MAP-5
+  kind: avoid
+  rule: WHEN the v0 cell is R5 (balanced range) or R7 (grind down) THEN don't expect funding-contrarian or OI-divergence positioning signals to pay
+  when: start-of-day v0 cell in {R5, R7}; funding_contrarian or oi_price_divergence active
+  then: 'expect negative net P&L (in line with R-AVOID-1: these signals fail overall)'
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: 'positioning family x100: R5 -1.44 / -1.63 (t -3.3 / -1.3), R7 -2.12 / -1.34 (t -4.4 / -1.2); oi_price_divergence R7 -4.6 / -3.2 (t -5.6 / -1.3)'
+  confidence: B
+  evidence:
+  - H-RC1
+  - H-P1
+  - H-P2
+  - research/reports/strategy_map_2026-11-11.md
+  review: holdout cell mean > 0 with t > 1
+  status: active
+- id: R-MAP-6
+  kind: avoid
+  rule: WHEN the v0 cell is R4 (compression) THEN don't expect swing-structure trend (geo_struct) or weekend fades (cme_gap_fill, weekend_drift_fade) to pay
+  when: start-of-day v0 cell R4
+  then: expect negative net P&L from geo_struct entries and from fading the weekend move at the CME reopen
+  scope:
+    assets: crypto
+    horizon: 1d-3d
+    sides: both
+  effect: geo_struct R4 -2.56 / -2.58 x100 (t -3.0 / -2.6, A); calendar family R4 -3.2 / -2.9 (t -2.3 / -2.0, B); cme_gap_fill R4 -7.0 / -7.5 (B)
+  confidence: B
+  evidence:
+  - H-RC1
+  - H-GT1
+  - H-W4
+  - research/reports/strategy_map_2026-11-11.md
+  review: holdout cell mean > 0 with t > 1
+  status: active
+- id: R-MAP-7
+  kind: avoid
+  rule: WHEN shock_regime fires its reversal leg in v0 cell R2 (trend up, normal vol) THEN don't expect the fade to pay
+  when: shock_regime signal with vol_state normal and start-of-day cell R2
+  then: expect negative net P&L; a candidate veto for the forward test (shock_regime is data-generated, so this is context only)
+  scope:
+    assets: crypto
+    horizon: 1h-1d
+    sides: both
+  effect: shock_regime R2 -2.25 / -7.28 x100 (t -3.3 / -2.4); R2 was outside the cells whose evidence shaped the design
+  confidence: C
+  evidence:
+  - H-RC1
+  - H-S2
+  - research/reports/strategy_map_2026-11-11.md
+  review: forward R2 shock trades after 2026-11-08 (H-S3 record)
+  status: provisional
+- id: R-PD-1
+  kind: expect
+  rule: WHEN judging how diversified the registered deterministic strategy book is THEN expect the equal-weight book to carry close to one bet (crypto trend), even though the strategy
+    correlation matrix has about 8 eigen-bets
+  when: equal-weight book of the 16 bar-runnable strategies on crypto universe L (or with the TradFi sleeves added)
+  then: count trend variants as one exposure; adding strategies does not add independent risk unless they load on something other than TSMOM
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: 'registered ENB (eigenvalue entropy) 8.3 [7.7, 8.6] in-sample, 7.5 [6.1, 8.6] holdout L, 13.8 with T sleeves; top-3 share 0.61 / 0.65 L (H-PD1 contradicted: more than 6 eigen-bets);
+    but Meucci ENB of the equal-weight book 1.15 in-sample, 2.5 holdout (L), 2.0 (L+T)'
+  confidence: B
+  evidence:
+  - H-PD1
+  - H-TR1
+  - research/reports/pnl_decomposition_2026-11-11.md
+  review: Meucci ENB of the book > 3 in a 6-month holdout window
+  status: active
+- id: R-PD-2
+  kind: expect
+  rule: WHEN a signal comes from the trend family (tsmom, ema_stack, donchian_breakout, geo_struct, geo_pivot_bo, geo_flag_bo, compression_breakout, the zoo ensemble) THEN read it as
+    a crypto time-series-momentum bet that is also long convexity, not as an independent edge
+  when: any trend-family strategy on crypto perps (cluster F1 of the PD report)
+  then: expect its P&L to follow the TSMOM factor and big absolute market days; don't stack several trend variants as if they were separate opinions
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: 'standardised TSMOM loading 0.36-0.79 (t 7-20) in-sample; zoo ensemble 0.79 (t 17.6) in-sample, 0.77 (t 10.0) holdout, R^2 0.68 / 0.70; convexity extension: tsmom +0.41 (t
+    11.5) / +0.59 (t 6.9), ema_stack +0.28 / +0.47, donchian +0.28 / +0.48'
+  confidence: B
+  evidence:
+  - H-PD2
+  - H-PD1
+  - H-TR1
+  - research/reports/pnl_decomposition_2026-11-11.md
+  review: a trend-family sleeve with TSMOM loading < 0.2 in a holdout half-year
+  status: active
+- id: R-PD-3
+  kind: expect
+  rule: 'WHEN running 1h mean reversion (zscore_reversion, rsi_reversion) THEN expect it to be short convexity: it loses on large absolute market days and when realised vol rises, so
+    it does not hedge the trend book in stress'
+  when: 1h fade strategies active on crypto perps
+  then: expect losses concentrated on big |market| days and vol-up days; treat its negative correlation with trend as a short-straddle exposure, not as diversification
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: both
+  effect: 'convexity extension (not registered): zscore_reversion CONVEX loading -0.51 (t -12.8) in-sample, -0.61 (t -6.8) holdout; rsi_reversion -0.38 (t -5.9) / -0.55 (t -7.3); VOL
+    loading -0.20 (t -5 to -7) in-sample (registered fit)'
+  confidence: B
+  evidence:
+  - H-PD2
+  - research/reports/pnl_decomposition_2026-11-11.md
+  review: re-fit after 6 more holdout months; the convexity factor is an extension, so register it before promoting
+  status: active
+- id: R-PD-4
+  kind: expect
+  rule: WHEN oi_price_divergence (rising open interest) gives a long tilt THEN read it as plain long crypto market beta, not an independent positioning signal
+  when: oi_price_divergence active on crypto perps
+  then: expect P&L to track the equal-weight crypto market return of the day
+  scope:
+    assets: crypto
+    horizon: 1d
+    sides: long
+  effect: standardised MKT loading 0.65 (t 18.6) in-sample, 0.77 (t 6.6) holdout; R^2 0.41 / 0.61; alpha t -4.5 in-sample, -0.6 holdout
+  confidence: A
+  evidence:
+  - H-PD2
+  - H-P2
+  - research/reports/pnl_decomposition_2026-11-11.md
+  review: MKT loading < 0.3 over a holdout half-year
+  status: active
+- id: R-PD-5
+  kind: expect
+  rule: WHEN a registered strategy shows a positive raw Sharpe THEN expect it to be factor exposure (TSMOM, market, carry) plus noise, not residual alpha; observable factors explain
+    only about a quarter of daily strategy variance
+  when: any registered strategy sleeve, daily P&L
+  then: don't credit a strategy with alpha from its raw track record; no sleeve has a Holm-significant positive alpha in both segments
+  scope:
+    assets: all
+    horizon: 1d
+    sides: both
+  effect: median R^2 0.25 in-sample (5 crypto factors), 0.22 holdout (8 factors), 0.36 / 0.30 with the convexity extension (H-PD2 contradicted on R^2 < 0.4); largest in-sample alpha
+    shock_regime t 2.5 (data-generated), holdout t -1.5
+  confidence: B
+  evidence:
+  - H-PD2
+  - research/reports/pnl_decomposition_2026-11-11.md
+  review: any sleeve with Holm-significant alpha t > 2 in a new holdout year
+  status: active
+- id: R-PD-6
+  kind: prefer
+  rule: 'WHEN looking for improvement in the directional strategies THEN prefer work on exits over work on entries or fees: trades give back about two thirds of their favourable excursion,
+    while taker costs take about 5% of it'
+  when: directional registered strategies at 1h and 4h (trade = maximal same-sign run)
+  then: prioritise exit design (targets, trailing rules, time-in-trade) and maker execution only second; direction is right on about 38% of trades by gross P&L
+  scope:
+    assets: all
+    horizon: 1h-1w
+    sides: both
+  effect: (costs + exit leakage) / sum MFE 0.70 [0.68, 0.71] in-sample (143k trades), 0.75 [0.69, 0.81] holdout (17k); capture of MFE 35% / 34%; costs 4.8% / 9.1% of MFE (14% / 27% of
+    kept gross); 1h 0.71 / 0.74, 4h 0.67 / 0.77
+  confidence: B
+  evidence:
+  - H-PD4
+  - research/reports/pnl_decomposition_2026-11-11.md
+  review: MFE from bar highs/lows is an upper bound, so leakage is overstated; confirm with a registered exit-rule test before acting
+  status: active
+- id: R-PD-7
+  kind: prefer
+  rule: WHEN ranking registered strategy types for next week THEN prefer a context-conditional ranking (IPCA on regime shares, vol percentile, funding z, trend strength, drawdown) over
+    last-quarter performance; trailing Sharpe ranks have negative information week to week
+  when: weekly cross-strategy ranking on crypto universe L
+  then: don't promote a strategy because its trailing 30-365d Sharpe is high; strategy performance mean-reverts at the weekly horizon; the conditional ranking is weak but positive
+  scope:
+    assets: crypto
+    horizon: 1w
+    sides: both
+  effect: IPCA (K=3, chosen in-sample) IC 0.10 (t 3.2) in-sample, 0.13 (t 1.2, 18 weeks) holdout; trailing-90d Sharpe IC -0.04 (t -1.9) / -0.19 (t -2.3); difference +0.14 (t 3.3, Holm
+    p 0.01) / +0.32 (t 1.8)
+  confidence: C
+  evidence:
+  - H-PD3
+  - research/reports/pnl_decomposition_2026-11-11.md
+  review: holdout IPCA IC > 0 with t > 2 after 52 weeks; K selection among 3 in-sample variants
+  status: provisional
+- id: R-TF-1
+  kind: avoid
+  rule: WHEN a Bybit equity perp has moved more than 1 overnight sigma between the NYSE close and 09:00 ET THEN do not fade the move at the cash open, neither for the first two hours
+    nor toward the previous close
+  when: tradfi_session.abs_overnight_z > 1 and time in [09:00, 11:00] ET on an NYSE session
+  then: no opening fade or gap-fill trades on equity perps
+  scope:
+    assets: TradFi equity perps (TSLA INTC GOOGL AAPL MSTR NVDA MU QQQ SOXL)
+    horizon: 2h to the NYSE close
+    sides: both
+  effect: holdout fade first 2h net -67 bp per trade (-0.52 RU, t -2.5, 246 trades), worse than 99.8% of matched random entries; gap fade to the previous close net -64 bp (t -1.8), worse
+    than 99% of random; reversal of >1 sigma overnight moves -0.22 sigma (t -1.5)
+  confidence: B
+  evidence:
+  - H-TP1
+  - H-TF1
+  - research/reports/tradfi_sessions_2026-11-11.md
+  review: proposed H-TP1b (continuation of >1 sigma overnight moves), forward only
+  status: active
+- id: R-TF-2
+  kind: expect
+  rule: WHEN an equity perp opens more than 1 overnight sigma away from the previous NYSE close THEN expect the previous close to be revisited during the session no more often than a
+    driftless random walk implies (about 22-28% for a typical 1.8 sigma gap)
+  when: tradfi_session.abs_overnight_z > 1 at 09:00 ET
+  then: use calendar.gap_fill_baseline with session sigma for the fill probability; no gap-fill premium
+  scope:
+    assets: TradFi equity perps
+    horizon: intraday (to the NYSE close)
+    sides: both
+  effect: holdout fill rate 22.4% vs reflection baseline 27.8% (z -1.8); vs ex-post realised-vol baseline -1.0 pp (z -0.3)
+  confidence: C
+  evidence:
+  - H-TF1
+  - H-W4
+  review: re-run at 200 holdout sessions
+  status: provisional
+- id: R-TF-3
+  kind: avoid
+  rule: WHEN the first 1h close after the first cash hour breaks that hour's high or low in an equity perp THEN do not trade the opening-range breakout to the close
+  when: 1h close in 10:00-14:00 ET beyond the high/low of the 09:00 ET bar
+  then: no ORB entries on 1h bars
+  scope:
+    assets: TradFi equity perps
+    horizon: intraday (to the NYSE close)
+    sides: both
+  effect: holdout gross +1.1 bp, net -13.9 bp per trade (-0.18 RU, t -2.4, 621 trades); beats matched random entries in only 61% of draws
+  confidence: B
+  evidence:
+  - H-TF3
+  review: '-'
+  status: active
+- id: R-TF-4
+  kind: avoid
+  rule: WHEN the first cash hour of an equity perp (previous close to 10:00 ET) moved strongly THEN do not expect the last hour before the NYSE close to follow it
+  when: time 15:00-16:00 ET on an NYSE session
+  then: no last-hour momentum trades keyed on the first hour
+  scope:
+    assets: TradFi equity perps
+    horizon: 1h (last cash hour)
+    sides: both
+  effect: holdout slope -0.09 (t -0.9), sign agreement 44%; follow strategy net -19 bp per trade (t -4.2), worse than 97% of random; AAPL -0.40 (t -3.4)
+  confidence: B
+  evidence:
+  - H-TF4
+  review: '-'
+  status: active
+- id: R-TF-5
+  kind: expect
+  rule: WHEN choosing between holding an equity perp overnight (NYSE close to open) or intraday THEN expect no night premium; the overnight and intraday legs earn the same on Bybit perps
+  when: holding-period choice for TradFi equity perps
+  then: no overnight-only or intraday-only tilt
+  scope:
+    assets: TradFi equity perps
+    horizon: 1 day
+    sides: long
+  effect: holdout overnight minus intraday +3 bp per day (t 0.14, 93 dates); long-overnight net -29 bp vs long-intraday -32 bp per day; in-sample +96 bp (t 1.5, 16 dates only)
+  confidence: C
+  evidence:
+  - H-TF2
+  review: re-run at 200 holdout sessions
+  status: provisional
+- id: R-TF-6
+  kind: avoid
+  rule: WHEN a commodity perp (CL BZ XAU XAG) moves between the Sunday CME reopen (18:00 ET) and Monday 07:00 UTC THEN do not expect that move to continue into the Monday Europe morning
+    (07:00-12:00 UTC)
+  when: Monday 07:00 UTC after a weekend
+  then: no continuation entries keyed on the Sunday-night move; oil leans to slight reversal
+  scope:
+    assets: CLUSDT BZUSDT XAUUSDT XAGUSDT
+    horizon: 5h
+    sides: both
+  effect: holdout continuation -0.13 sigma (t -0.9, 19 weekends), CL -0.35 sigma, BZ -0.29 sigma; follow strategy net -32 bp (t -2.0)
+  confidence: C
+  evidence:
+  - H-TF5
+  review: re-run at 40 holdout weekends
+  status: provisional
+- id: R-TF-7
+  kind: expect
+  rule: WHEN outside NYSE hours THEN expect Bybit equity perps to keep trading (about 0.25-0.5x regular-hours turnover and 0.4-0.65x the hourly abs return overnight, about 0.1-0.15x
+    turnover and 0.25-0.33x abs return at weekends) and the 09:00 ET bar to carry 1.7-2.5x the regular-hours abs return; weekends are quiet, not frozen, and the index moves too
+  when: calendar.nyse_open == false
+  then: treat overnight and weekend moves as traded price discovery (no gap at the open); keep risk sigma unshrunk across the 09:00 ET bar
+  scope:
+    assets: TradFi equity perps
+    horizon: 1h
+    sides: both
+  effect: 9 equity perps, Apr-Nov 2026, last and index 1h bars; basis to index about 5 bp at all hours
+  confidence: B
+  evidence:
+  - H-TP1
+  - research/reports/tradfi_sessions_2026-11-11.md
+  review: qualifies BELIEFS P5 / R-PX-9 wording ("freeze")
+  status: active
+- id: R-VOL-26
+  kind: prefer
+  rule: WHEN forecasting next-hour variance for quoting or intraday expectations THEN multiply the robust per-bar sigma squared by the expanding hour-of-week factor (features.seasonality.seasonal_factor)
+  when: horizon <= a few hours; central expectation or quote width
+  then: sigma_1h_expected = sigma_risk_next * sqrt(f_how), f_how known at the bar open; stops across weekends still follow R-VOL-2
+  scope:
+    assets: crypto perps (universe L) and TradFi perps (universe T)
+    horizon: 1h
+    sides: both
+  effect: next-hour QLIKE -0.040 (t -8.1) in-sample / -0.076 (t -4.5) holdout for crypto; -0.29 (t -9.5) / -0.38 (t -15.8) for TradFi perps; crypto gain mostly from weekday intraday
+    shape
+  confidence: A
+  evidence:
+  - H-NS4
+  review: a holdout quarter where the expanding factor no longer lowers 1h QLIKE (t > -2), or a quoting replay (H-NS7) showing no markout gain
+  status: active
+- id: R-VOL-27
+  kind: expect
+  rule: WHEN it is Sunday 22:00 to Monday 02:00 UTC or the US cash open hours (13:00-16:00 UTC) THEN expect hourly variance well above the weekly average, and WHEN it is Saturday 03:00-11:00
+    UTC THEN expect it well below
+  when: hour of week in the loud or quiet set of the current profile
+  then: crypto about 1.75-2.1x the average hour at the Sunday reopen and the US open, about 0.6x on Saturday mornings; TradFi perps about 3.3-3.6x at Monday 13 UTC and the Sunday reopen,
+    about 0.5x on Saturdays
+  scope:
+    assets: crypto perps and TradFi perps
+    horizon: 1h
+    sides: both
+  effect: profile known at 2026-11-10 from the H-NS4 model (expanding, all history)
+  confidence: B
+  evidence:
+  - H-NS4
+  review: refresh the profile monthly; demote if the top or bottom hours change set
+  status: active
+- id: R-AVOID-4
+  kind: avoid
+  rule: WHEN tempted to tilt direction by trading session (Asia, Europe, US, late UTC) THEN do not; session means are equal and the ranking flips out of sample
+  when: any session-of-day directional tilt
+  then: no session tilt
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1h-8h
+    sides: both
+  effect: in-sample F 1.86 (p 0.13); rank correlation in-sample vs holdout -0.40; tilt net -0.35 R/day in-sample, -0.89 R/day (t -3.1) holdout
+  confidence: A
+  evidence:
+  - H-NS3
+  review: none planned
+  status: active
+- id: R-PX-12
+  kind: avoid
+  rule: WHEN the QQQ perp makes a large move in the first NYSE hour THEN do not expect BTC or ETH to follow over the next 3 hours; the co-move is same-hour only
+  when: bar containing 09:30 ET on NYSE days
+  then: no directional follow-through trade on BTC/ETH from the QQQ open hour
+  scope:
+    assets: BTCUSDT, ETHUSDT
+    horizon: 3h
+    sides: both
+  effect: pooled slope -0.05 (t -0.63, 108 days); same-hour beta 0.29 (t 3.2)
+  confidence: C
+  evidence:
+  - H-NS5
+  review: re-run with >= 250 open days
+  status: provisional
+- id: R-CARRY-2
+  kind: avoid
+  rule: WHEN a funding settlement is about an hour away THEN do not expect price to lean against funding into it or rebound after it beyond the generic hourly funding drift
+  when: 1h before or after a 00/08/16 UTC settlement
+  then: no settlement-timed directional trade
+  scope:
+    assets: crypto perps (universe L, 8h funding)
+    horizon: 1h
+    sides: both
+  effect: pre b -0.010 (t -1.4), post +0.006 (t 0.7) in-sample; mid-interval placebo pre b -0.020 (t -2.4); 0.01 sigma per unit x is far below 7.5 bp costs
+  confidence: B
+  evidence:
+  - H-NS1
+  review: a holdout year with post b > 0 at t > 2 and a null placebo
+  status: active
+- id: R-VOL-28
+  kind: expect
+  rule: WHEN a weekly Deribit Friday 08:00 UTC expiry approaches THEN do not expect pinned (lower) realised vol into it or a release after it in BTC or ETH
+  when: Thu 08:00 to Sat 08:00 UTC
+  then: use the ordinary vol forecast; a monthly-expiry pre-window compression is under forward test (draft H-NS6)
+  scope:
+    assets: BTCUSDT, ETHUSDT
+    horizon: 24h
+    sides: both
+  effect: d_pre -0.007 (t -0.2), d_post -0.20 (t -4.2) in-sample; holdout +0.11 / -0.31 (19 weeks)
+  confidence: B
+  evidence:
+  - H-NS2
+  review: H-NS6 forward result after 12 monthly expiries
+  status: active
+- id: R-SYN-1
+  kind: avoid
+  rule: WHEN choosing trend-zoo or Donchian-breakout parameters per symbol THEN don't expect selection on block-bootstrap or regime-resampled paths (median or 10th-percentile Sharpe)
+    to beat a fixed or random choice in the holdout
+  when: per-symbol parameter choice among the 21 zoo variants or an 8-point Donchian grid at 4h, using paths resampled from in-sample 1h bars
+  then: use fixed pre-registered parameters or the equal-weight ensemble; treat generated-path rankings as a smoothed copy of the in-sample ranking (rank corr 0.6), not new evidence
+  scope:
+    assets: crypto
+    horizon: 4h-1d bars, multi-week holding
+    sides: both
+  effect: degradation reduction -0.59 Sharpe = the random-pick null (-0.59, CI [-0.90, -0.31]); not seed-robust (-0.41, -0.34, CIs cover 0); q10 pick vs champion holdout +0.18 [-0.53,
+    +0.91], sign flips across seeds
+  confidence: C
+  evidence:
+  - H-SYN1
+  - H-SYN2
+  - research/reports/synthetic_robustness_2026-11-11.md
+  review: a generated-path selection that beats the random-pick null with a CI excluding 0 after >= 12 holdout months
+  status: provisional
+- id: R-SYN-2
+  kind: expect
+  rule: WHEN a per-symbol trend or breakout champion is picked from its in-sample record THEN expect a coin-flip chance that it is overfit (PBO about 0.45 for the zoo, 0.65 for breakouts)
+    and a loss of about 1.1 Sharpe out of sample
+  when: best-in-sample variant per symbol among the trend zoo (21) or the Donchian grid (8), 4h bars
+  then: zoo champion in-sample +0.76 vs holdout -0.37; the breakout champion (often a 5-10 day channel) does worse in the holdout than a random grid point; don't promote a per-symbol
+    champion
+  scope:
+    assets: crypto
+    horizon: 4h-1d bars
+    sides: both
+  effect: PBO (CSCV S=16) median 0.44 zoo / 0.65 breakout; random pick beats the breakout champion by +0.38 Sharpe (CI [+0.04, +0.69]) in the holdout
+  confidence: B
+  evidence:
+  - H-SYN1
+  - H-TR2
+  - research/reports/synthetic_robustness_2026-11-11.md
+  review: holdout champion Sharpe within 0.2 of in-sample over 12 months, or PBO < 0.2 on a refreshed in-sample window
+  status: active
+- id: R-SYN-3
+  kind: prefer
+  rule: WHEN generating synthetic crypto price paths for robustness checks of deterministic rules THEN prefer a stationary block bootstrap of whole 1h relative-OHLC bars with a Politis-White
+    block on |r| (about 3-4 weeks), and don't use cell-by-cell v0 regime resampling, which destroys vol clustering beyond about half a day
+  when: building generated paths for parameter or stress checks (never for the LLM layer)
+  then: SBB reproduces 1h/4h kurtosis (0.96x/1.02x), |r| ACF to 24h (0.94x) and v0 episode durations (1.02x); expect it to understate clustering at one week (0.72x)
+  scope:
+    assets: crypto
+    horizon: 1h-1w
+    sides: both
+  effect: 'regime-switching resampler: |r| ACF 24h 0.24x, 168h 0x real; real value inside the generated 5-95% band for 0% of symbols'
+  confidence: B
+  evidence:
+  - H-SYN1
+  - research/reports/synthetic_robustness_2026-11-11.md
+  review: a vol-level-matched regime resampler (new hypothesis id) that reproduces |r| ACF at 24h and 168h
+  status: active
+- id: R-SIM-1
+  kind: expect
+  rule: WHEN estimating whether a resting post-only quote at the venue minimum quantity gets filled THEN expect a fill on almost every 3 s candle that trades strictly through its price
+    and on only about 45% of candles that just touch it
+  when: passive quote at the minimum quantity on a Bybit linear perp; 3 s candle low <= bid (high >= ask)
+  then: fill probability per candle ~1 for a strict trade-through, ~0.45 for a touch (queue position); never assume every touch fills
+  scope:
+    assets: crypto and TradFi perps quoted by atx mm
+    horizon: 3s-5m
+    sides: both
+  effect: touch model predicts 1.02% held-out fill rate vs 0.90% observed (CI 0.37-1.48%); every-touch-fills predicts 1.67%
+  confidence: C
+  evidence:
+  - H-SIM1
+  - research/reports/simulator_2026-11-11.md
+  review: '>= 150 held-out live fills, or raw trades + book deltas allowing a queue-position model'
+  status: provisional
+- id: R-SIM-2
+  kind: expect
+  rule: WHEN a crypto perp (major or alt) has just moved over the last 3 s to 1 min THEN expect aggressive flow to keep following that move (momentum takers), so a resting quote on the
+    side the price moved toward is the one likely to be hit next
+  when: sign of the last 3 s - 1 min mid return on BTC/ETH/SOL/XRP/BNB/DOGE or alts
+  then: expect signed taker flow in the same direction over the next 3 s - 1 min; treat fills on that side as adverse-selection prone
+  scope:
+    assets: crypto
+    horizon: 3s-1m
+    sides: both
+  effect: momentum coefficient > 0 on 92% of major and 86% of alt symbol-days (3 s); TradFi perps only 58%
+  confidence: C
+  evidence:
+  - H-SIM3
+  - research/reports/simulator_2026-11-11.md
+  review: a month of flow_3s with the sign share staying >= 80% for majors and alts
+  status: provisional
+- id: R-SIM-3
+  kind: expect
+  rule: WHEN the top-of-book depth within 5 bp is imbalanced THEN expect the next aggressive flow to hit the DEEPER side (sell into a deep bid, buy a deep ask), not to chase the imbalance
+  when: obi_5 = (bid - ask) / (bid + ask) depth within 5 bp, latest 3 s candle
+  then: do not read book imbalance as a signal of taker direction; positive obi_5 precedes net taker selling
+  scope:
+    assets: all
+    horizon: 3s
+    sides: both
+  effect: obi coefficient < 0 on 70% of 358 symbol-days (all classes, 3 s); t < -2 on about a quarter
+  confidence: C
+  evidence:
+  - H-SIM3
+  - research/reports/simulator_2026-11-11.md
+  review: event-time estimates on raw book deltas; a month of flow_3s keeping the negative sign on >= 70% of symbol-days
+  status: provisional
+- id: R-SIM-4
+  kind: avoid
+  rule: WHEN carrying flow reaction functions or quoting calibrations from one market to another THEN avoid assuming one universal coefficient after scaling by sigma, depth and median
+    trade notional; use the target market's own estimates or its class median with the class dispersion
+  when: transferring simulator or quoting parameters across symbols
+  then: re-estimate per symbol (or per class with the IQR as uncertainty); signs transfer within crypto, magnitudes do not
+  scope:
+    assets: all
+    horizon: 3s-1m
+    sides: both
+  effect: Wald test of equal scaled coefficients rejects in every class (p < 1e-5); within-class IQRs span a factor of 2-10
+  confidence: C
+  evidence:
+  - H-SIM3
+  - research/reports/simulator_2026-11-11.md
+  review: a longer sample where the within-class equality is not rejected for >= 2 classes
+  status: provisional
+- id: R-SIM-5
+  kind: avoid
+  rule: WHEN choosing market-making parameters THEN avoid ranking them on paths from the v0 flow generator; rank them on replays of real 3 s paths with the calibrated fill model
+  when: parameter search for atx mm (offsets, take-profit, requote threshold)
+  then: use real-path replay (sim/replay.py) for rankings until a generator passes H-SIM2 and H-SIM4
+  scope:
+    assets: all
+    horizon: 1d
+    sides: both
+  effect: generator failed H-SIM2 (alt 0/5, TradFi 2/5 facts) and its ranking agreement with replay is Spearman -0.09 (CI -0.73 to 0.44)
+  confidence: C
+  evidence:
+  - H-SIM2
+  - H-SIM4
+  - research/reports/simulator_2026-11-11.md
+  review: a v1 generator (event-level data) that passes H-SIM2 in all classes and reaches Spearman > 0.5 with CI excluding 0
+  status: provisional
+- id: R-SIM-6
+  kind: expect
+  rule: WHEN recent 1-minute volatility on a perp is high THEN expect more aggressive prints in the next seconds and therefore more fills (and more trade-throughs) on resting quotes
+  when: mean |3 s return| over the last minute above its usual level
+  then: expect trade intensity to rise; quotes left at the same sigma distance will be reached more often
+  scope:
+    assets: all
+    horizon: 3s-1m
+    sides: both
+  effect: intensity on recent vol > 0 on 88% of symbol-days (t > 2 on about 60%), all classes
+  confidence: C
+  evidence:
+  - H-SIM3
+  - research/reports/simulator_2026-11-11.md
+  review: a month of flow_3s
+  status: provisional
+- id: R-SIM-7
+  kind: expect
+  rule: WHEN replaying the atx mm quoter on real 3 s paths of a sell-off day THEN expect net results per turnover to depend mostly on the quote distances, with the best grid set (a0.2_b0.9_tp0.9_rq0.15)
+    at 14.2 bp of turnover vs 7.5 bp for the live mm_multi settings
+  when: real-path replay, 2026-11-10, 50 mm_multi symbols, minimum order quantities
+  then: treat the replay ranking as one day's evidence; confirm any change with paired live variants before adopting it
+  scope:
+    assets: all
+    horizon: 1d
+    sides: both
+  effect: best set 14.2 bp (3.84 USD on 2702 USD turnover); live settings 7.5 bp
+  confidence: C
+  evidence:
+  - H-SIM4
+  - research/reports/simulator_2026-11-11.md
+  review: replays on >= 10 more days and paired live variants
+  status: provisional
+- id: R-MS-1
+  kind: expect
+  rule: 'WHEN reasoning about or simulating aggressive trade arrivals on a Bybit perp THEN expect bursts, not a Poisson stream: durations have a coefficient of variation of about 2 and
+    roughly a quarter to a third of order gaps are a few milliseconds'
+  when: inter-arrival times of taker orders (same-ms same-side prints merged)
+  then: use a 3-component exponential mixture or Burr XII marginal with a slowly moving intensity; never an exponential law
+  scope:
+    assets: all
+    horizon: 1ms-1m
+    sides: both
+  effect: exponential rejected 51/51 (median KS 0.33); mixture or Burr XII best held-out for 37/51; burst component weight 0.24-0.32 at ~5 ms
+  confidence: C
+  evidence:
+  - H-MS1
+  review: a week of trades_raw with the same winners in >= 80% of symbol-days
+  status: provisional
+- id: R-MS-2
+  kind: avoid
+  rule: WHEN building a duration model for a generator or a fill-timing estimate THEN avoid relying on ACD(1,1) alone to remove clustering; its residuals keep most of the non-exponential
+    shape
+  when: conditional duration modelling, event time
+  then: add a burst / self-exciting component or draw innovations from the fitted mixture; check residual KS
+  scope:
+    assets: all
+    horizon: 1ms-1m
+    sides: both
+  effect: residual KS / raw KS median 0.78; halved for 2/51 symbols; ACD persistence ~1 (integrated); second-moment factor >= 1 for 51/51 Weibull fits, so they are filters, not generators
+  confidence: C
+  evidence:
+  - H-MS1
+  review: a Hawkes or mixture-innovation ACD that halves the KS on >= 80% of symbols out of sample
+  status: provisional
+- id: R-MS-3
+  kind: expect
+  rule: WHEN taker orders have been mostly on one side THEN expect the next orders to stay on that side more often than not, with memory decaying slowly (power law) over hundreds of
+    orders
+  when: order-level trade signs (prints of one order merged)
+  then: 'treat order flow as persistent in event time: lag-1 sign autocorrelation about 0.35, still 0.01-0.05 at lag 100; longest memory in TradFi perps'
+  scope:
+    assets: all
+    horizon: 1-1000 orders
+    sides: both
+  effect: power law beats exponential held-out for 48/48; gamma 0.64 majors, 0.74 alts, 0.45 TradFi; 1 s signed-flow Hurst 0.53 (CI 0.52-0.54)
+  confidence: C
+  evidence:
+  - H-MS3
+  review: a week of trades_raw; gamma in (0, 1) for >= 80% of symbol-days
+  status: provisional
+- id: R-MS-4
+  kind: avoid
+  rule: WHEN counting prints as trades (signs, durations, sizes) THEN avoid treating same-millisecond same-side prints as separate orders
+  when: any statistic built from Bybit public trades
+  then: merge same-ms same-side prints into one order first; print-level sign autocorrelation and zero durations are artefacts of matching against several makers
+  scope:
+    assets: all
+    horizon: tick
+    sides: both
+  effect: 1.9-4.0 prints per order; print-level sign ACF(1) 0.70-0.84 vs 0.33-0.39 for orders
+  confidence: C
+  evidence:
+  - H-MS1
+  - H-MS3
+  review: confirm on another venue or day
+  status: provisional
+- id: R-MS-5
+  kind: avoid
+  rule: WHEN modelling the tail of trade or order notional THEN avoid a pure Pareto with a universal exponent; prefer a log-normal body spliced to a heavy tail fitted per symbol, with
+    the tail index treated as uncertain
+  when: size distributions for simulation, impact or liquidation scenarios
+  then: use the per-symbol size_law; expect tail index 1.3-1.8 (prints) and about 1.1-1.5 (orders) but not stable between half-days
+  scope:
+    assets: all
+    horizon: tick
+    sides: both
+  effect: CSN rejects the power law for 45/51; Vuong never prefers it to a log-normal (0/51); FIT-TEST Spearman of zeta 0.27
+  confidence: C
+  evidence:
+  - H-MS2
+  review: multi-day tails with a stable index (Spearman > 0.7 between days)
+  status: provisional
+- id: R-MS-6
+  kind: expect
+  rule: WHEN traded volume in a 10 s or 1 min interval is high THEN expect the absolute return in the same interval to be large and the elevated volume to persist for several intervals
+  when: notional volume per clock bin
+  then: read volume bursts as volatility bursts; quote distances based on calm-period volume are too tight during them
+  scope:
+    assets: all
+    horizon: 10s-1h
+    sides: both
+  effect: Spearman(volume, |return|) 0.40-0.55, positive for 51/51; lag-1 ACF of log volume 0.35-0.64; log-normal beats gamma for 49-51/51
+  confidence: C
+  evidence:
+  - H-MS4
+  review: a week of trades_raw
+  status: provisional
+- id: R-MS-7
+  kind: prefer
+  rule: WHEN predicting the time to the next trade on BTC, ETH, SOL, XRP or DOGE THEN prefer the gradient-boosted AFT model (recent trade counts, last durations, prints in the last order)
+    over ACD; for alts and TradFi perps keep the ACD
+  when: next-arrival density, e.g. fill-timing or quote-refresh logic
+  then: use data/models/microstructure_laws/aft_2026-11-10/<SYM>.json for majors only
+  scope:
+    assets:
+    - BTCUSDT
+    - ETHUSDT
+    - SOLUSDT
+    - XRPUSDT
+    - DOGEUSDT
+    horizon: 1ms-1m
+    sides: both
+  effect: +0.071 nats per duration [0.063, 0.078] for majors; alts -0.012 [-0.030, 0.012]; TradFi -0.027 [-0.034, -0.019]
+  confidence: C
+  evidence:
+  - H-MS9
+  review: refit on several days; the majors gain must survive a day-ahead test
+  status: provisional
+- id: R-MS-11
+  kind: expect
+  rule: WHEN a perp's spread sits at one tick most of the time (BTC, ETH, SOL, XRP, DOGE, HYPE, ATOM, XAU on Bybit) THEN do not read its relative spread as a volatility signal; forecast
+    short-horizon vol from past RV and the hour-of-week factor
+  when: 1-tick share of the 100 ms book > 95%
+  then: vol forecast and quote width from RV (last 5 / 60 min) and the hour-of-week profile; spread ignored as an input
+  scope:
+    assets: tick-bound crypto majors and XAU perps
+    horizon: 5-15 min
+    sides: both
+  effect: pooled TEST coef of log spread -0.17 (t -1.6) / -0.32 (t -3.0), OOS R^2 gain -0.0016 / -0.0014; past RV gives OOS R^2 0.70-0.75
+  confidence: C
+  evidence:
+  - H-MS5
+  review: re-run on >= 10 days of ob200 books; a free-spread subset (CARV, KAS, NVDA) is the open lead
+  status: provisional
+- id: R-MS-12
+  kind: avoid
+  rule: WHEN ETH, SOL or BTC moves THEN do not expect a sub-minute follow-through in other crypto tokens to trade on; prices move together within about 20 ms, and 1 s Granger leads are
+    stale last-trade prices
+  when: any move in a crypto major
+  then: no lead-lag entry or exit timed off a major's tick in another token; treat the move as a common shock
+  scope:
+    assets: Bybit crypto perps (40 tokens of the pilot)
+    horizon: 0.1-60 s
+    sides: both
+  effect: HY peak at lag 0 for 38/39 (ETH) and 36/39 (SOL) targets, 0/39 positive peaks; fine-lag maximum within +-20 ms; mid-quote peaks 0-0.1 s
+  confidence: C
+  evidence:
+  - H-MS6
+  - H-OF5
+  review: re-run on more days of trades and books; a lag > 100 ms on >= 3 days would revive it
+  status: provisional
+- id: R-MS-13
+  kind: expect
+  rule: WHEN realised vol jumps in ETH, SOL or DOGE THEN expect the vol of the other crypto tokens to rise with it over the next minutes, and widen or pause quotes on the whole crypto
+    book together rather than symbol by symbol
+  when: 1 m RV of ETH, SOL or DOGE well above its recent level
+  then: crypto-wide quote widening or pause; alts (INJ, ARB, ZEC) are the receivers
+  scope:
+    assets: Bybit crypto perps
+    horizon: 1-10 min
+    sides: both
+  effect: DY net connectedness on TEST ETH +25.0 [13.1, 33.3], SOL +21.6 [10.9, 31.4], DOGE +27.0; total 88% (TEST) vs 67% (FIT)
+  confidence: C
+  evidence:
+  - H-MS6
+  review: rolling DY on >= 10 days; check that the transmitter ranking persists outside news days
+  status: provisional
+- id: R-MS-14
+  kind: prefer
+  rule: WHEN modelling fills or markouts from ob200 books THEN use the trade records for the touch a trade met, not the last 100 ms book push
+  when: simulator or replay built on the 100 ms book series
+  then: trades define executed prices; the 100 ms book defines depth and quote context only
+  scope:
+    assets: all ob200 symbols
+    horizon: sub-second
+    sides: both
+  effect: 11-64% of trades are outside the pre-trade 100 ms [bid1, ask1]; 1-19% outside the before-or-after union; 81-94% of those are sweeps
+  confidence: C
+  evidence:
+  - H-MS5
+  review: compare with a tick-by-tick (ob50 / ob1) feed when one is recorded
+  status: provisional
+- id: R-SIM-10
+  kind: expect
+  rule: 'WHEN estimating the order arrival rate, book depth or price impact of a Bybit perp that has not been recorded THEN expect them to follow trading activity W (sigma_day x dollar
+    volume): rate ~ W^0.54, depth within 25 bp ~ W^0.68, lambda / sigma^2 ~ W^-0.75, with about a 1.3x typical error'
+  when: instrument with known daily volatility and dollar volume, no trade or book history
+  then: use sim.population.Population.params_for(W, class, tick) for the rate, depth and impact level; treat them as +-30% estimates
+  scope:
+    assets: all
+    horizon: 1s-1d
+    sides: both
+  effect: LOO R^2 rate 0.85, impact 0.64, depth 0.66 over 51 perps; LOO median error rate x1.29, 1-min sigma x1.23
+  confidence: C
+  evidence:
+  - H-MS7
+  review: refit on >= 5 pilot days; LOO R^2 > 0.5 for rate and impact on each day
+  status: provisional
+- id: R-SIM-11
+  kind: avoid
+  rule: WHEN simulating order-sign memory or the order-size tail for a specific perp THEN avoid a universal gamma or tail index; use that perp's own estimates, and the class median only
+    as a wide prior
+  when: building or transferring a flow generator
+  then: measure gamma and the order size tail index per symbol (C1 params); class medians carry an uncertainty of about +-0.2 (gamma) and +-0.3 (tail index)
+  scope:
+    assets: all
+    horizon: 1-1000 orders
+    sides: both
+  effect: between-symbol dispersion 4.9x (gamma) and 2.4x (tail index) the FIT-vs-TEST noise; neither predicted by W or class (LOO R^2 0.19, -0.16)
+  confidence: C
+  evidence:
+  - H-MS7
+  - H-MS2
+  - H-MS3
+  review: 'multi-day panel: D against day-to-day variance'
+  status: provisional
+- id: R-SIM-12
+  kind: prefer
+  rule: WHEN predicting the quoted spread of a perp THEN prefer the tick size first (most perps sit at one tick) and, for free-spread perps, a model in log W and log tick; avoid predicting
+    it from activity alone
+  when: spread input for a simulator, a cost model or quote widths of a new symbol
+  then: spread = about one tick when the tick is large relative to the natural spread; otherwise log spread ~ -0.19 log W + 1.06 log tick
+  scope:
+    assets: all
+    horizon: tick
+    sides: both
+  effect: spread on log W and class LOO R^2 0.28; free-spread level on log W and log tick LOO R^2 0.85 (12 symbols); 39 of 51 perps tick-bound
+  confidence: C
+  evidence:
+  - H-MS7
+  - H-MS5
+  review: book data for all quoted symbols on >= 5 days
+  status: provisional
+- id: R-SIM-13
+  kind: prefer
+  rule: WHEN testing a deterministic execution or quoting rule on generated order flow THEN prefer the event-level generator v1 over v0, and use it for activity questions (fills, turnover,
+    inventory) rather than for net P&L rankings
+  when: synthetic flow for sim.replay or strategy research (never for the LLM layer)
+  then: sim.flow_sim_v1 paths; rank parameter sets by fills / turnover on v1, confirm P&L on real replays
+  scope:
+    assets: all
+    horizon: 3s-1d
+    sides: both
+  effect: 'TEST facts inside: v1 3-4/5 vs v0 0-2/5 per class; replay rank agreement with real: turnover 0.995, net bp 0.30 (v0 -0.09)'
+  confidence: C
+  evidence:
+  - H-MS8
+  - H-SIM2
+  - H-SIM4
+  - H-MD6
+  review: 'retired 2026-11-12: its multi-day test H-MD6 was contradicted (majors never reach 4/5 facts)'
+  status: retired
+- id: R-SIM-14
+  kind: avoid
+  rule: WHEN a generator is calibrated on a quiet session THEN avoid using it to judge behaviour in a news session; its volatility clustering and tails stay at the quiet level, and feeding
+    it the busy session's levels does not fix the shape
+  when: FIT window and target window differ in regime (news, US open, CPI)
+  then: calibrate per session or regime; evaluate news-session rules on real replays
+  scope:
+    assets: all
+    horizon: 3s-1h
+    sides: both
+  effect: alts |r| ACF 0.019 simulated vs 0.088 real on the CPI half; with TEST levels the majors' |r| ACF overshoots (0.136 vs <= 0.118) and alts' kurtosis 14.5 vs <= 12.5
+  confidence: C
+  evidence:
+  - H-MS8
+  - H-MS1
+  review: hour-of-week intensity profile from >= 5 days
+  status: provisional
+- id: R-ML-1
+  kind: prefer
+  rule: WHEN forecasting next-day variance for a crypto perp THEN start from the per-asset log-HAR level and adjust it for the forecast day's weekday before reading any other input
+  when: daily (1d) variance expectation for a universe-L perp
+  then: central forecast = log-HAR x weekday factor (Saturday about 0.6x, Sunday about 0.85x, Monday about 1.3x of the model's average day); risk and stops keep the unshrunk risk sigma
+    (R-VOL-2)
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1d
+    sides: both
+  effect: vol level carries 40-43% of TreeSHAP attribution and ablating it raises QLIKE 75%; calendar ablation +5-8% QLIKE; per-asset log-HAR + weekday dummies -5.5% QLIKE (t -2.9) in-sample,
+    -2.3% (t -0.6) holdout vs plain log-HAR (exploratory)
+  confidence: B
+  evidence:
+  - H-NN1
+  - H-NN3
+  - H-VM5
+  - H-NS4
+  review: register and test log-HAR + weekday as a tool (vol.har_dow); demote if the holdout weekday gain stays insignificant over 2 more months
+  status: active
+- id: R-ML-2
+  kind: expect
+  rule: WHEN vol is already high (v0 high-vol state) THEN expect a smaller weekend discount in next-day variance than in calm markets
+  when: the forecast day is Saturday or Sunday
+  then: weekend gap about -0.39 log points in high vol vs -0.48 in low vol (in-sample), -0.48 vs -0.57 (holdout); do not apply a calm-market weekend discount in a high-vol regime
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1d
+    sides: both
+  effect: TreeSHAP vol_level x calendar is the largest cross-group interaction (5.2% / 4.4% of |phi|), the same direction in both segments
+  confidence: C
+  evidence:
+  - H-NN3
+  review: register a direct test (weekend RV ratio by vol tercile, both segments) before promoting
+  status: provisional
+- id: R-ML-3
+  kind: avoid
+  rule: WHEN forecasting next-day crypto variance THEN don't call jump-variation, semivariance, range-estimator (Parkinson / GK) or raw-return inputs on top of the HAR level; they carry
+    no information a nonlinear model can use either
+  when: daily variance forecast with the HAR level already known
+  then: skip those tools for this target; they remain useful descriptively (for example jumps for stop placement)
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1d
+    sides: both
+  effect: group ablation in MLP and XGB changes QLIKE by -0.7% to +1.5%, none with |t| > 2 in the holdout; TreeSHAP shares 0.5-2%
+  confidence: B
+  evidence:
+  - H-NN1
+  - H-NN3
+  - H-VCL2
+  - H-VM3
+  review: a holdout quarter where any of these groups raises QLIKE by more than 3% (t > 2) when ablated
+  status: active
+- id: R-ML-4
+  kind: prefer
+  rule: WHEN a central next-day variance expectation is needed for a crypto perp and a validated nonlinear tool exists THEN prefer gradient-boosted trees on the 52-feature panel over
+    plain log-HAR, but only for central expectations, never for risk or stops
+  when: next-day expectation (quote widths, target distances); not risk
+  then: use the tree forecast with its in-sample bias correction; fall back to R-ML-1 if the tool is stale (no refit for more than 35 days)
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1d
+    sides: both
+  effect: XGB holdout QLIKE -15.7% vs log-HAR (t -2.4, 22/23 symbols), but in-sample -4.5% (t -1.0) and only -13.7% (t -1.6) vs log-HAR + weekday; the MLP wins in-sample (-8.0%, t -2.9)
+    and not in the holdout
+  confidence: C
+  evidence:
+  - H-NN1
+  review: forward test against log-HAR + weekday for 3 months after the tool exists; demote if QLIKE gain < 3% or t > -2
+  status: provisional
+- id: R-ML-5
+  kind: avoid
+  rule: WHEN looking for next-day direction THEN don't call a neural network or boosted-tree model on standard price, vol, regime, funding or calendar features; nonlinear capacity doesn't
+    create a signal that linear models miss
+  when: next-24h direction for crypto perps
+  then: treat the direction as a coin flip; any direction view must come from a separately validated, registered signal
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1d
+    sides: both
+  effect: Brier skill in-sample MLP -0.0024 [-0.0072, 0.0021], XGB -0.0016 [-0.0055, 0.0022]; holdout +0.0054 / +0.0018 with CIs including 0; models stop after about 1.5 epochs / 24
+    trees; tree and network attributions disagree (Spearman 0.22 holdout)
+  confidence: B
+  evidence:
+  - H-NN2
+  - H-IC1
+  review: a pre-registered nonlinear direction model with holdout Brier skill CI lower bound > 0
+  status: active
+- id: R-ML-6
+  kind: prefer
+  rule: WHEN explaining a model-based volatility forecast to the decision layer THEN cite grouped TreeSHAP attributions (vol level, calendar, context) rather than hidden-unit or dictionary
+    features of a neural network
+  when: a nonlinear vol forecast is shown with an explanation
+  then: report the vol-level, weekday and context contributions in log-RV units; don't name network features
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1d
+    sides: both
+  effect: SAE on the MLP's last layer, only 1/10 most-used features tie to a named state (|rho| > 0.6), top-3 ablation +0.09 QLIKE (t 1.3, holdout); TreeSHAP groups are stable across
+    segments (top-5 pairs 5/5) and agree with integrated gradients (Spearman 0.75)
+  confidence: B
+  evidence:
+  - H-NN4
+  - H-NN3
+  review: an SAE on a wider or multi-day micro model (H-NN5) that does yield >= 6/10 named features
+  status: active
+- id: R-ML-7
+  kind: prefer
+  rule: WHEN a central next-hour variance expectation is needed for a crypto perp and a validated hourly ML tool exists THEN prefer it over robust_bc x the hour-of-week factor, for expectations
+    only, never for stops
+  when: horizon 1h, quoting or intraday expectations
+  then: use the hourly model (features of ml.hourly) with its in-sample bias; fall back to R-VOL-26 if it is stale
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1h
+    sides: both
+  effect: 'next-hour QLIKE diff vs champion: XGB -0.04045 (t -5.11) in-sample / -0.06493 (t -2.65) holdout; MLP -0.03617 (t -4.82) / -0.06455 (t -2.94)'
+  confidence: C
+  evidence:
+  - H-NN8
+  - H-NS4
+  review: forward test for 1 month against R-VOL-26 before use; demote if the forward QLIKE gain is not significant
+  status: provisional
+- id: R-ML-8
+  kind: expect
+  rule: WHEN considering a wider neural network for the daily crypto vol forecast THEN don't expect extra capacity to improve it; the forecast is limited by information (vol level, weekday),
+    not by network width
+  when: choosing or retraining a daily vol model
+  then: keep small networks or trees; spend effort on inputs and validation, not width
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1d
+    sides: both
+  effect: 64-unit vs 16-unit last layer, daily QLIKE -0.0002 (t -0.08) in-sample, -0.0022 (t -0.77) holdout
+  confidence: B
+  evidence:
+  - H-NN9
+  - H-NN1
+  review: a wider model with a QLIKE gain at t < -2 in both segments
+  status: active
+- id: R-ML-9
+  kind: avoid
+  rule: WHEN explaining a daily vol forecast THEN don't cite sparse-autoencoder features of the network, even of a wider one; they are not stable named concepts. Use grouped TreeSHAP
+    (R-ML-6)
+  when: a model-based vol forecast is shown with an explanation
+  then: grouped TreeSHAP (vol level, calendar, context) in log-RV units
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1d
+    sides: both
+  effect: '64-unit layer, SAE dictionary 128: 0/10 features named on holdout (16-unit H-NN4: 1/10); top-3 ablation +0.0015 QLIKE (t 0.10)'
+  confidence: B
+  evidence:
+  - H-NN9
+  - H-NN4
+  review: an SAE on a model with more concepts in play (micro data, H-NN5) that yields >= 6/10 named features
+  status: active
+- id: R-ML-10
+  kind: prefer
+  rule: WHEN forming a next-hour variance expectation for a crypto perp THEN adjust the robust sigma x hour-of-week forecast for the last 1-6 hours of absolute returns and the daily
+    HAR level; ignore funding-hour and jump flags for this purpose
+  when: horizon 1h, central expectation or quote width; not stops
+  then: recent |returns| above the robust sigma and a daily HAR level above 24 x sigma^2 both point to a higher next-hour variance than the champion gives
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1h
+    sides: both
+  effect: group ablation in the hourly XGB raises QLIKE by +0.0327 (t 4.8) / +0.0669 (t 1.8) for recent returns and +0.0216 (t 8.0) / +0.0280 (t 3.2) for the daily HAR level (in-sample
+    / holdout); funding-hour and jump groups |t| < 2; linear model on the same inputs -0.02453 (t -4.28) / -0.02869 (t -3.07) vs the champion
+  confidence: B
+  evidence:
+  - H-NN8
+  - H-NS4
+  - H-S4
+  review: build vol.hourly_x (linear first, R-ML-7 trees second) and forward test for 1 month against R-VOL-26
+  status: active
+- id: R-ML-11
+  kind: prefer
+  rule: WHEN a next-minute variance expectation is needed for quoting THEN use a linear model of 10 / 60 / 300 s activity aggregates (squared returns, prints, orders, range) on top of
+    the trailing variance; a CNN on the raw 1 s path adds only about 1% more, and only for symbols without an L2 book
+  when: horizon 1 minute; quote widths, short-horizon expectations; not stops
+  then: forecast = trailing-1h per-second variance x 60 x exp(linear aggregates); no convolutional model
+  scope:
+    assets: crypto and TradFi perps with >= 10k traded seconds per day
+    horizon: 1m
+    sides: both
+  effect: CNN - linear QLIKE -0.0101 per window (-0.8%), share of symbol-days < 0 69% (n 347), t -6.78; both beat 60 x trailing-1h variance by -0.093 / -0.083
+  confidence: C
+  evidence:
+  - H-NN5
+  review: re-run on >= 20 days (agent A batches); promote to B if the linear gain over the baseline holds in both segments
+  status: provisional
+- id: R-ML-12
+  kind: expect
+  rule: WHEN reading the last 5 minutes of 1 s data for next-minute volatility THEN expect the signal to sit in the activity level of the last 1-5 minutes (la, z, orders), not in signed
+    flow, spread, depth or book imbalance
+  when: short-horizon vol expectation
+  then: scale the next-minute variance with the recent squared returns, order count and volume relative to their trailing-hour norms; ignore flow sign and book state for this target
+  scope:
+    assets: crypto and TradFi perps
+    horizon: 1m
+    sides: both
+  effect: integrated-gradient shares la 34%, z 11%, orders 11%; ablation QLIKE increase la +0.084, z +0.004, orders +0.030
+  confidence: C
+  evidence:
+  - H-NN5
+  - H-MS2
+  review: same attribution on >= 20 days
+  status: provisional
+- id: R-ML-13
+  kind: avoid
+  rule: WHEN looking for next-minute direction THEN don't call a neural network on 1 s order flow, returns, volume or book state; it does not forecast the sign usefully
+  when: horizon 1 minute; entries, exits, quote skew
+  then: treat the next-minute sign as unpredictable from the last 5 minutes of flow; skew only from validated inventory or flow-toxicity rules
+  scope:
+    assets: crypto and TradFi perps
+    horizon: 1m
+    sides: both
+  effect: CNN AUC 0.5051 [0.5037, 0.5065], linear 0.5067; verdict supports / supports / pooled supports
+  confidence: B
+  evidence:
+  - H-NN6
+  - H-MS6
+  - H-OF2
+  review: a registered short-horizon direction model with AUC CI lower bound > 0.52 on new days
+  status: active
+- id: R-DS-1
+  kind: expect
+  rule: WHEN the forecast day is Saturday and the v0 trend state is range or down THEN expect next-day realised variance about 54% below the per-asset log-HAR forecast
+  when: 'daily (1d) variance expectation for a universe-L crypto perp; merged cells of the frozen LAT1 partition (weekday group x vol tercile x v0 direction (36)): Saturday, v0 range
+    or trend down'
+  then: central next-day variance expectation = log-HAR x 0.46; stops and risk keep the unshrunk risk sigma (R-VOL-2)
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1d
+    sides: both
+  effect: next-day RV vs log-HAR (relative to the segment average) -49.3% in-sample (3501 rows, 219 dates, z -13.6), -57.7% holdout (326 rows, 18 dates, z -7.2); cell group defined after
+    the cell table was seen; grade B needs |z| > 2 in both segments and >= 15 holdout dates
+  confidence: C
+  evidence:
+  - H-DS1
+  - H-DS2
+  review: register the merged cell as a forward hypothesis; demote if the effect on dates after 2026-11-12 changes sign or falls below half
+  status: provisional
+- id: R-DS-2
+  kind: expect
+  rule: WHEN the forecast day is Monday THEN expect next-day realised variance about 34% above the per-asset log-HAR forecast
+  when: 'daily (1d) variance expectation for a universe-L crypto perp; merged cells of the frozen LAT1 partition (weekday group x vol tercile x v0 direction (36)): Monday'
+  then: central next-day variance expectation = log-HAR x 1.34; stops and risk keep the unshrunk risk sigma (R-VOL-2)
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1d
+    sides: both
+  effect: next-day RV vs log-HAR (relative to the segment average) +44.8% in-sample (4646 rows, 222 dates, z 9.8), +24.6% holdout (437 rows, 19 dates, z 2.4); cell group defined after
+    the cell table was seen; grade B needs |z| > 2 in both segments and >= 15 holdout dates
+  confidence: C
+  evidence:
+  - H-DS1
+  - H-DS2
+  review: register the merged cell as a forward hypothesis; demote if the effect on dates after 2026-11-12 changes sign or falls below half
+  status: provisional
+- id: R-DS-3
+  kind: expect
+  rule: WHEN the forecast day is Monday, vol is in the top third of its own 1-year range and the v0 trend state is up THEN expect next-day realised variance about 49% above the per-asset
+    log-HAR forecast
+  when: 'daily (1d) variance expectation for a universe-L crypto perp; merged cells of the frozen LAT1 partition (weekday group x vol tercile x v0 direction (36)): Monday, vol in the
+    top third and v0 trend up'
+  then: central next-day variance expectation = log-HAR x 1.49; stops and risk keep the unshrunk risk sigma (R-VOL-2)
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1d
+    sides: both
+  effect: next-day RV vs log-HAR (relative to the segment average) +48.7% in-sample (336 rows, 108 dates, z 6.3), +49.2% holdout (60 rows, 10 dates, z 4.7); cell group defined after
+    the cell table was seen; grade B needs |z| > 2 in both segments and >= 15 holdout dates
+  confidence: C
+  evidence:
+  - H-DS1
+  - H-DS2
+  review: register the merged cell as a forward hypothesis; demote if the effect on dates after 2026-11-12 changes sign or falls below half
+  status: provisional
+- id: R-DS-4
+  kind: expect
+  rule: WHEN the forecast day is Tuesday to Friday and the v0 trend state is up THEN expect next-day realised variance about 24% above the per-asset log-HAR forecast
+  when: 'daily (1d) variance expectation for a universe-L crypto perp; merged cells of the frozen LAT1 partition (weekday group x vol tercile x v0 direction (36)): Tue-Fri, v0 trend
+    up'
+  then: central next-day variance expectation = log-HAR x 1.24; stops and risk keep the unshrunk risk sigma (R-VOL-2)
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1d
+    sides: both
+  effect: next-day RV vs log-HAR (relative to the segment average) +20.4% in-sample (4130 rows, 652 dates, z 6.9), +28.0% holdout (385 rows, 63 dates, z 2.2); cell group defined after
+    the cell table was seen; grade B needs |z| > 2 in both segments and >= 15 holdout dates
+  confidence: C
+  evidence:
+  - H-DS1
+  - H-DS2
+  review: register the merged cell as a forward hypothesis; demote if the effect on dates after 2026-11-12 changes sign or falls below half
+  status: provisional
+- id: R-DS-5
+  kind: prefer
+  rule: WHEN a central next-day variance expectation is needed and no validated nonlinear tool is available THEN apply the LAT1 cell adjustment to the per-asset log-HAR forecast
+  when: daily (1d) variance expectation for a universe-L crypto perp
+  then: forecast = log-HAR x exp(EB-shrunk cell value of the cell table); fall back to plain log-HAR for cells with fewer than 30 training rows
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1d
+    sides: both
+  effect: QLIKE vs log-HAR -6.0% (t -3.01) in-sample, -7.4% (t -2.13) holdout; share of the XGB gain 1.34 / 0.47; H-DS1 inconclusive, H-DS2 rho 0.76
+  confidence: C
+  evidence:
+  - H-DS1
+  - H-DS2
+  review: forward test against log-HAR + weekday and the frozen XGB tool for 3 months; demote if the gain is < 2% or t > -2
+  status: provisional
+- id: R-DS-6
+  kind: avoid
+  rule: WHEN a discrete market state (weekday, vol tercile, trend state, k-means or tree cell) is known THEN don't infer next-day direction from it
+  when: next-24h direction for crypto perps, from any cell table of standard features
+  then: treat direction as a coin flip; cell tables are for variance expectations only
+  scope:
+    assets: crypto perps (universe L)
+    horizon: 1d
+    sides: both
+  effect: 'best in-sample direction cells (KM64): holdout Brier skill 0.0048 [-0.0002, 0.0087]; cell ordering by next-day return Spearman 0.00 between segments; H-DS3 inconclusive'
+  confidence: C
+  evidence:
+  - H-DS3
+  - H-NN2
+  review: a pre-registered direction cell with holdout Brier skill CI lower bound > 0
+  status: provisional
+- id: R-SP-1
+  kind: prefer
+  rule: WHEN preparing next-day volatility context for a crypto perp THEN call the vol-level tool (robust sigma or 7-day mean log RV, with the 30/90-day level as anchor) and the calendar
+    tool (weekend / TradFi-weekend hours of the forecast day) first; other inputs are optional for this target
+  when: a next-day (1d) volatility expectation is needed for a universe-L crypto perp
+  then: 'tools: vol level (robust sigma or lrv_w) + calendar (next_is_weekend, next_wk_hours); jumps, semivariances, range estimators, funding, OI, lags and products may be skipped'
+  scope:
+    assets: crypto universe L
+    horizon: 1d
+    sides: both
+  effect: 'a 95%-pruned MLP (100 of 2192 weights) matches the dense one: QLIKE ratio 0.986 [0.964, 1.007] in-sample, 0.974 [0.943, 1.027] holdout; at 99% only log_sigma and lrv_w survive
+    in > 90% of 168 networks; the vol-level cluster is the only stability-selected concept in both segments (1.00 / 0.99)'
+  confidence: B
+  evidence:
+  - H-SP1
+  - H-SP2
+  - H-NN3
+  review: a holdout quarter in which a 95%-pruned network is worse than the dense one by > 2% QLIKE, or a non-vol-level input becomes stability-selected in both segments
+  status: active
+- id: R-SP-2
+  kind: avoid
+  rule: WHEN reading a vol model's attributions THEN do not treat individual vol-level columns (robust sigma, 7d / 30d / 90d log RV, lagged daily RV) or individual hidden units as distinct
+    signals; they are interchangeable copies of one concept
+  when: explaining or citing why a vol forecast is high or low
+  then: cite 'vol level' and 'calendar' as concepts; do not argue from which vol column or neuron carries the weight
+  scope:
+    assets: crypto universe L
+    horizon: 1d
+    sides: both
+  effect: no single library column reaches stability probability 0.8 in either segment (substitution), while the vol-level cluster does (1.00 / 0.99); single-unit ablations change holdout
+    QLIKE by -5% to +6% while top-3 ablation gives x1.37 (redundant circuit)
+  confidence: B
+  evidence:
+  - H-SP2
+  - H-SP3
+  review: a study in which a single vol-level column dominates the others out of sample
+  status: active
+- id: R-SP-3
+  kind: expect
+  rule: WHEN the forecast day is Fri-Sun and the 7-day vol level is low THEN expect the ML vol forecast to sit below the vol-level baseline (the network's strongest units are calm-weekend
+    dampers); treat this as an expectation, never as a reason to loosen risk
+  when: next_is_weekend == 1 or next_wk_hours > 0, and lrv_w in its lower half
+  then: central sigma expectation below the unscaled level; risk sigma unchanged (R-VOL-2)
+  scope:
+    assets: crypto universe L
+    horizon: 1d
+    sides: both
+  effect: the two highest-attribution surviving units are fitted by lrv_w / lrv_m + weekday with holdout R^2 0.94 / 0.92, fire more on calm Fri-Sun days and lower the forecast
+  confidence: C
+  evidence:
+  - H-SP3
+  - H-NN1
+  - H-W1
+  review: forward weekends where calm-week realised vol is not below the weekday-scaled level
+  status: provisional
+- id: R-SP-4
+  kind: avoid
+  rule: WHEN a tool reports a next-day direction probability from the daily ML features THEN do not use it; pruned or dense, the network has no in-sample skill and its surviving inputs
+    are market-wide date noise
+  when: any next-day direction output of the ML direction networks
+  then: ignore for direction; no tool call for daily direction
+  scope:
+    assets: crypto universe L
+    horizon: 1d
+    sides: both
+  effect: Brier skill in-sample -0.0024 dense to -0.0004 at 99% sparsity, all CIs include 0; holdout +0.003 to +0.012 on 133 dates over 23 rounds looked at (not a lead)
+  confidence: B
+  evidence:
+  - H-NN2
+  - H-SP1
+  review: forward direction skill > 0.005 with CI lower > 0 over >= 120 days
+  status: active
+- id: R-ML-20
+  kind: prefer
+  rule: WHEN a central next-hour variance expectation is needed for a Bybit TradFi perp and a validated hourly ML tool exists THEN prefer it (H-NN8 inputs plus cash/CME session flags)
+    over robust_bc x the hour-of-week factor, for expectations only, never for stops
+  when: horizon 1h, TradFi perps (equities, ETFs, commodities, gold tokens), quoting or intraday expectations
+  then: use the pooled TradFi hourly model with its validation bias; fall back to R-VOL-26 if it is stale
+  scope:
+    assets: Bybit TradFi perps (universe T)
+    horizon: 1h
+    sides: both
+  effect: 'next-hour QLIKE diff vs champion, holdout: XGB -0.10192 (t -3.87), MLP -0.17556 (t -6.88), linear -0.13142 (t -4.86); 132 dates, 15 symbols'
+  confidence: C
+  evidence:
+  - H-NN11
+  - H-NN8
+  - H-NS4
+  review: forward test for 1 month against R-VOL-26; demote if the forward QLIKE gain is not significant
+  status: provisional
+- id: R-ML-21
+  kind: expect
+  rule: WHEN forming a next-hour variance expectation for a crypto alt perp THEN don't expect BTC/ETH/QQQ recent activity to add much beyond the alt's own recent returns, daily HAR level
+    and hour-of-week factor
+  when: horizon 1h, crypto alts
+  then: keep the alt's own inputs (R-ML-10); treat leader bursts as context, not as a forecast adjustment
+  scope:
+    assets: crypto perps (universe L minus BTC, ETH)
+    horizon: 1h
+    sides: both
+  effect: 'with minus without block, crypto alts: XGB -0.00018 (t -0.10) / -0.00050 (t -0.22), MLP 0.00673 (t 2.39) / 0.05430 (t 1.90) (in / ho)'
+  confidence: C
+  evidence:
+  - H-NN12
+  - H-NN8
+  review: rerun with a richer block (leader hour-of-week-adjusted surprises) as a new hypothesis
+  status: provisional
+- id: R-ML-22
+  kind: expect
+  rule: WHEN forming a next-hour variance expectation for a Bybit TradFi perp THEN don't expect recent BTC/ETH/QQQ activity to improve it beyond the perp's own inputs and session calendar
+  when: horizon 1h, TradFi perps
+  then: use the perp's own inputs and the session calendar only
+  scope:
+    assets: Bybit TradFi perps (universe T)
+    horizon: 1h
+    sides: both
+  effect: 'with minus without block, TradFi holdout: XGB -0.01327 (t -1.48), MLP 0.06278 (t 5.63)'
+  confidence: C
+  evidence:
+  - H-NN12
+  - H-NN11
+  review: rerun when the TradFi holdout has >= 250 dates
+  status: provisional
+- id: R-ML-23
+  kind: expect
+  rule: WHEN citing cross-asset context for a next-hour variance expectation THEN expect BTC to be the main leader for alts, ETH, equities, commodities and gold tokens (ETH for BTC itself),
+    and QQQ to matter less than BTC even for TradFi perps; treat it as explanation only, since the block does not improve the forecast
+  when: explaining or sanity-checking an hourly vol forecast
+  then: mention BTC's last hours first; don't adjust the forecast for leader bursts beyond what the target's own recent returns show
+  scope:
+    assets: crypto perps (universe L) and Bybit TradFi perps (universe T)
+    horizon: 1h
+    sides: both
+  effect: 'holdout within-block TreeSHAP share BTC / ETH / QQQ: alts 54/46/0, equities 52/29/19, commodities 49/33/18, gold tokens 48/35/17, ETH 91/9/0, BTC -/77/0 (own copy excluded);
+    only significant holdout ablation: BTC for equities (XGB +0.0312, t 2.9)'
+  confidence: C
+  evidence:
+  - H-NN12
+  review: recompute on the first 3 forward refits; demote if the per-class leader changes
+  status: provisional
+- id: R-ML-24
+  kind: avoid
+  rule: WHEN extending an hourly vol network with inputs that have a short history (a series listed months ago, such as QQQ for the crypto model) THEN avoid adding them to the MLP; the
+    network extrapolates and next-hour QLIKE gets worse
+  when: choosing inputs for a retrained hourly vol MLP
+  then: keep the MLP on the target's own inputs; test new cross-asset inputs in trees or linear models first, as a new hypothesis
+  scope:
+    assets: crypto perps (universe L) and Bybit TradFi perps (universe T)
+    horizon: 1h
+    sides: both
+  effect: 'MLP with minus without block: crypto 0.00673 (t 2.39) / 0.05430 (t 1.90) (in / ho), TradFi holdout 0.06278 (t 5.63); removing the QQQ block improves the crypto-alt MLP by
+    0.0526 (t 1.9) in the holdout'
+  confidence: C
+  evidence:
+  - H-NN12
+  review: repeat when QQQ has >= 12 months of history
+  status: provisional
+- id: R-EXIT-1
+  kind: avoid
+  rule: WHEN a trend-family trade is open THEN do not replace the strategy's own exit with a close-based trail of 1.5-3.5 one-bar sigma from the best close; over six years it lowered
+    the trend book's net P&L at every k
+  when: a trend-family position (tsmom, donchian_breakout, ema_stack, compression_breakout, geo_*, zoo_ensemble) is open on 1h or 4h bars
+  then: keep the strategy's own exit; treat a k-sigma trail on the best close as a cost to the trend book, not an edge
+  scope:
+    assets: 23 crypto perps (L) and 15 Bybit TradFi perps (T)
+    horizon: 1h-4h bars, trades of hours to weeks
+    sides: both
+  effect: 'paired book diff per day over k = 1.5/2.5/3.5: in-sample -0.0208 to -0.0167 (NW t -2.31 to -2.14; Sharpe 0.86 -> -1.13, -0.27, 0.27); holdout +0.0177 to +0.0187 (t +1.42 to
+    +1.75, Holm p 0.12; Sharpe -2.21 -> -2.83, -1.31, -0.87); 2204 / 132 days'
+  confidence: B
+  evidence:
+  - H-PD6
+  - H-PD4
+  - research/reports/exit_policy_2026-11-12.md
+  review: re-run when the holdout passes 180 days or the trend book turns profitable in the holdout; a sqrt(time-in-trade) distance or a profit-only trail needs its own registration
+  status: active
+- id: R-EXIT-2
+  kind: expect
+  rule: 'WHEN a tight trailing exit is laid over the trend book THEN expect it to act mainly as an exposure cut with short convexity: small gains on most days, losses on the large trend
+    days, so it helps only while the trend book itself is losing'
+  when: comparing a trailed trend book with the untrailed one, day by day
+  then: read a trailing exit's holdout gain as a hedge of a losing trend stretch, not as better exits; do not switch it on from a few months of trend losses
+  scope:
+    assets: 23 crypto perps (L) and 15 Bybit TradFi perps (T)
+    horizon: 1h-4h bars, trades of hours to weeks
+    sides: both
+  effect: exposure in-sample 0.86 -> 0.10/0.17/0.25; in-sample corr(diff, own-exit book) -1.00 to -0.96, skew of diff -2.31 to -2.00, diff > 0 on 0.51-0.54 of days yet negative on average;
+    holdout corr -0.99 to -0.91 while the own-exit book had Sharpe -2.21
+  confidence: C
+  evidence:
+  - H-PD6
+  - H-PD4
+  - research/reports/exit_policy_2026-11-12.md
+  review: re-run when the holdout passes 180 days or the trend book turns profitable in the holdout; a sqrt(time-in-trade) distance or a profit-only trail needs its own registration
+  status: provisional
+- id: R-EXIT-3
+  kind: expect
+  rule: WHEN trying to recover the H-PD4 exit leakage THEN expect a k-sigma trail on closes not to raise the share of favourable excursion kept in-sample; it shortens trades and shrinks
+    the excursion pool instead
+  when: exit designs evaluated with the H-PD4 MFE decomposition on trend-family trades
+  then: rank exit rules on paired net P&L; read capture and leakage only as diagnostics, and look at time-in-trade or profit-only rules (each needs its own registration)
+  scope:
+    assets: 23 crypto perps (L) and 15 Bybit TradFi perps (T)
+    horizon: 1h-4h bars, trades of hours to weeks
+    sides: both
+  effect: capture of MFE in-sample 0.316 -> 0.318/0.320/0.323, holdout 0.293 -> 0.354/0.352/0.350; (C+E)/MFE in-sample 0.722 -> 0.762/0.741/0.729; sum MFE in-sample 55021 -> 15669/23664/30834;
+    mean hold 70 h -> 9/15/21 h; costs / kept gross 0.12 -> 0.25/0.19/0.16
+  confidence: B
+  evidence:
+  - H-PD6
+  - H-PD4
+  - research/reports/exit_policy_2026-11-12.md
+  review: re-run when the holdout passes 180 days or the trend book turns profitable in the holdout; a sqrt(time-in-trade) distance or a profit-only trail needs its own registration
+  status: active
+- id: R-MINE-1
+  kind: expect
+  rule: WHEN BTC, ETH or SOL prints a top- or bottom-quintile 1-minute taker-flow minute THEN expect crypto alts' next-minute return to lean the same way, by only about 0.02-0.05 standard
+    deviations
+  when: leader flow quintile in {0, 4} (1-minute signed taker notional) for BTC, ETH or SOL
+  then: a small same-direction lean in alts for one minute; useful as a quote-skew input, far below taker costs as a trade
+  scope:
+    assets: crypto
+    horizon: 1m
+    sides: both
+  effect: +0.02 to +0.05 sd (t 1.8-3.3), 12 of 19 such direction discoveries replicated on 15 unseen days
+  confidence: C
+  evidence:
+  - H-MINE1
+  - H-MS6
+  review: more confirmation days; check net of half-spread
+  status: provisional
+- id: R-MINE-2
+  kind: expect
+  rule: WHEN a Bybit TradFi perp has an extreme own taker-flow minute THEN expect a small continuation in the same direction over the next minute (partly bid-ask bounce)
+  when: asset_class == tradfi and own flow quintile in {0, 4}
+  then: next-minute return leans with the flow; do not read it as a tradeable edge before a mid-price check
+  scope:
+    assets: tradfi
+    horizon: 1m
+    sides: both
+  effect: top-minus-bottom flow contrast +0.08 to +0.13 sd (t 3.7-4.1) on unseen days
+  confidence: C
+  evidence:
+  - H-MINE1
+  review: re-test on mid prices (book_1s) instead of last-trade prices
+  status: provisional
+- id: R-MINE-3
+  kind: expect
+  rule: WHEN a minute has extreme one-sided taker flow with few prints THEN expect the next minute to be quieter than average, not more volatile
+  when: own flow quintile in {0, 4} within a symbol-day
+  then: do not widen quotes on one-sided flow alone; widen on recent volatility (15-minute tercile) and the 12-16 UTC block instead
+  scope:
+    assets: all
+    horizon: 1m
+    sides: both
+  effect: about -9% next-minute |return| vs the symbol-day mean on discovery days; vol effects replicated at 90% (435/483)
+  confidence: C
+  evidence:
+  - H-MINE1
+  - H-OF1
+  review: more days; condition on print count explicitly
+  status: provisional
+- id: R-MD-1
+  kind: prefer
+  rule: WHEN calibrating a simulator or execution model for a perp THEN prefer per-day calibration of order-sign memory, size tails and arrival mixtures; these traits vary as much from
+    day to day as across symbols
+  when: building micro models (sign gamma, sign ACF1, size tail, duration mixture)
+  then: re-estimate per day (or per regime); do not reuse a single per-symbol calibration
+  scope:
+    assets: all
+    horizon: intraday
+    sides: both
+  effect: ICC 0.23-0.34 across 31 random days (needed > 0.5)
+  confidence: B
+  evidence:
+  - H-MD1
+  - H-MS7
+  review: a regime-conditioned ICC above 0.5
+  status: active
+- id: R-MD-2
+  kind: avoid
+  rule: WHEN a free-spread (not tick-bound) perp's spread widens THEN do not expect it to forecast the next 5-15 minutes of volatility beyond recent volatility
+  when: spread > 1 tick at least 25% of the time
+  then: use recent realised volatility and the hour-of-week profile for short-horizon vol; spread adds nothing reliable
+  scope:
+    assets: all
+    horizon: 5m-15m
+    sides: both
+  effect: positive out-of-sample gain on only ~40% of qualifying symbol-days (needed 70%)
+  confidence: B
+  evidence:
+  - H-MD4
+  - H-MS5
+  review: '-'
+  status: active
+- id: R-MD-3
+  kind: expect
+  rule: WHEN reading order-sign memory for a perp THEN expect power-law sign persistence on most but not all symbol-days (about three quarters), with Hurst of 1 s signed flow about 0.54
+  when: order-flow modelling
+  then: treat order-flow persistence as typical but day-dependent
+  scope:
+    assets: all
+    horizon: seconds-minutes
+    sides: both
+  effect: 76% of symbol-days pass (needed 80%); Hurst 0.541
+  confidence: C
+  evidence:
+  - H-MD3
+  - H-MS3
+  review: '-'
+  status: provisional
+- id: R-MD-4
+  kind: expect
+  rule: WHEN ETH or SOL volatility jumps THEN expect other crypto tokens' volatility to rise with it; ETH and SOL are net volatility transmitters on almost every day, more than BTC
+  when: ETH or SOL realised vol rising
+  then: raise vol expectations for alts; no return lead follows (R-MS-12)
+  scope:
+    assets: crypto
+    horizon: 1m-1d
+    sides: both
+  effect: ETH and SOL net transmitters on >= 80% of 31 random days (criterion met; significance short after Holm)
+  confidence: C
+  evidence:
+  - H-MD5
+  - H-MS6
+  review: forward days
+  status: provisional
+- id: R-GEN-1
+  kind: avoid
+  rule: WHEN judging the positioning family (funding_contrarian, oi_price_divergence) THEN do not use generated paths; use real funding / OI history only
+  when: evaluating or ranking positioning strategies
+  then: exclude synthetic funding / OI backtests from the evidence
+  scope:
+    assets: universe L (and T funding_contrarian)
+  effect: synthetic median Sharpe -3.4 vs realised +0.63; every generator rejects the realised value (q 0.96-0.99)
+  confidence: C
+  evidence:
+  - H-GEN1
+  - H-GEN3
+  review: after a funding generator with the clamp / burst structure
+  status: provisional
+- id: R-GEN-2
+  kind: expect
+  rule: WHEN a deterministic strategy's 132-day Sharpe is read THEN expect a 5-95% range about +/-3 Sharpe wide from path noise alone
+  when: reading any 4-5 month holdout or forward Sharpe of a single family book
+  then: treat |Sharpe| < 3 over 132 days as uninformative about the edge
+  scope:
+    assets: families x universes L, T
+  effect: median band width 5.9 (param), 5.5 (fixed), 5.0 (bootstrap); 11/12 realised values inside
+  confidence: C
+  evidence:
+  - H-GEN1
+  review: 2027-01 with a longer holdout
+  status: provisional
+- id: R-GEN-3
+  kind: avoid
+  rule: WHEN choosing between strategy families THEN do not rank them by median Sharpe on parametric generated paths
+  when: strategy selection or allocation
+  then: use real-data evidence; generated paths serve only as stress / variance envelopes
+  scope:
+    assets: families x universes L, T
+  effect: Spearman +0.24 (CI -0.48..+0.83) family level, +0.09 strategy level
+  confidence: C
+  evidence:
+  - H-GEN3
+  review: if a generator with estimated drift or flow structure is built
+  status: provisional
+- id: R-GEN-4
+  kind: prefer
+  rule: WHEN a synthetic stress test of daily / hourly risk statistics is needed THEN prefer the parametric generator (it reproduces 8 of 10 held-out stylised facts and creates unseen
+    states), but widen hourly tails and allow correlation drops
+  when: stress-testing vol, clustering, weekday / hour-of-week risk, jump frequency
+  then: use sim.market_gen param paths; add a separate tail / decorrelation scenario
+  scope:
+    assets: universe L
+  effect: 8/10 facts inside; misses hourly kurtosis (34.8 vs p95 28.4) and return factor share (0.61 vs p05 0.63)
+  confidence: C
+  evidence:
+  - H-GEN2
+  review: next holdout window
+  status: provisional
+- id: R-GEN-5
+  kind: expect
+  rule: WHEN parameter uncertainty is added to a market generator THEN expect little extra Sharpe dispersion over a few months; path noise dominates
+  when: designing robustness checks on generated data
+  then: do not count parameter-uncertain coverage as extra evidence beyond a fixed-parameter generator
+  scope:
+    assets: 132-day windows, L and T
+  effect: band width +7%; coverage identical (11/12 vs 11/12)
+  confidence: C
+  evidence:
+  - H-GEN1
+  review: with longer horizons
+  status: provisional
+- id: R-VBOS-1
+  kind: avoid
+  rule: WHEN a realised-volatility range break fires (5-20 day RV above its trailing 60-180 day 90-100% quantile) THEN don't expect trend-following to earn more than usual over the next
+    5-20 days; the trend ensemble has earned less than its own mean after such breaks
+  when: universe L crypto perps, 1d or 4h bars; onset = first bar the w-day log RV exceeds its trailing N-day q-quantile, declustered 20 days
+  then: don't add or scale trend exposure because volatility broke out; read a vol range break as a whipsaw warning, not a confirmation; it is not an exit signal either (R-EXIT-1)
+  scope:
+    assets: crypto
+    horizon: 5-20d
+    sides: both
+  effect: 10-day ensemble excess P&L walk-forward in-sample -0.037/day (t -2.43, 1d) and -0.075 (t -2.37, 4h); frozen detector holdout -0.086 (t -2.97, 24 events, 1d), -0.102 (t -1.59,
+    4h); 89-96% of range-grid points negative in-sample, 89-100% in the holdout
+  confidence: C
+  evidence:
+  - H-VBOS1
+  - research/reports/vol_bos_2026-11-13.md
+  review: register the negative direction as its own hypothesis and keep it only if the forward excess after range breaks stays < 0 with t < -2 over the next 100 events
+  status: provisional
+- id: R-VBOS-2
+  kind: expect
+  rule: WHEN upside or downside realised semivariance breaks above its own trailing quantile while the other side does not THEN don't read the dominant side as the direction of the next
+    5-20 days; it mostly restates the trailing return
+  when: 1d or 4h; RS+ / RS- over 5-20 days vs their trailing 60-180 day 80-95% quantiles; first bar of a one-sided break
+  then: no directional preference from semivariance dominance; use the semivariances for the vol forecast only
+  scope:
+    assets: crypto
+    horizon: 5-20d
+    sides: both
+  effect: walk-forward signed 10-day net return -0.077 sigma (t -1.04, 1d) and -0.037 (t -0.59, 4h); dominant side agrees with the trailing-return sign in 69-80% of events; 4h holdout
+    +0.165 bucket-weighted (t 1.20) but about -0.02 event-weighted (45 events)
+  confidence: B
+  evidence:
+  - H-VBOS2
+  - research/reports/vol_bos_2026-11-13.md
+  review: a registered re-test that conditions on semivariance dominance AGAINST the trailing return (the non-momentum part) shows t > 2 in both segments
+  status: active
+- id: R-VBOS-3
+  kind: avoid
+  rule: WHEN tempted to gate trend entries by a volatility break of structure plus a fractal price break and semivariance agreement THEN don't expect a better trend book; the in-sample-best
+    gate is a selection artefact and its timing is no better than a time-shifted gate
+  when: trend-zoo ensemble, 1d/4h, 992-config grid of vol-BoS detector x fractal k x semivariance filter x exit
+  then: keep the plain ensemble's entries and exits; if exposure must be cut, say so and cut it directly rather than through a vol-BoS timing story
+  scope:
+    assets: crypto
+    horizon: 1-20d
+    sides: both
+  effect: final pick Sharpe 0.35 vs 0.44 unfiltered in-sample (43% exposure), DSR 0.22 (SR0 0.68, 992 trials), PBO 0.84 (CSCV 16 blocks); holdout -0.46 vs -0.12; holdout Sharpe at the
+    50th percentile of 200 time-shifted gates; adding the opposite-BoS exit cut in-sample Sharpe 0.35 -> 0.13
+  confidence: B
+  evidence:
+  - H-VBOS3
+  - research/reports/vol_bos_2026-11-13.md
+  review: a pre-registered filter beats the ensemble in a forward window with DSR > 0.95 and PBO < 0.5 on its own grid
+  status: active
+- id: R-VBOS-4
+  kind: expect
+  rule: WHEN a vol-BoS or semivariance-break threshold is learned on history THEN expect the best threshold to move out of sample; don't trust a single tuned quantile
+  when: quantile thresholds 0.80-1.00 over 60-180 day trailing windows, 1d/4h, pooled crypto
+  then: use fixed, coarse thresholds chosen a priori, or report the whole surface; never act on a grid optimum alone
+  scope:
+    assets: crypto
+    horizon: 5-20d
+    sides: both
+  effect: holdout optimum inside the in-sample top quintile for 2 of 4 surfaces (split-half in-sample analogue also 2 of 4); in-sample vs holdout surface rank corr -0.11 to +0.50; walk-forward
+    picks change family or freq in 5 of 8 block transitions
+  confidence: C
+  evidence:
+  - H-VBOS4
+  - research/reports/vol_bos_2026-11-13.md
+  review: a forward window where >= 3 of 4 surfaces keep their optimum in the frozen top quintile
+  status: provisional
+- id: R-PNN-1
+  kind: prefer
+  rule: WHEN a BTC next-hour return distribution is needed THEN prefer a small quantile network on the hourly vol features (robust sigma, hour-of-week factor, recent |returns|, daily
+    HAR level) over log-HAR-t quantiles; the polynomial-edge and ReLU versions are interchangeable
+  when: next-hour BTC quantiles or bands (targets, stop distances, quote widths)
+  then: quantiles from the 1h PNN or MLP (data/models/pnn/latent_1h.parquet q05..q95); log-HAR-t as the fallback
+  scope:
+    assets: BTCUSDT
+    horizon: 1h
+    sides: both
+  effect: 'pinball in / holdout: pnn - log-HAR-t -0.00082 (-7.26) / -0.00124 (-2.95), mlp - log-HAR-t -0.00083 (-7.82) / -0.00097 (-2.24), pnn - mlp 0.00002 (0.22) / -0.00027 (-1.07)'
+  confidence: B
+  evidence:
+  - H-PNN1
+  - H-NN8
+  review: a forward quarter in which the 1h network's pinball is not below log-HAR-t
+  status: active
+- id: R-PNN-2
+  kind: expect
+  rule: WHEN a BTC next-day return distribution is needed THEN expect log-HAR-t (Student-t on the HAR variance) to be as good as a ~450-parameter network; do not cite a network quantile
+    as an improvement at 1d
+  when: next-day BTC quantiles or bands
+  then: log-HAR-t quantiles; networks only as a cross-check
+  scope:
+    assets: BTCUSDT
+    horizon: 1d
+    sides: both
+  effect: 'pinball in / holdout: pnn - log-HAR-t 0.00244 (1.75) / -0.00819 (-1.84), mlp - log-HAR-t 0.00020 (0.17) / -0.00722 (-1.38)'
+  confidence: C
+  evidence:
+  - H-PNN1
+  review: a holdout year in which a network beats log-HAR-t at 1d with t < -2
+  status: provisional
+- id: R-PNN-3
+  kind: expect
+  rule: WHEN quoting a BTC 80/90/95% band THEN expect unconformalised log-HAR-t bands to be close to nominal already; an adaptive-conformal wrapper keeps long-run coverage on target
+    but does not make the band narrower
+  when: a band whose coverage matters (probability-of-touch, range expectations)
+  then: log-HAR-t band or the ACI band (aci_lo / aci_hi); a running ACI alpha far from nominal is a calibration alarm
+  scope:
+    assets: BTCUSDT
+    horizon: 1h, 1d
+    sides: both
+  effect: 'clean_holdout coverage 1h 80%: ACI 0.798 / HAR-t 0.796, 90%: ACI 0.900 / HAR-t 0.902, 95%: ACI 0.950 / HAR-t 0.949; 1d 80%: ACI 0.805 / HAR-t 0.820, 90%: ACI 0.880 / HAR-t
+    0.887, 95%: ACI 0.940 / HAR-t 0.932; ACI / HAR-t width 1h 1.027, 1.028, 1.020; 1d 0.972, 0.974, 1.026'
+  confidence: C
+  evidence:
+  - H-PNN2
+  review: a forward quarter with log-HAR-t band coverage off nominal by > 3 pp
+  status: provisional
+- id: R-PNN-4
+  kind: avoid
+  rule: WHEN a model's latent state is predictable THEN do not assume that feeding the predicted next latent back improves the forecast; the latent trajectory is a display of the vol
+    / calendar state, not an extra signal
+  when: designing feedback loops between the real and latent spaces (dashboard, world-model ideas)
+  then: show z and zhat on the dashboard; keep the forecaster without the feedback input
+  scope:
+    assets: BTCUSDT
+    horizon: 1h, 1d
+    sides: both
+  effect: clean_holdout 1h R^2 gain over persistence 0.143 (t 20.7), fb - ctrl pinball 0.00002 (0.27); 1d R^2 gain over persistence 0.886 (t 10.5), fb - ctrl pinball -0.00050 (-0.69)
+  confidence: C
+  evidence:
+  - H-PNN3
+  review: a feedback variant with pinball gain t < -2 in both segments
+  status: provisional
+- id: R-FLD-1
+  kind: prefer
+  rule: WHEN a BTC return distribution for the next 1h-4h is needed for targets, stops or quote widths THEN prefer a calendar-aware density (the probability field, or log-HAR-t scaled
+    by the hour-of-week factor) over plain log-HAR-t with a constant jump rate
+  when: building p_tp / range / quantile inputs for BTC from the state at a bar close
+  then: read 1h quantiles from ai_trader.field (closed form) or from the calendar-scaled log-HAR-t; they are level at 1h (holdout)
+  scope:
+    assets: BTCUSDT perp (Bybit)
+    horizon: 1h-1d
+    sides: both
+  effect: 'field minus log-HAR-t + Kou, nats: in-sample 1h +0.033 (t +17.7), 4h +0.027 (t +7.2), 24h +0.009 (t +0.9); holdout 1h +0.051 (t +7.5), 4h +0.062 (t +5.4), 24h +0.023 (t +0.8);
+    field minus calendar baseline: in-sample 1h +0.004 (t +3.4), 4h -0.011 (t -4.1), 24h -0.036 (t -3.8); holdout 1h +0.002 (t +0.7), 4h -0.007 (t -1.2), 24h -0.037 (t -1.4)'
+  confidence: B
+  evidence:
+  - H-FLD1
+  - H-NS4
+  - research/reports/btc_field_2026-11-13.md
+  review: re-run research.field_study when the holdout passes 180 days or the state gains delta / news coordinates
+  status: active
+- id: R-FLD-2
+  kind: expect
+  rule: WHEN reading the BTC field's variance THEN expect it to scale with the hour-of-week factor and to fall back after a vol shock, not to depend on the sign of recent moves
+  when: interpreting the diffusion polynomial or a distribution card
+  then: explain a card's width by vol level, hour of week and recent shocks; do not read the drift or the width as a direction call
+  scope:
+    assets: BTCUSDT perp (Bybit)
+    horizon: 1h-1d
+    sides: both
+  effect: 'raw coefficient of s = 0.5 ln f in ln D: 2.67 (2 = one-for-one); corr(sign-free vol increment, return sign) -0.029; fast log-vol half-life 107 h'
+  confidence: B
+  evidence:
+  - H-FLD1
+  - H-LEV2
+  - H-NS4
+  - research/reports/btc_field_2026-11-13.md
+  review: re-run research.field_study when the holdout passes 180 days or the state gains delta / news coordinates
+  status: active
+- id: R-FLD-3
+  kind: avoid
+  rule: WHEN the BTC field's drift or P(up) differs from one half THEN avoid reading it as a direction signal
+  when: a distribution card or field output shows a non-zero drift or P(close up) away from 0.5
+  then: use the field for widths, tails and touch probabilities only; direction stays with the paired baselines
+  scope:
+    assets: BTCUSDT perp (Bybit)
+    horizon: 1h-1d
+    sides: both
+  effect: 'Brier skill of the field''s P(R > 0) vs the base rate: llm_in_sample 1h -0.0000 [-0.0001, +0.0000], 1d +0.0006 [-0.0025, +0.0034]; clean_holdout 1h -0.0000 [-0.0001, +0.0000],
+    1d +0.0075 [-0.0071, +0.0227]; H-FLD2 supports / inconclusive'
+  confidence: B
+  evidence:
+  - H-FLD2
+  - R-ML-5
+  - research/reports/btc_field_2026-11-13.md
+  review: re-run research.field_study when the holdout passes 180 days or the state gains delta / news coordinates
+  status: active
+- id: R-FLD-4
+  kind: expect
+  rule: WHEN tempted to update the BTC field's coefficients hourly THEN expect no gain over the frozen fit; its coefficients barely move through the holdout
+  when: deciding how often to refresh the field
+  then: refit monthly with the expanding window; keep the online filter as a monitor of coefficient drift only
+  scope:
+    assets: BTCUSDT perp (Bybit)
+    horizon: 1h-1d
+    sides: both
+  effect: 'online (RLS, 60-day memory) minus frozen, holdout: 1h +0.0000 (t +0.1), 4h -0.0001 (t -0.3), 24h -0.0083 (t -2.0); H-FLD3 inconclusive'
+  confidence: C
+  evidence:
+  - H-FLD3
+  - research/reports/btc_field_2026-11-13.md
+  review: re-run research.field_study when the holdout passes 180 days or the state gains delta / news coordinates
+  status: provisional
+- id: R-FLD-5
+  kind: prefer
+  rule: WHEN a BTC range or touch probability over 4h-1d is needed THEN prefer the calendar-scaled log-HAR-t direct-horizon density over the field's Monte-Carlo, and expect the field's
+    multi-hour ranges to run wide
+  when: multi-hour targets, range estimates or quote widths for BTC
+  then: use a direct-horizon log-HAR-t with the hour-of-week factor for 4h-1d widths; read field cards at 4h-1d as an upper bound on the range
+  scope:
+    assets: BTCUSDT perp (Bybit)
+    horizon: 4h-1d
+    sides: both
+  effect: 'field minus calendar baseline: in-sample 1h +0.004 (t +3.4), 4h -0.011 (t -4.1), 24h -0.036 (t -3.8); holdout 1h +0.002 (t +0.7), 4h -0.007 (t -1.2), 24h -0.037 (t -1.4);
+    field central-50% coverage at 4h 0.557 / 0.547 and at 1d 0.548 / 0.570 (in-sample / holdout; nominal 0.50)'
+  confidence: C
+  evidence:
+  - H-FLD1
+  - H-VM5
+  - R-VOL-21
+  - research/reports/btc_field_2026-11-13.md
+  review: re-run research.field_study when the holdout passes 180 days or the state gains delta / news coordinates
+  status: provisional
+- id: R-NEWS-5
+  kind: avoid
+  rule: WHEN forecasting next-day BTC volatility THEN do not add daily news-attention counts (Wikipedia, Hacker News, Fear and Greed) or event / on-chain flags to log-HAR x weekday
+  when: next-day BTC vol forecast
+  then: keep log-HAR x weekday; read attention spikes as context only
+  scope:
+    assets:
+    - BTCUSDT
+    horizon: 1d
+    sides: both
+  effect: QLIKE diff in-sample 0.0121 (NW t 1.50, contradicts); holdout 0.0153 (t 1.46, contradicts)
+  confidence: B
+  evidence:
+  - H-NEWS3
+  review: re-run scripts/news_alt_study.py when the clean holdout has >= 250 days; flip if the holdout verdict changes
+  status: active
+- id: R-NEWS-7
+  kind: avoid
+  rule: WHEN making a BTC direction call THEN do not use news attention, Fear and Greed level or change, event flags or on-chain activity as a directional signal
+  when: any next-day BTC direction view
+  then: direction from these inputs is no better than the base rate
+  scope:
+    assets:
+    - BTCUSDT
+    horizon: 1d
+    sides: both
+  effect: H-NEWS4 Brier skill in-sample -0.0181 CI [-0.0305, -0.0055] (supports); holdout -0.0180 CI [-0.0364, +0.0007] (supports)
+  confidence: B
+  evidence:
+  - H-NEWS4
+  review: re-run scripts/news_alt_study.py when the clean holdout has >= 250 days; flip if the holdout verdict changes
+  status: active
+- id: R-OBG-1
+  kind: prefer
+  rule: WHEN a BTC simulation needs order-book realism THEN use generated books (ob_gen v1 through at-match) only for tests that depend on the facts they reproduce (spread, depth profile,
+    touch depletion, inter-arrivals, impact, |r| ACF), not for signed-flow persistence or taker-size questions
+  when: simulating BTC book and trade dynamics below one minute
+  then: 6 of 8 held-out facts are reproduced; signed-flow ACF (0.003 vs 0.011 real) and median taker size fall outside the envelopes
+  scope:
+    assets:
+    - BTCUSDT
+    horizon: sub-minute
+    sides: both
+  effect: H-OBG1 inside-envelope facts 7/8 in-sample, 6/8 holdout, 6/8 pooled over 31 held-out days (supports)
+  confidence: B
+  evidence:
+  - H-OBG1
+  review: re-check after more ob200 calibration days; fix flow_acf and taker size in ob_gen v2
+  status: active
+- id: R-OBG-2
+  kind: avoid
+  rule: WHEN training a BTC next-minute volatility model THEN do not add generated twin days as a substitute for real days
+  when: training data for next-minute BTC volatility
+  then: generated twins do not improve held-out QLIKE, and with a quarter of the real days they make it slightly worse
+  scope:
+    assets:
+    - BTCUSDT
+    horizon: 1m
+    sides: both
+  effect: H-OBG2 QLIKE ratio pooled 1.0027 CI [0.9987, 1.0073] at full real data; 1.0059 CI [1.0015, 1.0106] at 25% real (contradicts, all segments)
+  confidence: B
+  evidence:
+  - H-OBG2
+  review: revisit only with ob_gen v2 (signed-flow persistence fixed)
+  status: active
+- id: R-MMR-1
+  kind: avoid
+  rule: 'WHEN quoting passively on a Bybit USDT perp at crypto maker fees (2 bp) with quotes within about 25 bp of the mid THEN expect a net loss: adverse selection inside one second
+    already exceeds the spread captured'
+  when: quote distance from mid < ~25 bp (BTCUSDT) or < ~20 bp (TRXUSDT, ETCUSDT, XLMUSDT); fees from config/fees.yaml crypto class
+  then: expect negative net P&L per symbol-day (replayed on real ob200 books with the live atx mm quoting code); prefer not quoting that tight
+  scope:
+    assets:
+    - BTCUSDT
+    - TRXUSDT
+    - ETCUSDT
+    - XLMUSDT
+    horizon: intraday
+    sides: both
+  effect: 'held days, pro-rata queue: every variant quoting closer than ~25 bp lost; e.g. fixed 3 bp quote sigma -1.55 USD/day BTC (stopped by the 1.5 USD symbol stop 10/10 days), -1.07
+    USD/day illiquid; spread +0.24/+0.33 vs adverse(1 s) -0.60/-0.76 and fees -1.07/-0.70 USD/day'
+  confidence: B
+  evidence:
+  - H-MMR1
+  - H-MMR2
+  - research/reports/mm_replay_2026-11-14.md
+  review: a held-out month where a sub-25 bp variant has net > 0 with a day-clustered CI above 0, or a maker rebate / VIP fee tier
+  status: active
+- id: R-MMR-2
+  kind: expect
+  rule: WHEN the live 1h-sigma quoter runs at its live width (offsets 0.45 / 0.90 sigma, or 0.675 symmetric) THEN expect a few fills a day and net P&L indistinguishable from zero
+  when: atx mm quote rule with config/mm_illiq20.yaml or mm_multi.yaml widths (k = 1), quotes ~40-50 bp from mid
+  then: expect about 2-5 fills per symbol-day and net within a few cents of zero; no evidence of an edge after fees
+  scope:
+    assets:
+    - BTCUSDT
+    - TRXUSDT
+    - ETCUSDT
+    - XLMUSDT
+    horizon: 1 day
+    sides: both
+  effect: 'held days, pro-rata: BTCUSDT +0.039 USD/symbol-day [95% CI -0.105, +0.178]; illiquid +0.002 [-0.009, +0.011]; fit-chosen by purged CV (PBO 0.00, deflated Sharpe 0.05 BTC /
+    0.89 illiquid)'
+  confidence: C
+  evidence:
+  - H-MMR1
+  - research/reports/mm_replay_2026-11-14.md
+  review: more held-out days (the CI is ~10x the mean), or a lower fee tier
+  status: provisional
+- id: R-MMR-3
+  kind: avoid
+  rule: 'WHEN setting crypto quote widths from the 15 s micro sigma (mm_nvda_micro settings) at 2 bp maker fees THEN avoid it: it quotes too close and loses to the best fixed width'
+  when: micro_interval_s = 15, micro_lookback = 40, micro_horizon_s 30-480, requote_sigma 0.5, min_rest_s 10; crypto fee class
+  then: expect lower net P&L than a wide fixed width chosen on the same days
+  scope:
+    assets:
+    - BTCUSDT
+    - TRXUSDT
+    - ETCUSDT
+    - XLMUSDT
+    horizon: intraday
+    sides: both
+  effect: 'held days, pro-rata, paired per symbol-day micro minus best fixed: illiquid -0.099 USD [-0.126, -0.074]; BTC -1.50 [-1.55, -1.44]; the 1h field / network band vs fixed on
+    BTC +0.024 [-0.21, +0.22] (no difference shown)'
+  confidence: B
+  evidence:
+  - H-MMR2
+  - research/reports/mm_replay_2026-11-14.md
+  review: a micro-sigma variant with wider horizon or a zero-fee (TradFi) contract tested on held-out replay days
+  status: active
+- id: R-MMR-4
+  kind: expect
+  rule: WHEN using the ob200 replay (atx mm-replay) to judge a quoting change on quiet contracts THEN expect it to roughly match the live bot's fills, with somewhat more fills than live
+  when: replay of the journaled live config over the live window, pro-rata queue, 150 ms latency
+  then: expect fill counts within about a factor of two of live and the same P&L sign; treat replay P&L as an upper-side estimate
+  scope:
+    assets:
+    - TRXUSDT
+    - ETCUSDT
+    - XLMUSDT
+    horizon: hours
+    sides: both
+  effect: '6 live symbol-days (2026-11-09, 11-10): replay 12 fills vs live 7; median |error| 0.25 (0.75 on the 4 days with live fills), P&L sign agreement 6/6'
+  confidence: C
+  evidence:
+  - H-MMR0
+  - research/reports/mm_replay_2026-11-14.md
+  review: a live run with >= 30 fills per symbol-day replayed the same way
+  status: provisional
+- id: R-OPX-1
+  kind: expect
+  rule: WHEN a long 25-delta BTC call is paired with a short put of delta about -0.85 on the same expiry (>= 21 days) THEN expect the put leg to remove about three quarters of the call's
+    vega, add about 0.85 of delta, and carry only about 5% of its premium as time value
+  when: building or reviewing a call + short deep-ITM put structure on Deribit BTC options
+  then: read the structure as a long future (net delta about 1.1) with a small volatility exposure, not as a premium harvest; the vega cut comes from selling the put's vega, and almost
+    all of the put premium is intrinsic value that is paid back
+  scope:
+    assets: BTC (Deribit inverse options)
+    horizon: 21-60 day expiries, 14-day holds
+    sides: long
+  effect: 'at 54 compression events: net vega 0.024% of spot per vol point vs 0.094% for the call alone and for call + perp (-74%); put vega / call vega median 0.74; net delta 1.09;
+    time value 5.6% of the put premium (1.06% of spot out of 19.7%); theta -0.015% of spot per day vs -0.068% for the call; all 2,090 entry days alike'
+  confidence: B
+  evidence:
+  - H-OPX2
+  - research/reports/options_compression_2026-11-14.md
+  review: re-run on a different put delta (-0.70 / -0.95) or when ETH options are added; a change of the smile regime (put skew far richer) could change the vega ratio
+  status: active
+- id: R-OPX-2
+  kind: avoid
+  rule: WHEN a BTC volatility compression has just fired THEN do not prefer a short deep-ITM put over a perp of the same delta for the long-delta leg; the put lost to the perp on average
+    and its losses are concentrated in crashes
+  when: compression event (7-day RV bottom quintile and 30-day IV bottom tercile of their trailing 365 days), structure entered at the next 08:00 fixing
+  then: get the extra delta from the perp (funding included) or accept that the short put is a short-convexity bet; a small typical gain (median +0.38% of spot) comes with a fat left
+    tail
+  scope:
+    assets: BTC (Deribit options, Bybit BTCUSDT perp)
+    horizon: 14 days or to expiry
+    sides: long
+  effect: paired diff (short put - perp) at events, llm_in_sample -0.33% of spot per 14 days, 95% CI [-1.07, +0.25], n 48 (to expiry -0.86); clean_holdout -0.67%, n 6 (inconclusive);
+    on all days the put did win in-sample (+0.29%, CI [+0.07, +0.48]) but not in the holdout (-0.40%, CI [-1.44, +0.32])
+  confidence: C
+  evidence:
+  - H-OPX2
+  - research/reports/options_compression_2026-11-14.md
+  review: holdout reaches 8 compression events; or a put chosen by time value per unit of gamma rather than by delta, registered separately
+  status: provisional
+- id: R-OPX-3
+  kind: expect
+  rule: WHEN a BTC volatility compression has just fired THEN do not expect long volatility to pay; the 14-day long ATM straddle loses on average after compressions as on other days,
+    and implied vol still exceeds realised vol
+  when: compression event as in R-OPX-2; ATM straddle with the first expiry >= 21 days, 14-day hold
+  then: treat a compression as a reason to expect cheaper options, not mispriced ones; a compression is not, by itself, a long-volatility entry
+  scope:
+    assets: BTC (Deribit options)
+    horizon: 14 days
+    sides: both
+  effect: 'net P&L / premium, llm_in_sample: delta-hedged events -3.9% vs all days -6.4% (diff +2.5%, 95% CI [-3.8, +9.4], n 48 vs 1967); unhedged +0.5% vs -2.2% (diff +2.7%, CI [-11.2,
+    +18.5]); median RV/IV 0.85 at events vs 0.82 on all days; clean_holdout 6 events (inconclusive)'
+  confidence: C
+  evidence:
+  - H-OPX1
+  - research/reports/options_compression_2026-11-14.md
+  review: holdout reaches 8 events; or a registered variant with a longer hold (30 days) or a calendar spread
+  status: provisional
+- id: R-OPX-4
+  kind: avoid
+  rule: WHEN an open trend trade or long option position shows a profit beyond the 95th percentile of its ex-ante distribution THEN do not scale out in thirds with limit orders at the
+    next closes; it lowered net R in both segments and gives up the continuation
+  when: trend-family trade (the H-PD6 trend book on 23 crypto perps) or an H-OPX1/2 option position, open profit above the log-HAR-t x weekday q95 at the elapsed horizon
+  then: keep the strategy's own exit; read an extreme open profit as a sign the move may continue (R-OPX-5), not as a target hit
+  scope:
+    assets: 23 crypto perps (trend book); BTC options
+    horizon: 1h-4h bars, trades of hours to weeks; 14-day option holds
+    sides: both
+  effect: trend book diff per trade (scaled - own exit), llm_in_sample -0.0036 R, 95% CI [-0.026, +0.014], 68,641 trades; clean_holdout -0.0081 R, CI [-0.089, +0.042], 6,933 trades;
+    triggered trades win 74% of the time (median +0.20 R) but lose on average (-0.018 R); option trades all days -0.24% of spot (straddles, CI [-0.45, -0.05]) and -0.39% (call + short
+    put, CI [-0.70, -0.12]) in-sample
+  confidence: B
+  evidence:
+  - H-OPX4
+  - H-OPX3
+  - H-PD6
+  - research/reports/options_compression_2026-11-14.md
+  review: holdout passes 180 days; a scale-out that only trims after a reversal signal (not a level) needs its own registration
+  status: active
+- id: R-OPX-5
+  kind: expect
+  rule: WHEN BTC has moved beyond the 90th-99th percentile of its ex-ante 3-day distribution THEN expect no reversal over the next 3 days; if anything the move continues by a fraction
+    of a sigma
+  when: move since a daily 08:00 UTC origin beyond the q90 / q95 / q99 of the log-HAR-t x weekday predictive distribution (either direction)
+  then: do not treat an extreme unexpected move as an exit or fade signal by itself; the evidence leans to mild continuation at 3 days (stronger after up moves), none at 1 and 7 days
+  scope:
+    assets: BTC, ETH (robustness)
+    horizon: 1-7 days
+    sides: both
+  effect: 'BTC next-3-day move in the same direction, llm_in_sample: q90 +0.15 sigma (cluster t 2.05, n 348), q95 +0.21 (t 2.24, n 155), q99 +0.31 (t 1.91, n 40), slope across q +0.068
+    (90% CI [+0.014, +0.124]); 1 day q90 +0.10 (t 1.88), 7 days q90 +0.05 (t 0.48); no horizon shows reversal; clean_holdout 3 days q90 +0.65 sigma (n 12); ETH 3 days q90 +0.17 (t 2.32),
+    q95 +0.24 (t 2.37)'
+  confidence: C
+  evidence:
+  - H-OPX3
+  - research/reports/options_compression_2026-11-14.md
+  review: holdout gives >= 10 events above q95 at 3 days; verdict was inconclusive (the 3-day q99 t of 1.91 missed the registered t > 2)
+  status: provisional
+- id: R-EXE-1
+  kind: prefer
+  rule: WHEN entering a shock_regime or trend_4h signal on BTCUSDT, ETHUSDT or SOLUSDT at paper-book order values THEN prefer a PostOnly limit joining the touch, re-pegged to the touch,
+    over a market order
+  when: a sleeve candidate (agent.session) on a Bybit USDT perp major; order value about 0.7-8k USDT; crypto fees (maker 2.0 bp, taker 5.5 bp); peg rule of atx exec-replay (amend to
+    the new touch when it moves away, cancel after 1 minute)
+  then: expect the limit to fill within seconds (median 1-3 s, all within 37 s) and to beat the market entry by about +0.01 R per signal net of a slightly worse fill price; no missed
+    entries at these order values
+  scope:
+    assets:
+    - BTCUSDT
+    - ETHUSDT
+    - SOLUSDT
+    horizon: entry, first minute
+    sides: both
+  effect: '275 signals 2026-01-05..11-13 replayed on real ob200 books (pro-rata): limit minus market +0.010 R/signal [95% CI +0.009, +0.012], llm_in_sample +0.008 [+0.006, +0.010], clean_holdout
+    +0.014 [+0.012, +0.015]; same for N = 1/5/15 min and for the pessimistic / optimistic queue models; fill rate 100%; shock_regime +0.016, trend_4h +0.006 R'
+  confidence: B
+  evidence:
+  - H-EXE1
+  - research/reports/execution_2026-11-15.md
+  review: larger order values (partial fills), thinner contracts, a live paper comparison of pegged entries, or a fee tier where the maker-taker gap narrows below ~1.5 bp
+  status: active
+- id: R-EXE-2
+  kind: expect
+  rule: WHEN a pegged limit entry at the touch fills on a major perp THEN expect its price to be about 1-1.5 bp worse than an immediate market order's, so the gain is the fee gap minus
+    that drift, not spread capture
+  when: PostOnly limit joining the best bid / ask at the decision time, re-pegged up (buys) or down (sells) as the touch moves away, BTC / ETH / SOL USDT perps, touch spread 0.01-1.1
+    bp
+  then: expect the limit fill about 1.1-1.6 bp from the decision-time mid in the signal direction (market order +0.1-0.3 bp); the 3.5 bp maker-taker gap is the whole edge; it is worth
+    about 0.01-0.02 R at stops of 1.8-3.8% and shrinks with wider stops
+  scope:
+    assets:
+    - BTCUSDT
+    - ETHUSDT
+    - SOLUSDT
+    horizon: entry, first minute
+    sides: both
+  effect: 'pro-rata, N = 1 min, 275 signals: fee part +0.015 R, price part -0.0047 R [95% CI -0.0061, -0.0034]; limit fill vs mid +1.1 bp (shock) / +1.6 bp (trend), market +0.29 / +0.13
+    bp'
+  confidence: B
+  evidence:
+  - H-EXE1
+  - research/reports/execution_2026-11-15.md
+  review: a different peg rule (no chasing, or improving the touch) tested the same way; live fills of the paper book's pegged entries
+  status: active
+- id: R-MMR-5
+  kind: expect
+  rule: WHEN gating the live-width quoter (40-50 bp from mid) to quiet sideways phases THEN expect it to stop trading rather than to earn
+  when: 'atx mm quote rule at the live width (L_k1_live BTCUSDT, L_k1_sym TRX/ETC/XLM) with the H-MMR3 gate: 60-min vol in its bottom tercile, |4h return| < 1 sigma, no 4-sigma hourly
+    shock in 6 h, jump intensity <= its fit median'
+  then: expect almost no fills while the gate is on (BTCUSDT 0 per held day, illiquid 0.2) and gated minus ungated net indistinguishable from zero; the gate does not create an edge at
+    this width
+  scope:
+    assets:
+    - BTCUSDT
+    - TRXUSDT
+    - ETCUSDT
+    - XLMUSDT
+    horizon: 1 day
+    sides: both
+  effect: 'held days 2026-11-04..13, pro-rata, gated minus ungated: BTCUSDT -0.039 USD/symbol-day [95% CI -0.173, +0.103], illiquid -0.002 [-0.011, +0.009]; gate on 11-18% of held minutes'
+  confidence: C
+  evidence:
+  - H-MMR3
+  - research/reports/execution_2026-11-15.md
+  review: a held-out month, or a gate tuned for fill rate (e.g. only the jump component) registered and tested on new days
+  status: provisional
+- id: R-MMR-6
+  kind: avoid
+  rule: 'WHEN quoting tight (offsets about 8-16 bp, fixed quote sigma 12-24 bp) at crypto maker fees THEN avoid it even inside quiet sideways phases: the regime gate cuts the loss but
+    the quoter still does not earn'
+  when: F_w12_sym / F_w24_sym variants of atx mm-replay, with or without the H-MMR3 regime gate, crypto fee class (maker 2.0 bp)
+  then: 'expect the gate to remove most of the loss by removing most of the fills, and the remaining fills to lose: adverse selection inside 1 s still about equals or exceeds the spread
+    captured in quiet phases, and the fee comes on top'
+  scope:
+    assets:
+    - BTCUSDT
+    - TRXUSDT
+    - ETCUSDT
+    - XLMUSDT
+    horizon: intraday
+    sides: both
+  effect: 'held days, pro-rata, gated minus ungated: BTCUSDT F_w12 +1.35 USD/day [+1.04, +1.54], F_w24 +0.97 [+0.65, +1.28]; illiquid F_w12 +0.58 [+0.40, +0.75], F_w24 +0.09 [+0.05,
+    +0.14]; gated levels BTCUSDT F_w12 -0.044 [-0.107, 0.000], illiquid F_w12 -0.011 [-0.020, -0.005] (spread +0.011 vs adverse 1 s -0.012 per day)'
+  confidence: B
+  evidence:
+  - H-MMR3
+  - H-MMR1
+  - research/reports/execution_2026-11-15.md
+  review: a maker rebate / lower fee tier, or a quiet-phase definition that leaves adverse selection clearly below the spread on new held-out days
+  status: active
+- id: R-RB-1
+  kind: avoid
+  rule: 'WHEN a crypto perp has just printed a flush (48h return below its 1y 5th pct, OI down >= 5% from its 72h high, v0 R9) THEN do not buy the next 4h close expecting a rebound:
+    the low usually comes later'
+  when: 'flush event: 4h close with 48h log return below its trailing-1y 5th pct, 4h OI >= 5% below its 72h high, v0 cell R9 (post_cascade_study.flush_events); candidate is a long entered
+    within the first 4h after the event'
+  then: expect a negative net R for a rebound long at the next 4h close with a stop under the flush low (2R target, 5-day time stop), and worse than a random long in the same R9 cell
+  scope:
+    assets: crypto
+    horizon: 5 days
+    sides: long
+  effect: 'net R per trade, 7.5 bp/side: llm_in_sample -0.19 [-0.36, -0.00] (n 614, 116 weeks), clean_holdout -0.34 [-0.67, -0.15] (n 22, 8 weeks); minus matched R9 random longs -0.35
+    [-0.59, -0.12] / -0.25 [-0.67, +0.08]; pegged-limit entry changes it by < 0.01 R'
+  confidence: B
+  evidence:
+  - H-RB1
+  - research/reports/post_cascade_2026-11-15.md
+  review: a registered later-entry variant (e.g. after the R9 episode ends or after a confirmed higher low) tested the same way; 20+ more holdout events
+  status: active
+- id: R-RB-2
+  kind: expect
+  rule: WHEN a flush has just printed THEN expect the 7-day low still ahead (median a further 5-9% down, usually one to three days later and later still in the 2026 holdout) followed
+    by a rebound of about 8-15% off that low, with no net drift over the week
+  when: 'flush event: 4h close with 48h log return below its trailing-1y 5th pct, 4h OI >= 5% below its 72h high, v0 cell R9 (post_cascade_study.flush_events)'
+  then: describes the path from the event close over 7 days (1h bars); use it to set expectations for timing, not as a direction signal
+  scope:
+    assets: crypto
+    horizon: 7 days
+    sides: both
+  effect: 'pooled n 636: further drop to the 7-day low median -8.7% (IQR -15.8% to -4.2%), low after median 54 h (only 35% within 24 h), rebound from the low median +15.1%, 7-day return
+    median +0.3%; BTC n 41: -5.4%, 36 h, +12.8%; clean_holdout n 22: -6.8%, 127 h, +8.0%'
+  confidence: C
+  evidence:
+  - H-RB1
+  - research/reports/post_cascade_2026-11-15.md
+  review: descriptive, mostly in-sample; re-check the holdout path quantiles at 50+ holdout events
+  status: provisional
+- id: R-RB-3
+  kind: expect
+  rule: WHEN the R9 episode that contains a flush ends THEN expect R6 whipsaw next (about 80%), otherwise R8 trend down; R9 itself usually lasts another 1-2.5 days after the flush
+  when: 'flush event: 4h close with 48h log return below its trailing-1y 5th pct, 4h OI >= 5% below its 72h high, v0 cell R9 (post_cascade_study.flush_events); v0 cell on 4h bars (regimes.label,
+    bar_hours 4)'
+  then: describes the state path; refines R-PX-8 (62% whipsaw after R9 in general) for flush-led R9 episodes
+  scope:
+    assets: crypto
+    horizon: 1-7 days
+    sides: both
+  effect: 'first cell after R9: R6 80%, R8 18% (n 635; BTC R6 83%, clean_holdout R6 81% of 21); R9 hours left after the event median 36 (IQR 20-60); cell at +7d: R6 30%, R9 25%, R5 18%,
+    R8 13%'
+  confidence: B
+  evidence:
+  - H-RB1
+  - H-RB2
+  - H-RL3
+  - research/reports/post_cascade_2026-11-15.md
+  review: the same matrix on daily cells, or a holdout share of R6 below 60% at 40+ holdout events
+  status: active
+- id: R-RB-4
+  kind: avoid
+  rule: 'WHEN funding drops below its 90-day 10th percentile while open interest rebuilds >= 3% within 72h of a flush THEN don''t expect a short squeeze from it: the next 24h is if anything
+    weaker than after flushes without that pattern'
+  when: 'flush event: 4h close with 48h log return below its trailing-1y 5th pct, 4h OI >= 5% below its 72h high, v0 cell R9 (post_cascade_study.flush_events); then at a 4h close within
+    72h: latest funding print < trailing-90d 10th pct of prints and OI >= 3% above its post-flush low'
+  then: treat new shorts piling in after a flush as no evidence for a rebound (in line with R-AVOID-1 / R-MAP-5 on funding-contrarian signals)
+  scope:
+    assets: crypto
+    horizon: 24-72h
+    sides: both
+  effect: pattern minus no-pattern vol-scaled return, llm_in_sample 24h -0.14 [-0.32, +0.02] sigma, 72h +0.02 [-0.13, +0.17] (pattern 234 of 614 events); clean_holdout 24h -0.39 [-1.13,
+    +0.66], 72h +0.02 [-0.61, +0.74] (pattern 4 of 35)
+  confidence: C
+  evidence:
+  - H-RB3
+  - research/reports/post_cascade_2026-11-15.md
+  review: 15+ holdout pattern events
+  status: provisional
+- id: R-RB-5
+  kind: expect
+  rule: 'WHEN shorting the first 4h close back below the EMA20 after a >= 1.5 sigma post-flush rebound THEN expect about breakeven net R: better than a random short in the same cell,
+    but no edge yet'
+  when: 'flush event: 4h close with 48h log return below its trailing-1y 5th pct, 4h OI >= 5% below its 72h high, v0 cell R9 (post_cascade_study.flush_events); then within 7 days a close
+    >= 1.5 sigma above the post-flush low, then a 4h close crossing below the 4h EMA20'
+  then: a short here is not worse than other shorts in the whipsaw that follows, but there is no tested positive expectation
+  scope:
+    assets: crypto
+    horizon: 5 days
+    sides: short
+  effect: 'net R per trade: llm_in_sample -0.00 [-0.15, +0.15] (n 560), clean_holdout +0.42 [-0.42, +1.21] (n 19, 7 weeks); minus matched random shorts +0.15 [-0.01, +0.32] / +0.65 [-0.41,
+    +1.56]; entries mostly in R6 (351 of 560)'
+  confidence: C
+  evidence:
+  - H-RB2
+  - research/reports/post_cascade_2026-11-15.md
+  review: holdout CI clearing zero at 40+ trades, or a registered variant
+  status: provisional
+- id: R-XS-1
+  kind: prefer
+  rule: WHEN next-hour volatility bands are needed for a universe-L crypto perp THEN prefer the quantiles of a small shared panel network on the hourly vol features over panel log-HAR-t
+    x hour-of-week; at 4h expect parity and at 24h keep log-HAR-t
+  when: next-hour return-magnitude quantiles or bands for one of the 23 universe-L perps (stop distances, touch probabilities, quote widths)
+  then: the xs_v3 1h vol head (or an equal-size MLP) as the band source; log-HAR-t x hour-of-week at 4h-24h and as the fallback
+  scope:
+    assets: universe L
+    horizon: 1h
+    sides: both
+  effect: 'pinball v3 - log-HAR-t at 1h: -0.00200 (t -14.1, 1.4%) llm_in_sample, -0.00220 (t -3.39, 1.4%) clean_holdout, lower for all 23 tokens; 4h -0.00109 (t -4.0) / -0.00017 (t -0.2);
+    24h +0.0012 / +0.0009 (worse)'
+  confidence: B
+  evidence:
+  - H-XS2
+  - H-PNN1
+  - research/reports/xs_network_2026-11-15.md
+  review: a forward quarter in which the 1h network pinball is not below log-HAR-t x hour-of-week
+  status: active
+- id: R-XS-2
+  kind: expect
+  rule: WHEN ranking universe-L tokens by their next 4h-24h return relative to the equal-weight basket THEN expect relative momentum to rank backwards and a low-volatility or short-term
+    reversal ranking to place the median correctly, without the top names earning more on average than the bottom names
+  when: a cross-sectional relative-strength view across the 23 universe-L perps
+  then: read 24h / 7d relative outperformance as a mild fade, and a high v3 relative-return rank as a calm, median-type outcome, not as expected excess return
+  scope:
+    assets: universe L
+    horizon: 4h-24h
+    sides: both
+  effect: 'rank IC llm_in_sample / clean_holdout: mom24 4h -0.029 (t -9.1) / -0.025 (t -2.5); low-vol 4h 0.040 / 0.039, 24h 0.073 / 0.060; v3 4h 0.055 / 0.052, 24h 0.077 / 0.061; v3
+    quintile spread in simple returns gross +0.1 / -2.2 bp per 4h and -7.0 / -17.2 bp per 24h'
+  confidence: B
+  evidence:
+  - H-XS1
+  - research/reports/xs_network_2026-11-15.md
+  review: a forward quarter with a positive gross simple-return quintile spread for the v3 ranking, or a momentum IC above zero
+  status: active
+- id: R-XS-3
+  kind: avoid
+  rule: WHEN v3's relative-return median or its pairwise P(token i beats token j) favours a token THEN do not treat that as a reason to enter long or short that token against the basket;
+    the quintile spread loses after costs in both segments
+  when: a candidate justified mainly by cross-sectional relative strength from xs_v3
+  then: use the cross-sectional panel as context only; require an independent thesis for any relative trade
+  scope:
+    assets: universe L
+    horizon: 4h-24h
+    sides: both
+  effect: 'top-minus-bottom quintile net of 7.5 bp/side/leg, simple returns: llm_in_sample -11.8 bp per 4h (t -8.9), -19.4 bp per 24h (t -2.3); clean_holdout -12.1 bp (t -2.4), -28.6
+    bp (t -1.2); turnover 0.66-0.83 per rebalance; pairwise accuracy 0.52-0.53'
+  confidence: B
+  evidence:
+  - H-XS1
+  - research/reports/xs_network_2026-11-15.md
+  review: a registered test of a slower, lower-turnover relative ranking with a positive net spread in the holdout
+  status: active
+- id: R-XS-4
+  kind: expect
+  rule: WHEN modelling intraday volatility or relative returns across universe L THEN expect no gain from cross-token attention over each token's own features plus equal-weight market
+    features; a learned attention puts BTC and TRX at the centre, not ETH and SOL
+  when: designing or reading cross-asset spillover models for crypto perps at 1h-24h
+  then: per-token panel models with market aggregates as inputs; treat attention maps as descriptive, not as evidence of transmission
+  scope:
+    assets: universe L
+    horizon: 1h-24h
+    sides: both
+  effect: pinball no-mix - mix (non-BTC) llm_in_sample 1h +0.00018 (t 2.9), 4h +0.00004 (t 0.3), 24h -0.0014 (t -2.9); clean_holdout -0.00040 (t -1.95), -0.00056 (t -1.55), -0.0023 (t
+    -1.4); received attention BTC 2.3x, TRX 2.3-3.6x, ETH / SOL below uniform (hub t -8.5 / -11.8 holdout)
+  confidence: C
+  evidence:
+  - H-XS3
+  - research/reports/xs_network_2026-11-15.md
+  review: a spillover model that beats its no-mixing ablation in a holdout
+  status: provisional

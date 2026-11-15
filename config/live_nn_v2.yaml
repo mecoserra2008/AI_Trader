@@ -1,0 +1,34 @@
+# Live BTC network v2.1 (v2 + issue-alpha floor; parallel shadow of live_nn.v1; approved by the user 2026-11-15). Pre-declared before the first
+# v2 line (diary 2026-11-15, kind decision). The hash of the parsed content (sort_keys JSON, sha256[:16]) goes into every
+# v2 line: changing anything here starts a new track record. Code: src/ai_trader/live/nn_v2.py.
+version: live_nn.v2.1
+model_id: live_nn.v2.1
+base: live_nn.v1                 # same frozen PNN 1h / 1d checkpoints, same field, same features; only the conformal layer differs
+aci:
+  # Gibbs-Candes adaptive conformal, same update and CQR scores as v1, applied the same way per horizon.
+  gamma_1h: 0.02                 # v1: 0.005
+  gamma_24h: 0.0008333333333333334   # = 0.02 / 24 (each resolved overlapping 24h forecast moves alpha by gamma / 24); v1: 0.005 / 24
+  window_1h: 1440
+  window_24h: 2000
+  levels: [80, 90, 95]
+  warm_start: "same source as v1 (data/models/pnn/latent_1h.parquet and latent_1d.parquet, F2 walk-forward ACI stream, rows whose label is known at as_of)"
+  alpha_floor:                   # v2.1 (2026-11-15, before any live v2 line): alpha_t < 0 makes the ACI interval infinite
+    divisor: 4                   # bands are ISSUED at alpha_eff = max(alpha_t, nominal_alpha / 4) = 0.05 / 0.025 / 0.0125 (80 / 90 / 95)
+    applies_to: [1h, 24h]
+    state: "unclipped alpha_t, updated on the pre-floor ACI band exactly as in v2"
+  update_on: pre-floor ACI band  # the ACI stream is updated with the miscoverage of its own band; the floor is an overlay
+jump_floor:
+  horizon: 1h                    # 24h bands get no floor
+  lookback_hours: 6              # bars S-6h .. S-1h (all closed at as_of)
+  z_trigger: 3.0                 # active if any of them had |z| > 3, z = r / sigma_eff_v2 of that bar
+  sigma_eff: "(hi80 - lo80) / 2.5631 of the v2 ISSUED 80% band (after the floor), % log return"
+  z_q: {80: 1.2815515655446004, 90: 1.6448536269514722, 95: 1.959963984540054}
+  floor: "half-width >= z_q * max(net sigma, field 1h sigma, H-NN10 ML sigma); widened symmetrically about the ACI band midpoint"
+  components:
+    net: "(q90 - q10) / 2.5631 of the frozen 1h PNN for bar S"
+    field: "field card 1h sd_pct at as_of; omitted if the field was fitted after as_of or the card failed"
+    hnn10: "newest BTCUSDT H-NN10 line logged by as_of with forecast_for >= S - 1h (sigma_next_hour_ml x 100); else omitted"
+    catch_up: "bars with no issued v2 line (warm-up, missed hours) use net and H-NN10 only"
+scoring:
+  pinball_bands: "mean pinball loss of the 6 issued band endpoints, taus 0.10/0.90 (80%), 0.05/0.95 (90%), 0.025/0.975 (95%)"
+  replay_lines_count_for_verdicts: false

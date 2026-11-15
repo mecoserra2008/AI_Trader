@@ -1,0 +1,93 @@
+# Cross-venue instrument map: Bybit linear USDT perps vs BlackBull Markets CFDs on cTrader (H-ARB1, H-ARB2).
+# Data only: nothing here is used to place orders on either venue.
+#
+# cTrader symbol names and ids are broker- and environment-specific and are only visible after login, so this file
+# holds candidate names. `atx ctrader symbols --resolve` matches them (exact name first, then "<ticker><sep><suffix>",
+# e.g. NVDA.NAS / NVDA.US) against the account's symbol list and writes the resolved name, id and symbol details
+# (lot size, commission, swaps, schedule, holidays) to data/research/xvenue/ctrader_map.json. Unresolved rows print
+# their candidate hits: add the right name to ctrader_candidates and rerun.
+#
+# SPYUSDT is excluded on purpose (the user's own position): never add it, not even for data. The resolver refuses it.
+#
+# Price conversion. gap = ln(mid_bybit / (multiplier * mid_ctrader)). Bybit perps are settled in USDT and the CFDs in
+# USD. Crypto perps (BTCUSDT...) track USDT spot books, so their price is in USDT and a raw gap vs a USD CFD includes the
+# USDT/USD basis: for classes in `usdt_correct_classes` the study subtracts ln(USDCUSDT) (Bybit SPOT USDCUSDT 1 m mid;
+# USDC ~ USD) and reports raw and corrected gaps. TradFi perps track a USD index numerically (the "USDT" price is the
+# USD price), so no correction is applied to them; the corrected gap is a sensitivity only. The residual USDC/USD
+# basis (a few bp at most in calm markets) is left in and flagged.
+#
+# Hours. Bybit TradFi perps trade 24/7 (BELIEFS T1). BlackBull CFDs follow their session (nominal below; the study
+# uses the resolved ProtoOASymbol.schedule + holidays, and treats a CFD second as live only inside the schedule and
+# with a quote younger than `live_age_s`). BlackBull lists 24/5 trading for ~90 US stocks/ETFs (public PDF, 2025-07):
+# Sun 20:00 ET - Fri 20:00 ET; regular session 09:30-16:00 ET. Times in UTC shift with US DST (ended 2026-11-01).
+
+version: 1
+live_age_s: 60                  # a second counts as common hours only if both venues quoted within this many seconds
+usdt_correct_classes: [crypto]
+seed: 20261114
+usdt_basis:
+  source: bybit spot USDCUSDT 1m klines (public REST)
+  fallback: bybit linear USDCUSDT (perp; carries its own premium)  # flagged in the report if used
+venues:
+  bybit:
+    hours: "24/7 (TradFi perps included, at 0.1-0.15x weekday turnover on weekends)"
+    fees: config/fees.yaml        # crypto 2 / 5.5 bp maker / taker, tradfi 0 / 2.75 bp
+    funding: lake funding table (8 h; XAU/XAG 4 h)
+  blackbull:
+    hours_fx_metals_energy: "Sun 22:00/23:00 UTC - Fri 22:00 UTC, daily break ~22:00-23:00 UTC (nominal)"
+    hours_crypto: "24/7 (nominal)"
+    hours_us_24_5: "Sun 20:00 ET - Fri 20:00 ET (nominal; check schedule)"
+    hours_us_regular: "Mon-Fri 09:30-16:00 ET"
+    fees: "from ProtoOASymbol commission fields of the account (Prime: USD 3 per side per USD 100k on FX/metals)"
+    swaps: "ProtoOASymbol swapLong / swapShort / swapCalculationType / swapRollover3Days"
+
+# Fields: bybit, class, ticker (for suffix matching), ctrader_candidates, multiplier (bybit price = multiplier x
+# ctrader price), units, quote, basis_note, study (part of the H-ARB1 sample).
+instruments:
+  # ---- metals
+  - {bybit: XAUUSDT, class: metal, ticker: XAUUSD, ctrader_candidates: [XAUUSD, "XAU/USD", GOLD], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD},
+     units: {bybit: "1 qty = 1 troy oz", ctrader: "lotSize from details (usually 100 oz)"}, basis_note: "both spot-gold referenced", study: true}
+  - {bybit: XAGUSDT, class: metal, ticker: XAGUSD, ctrader_candidates: [XAGUSD, "XAG/USD", SILVER], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD},
+     units: {bybit: "1 qty = 1 troy oz", ctrader: "lotSize from details (usually 5000 oz)"}, basis_note: "both spot-silver referenced", study: true}
+  # ---- energy: Bybit CL/BZ perps track front-month futures; BlackBull spot oil CFDs are futures-derived with roll
+  #      adjustments, so a structural basis (contango / roll) is expected and reported separately.
+  - {bybit: CLUSDT, class: energy, ticker: USOIL, ctrader_candidates: [USOIL, XTIUSD, WTI, USOUSD, WTIUSD, CL, SpotCrude, USOil], multiplier: 1.0,
+     quote: {bybit: USDT, ctrader: USD}, units: {bybit: "1 qty = 1 bbl", ctrader: "lotSize from details"}, basis_note: "front-month futures vs spot CFD: roll basis", study: true}
+  - {bybit: BZUSDT, class: energy, ticker: UKOIL, ctrader_candidates: [UKOIL, XBRUSD, BRENT, UKOUSD, BRN, BRENTUSD, SpotBrent, UKOil], multiplier: 1.0,
+     quote: {bybit: USDT, ctrader: USD}, units: {bybit: "1 qty = 1 bbl", ctrader: "lotSize from details"}, basis_note: "front-month futures vs spot CFD: roll basis", study: true}
+  # ---- FX (Bybit forex perps quote the pair itself, settled in USDT)
+  - {bybit: EURUSDUSDT, class: fx, ticker: EURUSD, ctrader_candidates: [EURUSD, "EUR/USD"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD},
+     units: {bybit: "1 qty = 1 EUR", ctrader: "1 lot = 100k EUR"}, basis_note: "", study: true}
+  - {bybit: GBPUSDUSDT, class: fx, ticker: GBPUSD, ctrader_candidates: [GBPUSD, "GBP/USD"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD},
+     units: {bybit: "1 qty = 1 GBP", ctrader: "1 lot = 100k GBP"}, basis_note: "", study: false}
+  - {bybit: USDJPYUSDT, class: fx, ticker: USDJPY, ctrader_candidates: [USDJPY, "USD/JPY"], multiplier: 1.0, quote: {bybit: USDT, ctrader: JPY},
+     units: {bybit: "1 qty = 1 USD", ctrader: "1 lot = 100k USD"}, basis_note: "price is JPY per USD on both: no USDT correction applies to the rate", study: false}
+  # ---- crypto (CFD on the coin vs the USDT perp)
+  - {bybit: BTCUSDT, class: crypto, ticker: BTCUSD, ctrader_candidates: [BTCUSD, "BTC/USD", BITCOIN, XBTUSD], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD},
+     units: {bybit: "1 qty = 1 BTC", ctrader: "lotSize from details (usually 1 BTC)"}, basis_note: "perp premium + USDT basis", study: true}
+  - {bybit: ETHUSDT, class: crypto, ticker: ETHUSD, ctrader_candidates: [ETHUSD, "ETH/USD", ETHEREUM], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD},
+     units: {bybit: "1 qty = 1 ETH", ctrader: "lotSize from details"}, basis_note: "perp premium + USDT basis", study: true}
+  - {bybit: SOLUSDT, class: crypto, ticker: SOLUSD, ctrader_candidates: [SOLUSD, "SOL/USD", SOLANA], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD},
+     units: {bybit: "1 qty = 1 SOL", ctrader: "lotSize from details"}, basis_note: "", study: false}
+  - {bybit: XRPUSDT, class: crypto, ticker: XRPUSD, ctrader_candidates: [XRPUSD, "XRP/USD", RIPPLE], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD},
+     units: {bybit: "1 qty = 1 XRP", ctrader: "lotSize from details"}, basis_note: "", study: false}
+  # ---- US stocks / ETFs (Bybit: 1 qty = 1 share; CFD: lotSize from details, usually 1 share). All on BlackBull's 24/5 list
+  #      unless noted. CRWV is not on the 24/5 list (regular session only, if offered at all).
+  - {bybit: NVDAUSDT, class: stock, ticker: NVDA, ctrader_candidates: [NVDA, NVDA.US, NVDA.NAS, NVDA.O, "#NVDA"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD}, basis_note: "", study: true}
+  - {bybit: TSLAUSDT, class: stock, ticker: TSLA, ctrader_candidates: [TSLA, TSLA.US, TSLA.NAS, TSLA.O, "#TSLA"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD}, basis_note: "", study: true}
+  - {bybit: COINUSDT, class: stock, ticker: COIN, ctrader_candidates: [COIN, COIN.US, COIN.NAS, COIN.O, "#COIN"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD}, basis_note: "", study: true}
+  - {bybit: CRWVUSDT, class: stock, ticker: CRWV, ctrader_candidates: [CRWV, CRWV.US, CRWV.NAS, CRWV.O, "#CRWV"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD}, basis_note: "not on the 24/5 list", study: true}
+  - {bybit: MSTRUSDT, class: stock, ticker: MSTR, ctrader_candidates: [MSTR, MSTR.US, MSTR.NAS, MSTR.O, "#MSTR"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD}, basis_note: "", study: true}
+  - {bybit: GOOGLUSDT, class: stock, ticker: GOOGL, ctrader_candidates: [GOOGL, GOOGL.US, GOOGL.NAS, GOOGL.O, "#GOOGL"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD}, basis_note: "", study: true}
+  - {bybit: QQQUSDT, class: etf, ticker: QQQ, ctrader_candidates: [QQQ, QQQ.US, QQQ.NAS, QQQ.O, "#QQQ"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD}, basis_note: "the ETF, not the NAS100 index CFD", study: true}
+  - {bybit: AAPLUSDT, class: stock, ticker: AAPL, ctrader_candidates: [AAPL, AAPL.US, AAPL.NAS, AAPL.O, "#AAPL"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD}, basis_note: "", study: false}
+  - {bybit: METAUSDT, class: stock, ticker: META, ctrader_candidates: [META, META.US, META.NAS, META.O, "#META"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD}, basis_note: "", study: false}
+  - {bybit: AMZNUSDT, class: stock, ticker: AMZN, ctrader_candidates: [AMZN, AMZN.US, AMZN.NAS, AMZN.O, "#AMZN"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD}, basis_note: "", study: false}
+  - {bybit: MSFTUSDT, class: stock, ticker: MSFT, ctrader_candidates: [MSFT, MSFT.US, MSFT.NAS, MSFT.O, "#MSFT"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD}, basis_note: "", study: false}
+  - {bybit: PLTRUSDT, class: stock, ticker: PLTR, ctrader_candidates: [PLTR, PLTR.US, PLTR.NAS, PLTR.O, "#PLTR"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD}, basis_note: "", study: false}
+  - {bybit: AMDSTOCKUSDT, class: stock, ticker: AMD, ctrader_candidates: [AMD, AMD.US, AMD.NAS, AMD.O, "#AMD"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD}, basis_note: "", study: false}
+  - {bybit: HOODUSDT, class: stock, ticker: HOOD, ctrader_candidates: [HOOD, HOOD.US, HOOD.NAS, HOOD.O, "#HOOD"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD}, basis_note: "not on the 24/5 list", study: false}
+  - {bybit: IWMUSDT, class: etf, ticker: IWM, ctrader_candidates: [IWM, IWM.US, IWM.ARCA, "#IWM"], multiplier: 1.0, quote: {bybit: USDT, ctrader: USD}, basis_note: "the ETF, not the US2000 index CFD", study: false}
+
+# Not mapped: index CFDs (US500, NAS100, US30, GER40...) have no same-underlying Bybit perp (Bybit lists ETFs; SPY is
+# excluded); QQQ vs NAS100 would be a proxy with a drifting ratio, not an arbitrage.

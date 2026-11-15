@@ -1,0 +1,413 @@
+{
+ "hypothesis": "H-MINE1",
+ "family": {
+  "total": 1884,
+  "by_family": {
+   "F1": 720,
+   "F2": 144,
+   "F3": 120,
+   "F3c": 60,
+   "F4a": 180,
+   "F4b": 300,
+   "F5": 360
+  },
+  "vol": 942,
+  "direction": 942
+ },
+ "family_text": {
+  "F1": "own state cross: class x flow quintile x 15-min vol tercile x hour block (cell vs symbol-day mean)",
+  "F2": "flow contrast: top minus bottom flow quintile within class x vol tercile x hour block",
+  "F3": "spread regime (L2-book symbols): spread (tick-bound / free) x flow quintile x vol tercile",
+  "F3c": "spread contrast: free minus tick-bound within flow quintile x vol tercile",
+  "F4a": "leader state for alts: BTC / ETH / SOL same-minute flow quintile x vol tercile",
+  "F4b": "leader x own flow for alts: leader flow quintile x own flow quintile",
+  "F5": "5-minute table: class x 5-min flow quintile x 30-min vol tercile x hour block (next-5m targets)"
+ },
+ "discovery_days": [
+  "2025-09-05",
+  "2025-12-18",
+  "2026-07-12",
+  "2026-07-13",
+  "2026-09-23",
+  "2025-08-31",
+  "2025-11-19",
+  "2026-07-22",
+  "2026-08-17",
+  "2026-10-25",
+  "2026-05-11",
+  "2026-06-21",
+  "2026-07-03",
+  "2026-08-16",
+  "2026-10-02",
+  "2026-11-10"
+ ],
+ "confirmation_days_planned": [
+  "2026-05-20",
+  "2026-06-14",
+  "2026-07-07",
+  "2026-07-18",
+  "2026-10-09",
+  "2025-11-21",
+  "2026-01-25",
+  "2026-07-17",
+  "2026-08-04",
+  "2026-08-18",
+  "2025-09-02",
+  "2025-09-10",
+  "2026-10-16",
+  "2026-11-02",
+  "2026-11-08"
+ ],
+ "frozen_at": "2026-11-12T12:34:36+00:00",
+ "n_testable": 1610,
+ "n_discoveries": 550,
+ "discoveries_by_family_kind": {
+  "F1:direction": 22,
+  "F1:vol": 203,
+  "F2:direction": 5,
+  "F2:vol": 1,
+  "F3:direction": 8,
+  "F3:vol": 46,
+  "F3c:direction": 2,
+  "F3c:vol": 6,
+  "F4a:direction": 7,
+  "F4a:vol": 71,
+  "F4b:direction": 19,
+  "F4b:vol": 112,
+  "F5:direction": 4,
+  "F5:vol": 44
+ },
+ "descriptives": {
+  "rows": 926839,
+  "by_class": [
+   {
+    "cls": "alt",
+    "rows": 707719,
+    "symbols": 35
+   },
+   {
+    "cls": "major",
+    "rows": 108880,
+    "symbols": 5
+   },
+   {
+    "cls": "tradfi",
+    "rows": 110240,
+    "symbols": 11
+   }
+  ],
+  "a1_by_vol": [
+   {
+    "vol_t": 0,
+    "mean": -0.2364555479735273,
+    "se": 0.01728741420909653,
+    "days": 16
+   },
+   {
+    "vol_t": 1,
+    "mean": -0.08619102513014212,
+    "se": 0.016910165910228824,
+    "days": 16
+   },
+   {
+    "vol_t": 2,
+    "mean": 0.27776707726267175,
+    "se": 0.016848731153944252,
+    "days": 16
+   }
+  ],
+  "a1_by_hour": [
+   {
+    "hour": 0,
+    "mean": -0.10818320300849826,
+    "se": 0.029036841809575213,
+    "days": 16
+   },
+   {
+    "hour": 1,
+    "mean": -0.13090074308033584,
+    "se": 0.0224776428746512,
+    "days": 16
+   },
+   {
+    "hour": 2,
+    "mean": 0.25093142787392303,
+    "se": 0.05605098155670278,
+    "days": 16
+   },
+   {
+    "hour": 3,
+    "mean": 0.03755917673293656,
+    "se": 0.032503889783333066,
+    "days": 16
+   }
+  ],
+  "a1_by_flow": [
+   {
+    "flow_q": 0,
+    "mean": -0.08447093420166867,
+    "se": 0.00738946936305155,
+    "days": 16
+   },
+   {
+    "flow_q": 1,
+    "mean": 0.07323148783145485,
+    "se": 0.009285940800128177,
+    "days": 16
+   },
+   {
+    "flow_q": 2,
+    "mean": 0.04554912587927288,
+    "se": 0.009398223943912803,
+    "days": 16
+   },
+   {
+    "flow_q": 3,
+    "mean": 0.05915045806216693,
+    "se": 0.007639106112269268,
+    "days": 16
+   },
+   {
+    "flow_q": 4,
+    "mean": -0.09530618616717808,
+    "se": 0.011303493807514496,
+    "days": 16
+   }
+  ],
+  "s1_by_class_flow": [
+   {
+    "cls": "alt",
+    "flow_q": 0,
+    "mean": 0.007939781113171077,
+    "se": 0.005244310907767978,
+    "days": 16
+   },
+   {
+    "cls": "alt",
+    "flow_q": 1,
+    "mean": 0.003402473421000073,
+    "se": 0.0038745539312581736,
+    "days": 16
+   },
+   {
+    "cls": "alt",
+    "flow_q": 2,
+    "mean": -0.010654172689047768,
+    "se": 0.0028194458614653364,
+    "days": 16
+   },
+   {
+    "cls": "alt",
+    "flow_q": 3,
+    "mean": -0.0005893984311260074,
+    "se": 0.0025581982560988156,
+    "days": 16
+   },
+   {
+    "cls": "alt",
+    "flow_q": 4,
+    "mean": -0.0002714612296342224,
+    "se": 0.005057208332240685,
+    "days": 16
+   },
+   {
+    "cls": "major",
+    "flow_q": 0,
+    "mean": 0.010521588453033987,
+    "se": 0.007914935021267451,
+    "days": 16
+   },
+   {
+    "cls": "major",
+    "flow_q": 1,
+    "mean": 0.006696910016234082,
+    "se": 0.007325188220560366,
+    "days": 16
+   },
+   {
+    "cls": "major",
+    "flow_q": 2,
+    "mean": -0.008766824456004496,
+    "se": 0.007718493448212669,
+    "days": 16
+   },
+   {
+    "cls": "major",
+    "flow_q": 3,
+    "mean": -0.007384819706939824,
+    "se": 0.007187855578342751,
+    "days": 16
+   },
+   {
+    "cls": "major",
+    "flow_q": 4,
+    "mean": -0.003124771155156012,
+    "se": 0.005058367746749925,
+    "days": 16
+   },
+   {
+    "cls": "tradfi",
+    "flow_q": 0,
+    "mean": -0.028480050504121904,
+    "se": 0.010216162843567089,
+    "days": 12
+   },
+   {
+    "cls": "tradfi",
+    "flow_q": 1,
+    "mean": -0.012104328143140287,
+    "se": 0.00874657938007401,
+    "days": 12
+   },
+   {
+    "cls": "tradfi",
+    "flow_q": 2,
+    "mean": 0.004013219205506565,
+    "se": 0.007035579690150085,
+    "days": 12
+   },
+   {
+    "cls": "tradfi",
+    "flow_q": 3,
+    "mean": 0.008738010885070169,
+    "se": 0.00793848564986536,
+    "days": 12
+   },
+   {
+    "cls": "tradfi",
+    "flow_q": 4,
+    "mean": 0.024595117553034018,
+    "se": 0.013363466984903644,
+    "days": 12
+   }
+  ],
+  "alt_s1_by_btc_flow": [
+   {
+    "BTC_flow_q": 0,
+    "mean": -0.018560558063204165,
+    "se": 0.00749190395547556,
+    "days": 16
+   },
+   {
+    "BTC_flow_q": 1,
+    "mean": -0.002985947927856058,
+    "se": 0.008725383774170578,
+    "days": 16
+   },
+   {
+    "BTC_flow_q": 2,
+    "mean": -0.009362232382453454,
+    "se": 0.010474634154903663,
+    "days": 16
+   },
+   {
+    "BTC_flow_q": 3,
+    "mean": 0.002872166904212435,
+    "se": 0.010347176217997127,
+    "days": 16
+   },
+   {
+    "BTC_flow_q": 4,
+    "mean": 0.02756462237898716,
+    "se": 0.00797178221637307,
+    "days": 16
+   }
+  ],
+  "alt_s5_by_btc_flow": [
+   {
+    "BTC_flow_q": 0,
+    "mean": -0.01015817590762896,
+    "se": 0.010291464628334102,
+    "days": 16
+   },
+   {
+    "BTC_flow_q": 1,
+    "mean": -0.0037314972680576918,
+    "se": 0.0076452260264059215,
+    "days": 16
+   },
+   {
+    "BTC_flow_q": 2,
+    "mean": 0.008726969546935654,
+    "se": 0.008103508981280342,
+    "days": 16
+   },
+   {
+    "BTC_flow_q": 3,
+    "mean": 0.003957028158006623,
+    "se": 0.010419188525257967,
+    "days": 16
+   },
+   {
+    "BTC_flow_q": 4,
+    "mean": -0.00028301341364236334,
+    "se": 0.011112125703791418,
+    "days": 16
+   }
+  ],
+  "vol_tercile_persistence_1m": 0.9162767044068075,
+  "spread_free_share": [
+   {
+    "sym": "SOLUSDT",
+    "free_share": 0.0,
+    "rows": 21776
+   },
+   {
+    "sym": "XRPUSDT",
+    "free_share": 4.5922116091109475e-05,
+    "rows": 21776
+   },
+   {
+    "sym": "DOGEUSDT",
+    "free_share": 4.5922116091109475e-05,
+    "rows": 21776
+   },
+   {
+    "sym": "BTCUSDT",
+    "free_share": 0.007577149155033064,
+    "rows": 21776
+   },
+   {
+    "sym": "ETHUSDT",
+    "free_share": 0.008220058780308596,
+    "rows": 21776
+   },
+   {
+    "sym": "XAUUSDT",
+    "free_share": 0.016838109233406808,
+    "rows": 16332
+   },
+   {
+    "sym": "ATOMUSDT",
+    "free_share": 0.10782512858192506,
+    "rows": 21776
+   },
+   {
+    "sym": "NVDAUSDT",
+    "free_share": 0.17479794268919913,
+    "rows": 13610
+   },
+   {
+    "sym": "HYPEUSDT",
+    "free_share": 0.22345701689933872,
+    "rows": 21776
+   },
+   {
+    "sym": "KASUSDT",
+    "free_share": 0.34974283614988977,
+    "rows": 17693
+   },
+   {
+    "sym": "QQQUSDT",
+    "free_share": 0.41489101151114377,
+    "rows": 4083
+   },
+   {
+    "sym": "CARVUSDT",
+    "free_share": 0.6550330639235856,
+    "rows": 8166
+   }
+  ]
+ },
+ "rules": []
+}

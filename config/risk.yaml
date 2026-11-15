@@ -8,7 +8,23 @@ max_positions_per_cluster: 1
 daily_loss_limit_pct: 1.5        # equity drawdown vs UTC day start -> no new entries until next day
 max_gross_exposure_x: 3.0        # sum of position notionals / equity
 max_stop_distance_pct: 15.0      # sanity cap on |entry - stop| / entry
-min_net_expected_r: 0.10         # after costs, in R units
+min_net_expected_r: 0.10         # after costs, in R units (inclusive: reject < 0.10). Every non-paper mode
+# PAPER / REPLAY only (user decision 2026-11-14 ~13:30 UTC, option 1): accept any candidate whose net E[R] after costs
+# is > 0 (exclusive bound: 0 itself is rejected). at-risk applies it only when the mode is paper or replay and the
+# environment is not mainnet (DecideConfig::for_mode); live / mainnet keep min_net_expected_r. New track record from here.
+min_net_expected_r_paper: 0.0
+
+# Paper-book entries (2026-11-15, main session / user: limit entries). H-EXE1 supports in both segments: a PostOnly limit
+# joining the touch and re-pegged beat a market entry by +0.010 R per signal, 275/275 replayed signals filled within 37 s,
+# fills 1.1-1.6 bp beyond the decision-time mid (research/reports/execution_2026-11-15.md; R-EXE-1, R-EXE-2).
+# pegged_limit: both sleeves send `entry: {type: limit, peg: touch}`; at-risk costs the entry as maker + slip_bps (exit
+# unchanged: taker + slippage); at-exec PaperBook fills it at the first 1h open after submission moved slip_bps against
+# the trade, maker fee from config/fees.yaml (no 1m bars: the re-peg window lies inside that first bar).
+# as_signal: the sleeve's own entry type (shock market, trend limit at the bar close). Changing this is a tool-version change.
+paper_entry:
+  mode: pegged_limit
+  slip_bps: 1.3
+  window_min: 15
 
 costs:                           # Bybit linear VIP0
   taker_bps: 5.5
@@ -17,7 +33,11 @@ costs:                           # Bybit linear VIP0
 
 placement:                       # structural TP/SL constants (ARCHITECTURE §3.11). Pre-registered.
   min_stop_distance_sigma: 0.5
-  max_stop_distance_sigma: 4.0
+  max_stop_distance_sigma: 4.0   # PRIOR stop cap (H-STOP1). Replaced by data/models/risk/stop_cap.json when present
+  # Hard bounds for the stop cap (user decision 2026-11-14): the weekly posterior update (ai_trader.risk.stop_posterior,
+  # Monday 00:00 UTC, closed paper trades only) is clipped to [lo, hi], and at-risk refuses a stop-cap file outside them.
+  # The LLM never sets the cap. Changing these bounds starts a new track record.
+  stop_cap_bounds_sigma: [2.5, 6.0]
   overshoot_quantile: 0.80
   undershoot_quantile: 0.20
   max_tp_candidates: 4
@@ -27,3 +47,56 @@ llm_view:
   confidence_scale: {low: 0.25, medium: 0.5, high: 1.0}
 
 slot_replacement_hurdle_r: 0.15
+
+# ---------------------------------------------------------------------------------------------------------------------
+# LIVE account, small size. User authorisation 2026-11-15 ~16:10 UTC: Claude may trade the user's LIVE Bybit account,
+# USDT linear perpetuals only, under these hard limits. Enforced in code: at-risk::live (decide_live, before every venue
+# write) and `atx live` (exchange-side stop on every entry, PostOnly pegged entries, kill switch). The user's numbers are
+# also compiled into at-risk (LIVE_CEILINGS): a value here that is LOOSER than them is refused at load (fail closed).
+# The LLM cannot change any of this; a change needs the user's words and starts a new live track record (the profile
+# hash is logged with every live journal event).
+live_small:
+  max_loss_per_trade_usd: 2.00     # worst case at the stop, fees + the tier's stop slip included
+  risk_to_stop_usd: 1.70           # sizing budget: qty * (|entry - stop| + entry fee + exit fee + 2 bp slippage)
+  max_entries_per_day: 20          # bot entry orders submitted per UTC day (filled or not)
+  daily_loss_stop_usd: 10.0        # realised (bot trades closed today) + open losses <= -10 -> no new entries today
+  daily_loss_budget: true          # also refuse an entry if realised - every open worst case - this worst case < -10
+  max_open_positions: 3            # bot positions + resting bot entries
+  max_same_direction: 2            # all bot positions in one direction (stricter than per-cluster)
+  max_gross_notional_usd: 400.0    # bot positions at mark + resting entries + the new order
+  max_stop_distance_pct: 10.0
+  min_net_expected_r: 0.10         # inclusive, live costs (maker + peg slip entry, taker + slippage exit)
+  require_sigma: true              # placement check against the stop cap (placement / stop_cap.json), as in paper
+  excluded_symbols: [SPYUSDT]      # never touched (SPYUSDT is also hard-coded in at-risk)
+  excluded_symbol_types: []        # Bybit symbolType values never traded, e.g. [innovation]; "" = crypto
+  # Notional tiers by liquidity, from Bybit mainnet 24h turnover rank among Trading USDT linear perps and the quoted
+  # spread. First tier whose every condition holds. Notional = min(tier cap, depth.max_share x book depth, the size
+  # whose risk to the stop is 1.70). stop_slip_bps: stop-exit slippage budgeted in the 2 USD worst case.
+  tiers:
+    - {name: liquid, max_rank: 10, min_turnover_usd: 100000000, max_spread_bps: 3, notional_cap_usd: 200, stop_slip_bps: 10}
+    - {name: mid, max_rank: 50, min_turnover_usd: 20000000, max_spread_bps: 10, notional_cap_usd: 100, stop_slip_bps: 25}
+    - {name: illiquid, min_turnover_usd: 3000000, max_spread_bps: 30, notional_cap_usd: 50, stop_slip_bps: 60}
+  depth:
+    band_bps: 50                   # depth summed within 50 bp of the touch, each side (top 200 levels)
+    max_share: 0.10                # notional <= 10% of min(bid depth, ask depth)
+  correlation:                     # correlated tokens are the same bet (same-direction limit, hedge refusal)
+    btc_symbol: BTCUSDT
+    threshold: 0.7                 # rolling corr of 1h log returns to BTC > 0.7 -> cluster btc_beta
+    freq: 1h
+    window_hours: 720              # 30 days
+    min_obs: 300                   # fewer aligned returns: unknown -> counts as btc_beta (fail closed)
+    cache_hours: 6
+    sector_file: config/sectors.yaml   # sector clusters: overrides > sectors
+    ignore_sectors: [other]
+  entry:                           # R-EXE-1: limit joining the touch, re-pegged, cancelled after the window
+    time_in_force: PostOnly
+    window_min: 15
+    poll_ms: 1500
+    slip_bps: 1.3                  # cost model of the peg (paper_entry.slip_bps, H-EXE1)
+  stop_trigger_by: MarkPrice
+  leverage: 5                      # margin setting only (size comes from the limits above)
+  margin_buffer: 1.5               # free USDT >= notional / leverage x 1.5
+  approval:
+    manual_trades: 5               # the first 5 live trades need `atx live approve <id>` by the user; then auto
+    ttl_min: 60                    # a pending proposal expires after 60 min
+  link_prefix: lsb                 # orderLinkId "lsb-..." marks the bot's orders; nothing else is ever touched

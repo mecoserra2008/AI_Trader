@@ -1,0 +1,86 @@
+# NVDA perp, micro-volatility market making at 0% maker fee (user request 2026-11-11 23:40 UTC: quote much tighter off
+# 15-second volatility, use pivot levels and the distance to them for one side or the other, and quantity as a factor
+# to change exposure). Bybit fee-rate API: NVDAUSDT maker 0, taker 2.75 bp. Same engine as mm_nvda.yaml (bullish
+# distance skew, inventory target 13 USD, take-profit only above the target) with micro_* quoting (expected 30 s move
+# from 15 s trade returns over the last 10 min), a small pivot-level tilt (levels break about as often as they hold,
+# R-PX-4, so this is a logged discretionary tilt to A/B, not a tested signal) and 1-3 lot adding orders scaled by the
+# shortfall to the target and the level tilt. New track record (H-MM2 family). NEVER add SPYUSDT.
+
+symbols: [NVDAUSDT]
+refresh_s: 3                   # one symbol: ~2.5 s of work per tick on this link
+sigma_lookback_min: 240        # slow sigma window (1m klines)
+sigma_fast_min: 30             # fast sigma window; sigma used = max(slow, fast)
+sigma_floor_bps: 20.0
+
+ask_offset_sigma: 0.90         # sell quote further away (bullish: don't sell the dip)
+bid_offset_sigma: 0.45         # buy quote closer to the reservation price
+requote_sigma: 0.50            # in quote-sigma (expected 30 s move) units
+min_rest_s: 10
+
+inventory_shift_sigma: 0.60
+take_profit_sigma: 0.60
+max_short_usd: 7.0             # one lot from flat only
+max_long_usd: 30.0
+max_gross_usd: 40.0
+reduce_lots_max: 3             # reducing side: 1 lot near flat -> 3 lots at the cap
+
+flow_window_s: 120
+flow_depth_bps: 25
+flow_shift_sigma: 0.30
+flow_batch: 1                  # one symbol: refresh its flow every tick
+
+tox_horizon_s: 60
+tox_alpha: 0.30
+tox_widen: 1.0
+tox_pause_sigma: 0.75
+
+shock_pause_sigma: 3.0         # |mid move| between ticks > 3 x sigma scaled to the tick -> no adding for the cooldown
+shock_cooldown_s: 120
+
+level_lookback_h: 48
+level_pivot_bars: 3
+level_snap_sigma: 0.5
+level_buffer_sigma: 0.05
+
+loss_limit_usd: 5.0            # fill-ledger P&L since start -> cancel, close, stop
+symbol_loss_limit_usd: 5.0     # single symbol: same as the global limit
+exit_window_min: 30
+leverage: 10
+order_pause_ms: 80             # throttle between order operations (~12/s max)
+
+# Structural zones (scripts/levels.py, 4h pivots clustered by ATR; refresh before each run). Quotes go just BEYOND zones.
+levels_file: data/mm/levels.json
+
+
+# Portfolio balance (added 2026-11-08 23:10 UTC after the first run filled 38 shorts in 2 min on a bounce):
+max_net_usd: 35.0
+portfolio_shift_sigma: 0.6     # every reservation leans against the portfolio net by up to 0.6 sigma
+
+# Slow link (added 2026-11-10, see scripts/conn_probe.py):
+per_symbol_tickers_max: 25     # <= 25 symbols: one ~1 KB ticker call per symbol instead of the ~700 KB category call
+flow_trades_limit: 1000        # venue max; ~10-15 min of NVDA trades for the 15 s sigma
+max_quote_age_s: 4.0           # a book top older than this (request start -> decision) adds no inventory that tick
+
+# Discretionary view (user 2026-11-11): bullish lean after the sell-off. Logged inventory skew, NOT a tested signal.
+bias:
+  NVDAUSDT: {sigma: 0.25, off_above: 185, max_long_usd: 30, max_short_usd: 7, target_usd: 13,
+             note: "user: more bullish after NVDA fell ~25% in two weeks; hold a small long (target 13 USD ~ 2 lots) most of the time; lean off above 185"}
+
+# Micro-volatility quoting (0% maker fee): distances, skews, take-profit and requotes in units of the expected move over
+# 30 s, from 15 s returns of recent trades (last 40 intervals = 10 min), floored at 3 bp. 1h sigma still drives shock
+# pauses, toxicity and the level distances.
+micro_interval_s: 15
+micro_lookback: 40
+micro_horizon_s: 30
+micro_floor_bps: 3.0
+# Pivot levels (15m swings over 48 h + 4h zones): tilt toward the nearer side, reach 3 x 1h sigma.
+level_shift_sigma: 0.15
+level_reach_sigma: 3.0
+# Quantity as an exposure factor: adding orders of 1..3 minimum lots (0.04 NVDA each).
+add_lots_max: 3
+add_inventory_weight: 1.0
+add_level_weight: 0.5
+# Fixes after the 2026-11-12 00:50 UTC stop (the run lost ~0.16 USD: the quotes captured ~+9 cents per NVDA traded at
+# 0 fees, but the bullish ~16 USD inventory lost ~0.25 USD as NVDA fell 0.9%, and the inventory skew sold lots below cost):
+reduce_min_edge_bps: 1.0       # never sell a long below entry + 1 bp (or cover a short above entry - 1 bp), except in the wind-down
+trend_guard_sigma: 1.5         # recent-trade-window move beyond 1.5 sd against the bullish view -> bias and target off that tick

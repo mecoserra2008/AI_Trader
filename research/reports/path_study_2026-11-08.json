@@ -1,0 +1,229 @@
+{
+ "cpi_dates_n": 279,
+ "paths": {
+  "BTC": {
+   "all_weeks": {
+    "n": 345,
+    "exact": 0.03188405797101449,
+    "exact_if_independent": 0.030865492269618187,
+    "loose": 0.17391304347826086,
+    "loose_if_independent": 0.1722783850670758,
+    "p_mon_chop": 0.40869565217391307,
+    "p_tue_fall": 0.2579710144927536,
+    "p_wedthu_rise": 0.2927536231884058,
+    "p_rise_given_tue_fall": 0.3258426966292135
+   },
+   "cpi_on_tuesday_weeks": {
+    "n": 23,
+    "exact": 0.043478260869565216,
+    "exact_if_independent": 0.024656858716199555,
+    "loose": 0.17391304347826086,
+    "loose_if_independent": 0.12295553546478177,
+    "p_mon_chop": 0.43478260869565216,
+    "p_tue_fall": 0.21739130434782608,
+    "p_wedthu_rise": 0.2608695652173913,
+    "p_rise_given_tue_fall": 0.4
+   },
+   "high_vol_start": {
+    "n": 94,
+    "exact": 0.05319148936170213,
+    "exact_if_independent": 0.03008726390106238,
+    "loose": 0.1702127659574468,
+    "loose_if_independent": 0.21090582048293732,
+    "p_mon_chop": 0.3723404255319149,
+    "p_tue_fall": 0.22340425531914893,
+    "p_wedthu_rise": 0.3617021276595745,
+    "p_rise_given_tue_fall": 0.47619047619047616
+   },
+   "cpi_tuesday_and_high_vol": {
+    "n": 4,
+    "exact": 0.0,
+    "exact_if_independent": 0.0,
+    "loose": 0.0,
+    "loose_if_independent": 0.03125,
+    "p_mon_chop": 0.0,
+    "p_tue_fall": 0.0,
+    "p_wedthu_rise": 0.25,
+    "p_rise_given_tue_fall": null
+   }
+  },
+  "NDX": {
+   "all_weeks": {
+    "n": 976,
+    "exact": 0.0584016393442623,
+    "exact_if_independent": 0.04149520465093995,
+    "loose": 0.19672131147540983,
+    "loose_if_independent": 0.18087260831440738,
+    "p_mon_chop": 0.45184426229508196,
+    "p_tue_fall": 0.2489754098360656,
+    "p_wedthu_rise": 0.36885245901639346,
+    "p_rise_given_tue_fall": 0.41975308641975306
+   },
+   "cpi_on_tuesday_weeks": {
+    "n": 54,
+    "exact": 0.05555555555555555,
+    "exact_if_independent": 0.02920032515368592,
+    "loose": 0.16666666666666666,
+    "loose_if_independent": 0.13158563227150333,
+    "p_mon_chop": 0.4074074074074074,
+    "p_tue_fall": 0.2037037037037037,
+    "p_wedthu_rise": 0.35185185185185186,
+    "p_rise_given_tue_fall": 0.45454545454545453
+   },
+   "high_vol_start": {
+    "n": 301,
+    "exact": 0.04318936877076412,
+    "exact_if_independent": 0.03314521951438275,
+    "loose": 0.19269102990033224,
+    "loose_if_independent": 0.18133064250425754,
+    "p_mon_chop": 0.43521594684385384,
+    "p_tue_fall": 0.2292358803986711,
+    "p_wedthu_rise": 0.33222591362126247,
+    "p_rise_given_tue_fall": 0.4057971014492754
+   },
+   "cpi_tuesday_and_high_vol": {
+    "n": 13,
+    "exact": 0.07692307692307693,
+    "exact_if_independent": 0.02457897132453346,
+    "loose": 0.07692307692307693,
+    "loose_if_independent": 0.09831588529813383,
+    "p_mon_chop": 0.46153846153846156,
+    "p_tue_fall": 0.23076923076923078,
+    "p_wedthu_rise": 0.23076923076923078,
+    "p_rise_given_tue_fall": 0.3333333333333333
+   }
+  },
+  "SPX": {
+   "all_weeks": {
+    "n": 976,
+    "exact": 0.04815573770491803,
+    "exact_if_independent": 0.040548962222127075,
+    "loose": 0.20799180327868852,
+    "loose_if_independent": 0.19771927840325842,
+    "p_mon_chop": 0.4764344262295082,
+    "p_tue_fall": 0.257172131147541,
+    "p_wedthu_rise": 0.33094262295081966,
+    "p_rise_given_tue_fall": 0.3466135458167331
+   },
+   "cpi_on_tuesday_weeks": {
+    "n": 54,
+    "exact": 0.05555555555555555,
+    "exact_if_independent": 0.04127927653304882,
+    "loose": 0.14814814814814814,
+    "loose_if_independent": 0.15249199817101053,
+    "p_mon_chop": 0.46296296296296297,
+    "p_tue_fall": 0.24074074074074073,
+    "p_wedthu_rise": 0.37037037037037035,
+    "p_rise_given_tue_fall": 0.3076923076923077
+   },
+   "high_vol_start": {
+    "n": 307,
+    "exact": 0.06514657980456026,
+    "exact_if_independent": 0.04456958096618621,
+    "loose": 0.21498371335504887,
+    "loose_if_independent": 0.18358521710613196,
+    "p_mon_chop": 0.5146579804560261,
+    "p_tue_fall": 0.250814332247557,
+    "p_wedthu_rise": 0.34527687296416937,
+    "p_rise_given_tue_fall": 0.44155844155844154
+   },
+   "cpi_tuesday_and_high_vol": {
+    "n": 17,
+    "exact": 0.0,
+    "exact_if_independent": 0.020354162426216165,
+    "loose": 0.17647058823529413,
+    "loose_if_independent": 0.11968247506615103,
+    "p_mon_chop": 0.5882352941176471,
+    "p_tue_fall": 0.11764705882352941,
+    "p_wedthu_rise": 0.29411764705882354,
+    "p_rise_given_tue_fall": 0.0
+   }
+  }
+ },
+ "cpi_aligned": {
+  "BTC": {
+   "n": 82,
+   "p_cpi_day_down_05": 0.2073170731707317,
+   "p_cpi_day_up_05": 0.3902439024390244,
+   "mean_abs_z_cpi_day": 0.927338865549672,
+   "p_path_aligned": 0.024390243902439025,
+   "p_bounce_given_down": 0.23529411764705882,
+   "p_bounce_given_up_day": 0.25
+  },
+  "NDX": {
+   "n": 277,
+   "p_cpi_day_down_05": 0.22021660649819494,
+   "p_cpi_day_up_05": 0.36462093862815886,
+   "mean_abs_z_cpi_day": 0.799698545728516,
+   "p_path_aligned": 0.032490974729241874,
+   "p_bounce_given_down": 0.39344262295081966,
+   "p_bounce_given_up_day": 0.37623762376237624
+  },
+  "SPX": {
+   "n": 277,
+   "p_cpi_day_down_05": 0.22743682310469315,
+   "p_cpi_day_up_05": 0.3249097472924188,
+   "mean_abs_z_cpi_day": 0.783256611535072,
+   "p_path_aligned": 0.05054151624548736,
+   "p_bounce_given_down": 0.49206349206349204,
+   "p_bounce_given_up_day": 0.36666666666666664
+  }
+ },
+ "ev2": {
+  "llm_in_sample": {
+   "BTC": {
+    "n_down_cpi_days": 35,
+    "mean_next2_z": 0.2956674942961536,
+    "t": 1.5019245319014451,
+    "mean_next2_z_after_up": 0.22965423953693134
+   },
+   "NDX": {
+    "n_down_cpi_days": 116,
+    "mean_next2_z": 0.15719687370870505,
+    "t": 1.1705124507788531,
+    "mean_next2_z_after_up": 0.16079320812826484
+   },
+   "SPX": {
+    "n_down_cpi_days": 114,
+    "mean_next2_z": 0.21171601315066985,
+    "t": 1.5258225049986271,
+    "mean_next2_z_after_up": 0.1839198707377569
+   }
+  },
+  "clean_holdout": {
+   "BTC": {
+    "n_down_cpi_days": 2,
+    "mean_next2_z": -0.303772690197628,
+    "t": -2.4236244455791973,
+    "mean_next2_z_after_up": -0.6230972120439667
+   }
+  }
+ },
+ "cpi_cross": {
+  "n": 81,
+  "corr_btc_ndx_cpi_day": 0.5137551633018634,
+  "sign_agreement": 0.7037037037037037,
+  "btc_next2_when_ndx_cpi_day_down": 0.2685600355692688,
+  "n_ndx_down": 17
+ },
+ "monte_carlo_driftless": {
+  "tue_x1.0": {
+   "exact": 0.033715,
+   "loose": 0.191635,
+   "nu": 4.0,
+   "tue_vol_mult": 1.0
+  },
+  "tue_x1.4": {
+   "exact": 0.041735,
+   "loose": 0.191635,
+   "nu": 4.0,
+   "tue_vol_mult": 1.4
+  },
+  "tue_x1.7": {
+   "exact": 0.04585,
+   "loose": 0.191635,
+   "nu": 4.0,
+   "tue_vol_mult": 1.7
+  }
+ }
+}

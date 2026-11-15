@@ -1,0 +1,3222 @@
+{
+ "meta": {
+  "as_of": "2026-11-10T22:46:27.701658+00:00",
+  "complete_days": {
+   "BTCUSDT": 2406,
+   "ETHUSDT": 2051,
+   "SOLUSDT": 1837,
+   "XRPUSDT": 1992,
+   "DOGEUSDT": 1972,
+   "ADAUSDT": 2048,
+   "LINKUSDT": 2196,
+   "LTCUSDT": 2196,
+   "BCHUSDT": 2142,
+   "AVAXUSDT": 1867,
+   "DOTUSDT": 2048,
+   "BNBUSDT": 1945,
+   "TRXUSDT": 1882,
+   "NEARUSDT": 1841,
+   "ATOMUSDT": 1841,
+   "ETCUSDT": 1945,
+   "FILUSDT": 1945,
+   "UNIUSDT": 1791,
+   "AAVEUSDT": 1992,
+   "XLMUSDT": 1882,
+   "SUIUSDT": 1256,
+   "ENAUSDT": 921,
+   "HYPEUSDT": 674,
+   "XAUUSDT": 215,
+   "XAGUSDT": 215,
+   "CLUSDT": 200,
+   "BZUSDT": 150,
+   "TSLAUSDT": 172,
+   "INTCUSDT": 171,
+   "GOOGLUSDT": 166,
+   "AAPLUSDT": 165,
+   "MSTRUSDT": 164,
+   "NVDAUSDT": 157,
+   "MUUSDT": 156,
+   "QQQUSDT": 156,
+   "SOXLUSDT": 144,
+   "SPCXUSDT": 117,
+   "PAXGUSDT": 647,
+   "XAUTUSDT": 555
+  },
+  "index_series_in_lake": []
+ },
+ "segments": {
+  "llm_in_sample": {
+   "results": {
+    "H-LEV1": [
+     "inconclusive",
+     {
+      "universe": "T equity/index",
+      "symbols": [
+       "TSLAUSDT",
+       "INTCUSDT",
+       "GOOGLUSDT",
+       "AAPLUSDT",
+       "MSTRUSDT",
+       "NVDAUSDT",
+       "MUUSDT",
+       "QQQUSDT",
+       "SOXLUSDT"
+      ],
+      "shar": {
+       "primary_level": {
+        "n": 75,
+        "n_dates": 18,
+        "diff": -0.0689,
+        "diff_t": -0.2572,
+        "diff_p_pos": 0.5999,
+        "diff_t_dk": -0.3569,
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.1264,
+          "se": 0.0555,
+          "t": 2.2756
+         },
+         "rs_pos_s": {
+          "b": 0.1953,
+          "se": 0.2815,
+          "t": 0.6935
+         },
+         "rv_w_s": {
+          "b": -0.6998,
+          "se": 0.3212,
+          "t": -2.1788
+         },
+         "rv_m_s": {
+          "b": 0.4683,
+          "se": 1.0614,
+          "t": 0.4412
+         }
+        }
+       },
+       "log": {
+        "n": 75,
+        "n_dates": 18,
+        "diff": 0.0135,
+        "diff_t": 0.046,
+        "diff_p_pos": 0.4819,
+        "diff_t_dk": 0.045,
+        "coefs": {
+         "l_neg": {
+          "b": 0.0952,
+          "se": 0.1991,
+          "t": 0.4782
+         },
+         "l_pos": {
+          "b": 0.0817,
+          "se": 0.1688,
+          "t": 0.4841
+         },
+         "l_w": {
+          "b": -0.8071,
+          "se": 0.5046,
+          "t": -1.5996
+         },
+         "l_m": {
+          "b": 0.8782,
+          "se": 1.6095,
+          "t": 0.5456
+         }
+        }
+       },
+       "level_cal": {
+        "n": 75,
+        "n_dates": 18,
+        "diff": -0.2025,
+        "diff_t": -0.6177,
+        "diff_p_pos": 0.7275,
+        "diff_t_dk": -0.7162,
+        "coefs": {
+         "rs_neg_s": {
+          "b": -0.0056,
+          "se": 0.1283,
+          "t": -0.0439
+         },
+         "rs_pos_s": {
+          "b": 0.1968,
+          "se": 0.2613,
+          "t": 0.7534
+         },
+         "rv_w_s": {
+          "b": -0.0776,
+          "se": 0.2325,
+          "t": -0.3336
+         },
+         "rv_m_s": {
+          "b": -0.7389,
+          "se": 1.3399,
+          "t": -0.5515
+         }
+        }
+       },
+       "n_symbols": 9
+      },
+      "gjr_summary": {
+       "n_assets_fit": 0,
+       "median_gjr_gamma": null,
+       "n_gamma_pos": 0,
+       "n_gamma_t_gt2": 0,
+       "n_gamma_t_lt_m2": 0,
+       "median_egarch_gamma": null,
+       "n_egarch_neg": 0
+      },
+      "gjr_assets": {
+       "TSLAUSDT": {
+        "n": 40,
+        "status": "n/a (< 250 days)"
+       },
+       "INTCUSDT": {
+        "n": 39,
+        "status": "n/a (< 250 days)"
+       },
+       "GOOGLUSDT": {
+        "n": 34,
+        "status": "n/a (< 250 days)"
+       },
+       "AAPLUSDT": {
+        "n": 33,
+        "status": "n/a (< 250 days)"
+       },
+       "MSTRUSDT": {
+        "n": 32,
+        "status": "n/a (< 250 days)"
+       },
+       "NVDAUSDT": {
+        "n": 25,
+        "status": "n/a (< 250 days)"
+       },
+       "MUUSDT": {
+        "n": 24,
+        "status": "n/a (< 250 days)"
+       },
+       "QQQUSDT": {
+        "n": 24,
+        "status": "n/a (< 250 days)"
+       },
+       "SOXLUSDT": {
+        "n": 12,
+        "status": "n/a (< 250 days)"
+       }
+      },
+      "index_series_in_lake": [],
+      "tests": {
+       "H-LEV1:diff>0": {
+        "p_raw": 0.5999,
+        "p_holm": 1.0
+       }
+      }
+     },
+     "TradFi perps start Mar-Jun 2026: their sample is mostly clean_holdout. GJR n/a in this segment (< 250 days per asset); verdict from SHAR only. No equity index series in data/lake/alt_series, long-history robustness unavailable. Leverage is a textbook result: in-sample support is weak evidence."
+    ],
+    "H-LEV2": [
+     "supports",
+     {
+      "universe": "L",
+      "shar": {
+       "primary_level": {
+        "n": 39128,
+        "n_dates": 2252,
+        "diff": -0.0321,
+        "diff_t": -0.2782,
+        "diff_p_pos": 0.6096,
+        "diff_t_dk": -0.2477,
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.2608,
+          "se": 0.0843,
+          "t": 3.0922
+         },
+         "rs_pos_s": {
+          "b": 0.2929,
+          "se": 0.0573,
+          "t": 5.1079
+         },
+         "rv_w_s": {
+          "b": 0.1787,
+          "se": 0.0436,
+          "t": 4.0946
+         },
+         "rv_m_s": {
+          "b": 0.19,
+          "se": 0.0338,
+          "t": 5.6174
+         }
+        }
+       },
+       "log": {
+        "n": 39128,
+        "n_dates": 2252,
+        "diff": 0.0347,
+        "diff_t": 1.2984,
+        "diff_p_pos": 0.0971,
+        "diff_t_dk": 1.1932,
+        "coefs": {
+         "l_neg": {
+          "b": 0.1954,
+          "se": 0.0179,
+          "t": 10.9262
+         },
+         "l_pos": {
+          "b": 0.1607,
+          "se": 0.0153,
+          "t": 10.5349
+         },
+         "l_w": {
+          "b": 0.2575,
+          "se": 0.0287,
+          "t": 8.9805
+         },
+         "l_m": {
+          "b": 0.2238,
+          "se": 0.0284,
+          "t": 7.869
+         }
+        }
+       },
+       "level_cal": {
+        "n": 39128,
+        "n_dates": 2252,
+        "diff": -0.029,
+        "diff_t": -0.2531,
+        "diff_p_pos": 0.5999,
+        "diff_t_dk": -0.2248,
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.2612,
+          "se": 0.084,
+          "t": 3.1108
+         },
+         "rs_pos_s": {
+          "b": 0.2901,
+          "se": 0.0568,
+          "t": 5.1079
+         },
+         "rv_w_s": {
+          "b": 0.1867,
+          "se": 0.0438,
+          "t": 4.2632
+         },
+         "rv_m_s": {
+          "b": 0.1838,
+          "se": 0.0331,
+          "t": 5.5542
+         }
+        }
+       },
+       "n_symbols": 23
+      },
+      "gjr_summary": {
+       "n_assets_fit": 23,
+       "median_gjr_gamma": 0.004,
+       "n_gamma_pos": 13,
+       "n_gamma_t_gt2": 0,
+       "n_gamma_t_lt_m2": 2,
+       "median_egarch_gamma": -0.0021,
+       "n_egarch_neg": 12
+      },
+      "gjr_assets": {
+       "BTCUSDT": {
+        "n": 2274,
+        "gjr": {
+         "gamma": 0.0088,
+         "se": 0.0206,
+         "t": 0.4293,
+         "converged": true,
+         "nu": 3.2322,
+         "alpha": 0.0644,
+         "beta": 0.9312
+        },
+        "egarch": {
+         "gamma": -0.0042,
+         "se": 0.0166,
+         "t": -0.2518,
+         "converged": true,
+         "nu": 3.144
+        },
+        "status": "ok"
+       },
+       "ETHUSDT": {
+        "n": 1919,
+        "gjr": {
+         "gamma": 0.0502,
+         "se": 0.0645,
+         "t": 0.7789,
+         "converged": true,
+         "nu": 3.4857,
+         "alpha": 0.0605,
+         "beta": 0.9098
+        },
+        "egarch": {
+         "gamma": -0.0251,
+         "se": 0.0323,
+         "t": -0.7748,
+         "converged": true,
+         "nu": 3.5174
+        },
+        "status": "ok"
+       },
+       "SOLUSDT": {
+        "n": 1705,
+        "gjr": {
+         "gamma": 0.0681,
+         "se": 0.0429,
+         "t": 1.5884,
+         "converged": true,
+         "nu": 5.2911,
+         "alpha": 0.0987,
+         "beta": 0.7743
+        },
+        "egarch": {
+         "gamma": -0.0389,
+         "se": 0.0259,
+         "t": -1.499,
+         "converged": true,
+         "nu": 5.1489
+        },
+        "status": "ok"
+       },
+       "XRPUSDT": {
+        "n": 1860,
+        "gjr": {
+         "gamma": 0.0197,
+         "se": 0.0595,
+         "t": 0.3311,
+         "converged": true,
+         "nu": 3.1773,
+         "alpha": 0.2253,
+         "beta": 0.7033
+        },
+        "egarch": {
+         "gamma": -0.0266,
+         "se": 0.0278,
+         "t": -0.9568,
+         "converged": true,
+         "nu": 3.2272
+        },
+        "status": "ok"
+       },
+       "DOGEUSDT": {
+        "n": 1840,
+        "gjr": {
+         "gamma": -0.0665,
+         "se": 0.0258,
+         "t": -2.5734,
+         "converged": true,
+         "nu": 3.2944,
+         "alpha": 0.1245,
+         "beta": 0.9069
+        },
+        "egarch": {
+         "gamma": 0.0502,
+         "se": 0.0229,
+         "t": 2.1911,
+         "converged": true,
+         "nu": 3.3373
+        },
+        "status": "ok"
+       },
+       "ADAUSDT": {
+        "n": 1916,
+        "gjr": {
+         "gamma": 0.0372,
+         "se": 0.0459,
+         "t": 0.8095,
+         "converged": true,
+         "nu": 4.2281,
+         "alpha": 0.1714,
+         "beta": 0.7483
+        },
+        "egarch": {
+         "gamma": -0.0138,
+         "se": 0.0244,
+         "t": -0.5659,
+         "converged": true,
+         "nu": 4.3224
+        },
+        "status": "ok"
+       },
+       "LINKUSDT": {
+        "n": 2064,
+        "gjr": {
+         "gamma": 0.004,
+         "se": 0.0299,
+         "t": 0.135,
+         "converged": true,
+         "nu": 5.8911,
+         "alpha": 0.107,
+         "beta": 0.8577
+        },
+        "egarch": {
+         "gamma": -0.0029,
+         "se": 0.02,
+         "t": -0.1463,
+         "converged": true,
+         "nu": 5.7803
+        },
+        "status": "ok"
+       },
+       "LTCUSDT": {
+        "n": 2064,
+        "gjr": {
+         "gamma": -0.076,
+         "se": 0.0253,
+         "t": -3.008,
+         "converged": true,
+         "nu": 3.6384,
+         "alpha": 0.1237,
+         "beta": 0.9081
+        },
+        "egarch": {
+         "gamma": 0.0425,
+         "se": 0.016,
+         "t": 2.6525,
+         "converged": true,
+         "nu": 3.6657
+        },
+        "status": "ok"
+       },
+       "BCHUSDT": {
+        "n": 2010,
+        "gjr": {
+         "gamma": 0.0049,
+         "se": 0.0287,
+         "t": 0.1727,
+         "converged": true,
+         "nu": 3.4103,
+         "alpha": 0.098,
+         "beta": 0.8631
+        },
+        "egarch": {
+         "gamma": 0.0072,
+         "se": 0.021,
+         "t": 0.3444,
+         "converged": true,
+         "nu": 3.3873
+        },
+        "status": "ok"
+       },
+       "AVAXUSDT": {
+        "n": 1735,
+        "gjr": {
+         "gamma": -0.0251,
+         "se": 0.0177,
+         "t": -1.4188,
+         "converged": true,
+         "nu": 4.8847,
+         "alpha": 0.0742,
+         "beta": 0.9308
+        },
+        "egarch": {
+         "gamma": 0.0187,
+         "se": 0.0159,
+         "t": 1.1761,
+         "converged": true,
+         "nu": 4.9436
+        },
+        "status": "ok"
+       },
+       "DOTUSDT": {
+        "n": 1916,
+        "gjr": {
+         "gamma": -0.0256,
+         "se": 0.018,
+         "t": -1.4216,
+         "converged": true,
+         "nu": 4.3992,
+         "alpha": 0.0672,
+         "beta": 0.9385
+        },
+        "egarch": {
+         "gamma": 0.0273,
+         "se": 0.015,
+         "t": 1.8172,
+         "converged": true,
+         "nu": 4.4695
+        },
+        "status": "ok"
+       },
+       "BNBUSDT": {
+        "n": 1813,
+        "gjr": {
+         "gamma": 0.0484,
+         "se": 0.0776,
+         "t": 0.6238,
+         "converged": true,
+         "nu": 3.5593,
+         "alpha": 0.1608,
+         "beta": 0.7736
+        },
+        "egarch": {
+         "gamma": -0.0295,
+         "se": 0.0362,
+         "t": -0.8167,
+         "converged": true,
+         "nu": 3.6197
+        },
+        "status": "ok"
+       },
+       "TRXUSDT": {
+        "n": 1750,
+        "gjr": {
+         "gamma": -0.017,
+         "se": 0.0561,
+         "t": -0.3029,
+         "converged": true,
+         "nu": 3.4311,
+         "alpha": 0.2329,
+         "beta": 0.7278
+        },
+        "egarch": {
+         "gamma": -0.0175,
+         "se": 0.0275,
+         "t": -0.638,
+         "converged": true,
+         "nu": 3.4846
+        },
+        "status": "ok"
+       },
+       "NEARUSDT": {
+        "n": 1709,
+        "gjr": {
+         "gamma": -0.0303,
+         "se": 0.0172,
+         "t": -1.7541,
+         "converged": true,
+         "nu": 4.5207,
+         "alpha": 0.0744,
+         "beta": 0.937
+        },
+        "egarch": {
+         "gamma": 0.0339,
+         "se": 0.016,
+         "t": 2.1191,
+         "converged": true,
+         "nu": 4.5762
+        },
+        "status": "ok"
+       },
+       "ATOMUSDT": {
+        "n": 1709,
+        "gjr": {
+         "gamma": -0.0346,
+         "se": 0.0349,
+         "t": -0.9914,
+         "converged": true,
+         "nu": 5.342,
+         "alpha": 0.1402,
+         "beta": 0.8452
+        },
+        "egarch": {
+         "gamma": 0.0188,
+         "se": 0.0212,
+         "t": 0.8872,
+         "converged": true,
+         "nu": 5.3603
+        },
+        "status": "ok"
+       },
+       "ETCUSDT": {
+        "n": 1813,
+        "gjr": {
+         "gamma": -0.0093,
+         "se": 0.0397,
+         "t": -0.2333,
+         "converged": true,
+         "nu": 3.5845,
+         "alpha": 0.1372,
+         "beta": 0.8022
+        },
+        "egarch": {
+         "gamma": 0.0141,
+         "se": 0.0238,
+         "t": 0.5939,
+         "converged": true,
+         "nu": 3.6644
+        },
+        "status": "ok"
+       },
+       "FILUSDT": {
+        "n": 1813,
+        "gjr": {
+         "gamma": -0.0816,
+         "se": 0.0582,
+         "t": -1.4019,
+         "converged": true,
+         "nu": 3.6048,
+         "alpha": 0.2185,
+         "beta": 0.6913
+        },
+        "egarch": {
+         "gamma": 0.0526,
+         "se": 0.0279,
+         "t": 1.8839,
+         "converged": true,
+         "nu": 3.63
+        },
+        "status": "ok"
+       },
+       "UNIUSDT": {
+        "n": 1659,
+        "gjr": {
+         "gamma": 0.0103,
+         "se": 0.0133,
+         "t": 0.7755,
+         "converged": true,
+         "nu": 3.9487,
+         "alpha": 0.0213,
+         "beta": 0.9691
+        },
+        "egarch": {
+         "gamma": -0.0021,
+         "se": 0.0203,
+         "t": -0.1058,
+         "converged": true,
+         "nu": 3.8526
+        },
+        "status": "ok"
+       },
+       "AAVEUSDT": {
+        "n": 1860,
+        "gjr": {
+         "gamma": 0.0067,
+         "se": 0.0381,
+         "t": 0.1757,
+         "converged": true,
+         "nu": 4.8345,
+         "alpha": 0.0903,
+         "beta": 0.8701
+        },
+        "egarch": {
+         "gamma": -0.0112,
+         "se": 0.0253,
+         "t": -0.4427,
+         "converged": true,
+         "nu": 4.9244
+        },
+        "status": "ok"
+       },
+       "XLMUSDT": {
+        "n": 1750,
+        "gjr": {
+         "gamma": 0.0016,
+         "se": 0.0432,
+         "t": 0.0372,
+         "converged": true,
+         "nu": 3.955,
+         "alpha": 0.1691,
+         "beta": 0.7963
+        },
+        "egarch": {
+         "gamma": 0.0035,
+         "se": 0.0227,
+         "t": 0.1528,
+         "converged": true,
+         "nu": 4.0268
+        },
+        "status": "ok"
+       },
+       "SUIUSDT": {
+        "n": 1124,
+        "gjr": {
+         "gamma": 0.1146,
+         "se": 0.0602,
+         "t": 1.9023,
+         "converged": true,
+         "nu": 4.2172,
+         "alpha": 0.0646,
+         "beta": 0.7967
+        },
+        "egarch": {
+         "gamma": -0.0563,
+         "se": 0.0338,
+         "t": -1.6647,
+         "converged": true,
+         "nu": 4.231
+        },
+        "status": "ok"
+       },
+       "ENAUSDT": {
+        "n": 789,
+        "gjr": {
+         "gamma": -0.0037,
+         "se": 0.0141,
+         "t": -0.2646,
+         "converged": true,
+         "nu": 7.1243,
+         "alpha": 0.0169,
+         "beta": 0.982
+        },
+        "egarch": {
+         "gamma": 0.0051,
+         "se": 0.0129,
+         "t": 0.3943,
+         "converged": true,
+         "nu": 7.1303
+        },
+        "status": "ok"
+       },
+       "HYPEUSDT": {
+        "n": 542,
+        "gjr": {
+         "gamma": 0.099,
+         "se": 0.053,
+         "t": 1.8669,
+         "converged": true,
+         "nu": 11.3559,
+         "alpha": 0.0417,
+         "beta": 0.8381
+        },
+        "egarch": {
+         "gamma": -0.0729,
+         "se": 0.0371,
+         "t": -1.9672,
+         "converged": true,
+         "nu": 11.5012
+        },
+        "status": "ok"
+       }
+      },
+      "shar_4h": {
+       "n": 234849,
+       "n_dates": 2253,
+       "diff": -0.0028,
+       "diff_t": -0.0365,
+       "diff_t_dk": -0.034,
+       "coefs": {
+        "rs_neg_s": {
+         "b": 0.1208,
+         "se": 0.0316,
+         "t": 3.827
+        },
+        "rs_pos_s": {
+         "b": 0.1237,
+         "se": 0.0629,
+         "t": 1.9653
+        },
+        "rv_d_s": {
+         "b": 0.2743,
+         "se": 0.0498,
+         "t": 5.5032
+        },
+        "rv_w_s": {
+         "b": 0.178,
+         "se": 0.0399,
+         "t": 4.4665
+        },
+        "rv_m_s": {
+         "b": 0.1518,
+         "se": 0.0278,
+         "t": 5.4643
+        }
+       }
+      },
+      "sign": "none",
+      "tests": {
+       "H-LEV2:diff!=0": {
+        "p_raw": 0.7809,
+        "p_holm": 1.0
+       }
+      }
+     },
+     "Median GJR gamma 0.0040 reported, not part of the registered success test. Supports = no significant positive asymmetry (t < 2, registered criterion); t < -2 would be inverse asymmetry."
+    ],
+    "H-LEV3": [
+     "inconclusive",
+     {
+      "L": {
+       "verdict": "inconclusive",
+       "fit": {
+        "inter_neg": {
+         "est": 0.0998,
+         "se": 0.1699,
+         "t": 0.5873,
+         "p_pos": 0.2785
+        },
+        "inter_pos": {
+         "est": 0.1074,
+         "se": 0.3418,
+         "t": 0.3142,
+         "p_pos": 0.3767
+        },
+        "inter_neg_dk": {
+         "est": 0.0998,
+         "se": 0.1292,
+         "t": 0.7725,
+         "p_pos": 0.2199
+        },
+        "neg_in_dd_minus_pos_in_dd": {
+         "est": -0.0591,
+         "se": 0.5061,
+         "t": -0.1167,
+         "p_pos": 0.5464
+        },
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.2315,
+          "se": 0.089,
+          "t": 2.6005
+         },
+         "rs_pos_s": {
+          "b": 0.283,
+          "se": 0.053,
+          "t": 5.3359
+         },
+         "neg_dd": {
+          "b": 0.0998,
+          "se": 0.1699,
+          "t": 0.5873
+         },
+         "pos_dd": {
+          "b": 0.1074,
+          "se": 0.3418,
+          "t": 0.3142
+         },
+         "rv_w_s": {
+          "b": 0.1744,
+          "se": 0.0438,
+          "t": 3.9852
+         },
+         "rv_m_s": {
+          "b": 0.1983,
+          "se": 0.0339,
+          "t": 5.8441
+         }
+        },
+        "n": 38944,
+        "n_dates": 2244,
+        "n_dd_dates": 688,
+        "dd_share": 0.0839
+       },
+       "with_dd_main_effect": {
+        "inter_neg": {
+         "est": 0.0946,
+         "se": 0.1712,
+         "t": 0.5527,
+         "p_pos": 0.2903
+        },
+        "inter_pos": {
+         "est": 0.0984,
+         "se": 0.3405,
+         "t": 0.2889,
+         "p_pos": 0.3863
+        },
+        "dd": {
+         "b": 0.0515,
+         "se": 0.0729,
+         "t": 0.7057
+        }
+       }
+      },
+      "T": {
+       "verdict": "inconclusive",
+       "fit": {
+        "inter_neg": {
+         "est": 0.6138,
+         "se": 0.4801,
+         "t": 1.2784,
+         "p_pos": 0.1009
+        },
+        "inter_pos": {
+         "est": -0.8893,
+         "se": 0.6597,
+         "t": -1.3482,
+         "p_pos": 0.9109
+        },
+        "inter_neg_dk": {
+         "est": 0.6138,
+         "se": 0.2699,
+         "t": 2.2742,
+         "p_pos": 0.0115
+        },
+        "neg_in_dd_minus_pos_in_dd": {
+         "est": 1.3293,
+         "se": 0.7842,
+         "t": 1.6952,
+         "p_pos": 0.0453
+        },
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.2128,
+          "se": 0.3393,
+          "t": 0.6272
+         },
+         "rs_pos_s": {
+          "b": 0.3866,
+          "se": 0.5446,
+          "t": 0.7099
+         },
+         "neg_dd": {
+          "b": 0.6138,
+          "se": 0.4801,
+          "t": 1.2784
+         },
+         "pos_dd": {
+          "b": -0.8893,
+          "se": 0.6597,
+          "t": -1.3482
+         },
+         "rv_w_s": {
+          "b": 0.3492,
+          "se": 0.2993,
+          "t": 1.1669
+         },
+         "rv_m_s": {
+          "b": 0.0439,
+          "se": 0.133,
+          "t": 0.33
+         }
+        },
+        "n": 1050,
+        "n_dates": 485,
+        "n_dd_dates": 33,
+        "dd_share": 0.0619
+       },
+       "with_dd_main_effect": {
+        "inter_neg": {
+         "est": 0.349,
+         "se": 0.5501,
+         "t": 0.6345,
+         "p_pos": 0.263
+        },
+        "inter_pos": {
+         "est": -0.8716,
+         "se": 0.696,
+         "t": -1.2523,
+         "p_pos": 0.8945
+        },
+        "dd": {
+         "b": 0.9661,
+         "se": 0.9061,
+         "t": 1.0662
+        }
+       }
+      },
+      "tests": {
+       "H-LEV3:L:inter>0": {
+        "p_raw": 0.2785,
+        "p_holm": 1.0
+       },
+       "H-LEV3:T:inter>0": {
+        "p_raw": 0.1009,
+        "p_holm": 0.6052
+       }
+      }
+     },
+     "TradFi perps start Mar-Jun 2026: their sample is mostly clean_holdout. Requires both universes; T in-sample is tiny. Drawdown = close below 30d max close by > 1.5 sigma_30d sqrt(30)."
+    ],
+    "H-LEV4": [
+     "inconclusive",
+     {
+      "L": {
+       "log": {
+        "mean": 0.0025,
+        "t": 1.9519,
+        "n_dates": 2028,
+        "n_obs": 37944,
+        "mean_qa": 0.3856,
+        "mean_qb": 0.3823,
+        "p_neg": 0.9745,
+        "p_two": 0.0509
+       },
+       "level": {
+        "mean": -0.0017,
+        "t": -2.2742,
+        "n_dates": 2028,
+        "n_obs": 37944,
+        "mean_qa": 0.4225,
+        "mean_qb": 0.424,
+        "p_neg": 0.0115,
+        "p_two": 0.023
+       }
+      },
+      "T": {
+       "log": {
+        "mean": 0.0166,
+        "t": 2.2339,
+        "n_dates": 322,
+        "n_obs": 688,
+        "mean_qa": 0.689,
+        "mean_qb": 0.6729,
+        "p_neg": 0.9873,
+        "p_two": 0.0255
+       },
+       "level": {
+        "mean": -0.0013,
+        "t": -0.0795,
+        "n_dates": 322,
+        "n_obs": 688,
+        "mean_qa": 0.6741,
+        "mean_qb": 0.6745,
+        "p_neg": 0.4683,
+        "p_two": 0.9367
+       }
+      },
+      "primary": "log form",
+      "design": "expanding window, refit 30d, FE, first fit >= 250 rows / 60 dates",
+      "tests": {
+       "H-LEV4:T:dq<0": {
+        "p_raw": 0.9873,
+        "p_holm": 1.0
+       },
+       "H-LEV4:L:dq!=0": {
+        "p_raw": 0.0509,
+        "p_holm": 0.3566
+       }
+      }
+     },
+     "TradFi perps start Mar-Jun 2026: their sample is mostly clean_holdout. dq = QLIKE(SHAR) - QLIKE(HAR), date-averaged, NW t; negative = SHAR better. Registered T criterion applies to the holdout."
+    ],
+    "H-LEV5": [
+     "contradicts",
+     {
+      "universe": "L",
+      "inter": {
+       "est": -0.0504,
+       "se": 0.0219,
+       "t": -2.3008,
+       "p_pos": 0.9893
+      },
+      "inter_dk": {
+       "est": -0.0504,
+       "se": 0.0238,
+       "t": -2.1161,
+       "p_pos": 0.9828
+      },
+      "coefs": {
+       "rv_s": {
+        "b": 0.2838,
+        "se": 0.0568,
+        "t": 4.9946
+       },
+       "rv_w_s": {
+        "b": 0.1816,
+        "se": 0.0434,
+        "t": 4.1814
+       },
+       "rv_m_s": {
+        "b": 0.2011,
+        "se": 0.0335,
+        "t": 6.0107
+       },
+       "rs_neg_s": {
+        "b": -0.061,
+        "se": 0.104,
+        "t": -0.5869
+       },
+       "fz": {
+        "b": 0.0689,
+        "se": 0.0292,
+        "t": 2.359
+       },
+       "neg_fz": {
+        "b": -0.0504,
+        "se": 0.0219,
+        "t": -2.3008
+       }
+      },
+      "n": 38952,
+      "n_dates": 2252,
+      "tests": {
+       "H-LEV5:inter>0": {
+        "p_raw": 0.9893,
+        "p_holm": 1.0
+       }
+      }
+     },
+     "fz = funding z vs trailing 90d prints known at origin, clipped +-5; levels scaled by symbol mean RV."
+    ]
+   },
+   "holm": {
+    "H-LEV1:diff>0": {
+     "p_raw": 0.5999,
+     "p_holm": 1.0
+    },
+    "H-LEV2:diff!=0": {
+     "p_raw": 0.7809,
+     "p_holm": 1.0
+    },
+    "H-LEV3:L:inter>0": {
+     "p_raw": 0.2785,
+     "p_holm": 1.0
+    },
+    "H-LEV3:T:inter>0": {
+     "p_raw": 0.1009,
+     "p_holm": 0.6052
+    },
+    "H-LEV4:T:dq<0": {
+     "p_raw": 0.9873,
+     "p_holm": 1.0
+    },
+    "H-LEV4:L:dq!=0": {
+     "p_raw": 0.0509,
+     "p_holm": 0.3566
+    },
+    "H-LEV5:inter>0": {
+     "p_raw": 0.9893,
+     "p_holm": 1.0
+    }
+   }
+  },
+  "clean_holdout": {
+   "results": {
+    "H-LEV1": [
+     "contradicts",
+     {
+      "universe": "T equity/index",
+      "symbols": [
+       "TSLAUSDT",
+       "INTCUSDT",
+       "GOOGLUSDT",
+       "AAPLUSDT",
+       "MSTRUSDT",
+       "NVDAUSDT",
+       "MUUSDT",
+       "QQQUSDT",
+       "SOXLUSDT"
+      ],
+      "shar": {
+       "primary_level": {
+        "n": 1178,
+        "n_dates": 132,
+        "diff": -0.2786,
+        "diff_t": -2.1137,
+        "diff_p_pos": 0.9818,
+        "diff_t_dk": -2.1405,
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.2341,
+          "se": 0.0786,
+          "t": 2.9793
+         },
+         "rs_pos_s": {
+          "b": 0.5128,
+          "se": 0.1518,
+          "t": 3.3787
+         },
+         "rv_w_s": {
+          "b": -0.1129,
+          "se": 0.1211,
+          "t": -0.9326
+         },
+         "rv_m_s": {
+          "b": 0.3008,
+          "se": 0.1308,
+          "t": 2.3002
+         }
+        }
+       },
+       "log": {
+        "n": 1178,
+        "n_dates": 132,
+        "diff": 0.0227,
+        "diff_t": 0.2224,
+        "diff_p_pos": 0.4122,
+        "diff_t_dk": 0.2176,
+        "coefs": {
+         "l_neg": {
+          "b": 0.1948,
+          "se": 0.0632,
+          "t": 3.0835
+         },
+         "l_pos": {
+          "b": 0.1721,
+          "se": 0.0604,
+          "t": 2.8499
+         },
+         "l_w": {
+          "b": -0.3053,
+          "se": 0.1425,
+          "t": -2.1427
+         },
+         "l_m": {
+          "b": 0.5133,
+          "se": 0.2148,
+          "t": 2.3899
+         }
+        }
+       },
+       "level_cal": {
+        "n": 1178,
+        "n_dates": 132,
+        "diff": -0.1994,
+        "diff_t": -1.7937,
+        "diff_p_pos": 0.9624,
+        "diff_t_dk": -1.7936,
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.165,
+          "se": 0.0813,
+          "t": 2.0297
+         },
+         "rs_pos_s": {
+          "b": 0.3644,
+          "se": 0.1346,
+          "t": 2.7074
+         },
+         "rv_w_s": {
+          "b": 0.1834,
+          "se": 0.0957,
+          "t": 1.9154
+         },
+         "rv_m_s": {
+          "b": 0.0921,
+          "se": 0.1172,
+          "t": 0.7854
+         }
+        }
+       },
+       "n_symbols": 9
+      },
+      "gjr_summary": {
+       "n_assets_fit": 0,
+       "median_gjr_gamma": null,
+       "n_gamma_pos": 0,
+       "n_gamma_t_gt2": 0,
+       "n_gamma_t_lt_m2": 0,
+       "median_egarch_gamma": null,
+       "n_egarch_neg": 0
+      },
+      "gjr_assets": {
+       "TSLAUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "INTCUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "GOOGLUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "AAPLUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "MSTRUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "NVDAUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "MUUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "QQQUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "SOXLUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       }
+      },
+      "index_series_in_lake": [],
+      "tests": {
+       "H-LEV1:diff>0": {
+        "p_raw": 0.9818,
+        "p_holm": 1.0
+       }
+      }
+     },
+     "GJR n/a in this segment (< 250 days per asset); verdict from SHAR only. No equity index series in data/lake/alt_series, long-history robustness unavailable. Leverage is a textbook result: in-sample support is weak evidence."
+    ],
+    "H-LEV2": [
+     "supports",
+     {
+      "universe": "L",
+      "shar": {
+       "primary_level": {
+        "n": 3036,
+        "n_dates": 132,
+        "diff": -0.1981,
+        "diff_t": -1.5746,
+        "diff_p_pos": 0.9411,
+        "diff_t_dk": -1.376,
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.0962,
+          "se": 0.0728,
+          "t": 1.321
+         },
+         "rs_pos_s": {
+          "b": 0.2943,
+          "se": 0.0874,
+          "t": 3.3677
+         },
+         "rv_w_s": {
+          "b": 0.1068,
+          "se": 0.0733,
+          "t": 1.4578
+         },
+         "rv_m_s": {
+          "b": 0.0805,
+          "se": 0.1457,
+          "t": 0.5527
+         }
+        }
+       },
+       "log": {
+        "n": 3036,
+        "n_dates": 132,
+        "diff": -0.1188,
+        "diff_t": -1.425,
+        "diff_p_pos": 0.9217,
+        "diff_t_dk": -1.2797,
+        "coefs": {
+         "l_neg": {
+          "b": 0.1001,
+          "se": 0.052,
+          "t": 1.9253
+         },
+         "l_pos": {
+          "b": 0.219,
+          "se": 0.0569,
+          "t": 3.8456
+         },
+         "l_w": {
+          "b": 0.1468,
+          "se": 0.109,
+          "t": 1.3467
+         },
+         "l_m": {
+          "b": 0.2535,
+          "se": 0.1368,
+          "t": 1.8536
+         }
+        }
+       },
+       "level_cal": {
+        "n": 3036,
+        "n_dates": 132,
+        "diff": -0.2171,
+        "diff_t": -1.7787,
+        "diff_p_pos": 0.9612,
+        "diff_t_dk": -1.6166,
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.0726,
+          "se": 0.0639,
+          "t": 1.1365
+         },
+         "rs_pos_s": {
+          "b": 0.2897,
+          "se": 0.0886,
+          "t": 3.2711
+         },
+         "rv_w_s": {
+          "b": 0.1406,
+          "se": 0.0711,
+          "t": 1.9767
+         },
+         "rv_m_s": {
+          "b": 0.0537,
+          "se": 0.146,
+          "t": 0.3681
+         }
+        }
+       },
+       "n_symbols": 23
+      },
+      "gjr_summary": {
+       "n_assets_fit": 0,
+       "median_gjr_gamma": null,
+       "n_gamma_pos": 0,
+       "n_gamma_t_gt2": 0,
+       "n_gamma_t_lt_m2": 0,
+       "median_egarch_gamma": null,
+       "n_egarch_neg": 0
+      },
+      "gjr_assets": {
+       "BTCUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "ETHUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "SOLUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "XRPUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "DOGEUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "ADAUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "LINKUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "LTCUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "BCHUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "AVAXUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "DOTUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "BNBUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "TRXUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "NEARUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "ATOMUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "ETCUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "FILUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "UNIUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "AAVEUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "XLMUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "SUIUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "ENAUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       },
+       "HYPEUSDT": {
+        "n": 132,
+        "status": "n/a (< 250 days)"
+       }
+      },
+      "shar_4h": {
+       "n": 18331,
+       "n_dates": 133,
+       "diff": -0.0448,
+       "diff_t": -0.5197,
+       "diff_t_dk": -0.4596,
+       "coefs": {
+        "rs_neg_s": {
+         "b": 0.0009,
+         "se": 0.0526,
+         "t": 0.0176
+        },
+        "rs_pos_s": {
+         "b": 0.0457,
+         "se": 0.0356,
+         "t": 1.2845
+        },
+        "rv_d_s": {
+         "b": 0.236,
+         "se": 0.0781,
+         "t": 3.0231
+        },
+        "rv_w_s": {
+         "b": 0.1196,
+         "se": 0.065,
+         "t": 1.8381
+        },
+        "rv_m_s": {
+         "b": 0.0679,
+         "se": 0.1272,
+         "t": 0.5337
+        }
+       }
+      },
+      "sign": "none",
+      "tests": {
+       "H-LEV2:diff!=0": {
+        "p_raw": 0.1178,
+        "p_holm": 0.8243
+       }
+      }
+     },
+     "GJR n/a in this segment (< 250 days); verdict from SHAR only. Supports = no significant positive asymmetry (t < 2, registered criterion); t < -2 would be inverse asymmetry."
+    ],
+    "H-LEV3": [
+     "contradicts",
+     {
+      "L": {
+       "verdict": "supports",
+       "fit": {
+        "inter_neg": {
+         "est": 0.0261,
+         "se": 0.1087,
+         "t": 0.2405,
+         "p_pos": 0.4052
+        },
+        "inter_pos": {
+         "est": -0.3074,
+         "se": 0.497,
+         "t": -0.6184,
+         "p_pos": 0.7313
+        },
+        "inter_neg_dk": {
+         "est": 0.0261,
+         "se": 0.1085,
+         "t": 0.2408,
+         "p_pos": 0.4049
+        },
+        "neg_in_dd_minus_pos_in_dd": {
+         "est": 0.1361,
+         "se": 0.5648,
+         "t": 0.241,
+         "p_pos": 0.405
+        },
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.0971,
+          "se": 0.0811,
+          "t": 1.1973
+         },
+         "rs_pos_s": {
+          "b": 0.2944,
+          "se": 0.0875,
+          "t": 3.3647
+         },
+         "neg_dd": {
+          "b": 0.0261,
+          "se": 0.1087,
+          "t": 0.2405
+         },
+         "pos_dd": {
+          "b": -0.3074,
+          "se": 0.497,
+          "t": -0.6184
+         },
+         "rv_w_s": {
+          "b": 0.1066,
+          "se": 0.074,
+          "t": 1.4419
+         },
+         "rv_m_s": {
+          "b": 0.077,
+          "se": 0.1463,
+          "t": 0.5264
+         }
+        },
+        "n": 3036,
+        "n_dates": 132,
+        "n_dd_dates": 61,
+        "dd_share": 0.0688
+       },
+       "with_dd_main_effect": {
+        "inter_neg": {
+         "est": 0.0753,
+         "se": 0.1028,
+         "t": 0.7323,
+         "p_pos": 0.2327
+        },
+        "inter_pos": {
+         "est": 0.0311,
+         "se": 0.6132,
+         "t": 0.0507,
+         "p_pos": 0.4798
+        },
+        "dd": {
+         "b": -0.2081,
+         "se": 0.1541,
+         "t": -1.3502
+        }
+       }
+      },
+      "T": {
+       "verdict": "contradicts",
+       "fit": {
+        "inter_neg": {
+         "est": -0.1705,
+         "se": 0.0774,
+         "t": -2.2039,
+         "p_pos": 0.9854
+        },
+        "inter_pos": {
+         "est": 1.4878,
+         "se": 0.5208,
+         "t": 2.8566,
+         "p_pos": 0.0025
+        },
+        "inter_neg_dk": {
+         "est": -0.1705,
+         "se": 0.0919,
+         "t": -1.8546,
+         "p_pos": 0.9682
+        },
+        "neg_in_dd_minus_pos_in_dd": {
+         "est": -1.7466,
+         "se": 0.5588,
+         "t": -3.1254,
+         "p_pos": 0.9989
+        },
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.284,
+          "se": 0.0655,
+          "t": 4.3362
+         },
+         "rs_pos_s": {
+          "b": 0.3723,
+          "se": 0.0804,
+          "t": 4.6325
+         },
+         "neg_dd": {
+          "b": -0.1705,
+          "se": 0.0774,
+          "t": -2.2039
+         },
+         "pos_dd": {
+          "b": 1.4878,
+          "se": 0.5208,
+          "t": 2.8566
+         },
+         "rv_w_s": {
+          "b": -0.1895,
+          "se": 0.1175,
+          "t": -1.6133
+         },
+         "rv_m_s": {
+          "b": 0.2961,
+          "se": 0.1337,
+          "t": 2.214
+         }
+        },
+        "n": 1933,
+        "n_dates": 132,
+        "n_dd_dates": 53,
+        "dd_share": 0.0657
+       },
+       "with_dd_main_effect": {
+        "inter_neg": {
+         "est": -0.1756,
+         "se": 0.079,
+         "t": -2.2236,
+         "p_pos": 0.9861
+        },
+        "inter_pos": {
+         "est": 1.4269,
+         "se": 0.5743,
+         "t": 2.4844,
+         "p_pos": 0.0071
+        },
+        "dd": {
+         "b": 0.0904,
+         "se": 0.2191,
+         "t": 0.4127
+        }
+       }
+      },
+      "tests": {
+       "H-LEV3:L:inter>0": {
+        "p_raw": 0.4052,
+        "p_holm": 1.0
+       },
+       "H-LEV3:T:inter>0": {
+        "p_raw": 0.9854,
+        "p_holm": 1.0
+       }
+      }
+     },
+     "Requires both universes; T in-sample is tiny. Drawdown = close below 30d max close by > 1.5 sigma_30d sqrt(30)."
+    ],
+    "H-LEV4": [
+     "contradicts",
+     {
+      "L": {
+       "log": {
+        "mean": 0.0022,
+        "t": 1.0022,
+        "n_dates": 132,
+        "n_obs": 3036,
+        "mean_qa": 0.4065,
+        "mean_qb": 0.4044,
+        "p_neg": 0.8419,
+        "p_two": 0.3162
+       },
+       "level": {
+        "mean": -0.0008,
+        "t": -1.9957,
+        "n_dates": 132,
+        "n_obs": 3036,
+        "mean_qa": 0.4383,
+        "mean_qb": 0.4391,
+        "p_neg": 0.023,
+        "p_two": 0.046
+       }
+      },
+      "T": {
+       "log": {
+        "mean": 0.0056,
+        "t": 2.2156,
+        "n_dates": 132,
+        "n_obs": 1562,
+        "mean_qa": 0.6948,
+        "mean_qb": 0.6878,
+        "p_neg": 0.9866,
+        "p_two": 0.0267
+       },
+       "level": {
+        "mean": -0.0002,
+        "t": -0.2652,
+        "n_dates": 132,
+        "n_obs": 1562,
+        "mean_qa": 0.7021,
+        "mean_qb": 0.7022,
+        "p_neg": 0.3954,
+        "p_two": 0.7909
+       }
+      },
+      "primary": "log form",
+      "design": "expanding window, refit 30d, FE, first fit >= 250 rows / 60 dates",
+      "tests": {
+       "H-LEV4:T:dq<0": {
+        "p_raw": 0.9866,
+        "p_holm": 1.0
+       },
+       "H-LEV4:L:dq!=0": {
+        "p_raw": 0.3162,
+        "p_holm": 1.0
+       }
+      }
+     },
+     "dq = QLIKE(SHAR) - QLIKE(HAR), date-averaged, NW t; negative = SHAR better. Registered T criterion applies to the holdout."
+    ],
+    "H-LEV5": [
+     "contradicts",
+     {
+      "universe": "L",
+      "inter": {
+       "est": -0.1031,
+       "se": 0.084,
+       "t": -1.2273,
+       "p_pos": 0.889
+      },
+      "inter_dk": {
+       "est": -0.1031,
+       "se": 0.0638,
+       "t": -1.6152,
+       "p_pos": 0.9469
+      },
+      "coefs": {
+       "rv_s": {
+        "b": 0.2914,
+        "se": 0.083,
+        "t": 3.5111
+       },
+       "rv_w_s": {
+        "b": 0.1023,
+        "se": 0.073,
+        "t": 1.401
+       },
+       "rv_m_s": {
+        "b": 0.0686,
+        "se": 0.1406,
+        "t": 0.4877
+       },
+       "rs_neg_s": {
+        "b": -0.1393,
+        "se": 0.1383,
+        "t": -1.007
+       },
+       "fz": {
+        "b": 0.1532,
+        "se": 0.0566,
+        "t": 2.7088
+       },
+       "neg_fz": {
+        "b": -0.1031,
+        "se": 0.084,
+        "t": -1.2273
+       }
+      },
+      "n": 3036,
+      "n_dates": 132,
+      "tests": {
+       "H-LEV5:inter>0": {
+        "p_raw": 0.889,
+        "p_holm": 1.0
+       }
+      }
+     },
+     "fz = funding z vs trailing 90d prints known at origin, clipped +-5; levels scaled by symbol mean RV."
+    ]
+   },
+   "holm": {
+    "H-LEV1:diff>0": {
+     "p_raw": 0.9818,
+     "p_holm": 1.0
+    },
+    "H-LEV2:diff!=0": {
+     "p_raw": 0.1178,
+     "p_holm": 0.8243
+    },
+    "H-LEV3:L:inter>0": {
+     "p_raw": 0.4052,
+     "p_holm": 1.0
+    },
+    "H-LEV3:T:inter>0": {
+     "p_raw": 0.9854,
+     "p_holm": 1.0
+    },
+    "H-LEV4:T:dq<0": {
+     "p_raw": 0.9866,
+     "p_holm": 1.0
+    },
+    "H-LEV4:L:dq!=0": {
+     "p_raw": 0.3162,
+     "p_holm": 1.0
+    },
+    "H-LEV5:inter>0": {
+     "p_raw": 0.889,
+     "p_holm": 1.0
+    }
+   }
+  },
+  "pooled": {
+   "results": {
+    "H-LEV1": [
+     "contradicts",
+     {
+      "universe": "T equity/index",
+      "symbols": [
+       "TSLAUSDT",
+       "INTCUSDT",
+       "GOOGLUSDT",
+       "AAPLUSDT",
+       "MSTRUSDT",
+       "NVDAUSDT",
+       "MUUSDT",
+       "QQQUSDT",
+       "SOXLUSDT"
+      ],
+      "shar": {
+       "primary_level": {
+        "n": 1253,
+        "n_dates": 150,
+        "diff": -0.262,
+        "diff_t": -2.1386,
+        "diff_p_pos": 0.983,
+        "diff_t_dk": -2.1779,
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.2204,
+          "se": 0.0705,
+          "t": 3.1285
+         },
+         "rs_pos_s": {
+          "b": 0.4824,
+          "se": 0.1417,
+          "t": 3.4042
+         },
+         "rv_w_s": {
+          "b": -0.1166,
+          "se": 0.1122,
+          "t": -1.0393
+         },
+         "rv_m_s": {
+          "b": 0.3627,
+          "se": 0.1357,
+          "t": 2.6729
+         }
+        }
+       },
+       "log": {
+        "n": 1253,
+        "n_dates": 150,
+        "diff": 0.0303,
+        "diff_t": 0.3085,
+        "diff_p_pos": 0.3791,
+        "diff_t_dk": 0.3045,
+        "coefs": {
+         "l_neg": {
+          "b": 0.1935,
+          "se": 0.0607,
+          "t": 3.188
+         },
+         "l_pos": {
+          "b": 0.1632,
+          "se": 0.0583,
+          "t": 2.8014
+         },
+         "l_w": {
+          "b": -0.2945,
+          "se": 0.1361,
+          "t": -2.1639
+         },
+         "l_m": {
+          "b": 0.5546,
+          "se": 0.2129,
+          "t": 2.6051
+         }
+        }
+       },
+       "level_cal": {
+        "n": 1253,
+        "n_dates": 150,
+        "diff": -0.1902,
+        "diff_t": -1.8644,
+        "diff_p_pos": 0.9679,
+        "diff_t_dk": -1.8548,
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.1505,
+          "se": 0.0736,
+          "t": 2.0456
+         },
+         "rs_pos_s": {
+          "b": 0.3407,
+          "se": 0.1223,
+          "t": 2.7866
+         },
+         "rv_w_s": {
+          "b": 0.1825,
+          "se": 0.0889,
+          "t": 2.0536
+         },
+         "rv_m_s": {
+          "b": 0.1337,
+          "se": 0.1238,
+          "t": 1.0802
+         }
+        }
+       },
+       "n_symbols": 9
+      },
+      "gjr_summary": {
+       "n_assets_fit": 0,
+       "median_gjr_gamma": null,
+       "n_gamma_pos": 0,
+       "n_gamma_t_gt2": 0,
+       "n_gamma_t_lt_m2": 0,
+       "median_egarch_gamma": null,
+       "n_egarch_neg": 0
+      },
+      "gjr_assets": {
+       "TSLAUSDT": {
+        "n": 172,
+        "status": "n/a (< 250 days)"
+       },
+       "INTCUSDT": {
+        "n": 171,
+        "status": "n/a (< 250 days)"
+       },
+       "GOOGLUSDT": {
+        "n": 166,
+        "status": "n/a (< 250 days)"
+       },
+       "AAPLUSDT": {
+        "n": 165,
+        "status": "n/a (< 250 days)"
+       },
+       "MSTRUSDT": {
+        "n": 164,
+        "status": "n/a (< 250 days)"
+       },
+       "NVDAUSDT": {
+        "n": 157,
+        "status": "n/a (< 250 days)"
+       },
+       "MUUSDT": {
+        "n": 156,
+        "status": "n/a (< 250 days)"
+       },
+       "QQQUSDT": {
+        "n": 156,
+        "status": "n/a (< 250 days)"
+       },
+       "SOXLUSDT": {
+        "n": 144,
+        "status": "n/a (< 250 days)"
+       }
+      },
+      "index_series_in_lake": [],
+      "gjr_exploratory_full_sample": {
+       "summary": {
+        "n_assets_fit": 0,
+        "median_gjr_gamma": null,
+        "n_gamma_pos": 0,
+        "n_gamma_t_gt2": 0,
+        "n_gamma_t_lt_m2": 0,
+        "median_egarch_gamma": null,
+        "n_egarch_neg": 0
+       },
+       "assets": {
+        "TSLAUSDT": {
+         "n": 172,
+         "gjr": {
+          "gamma": 0.3696,
+          "se": 0.3524,
+          "t": 1.0488,
+          "converged": true,
+          "nu": 2.2185,
+          "alpha": 0.0463,
+          "beta": 0.7689
+         },
+         "egarch": {
+          "gamma": -0.3814,
+          "se": 0.2288,
+          "t": -1.6669,
+          "converged": true,
+          "nu": 2.1976
+         },
+         "status": "exploratory (< 250 days)"
+        },
+        "INTCUSDT": {
+         "n": 171,
+         "gjr": {
+          "gamma": 0.0943,
+          "se": 0.0894,
+          "t": 1.0552,
+          "converged": true,
+          "nu": 3.3306,
+          "alpha": 0.0,
+          "beta": 0.9126
+         },
+         "egarch": {
+          "gamma": -0.0889,
+          "se": 0.0638,
+          "t": -1.3935,
+          "converged": true,
+          "nu": 3.425
+         },
+         "status": "exploratory (< 250 days)"
+        },
+        "GOOGLUSDT": {
+         "n": 166,
+         "gjr": {
+          "gamma": -0.6635,
+          "se": 0.7388,
+          "t": -0.898,
+          "converged": true,
+          "nu": 2.6671,
+          "alpha": 1.0,
+          "beta": 0.0109
+         },
+         "egarch": {
+          "gamma": 0.02,
+          "se": 0.2535,
+          "t": 0.0787,
+          "converged": true,
+          "nu": 2.5515
+         },
+         "status": "exploratory (< 250 days)"
+        },
+        "AAPLUSDT": {
+         "n": 165,
+         "gjr": {
+          "gamma": 0.7258,
+          "se": 0.9467,
+          "t": 0.7667,
+          "converged": true,
+          "nu": 2.0936,
+          "alpha": 0.0,
+          "beta": 0.6371
+         },
+         "egarch": {
+          "gamma": -1.1288,
+          "se": 1.3239,
+          "t": -0.8527,
+          "converged": true,
+          "nu": 2.05
+         },
+         "status": "exploratory (< 250 days)"
+        },
+        "MSTRUSDT": {
+         "n": 164,
+         "gjr": {
+          "gamma": 0.0927,
+          "se": 3.1177,
+          "t": 0.0297,
+          "converged": true,
+          "nu": 4.2377,
+          "alpha": 0.0,
+          "beta": 0.8976
+         },
+         "egarch": {
+          "gamma": 0.0329,
+          "se": 0.1518,
+          "t": 0.2164,
+          "converged": true,
+          "nu": 4.1755
+         },
+         "status": "exploratory (< 250 days)"
+        },
+        "NVDAUSDT": {
+         "n": 157,
+         "gjr": {
+          "gamma": 0.0821,
+          "se": 0.1878,
+          "t": 0.4374,
+          "converged": true,
+          "nu": 3.5568,
+          "alpha": 0.0,
+          "beta": 0.8555
+         },
+         "egarch": {
+          "gamma": -0.2064,
+          "se": 0.0215,
+          "t": -9.5813,
+          "converged": true,
+          "nu": 5.5918
+         },
+         "status": "exploratory (< 250 days)"
+        },
+        "MUUSDT": {
+         "n": 156,
+         "gjr": {
+          "gamma": 0.2135,
+          "se": 0.5232,
+          "t": 0.4081,
+          "converged": true,
+          "nu": 3.8189,
+          "alpha": 0.386,
+          "beta": 0.0
+         },
+         "egarch": {
+          "gamma": -0.1221,
+          "se": 0.0788,
+          "t": -1.5485,
+          "converged": true,
+          "nu": 4.5206
+         },
+         "status": "exploratory (< 250 days)"
+        },
+        "QQQUSDT": {
+         "n": 156,
+         "gjr": {
+          "gamma": 0.1125,
+          "se": 0.0775,
+          "t": 1.4518,
+          "converged": true,
+          "nu": 4.4679,
+          "alpha": 0.0,
+          "beta": 0.9337
+         },
+         "egarch": {
+          "gamma": -0.0815,
+          "se": 0.159,
+          "t": -0.5129,
+          "converged": true,
+          "nu": 3.3005
+         },
+         "status": "exploratory (< 250 days)"
+        },
+        "SOXLUSDT": {
+         "n": 144,
+         "gjr": {
+          "gamma": 0.1438,
+          "se": 0.0937,
+          "t": 1.5353,
+          "converged": true,
+          "nu": 3.457,
+          "alpha": 0.0,
+          "beta": 0.9122
+         },
+         "egarch": {
+          "gamma": -0.3298,
+          "se": 0.0022,
+          "t": -153.1838,
+          "converged": true,
+          "nu": 6.286
+         },
+         "status": "exploratory (< 250 days)"
+        }
+       }
+      },
+      "tests": {
+       "H-LEV1:diff>0": {
+        "p_raw": 0.983,
+        "p_holm": 1.0
+       }
+      }
+     },
+     "TradFi perps start Mar-Jun 2026: their sample is mostly clean_holdout. GJR n/a in this segment (< 250 days per asset); verdict from SHAR only. No equity index series in data/lake/alt_series, long-history robustness unavailable. Leverage is a textbook result: in-sample support is weak evidence."
+    ],
+    "H-LEV2": [
+     "supports",
+     {
+      "universe": "L",
+      "shar": {
+       "primary_level": {
+        "n": 42164,
+        "n_dates": 2384,
+        "diff": -0.0323,
+        "diff_t": -0.2837,
+        "diff_p_pos": 0.6117,
+        "diff_t_dk": -0.25,
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.2632,
+          "se": 0.0844,
+          "t": 3.1194
+         },
+         "rs_pos_s": {
+          "b": 0.2955,
+          "se": 0.0555,
+          "t": 5.3292
+         },
+         "rv_w_s": {
+          "b": 0.177,
+          "se": 0.0432,
+          "t": 4.0955
+         },
+         "rv_m_s": {
+          "b": 0.1966,
+          "se": 0.0334,
+          "t": 5.8812
+         }
+        }
+       },
+       "log": {
+        "n": 42164,
+        "n_dates": 2384,
+        "diff": 0.0239,
+        "diff_t": 0.9332,
+        "diff_p_pos": 0.1754,
+        "diff_t_dk": 0.844,
+        "coefs": {
+         "l_neg": {
+          "b": 0.1897,
+          "se": 0.0171,
+          "t": 11.1166
+         },
+         "l_pos": {
+          "b": 0.1658,
+          "se": 0.0147,
+          "t": 11.2479
+         },
+         "l_w": {
+          "b": 0.2517,
+          "se": 0.0277,
+          "t": 9.0842
+         },
+         "l_m": {
+          "b": 0.235,
+          "se": 0.0274,
+          "t": 8.5677
+         }
+        }
+       },
+       "level_cal": {
+        "n": 42164,
+        "n_dates": 2384,
+        "diff": -0.0297,
+        "diff_t": -0.2626,
+        "diff_p_pos": 0.6036,
+        "diff_t_dk": -0.2307,
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.2632,
+          "se": 0.084,
+          "t": 3.1336
+         },
+         "rs_pos_s": {
+          "b": 0.2929,
+          "se": 0.055,
+          "t": 5.3271
+         },
+         "rv_w_s": {
+          "b": 0.185,
+          "se": 0.0434,
+          "t": 4.2663
+         },
+         "rv_m_s": {
+          "b": 0.1904,
+          "se": 0.0327,
+          "t": 5.8183
+         }
+        }
+       },
+       "n_symbols": 23
+      },
+      "gjr_summary": {
+       "n_assets_fit": 23,
+       "median_gjr_gamma": -0.0026,
+       "n_gamma_pos": 11,
+       "n_gamma_t_gt2": 0,
+       "n_gamma_t_lt_m2": 3,
+       "median_egarch_gamma": 0.0013,
+       "n_egarch_neg": 11
+      },
+      "gjr_assets": {
+       "BTCUSDT": {
+        "n": 2406,
+        "gjr": {
+         "gamma": 0.0094,
+         "se": 0.0191,
+         "t": 0.4904,
+         "converged": true,
+         "nu": 3.2046,
+         "alpha": 0.0607,
+         "beta": 0.9346
+        },
+        "egarch": {
+         "gamma": -0.0021,
+         "se": 0.0156,
+         "t": -0.1324,
+         "converged": true,
+         "nu": 3.0595
+        },
+        "status": "ok"
+       },
+       "ETHUSDT": {
+        "n": 2051,
+        "gjr": {
+         "gamma": 0.0462,
+         "se": 0.0516,
+         "t": 0.8952,
+         "converged": true,
+         "nu": 3.3714,
+         "alpha": 0.0535,
+         "beta": 0.9234
+        },
+        "egarch": {
+         "gamma": -0.0217,
+         "se": 0.0274,
+         "t": -0.7923,
+         "converged": true,
+         "nu": 3.3258
+        },
+        "status": "ok"
+       },
+       "SOLUSDT": {
+        "n": 1837,
+        "gjr": {
+         "gamma": 0.0557,
+         "se": 0.0384,
+         "t": 1.4532,
+         "converged": true,
+         "nu": 5.0333,
+         "alpha": 0.1107,
+         "beta": 0.8026
+        },
+        "egarch": {
+         "gamma": -0.0279,
+         "se": 0.023,
+         "t": -1.2135,
+         "converged": true,
+         "nu": 4.9108
+        },
+        "status": "ok"
+       },
+       "XRPUSDT": {
+        "n": 1992,
+        "gjr": {
+         "gamma": -0.0026,
+         "se": 0.0607,
+         "t": -0.0431,
+         "converged": true,
+         "nu": 3.1293,
+         "alpha": 0.2402,
+         "beta": 0.7015
+        },
+        "egarch": {
+         "gamma": -0.0137,
+         "se": 0.0274,
+         "t": -0.502,
+         "converged": true,
+         "nu": 3.1615
+        },
+        "status": "ok"
+       },
+       "DOGEUSDT": {
+        "n": 1972,
+        "gjr": {
+         "gamma": -0.0685,
+         "se": 0.024,
+         "t": -2.854,
+         "converged": true,
+         "nu": 3.2702,
+         "alpha": 0.1211,
+         "beta": 0.9132
+        },
+        "egarch": {
+         "gamma": 0.0581,
+         "se": 0.019,
+         "t": 3.0635,
+         "converged": true,
+         "nu": 3.2751
+        },
+        "status": "ok"
+       },
+       "ADAUSDT": {
+        "n": 2048,
+        "gjr": {
+         "gamma": 0.0239,
+         "se": 0.0432,
+         "t": 0.5539,
+         "converged": true,
+         "nu": 4.1789,
+         "alpha": 0.1737,
+         "beta": 0.7422
+        },
+        "egarch": {
+         "gamma": -0.0062,
+         "se": 0.0231,
+         "t": -0.2669,
+         "converged": true,
+         "nu": 4.2509
+        },
+        "status": "ok"
+       },
+       "LINKUSDT": {
+        "n": 2196,
+        "gjr": {
+         "gamma": 0.002,
+         "se": 0.0268,
+         "t": 0.0754,
+         "converged": true,
+         "nu": 5.7532,
+         "alpha": 0.0995,
+         "beta": 0.8709
+        },
+        "egarch": {
+         "gamma": 0.0013,
+         "se": 0.0186,
+         "t": 0.0723,
+         "converged": true,
+         "nu": 5.6227
+        },
+        "status": "ok"
+       },
+       "LTCUSDT": {
+        "n": 2196,
+        "gjr": {
+         "gamma": -0.062,
+         "se": 0.0244,
+         "t": -2.5413,
+         "converged": true,
+         "nu": 3.5447,
+         "alpha": 0.1089,
+         "beta": 0.9187
+        },
+        "egarch": {
+         "gamma": 0.0387,
+         "se": 0.0153,
+         "t": 2.5185,
+         "converged": true,
+         "nu": 3.5716
+        },
+        "status": "ok"
+       },
+       "BCHUSDT": {
+        "n": 2142,
+        "gjr": {
+         "gamma": 0.0187,
+         "se": 0.027,
+         "t": 0.6914,
+         "converged": true,
+         "nu": 3.2784,
+         "alpha": 0.0795,
+         "beta": 0.8797
+        },
+        "egarch": {
+         "gamma": 0.002,
+         "se": 0.0201,
+         "t": 0.1012,
+         "converged": true,
+         "nu": 3.2574
+        },
+        "status": "ok"
+       },
+       "AVAXUSDT": {
+        "n": 1867,
+        "gjr": {
+         "gamma": -0.0241,
+         "se": 0.0174,
+         "t": -1.387,
+         "converged": true,
+         "nu": 4.6946,
+         "alpha": 0.0744,
+         "beta": 0.9298
+        },
+        "egarch": {
+         "gamma": 0.0211,
+         "se": 0.0154,
+         "t": 1.366,
+         "converged": true,
+         "nu": 4.7283
+        },
+        "status": "ok"
+       },
+       "DOTUSDT": {
+        "n": 2048,
+        "gjr": {
+         "gamma": -0.0318,
+         "se": 0.0172,
+         "t": -1.847,
+         "converged": true,
+         "nu": 4.309,
+         "alpha": 0.0711,
+         "beta": 0.9384
+        },
+        "egarch": {
+         "gamma": 0.0333,
+         "se": 0.0144,
+         "t": 2.3157,
+         "converged": true,
+         "nu": 4.3636
+        },
+        "status": "ok"
+       },
+       "BNBUSDT": {
+        "n": 1945,
+        "gjr": {
+         "gamma": 0.0052,
+         "se": 0.0818,
+         "t": 0.0631,
+         "converged": true,
+         "nu": 3.494,
+         "alpha": 0.1426,
+         "beta": 0.8361
+        },
+        "egarch": {
+         "gamma": -0.0108,
+         "se": 0.0351,
+         "t": -0.3087,
+         "converged": true,
+         "nu": 3.5253
+        },
+        "status": "ok"
+       },
+       "TRXUSDT": {
+        "n": 1882,
+        "gjr": {
+         "gamma": -0.0495,
+         "se": 0.0571,
+         "t": -0.8676,
+         "converged": true,
+         "nu": 3.2807,
+         "alpha": 0.2767,
+         "beta": 0.7435
+        },
+        "egarch": {
+         "gamma": -0.0006,
+         "se": 0.0263,
+         "t": -0.0216,
+         "converged": true,
+         "nu": 3.3322
+        },
+        "status": "ok"
+       },
+       "NEARUSDT": {
+        "n": 1841,
+        "gjr": {
+         "gamma": -0.0449,
+         "se": 0.019,
+         "t": -2.3557,
+         "converged": true,
+         "nu": 4.5627,
+         "alpha": 0.0943,
+         "beta": 0.9231
+        },
+        "egarch": {
+         "gamma": 0.0429,
+         "se": 0.0162,
+         "t": 2.65,
+         "converged": true,
+         "nu": 4.6238
+        },
+        "status": "ok"
+       },
+       "ATOMUSDT": {
+        "n": 1841,
+        "gjr": {
+         "gamma": -0.0341,
+         "se": 0.0294,
+         "t": -1.1616,
+         "converged": true,
+         "nu": 5.0324,
+         "alpha": 0.1283,
+         "beta": 0.8616
+        },
+        "egarch": {
+         "gamma": 0.0204,
+         "se": 0.0193,
+         "t": 1.058,
+         "converged": true,
+         "nu": 5.0842
+        },
+        "status": "ok"
+       },
+       "ETCUSDT": {
+        "n": 1945,
+        "gjr": {
+         "gamma": -0.0173,
+         "se": 0.0399,
+         "t": -0.4335,
+         "converged": true,
+         "nu": 3.5583,
+         "alpha": 0.1511,
+         "beta": 0.8024
+        },
+        "egarch": {
+         "gamma": 0.0203,
+         "se": 0.0239,
+         "t": 0.8467,
+         "converged": true,
+         "nu": 3.638
+        },
+        "status": "ok"
+       },
+       "FILUSDT": {
+        "n": 1945,
+        "gjr": {
+         "gamma": -0.0901,
+         "se": 0.0545,
+         "t": -1.6534,
+         "converged": true,
+         "nu": 3.6219,
+         "alpha": 0.2181,
+         "beta": 0.7026
+        },
+        "egarch": {
+         "gamma": 0.0558,
+         "se": 0.0264,
+         "t": 2.1154,
+         "converged": true,
+         "nu": 3.6481
+        },
+        "status": "ok"
+       },
+       "UNIUSDT": {
+        "n": 1791,
+        "gjr": {
+         "gamma": 0.0067,
+         "se": 0.0166,
+         "t": 0.4035,
+         "converged": true,
+         "nu": 3.906,
+         "alpha": 0.0293,
+         "beta": 0.9602
+        },
+        "egarch": {
+         "gamma": 0.0049,
+         "se": 0.0192,
+         "t": 0.2541,
+         "converged": true,
+         "nu": 3.8641
+        },
+        "status": "ok"
+       },
+       "AAVEUSDT": {
+        "n": 1992,
+        "gjr": {
+         "gamma": 0.0125,
+         "se": 0.0397,
+         "t": 0.3145,
+         "converged": true,
+         "nu": 4.7661,
+         "alpha": 0.0964,
+         "beta": 0.8522
+        },
+        "egarch": {
+         "gamma": -0.011,
+         "se": 0.0242,
+         "t": -0.4519,
+         "converged": true,
+         "nu": 4.8177
+        },
+        "status": "ok"
+       },
+       "XLMUSDT": {
+        "n": 1882,
+        "gjr": {
+         "gamma": -0.0181,
+         "se": 0.0427,
+         "t": -0.4234,
+         "converged": true,
+         "nu": 3.999,
+         "alpha": 0.179,
+         "beta": 0.7939
+        },
+        "egarch": {
+         "gamma": 0.0143,
+         "se": 0.0224,
+         "t": 0.6388,
+         "converged": true,
+         "nu": 4.0533
+        },
+        "status": "ok"
+       },
+       "SUIUSDT": {
+        "n": 1256,
+        "gjr": {
+         "gamma": 0.088,
+         "se": 0.0537,
+         "t": 1.6401,
+         "converged": true,
+         "nu": 4.1717,
+         "alpha": 0.0803,
+         "beta": 0.8238
+        },
+        "egarch": {
+         "gamma": -0.0427,
+         "se": 0.0297,
+         "t": -1.4363,
+         "converged": true,
+         "nu": 4.2136
+        },
+        "status": "ok"
+       },
+       "ENAUSDT": {
+        "n": 921,
+        "gjr": {
+         "gamma": -0.0087,
+         "se": 0.0113,
+         "t": -0.7743,
+         "converged": true,
+         "nu": 6.1307,
+         "alpha": 0.02,
+         "beta": 0.9825
+        },
+        "egarch": {
+         "gamma": -0.0034,
+         "se": 0.0335,
+         "t": -0.1006,
+         "converged": true,
+         "nu": 6.0672
+        },
+        "status": "ok"
+       },
+       "HYPEUSDT": {
+        "n": 674,
+        "gjr": {
+         "gamma": 0.0611,
+         "se": 0.04,
+         "t": 1.5288,
+         "converged": true,
+         "nu": 7.6596,
+         "alpha": 0.0416,
+         "beta": 0.8989
+        },
+        "egarch": {
+         "gamma": -0.0443,
+         "se": 0.0283,
+         "t": -1.5675,
+         "converged": true,
+         "nu": 7.6944
+        },
+        "status": "ok"
+       }
+      },
+      "shar_4h": {
+       "n": 253180,
+       "n_dates": 2386,
+       "diff": -0.005,
+       "diff_t": -0.0645,
+       "diff_t_dk": -0.0599,
+       "coefs": {
+        "rs_neg_s": {
+         "b": 0.1213,
+         "se": 0.0317,
+         "t": 3.8213
+        },
+        "rs_pos_s": {
+         "b": 0.1263,
+         "se": 0.063,
+         "t": 2.0059
+        },
+        "rv_d_s": {
+         "b": 0.2757,
+         "se": 0.0493,
+         "t": 5.5894
+        },
+        "rv_w_s": {
+         "b": 0.1763,
+         "se": 0.0395,
+         "t": 4.4627
+        },
+        "rv_m_s": {
+         "b": 0.1567,
+         "se": 0.0274,
+         "t": 5.7198
+        }
+       }
+      },
+      "sign": "none",
+      "tests": {
+       "H-LEV2:diff!=0": {
+        "p_raw": 0.7766,
+        "p_holm": 1.0
+       }
+      }
+     },
+     "Median GJR gamma -0.0026 reported, not part of the registered success test. Supports = no significant positive asymmetry (t < 2, registered criterion); t < -2 would be inverse asymmetry."
+    ],
+    "H-LEV3": [
+     "contradicts",
+     {
+      "L": {
+       "verdict": "inconclusive",
+       "fit": {
+        "inter_neg": {
+         "est": 0.1007,
+         "se": 0.1706,
+         "t": 0.5905,
+         "p_pos": 0.2775
+        },
+        "inter_pos": {
+         "est": 0.1071,
+         "se": 0.3422,
+         "t": 0.3129,
+         "p_pos": 0.3772
+        },
+        "inter_neg_dk": {
+         "est": 0.1007,
+         "se": 0.1292,
+         "t": 0.7797,
+         "p_pos": 0.2178
+        },
+        "neg_in_dd_minus_pos_in_dd": {
+         "est": -0.0583,
+         "se": 0.5067,
+         "t": -0.1151,
+         "p_pos": 0.5458
+        },
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.234,
+          "se": 0.0894,
+          "t": 2.6176
+         },
+         "rs_pos_s": {
+          "b": 0.286,
+          "se": 0.0512,
+          "t": 5.585
+         },
+         "neg_dd": {
+          "b": 0.1007,
+          "se": 0.1706,
+          "t": 0.5905
+         },
+         "pos_dd": {
+          "b": 0.1071,
+          "se": 0.3422,
+          "t": 0.3129
+         },
+         "rv_w_s": {
+          "b": 0.1727,
+          "se": 0.0433,
+          "t": 3.9928
+         },
+         "rv_m_s": {
+          "b": 0.2046,
+          "se": 0.0336,
+          "t": 6.0883
+         }
+        },
+        "n": 41980,
+        "n_dates": 2376,
+        "n_dd_dates": 749,
+        "dd_share": 0.0828
+       },
+       "with_dd_main_effect": {
+        "inter_neg": {
+         "est": 0.0965,
+         "se": 0.1718,
+         "t": 0.5617,
+         "p_pos": 0.2872
+        },
+        "inter_pos": {
+         "est": 0.1,
+         "se": 0.3412,
+         "t": 0.293,
+         "p_pos": 0.3848
+        },
+        "dd": {
+         "b": 0.0415,
+         "se": 0.0707,
+         "t": 0.5875
+        }
+       }
+      },
+      "T": {
+       "verdict": "contradicts",
+       "fit": {
+        "inter_neg": {
+         "est": -0.1283,
+         "se": 0.1922,
+         "t": -0.6678,
+         "p_pos": 0.7477
+        },
+        "inter_pos": {
+         "est": 0.322,
+         "se": 0.3262,
+         "t": 0.9871,
+         "p_pos": 0.162
+        },
+        "inter_neg_dk": {
+         "est": -0.1283,
+         "se": 0.1193,
+         "t": -1.0758,
+         "p_pos": 0.859
+        },
+        "neg_in_dd_minus_pos_in_dd": {
+         "est": -0.5549,
+         "se": 0.32,
+         "t": -1.7342,
+         "p_pos": 0.9583
+        },
+        "coefs": {
+         "rs_neg_s": {
+          "b": 0.2729,
+          "se": 0.189,
+          "t": 1.444
+         },
+         "rs_pos_s": {
+          "b": 0.3775,
+          "se": 0.1984,
+          "t": 1.9029
+         },
+         "neg_dd": {
+          "b": -0.1283,
+          "se": 0.1922,
+          "t": -0.6678
+         },
+         "pos_dd": {
+          "b": 0.322,
+          "se": 0.3262,
+          "t": 0.9871
+         },
+         "rv_w_s": {
+          "b": 0.1493,
+          "se": 0.1875,
+          "t": 0.7961
+         },
+         "rv_m_s": {
+          "b": 0.1643,
+          "se": 0.0985,
+          "t": 1.6672
+         }
+        },
+        "n": 2983,
+        "n_dates": 617,
+        "n_dd_dates": 86,
+        "dd_share": 0.0644
+       },
+       "with_dd_main_effect": {
+        "inter_neg": {
+         "est": -0.1832,
+         "se": 0.1911,
+         "t": -0.9585,
+         "p_pos": 0.8309
+        },
+        "inter_pos": {
+         "est": 0.1166,
+         "se": 0.3129,
+         "t": 0.3728,
+         "p_pos": 0.3547
+        },
+        "dd": {
+         "b": 0.6569,
+         "se": 0.3432,
+         "t": 1.9139
+        }
+       }
+      },
+      "tests": {
+       "H-LEV3:L:inter>0": {
+        "p_raw": 0.2775,
+        "p_holm": 1.0
+       },
+       "H-LEV3:T:inter>0": {
+        "p_raw": 0.7477,
+        "p_holm": 1.0
+       }
+      }
+     },
+     "TradFi perps start Mar-Jun 2026: their sample is mostly clean_holdout. Requires both universes; T in-sample is tiny. Drawdown = close below 30d max close by > 1.5 sigma_30d sqrt(30)."
+    ],
+    "H-LEV4": [
+     "contradicts",
+     {
+      "L": {
+       "log": {
+        "mean": 0.0025,
+        "t": 2.0495,
+        "n_dates": 2160,
+        "n_obs": 40980,
+        "mean_qa": 0.3871,
+        "mean_qb": 0.384,
+        "p_neg": 0.9798,
+        "p_two": 0.0404
+       },
+       "level": {
+        "mean": -0.0017,
+        "t": -2.3405,
+        "n_dates": 2160,
+        "n_obs": 40980,
+        "mean_qa": 0.4237,
+        "mean_qb": 0.4251,
+        "p_neg": 0.0096,
+        "p_two": 0.0193
+       }
+      },
+      "T": {
+       "log": {
+        "mean": 0.0134,
+        "t": 2.5069,
+        "n_dates": 454,
+        "n_obs": 2250,
+        "mean_qa": 0.693,
+        "mean_qb": 0.6832,
+        "p_neg": 0.9939,
+        "p_two": 0.0122
+       },
+       "level": {
+        "mean": -0.001,
+        "t": -0.0855,
+        "n_dates": 454,
+        "n_obs": 2250,
+        "mean_qa": 0.6935,
+        "mean_qb": 0.6937,
+        "p_neg": 0.4659,
+        "p_two": 0.9318
+       }
+      },
+      "primary": "log form",
+      "design": "expanding window, refit 30d, FE, first fit >= 250 rows / 60 dates",
+      "tests": {
+       "H-LEV4:T:dq<0": {
+        "p_raw": 0.9939,
+        "p_holm": 1.0
+       },
+       "H-LEV4:L:dq!=0": {
+        "p_raw": 0.0404,
+        "p_holm": 0.2829
+       }
+      }
+     },
+     "TradFi perps start Mar-Jun 2026: their sample is mostly clean_holdout. dq = QLIKE(SHAR) - QLIKE(HAR), date-averaged, NW t; negative = SHAR better. Registered T criterion applies to the holdout."
+    ],
+    "H-LEV5": [
+     "contradicts",
+     {
+      "universe": "L",
+      "inter": {
+       "est": -0.0515,
+       "se": 0.0216,
+       "t": -2.3852,
+       "p_pos": 0.9914
+      },
+      "inter_dk": {
+       "est": -0.0515,
+       "se": 0.0236,
+       "t": -2.1811,
+       "p_pos": 0.9854
+      },
+      "coefs": {
+       "rv_s": {
+        "b": 0.2863,
+        "se": 0.055,
+        "t": 5.2047
+       },
+       "rv_w_s": {
+        "b": 0.1801,
+        "se": 0.043,
+        "t": 4.1871
+       },
+       "rv_m_s": {
+        "b": 0.208,
+        "se": 0.033,
+        "t": 6.2987
+       },
+       "rs_neg_s": {
+        "b": -0.0622,
+        "se": 0.1022,
+        "t": -0.609
+       },
+       "fz": {
+        "b": 0.0706,
+        "se": 0.0282,
+        "t": 2.5048
+       },
+       "neg_fz": {
+        "b": -0.0515,
+        "se": 0.0216,
+        "t": -2.3852
+       }
+      },
+      "n": 41988,
+      "n_dates": 2384,
+      "tests": {
+       "H-LEV5:inter>0": {
+        "p_raw": 0.9914,
+        "p_holm": 1.0
+       }
+      }
+     },
+     "fz = funding z vs trailing 90d prints known at origin, clipped +-5; levels scaled by symbol mean RV."
+    ]
+   },
+   "holm": {
+    "H-LEV1:diff>0": {
+     "p_raw": 0.983,
+     "p_holm": 1.0
+    },
+    "H-LEV2:diff!=0": {
+     "p_raw": 0.7766,
+     "p_holm": 1.0
+    },
+    "H-LEV3:L:inter>0": {
+     "p_raw": 0.2775,
+     "p_holm": 1.0
+    },
+    "H-LEV3:T:inter>0": {
+     "p_raw": 0.7477,
+     "p_holm": 1.0
+    },
+    "H-LEV4:T:dq<0": {
+     "p_raw": 0.9939,
+     "p_holm": 1.0
+    },
+    "H-LEV4:L:dq!=0": {
+     "p_raw": 0.0404,
+     "p_holm": 0.2829
+    },
+    "H-LEV5:inter>0": {
+     "p_raw": 0.9914,
+     "p_holm": 1.0
+    }
+   }
+  }
+ }
+}

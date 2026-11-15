@@ -326,20 +326,67 @@ impl<'a> MarketData<'a> {
 
     pub async fn tickers(&self) -> anyhow::Result<Vec<Ticker>> {
         let r = self.rest.get_public("/v5/market/tickers", &[("category", self.category.clone())]).await?;
-        Ok(r["list"]
-            .as_array()
-            .context("tickers: no list")?
-            .iter()
-            .map(|x| Ticker {
-                symbol: x["symbol"].as_str().unwrap_or_default().to_string(),
-                last_price: f(&x["lastPrice"]),
-                mark_price: f(&x["markPrice"]),
-                turnover_24h: f(&x["turnover24h"]),
-                open_interest_value: f(&x["openInterestValue"]),
-                funding_rate: f(&x["fundingRate"]),
-                bid1: f(&x["bid1Price"]),
-                ask1: f(&x["ask1Price"]),
-            })
-            .collect())
+        parse_tickers(&r)
     }
+
+    /// One symbol's ticker (~1 KB instead of ~700 KB for the whole category; matters on slow links).
+    pub async fn ticker(&self, symbol: &str) -> anyhow::Result<Option<Ticker>> {
+        let r = self.rest.get_public("/v5/market/tickers", &[("category", self.category.clone()), ("symbol", symbol.to_string())]).await?;
+        Ok(parse_tickers(&r)?.into_iter().find(|x| x.symbol == symbol))
+    }
+}
+
+/// Order book levels (price, size), best first.
+#[derive(Clone, Debug, Default)]
+pub struct Book {
+    pub bids: Vec<(f64, f64)>,
+    pub asks: Vec<(f64, f64)>,
+    pub ts: Ms,
+}
+
+impl Book {
+    pub fn best_bid(&self) -> Option<f64> {
+        self.bids.first().map(|x| x.0)
+    }
+
+    pub fn best_ask(&self) -> Option<f64> {
+        self.asks.first().map(|x| x.0)
+    }
+
+    /// Quote-currency depth within `band_bps` of the touch on each side: (bid, ask).
+    pub fn depth_usd(&self, band_bps: f64) -> (f64, f64) {
+        let (Some(bb), Some(ba)) = (self.best_bid(), self.best_ask()) else { return (0.0, 0.0) };
+        let b = self.bids.iter().filter(|(p, _)| *p >= bb * (1.0 - band_bps / 1e4)).map(|(p, q)| p * q).sum();
+        let a = self.asks.iter().filter(|(p, _)| *p <= ba * (1.0 + band_bps / 1e4)).map(|(p, q)| p * q).sum();
+        (b, a)
+    }
+}
+
+impl MarketData<'_> {
+    /// L2 snapshot, `limit` levels per side (linear: 1..500).
+    pub async fn orderbook(&self, symbol: &str, limit: u32) -> anyhow::Result<Book> {
+        let r = self.rest.get_public("/v5/market/orderbook", &[("category", self.category.clone()), ("symbol", symbol.to_string()), ("limit", limit.to_string())]).await?;
+        let side = |k: &str| -> Vec<(f64, f64)> {
+            r[k].as_array().map(|l| l.iter().filter_map(|x| Some((f(x.get(0)?), f(x.get(1)?)))).filter(|(p, q)| p.is_finite() && q.is_finite()).collect()).unwrap_or_default()
+        };
+        Ok(Book { bids: side("b"), asks: side("a"), ts: i(&r["ts"]) })
+    }
+}
+
+fn parse_tickers(r: &Value) -> anyhow::Result<Vec<Ticker>> {
+    Ok(r["list"]
+        .as_array()
+        .context("tickers: no list")?
+        .iter()
+        .map(|x| Ticker {
+            symbol: x["symbol"].as_str().unwrap_or_default().to_string(),
+            last_price: f(&x["lastPrice"]),
+            mark_price: f(&x["markPrice"]),
+            turnover_24h: f(&x["turnover24h"]),
+            open_interest_value: f(&x["openInterestValue"]),
+            funding_rate: f(&x["fundingRate"]),
+            bid1: f(&x["bid1Price"]),
+            ask1: f(&x["ask1Price"]),
+        })
+        .collect())
 }

@@ -1,0 +1,133 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{glasserman2023,sarkar2024,lopezlira2023}
+\citation{neweywest1987}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction and design principles}{1}{section.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces The layer split (\path {docs/PLAN.md}, \S  2).}}{2}{table.caption.1}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:layers}{{1}{2}{The layer split (\protect \path {docs/PLAN.md}, \S 2)}{table.caption.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces System architecture. Blue: Rust ingestion and storage. Violet: Python research and the knowledge pipeline. Teal: frozen deterministic models and the cards Claude reads. Orange: the only non-deterministic component. Red: the deterministic Rust risk and execution path, which never takes a size from the LLM.}}{2}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:arch}{{1}{2}{System architecture. Blue: Rust ingestion and storage. Violet: Python research and the knowledge pipeline. Teal: frozen deterministic models and the cards Claude reads. Orange: the only non-deterministic component. Red: the deterministic Rust risk and execution path, which never takes a size from the LLM}{figure.caption.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{The cutoff split.}{2}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}System architecture}{2}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Data and the lake.}{2}{section*.4}\protected@file@percent }
+\citation{bailey2014dsr}
+\citation{bailey2017pbo}
+\citation{holm1979}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Timeline of the build, from the research diary (\path {research/diary/2026-11-07.md} to \path {2026-11-15.md}).}}{3}{figure.caption.7}\protected@file@percent }
+\newlabel{fig:timeline}{{2}{3}{Timeline of the build, from the research diary (\protect \path {research/diary/2026-11-07.md} to \protect \path {2026-11-15.md})}{figure.caption.7}{}}
+\@writefile{toc}{\contentsline {paragraph}{Risk engine.}{3}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Paper and live pipeline.}{3}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Research protocol and the knowledge pipeline}{3}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}From hypothesis to rule}{3}{subsection.3.1}\protected@file@percent }
+\citation{patton2011}
+\citation{corsi2009}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Left: reliability of our pre-registered priors (strict outcome: 1 = supported in both segments, 0 = refuted or flipped; open and untested excluded), computed with the rules of \path {scripts/knowledge_book.py} from \path {research/hypotheses.yaml} and \path {research/hypotheses_results.jsonl} as of 2026-11-15. Right: latest verdict per segment over all hypotheses with a result.}}{4}{figure.caption.8}\protected@file@percent }
+\newlabel{fig:calib}{{3}{4}{Left: reliability of our pre-registered priors (strict outcome: 1 = supported in both segments, 0 = refuted or flipped; open and untested excluded), computed with the rules of \protect \path {scripts/knowledge_book.py} from \protect \path {research/hypotheses.yaml} and \protect \path {research/hypotheses_results.jsonl} as of 2026-11-15. Right: latest verdict per segment over all hypotheses with a result}{figure.caption.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}How good were our priors?}{4}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Models}{4}{section.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Left: next-day variance tournament on 23 crypto perps, QLIKE relative to level HAR (\path {research/reports/vol_tournament_2026-11-10.json}). Right: the crypto hour-of-week volatility profile (\textsf  {H-NS4}), recomputed from lake 1h bars.}}{5}{figure.caption.12}\protected@file@percent }
+\newlabel{fig:vol}{{4}{5}{Left: next-day variance tournament on 23 crypto perps, QLIKE relative to level HAR (\protect \path {research/reports/vol_tournament_2026-11-10.json}). Right: the crypto hour-of-week volatility profile (\hyp {H-NS4}), recomputed from lake 1h bars}{figure.caption.12}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Volatility}{5}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Per-bar and daily models.}{5}{section*.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The calendar.}{5}{section*.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Machine-learned volatility.}{5}{section*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}The probability field}{5}{subsection.4.2}\protected@file@percent }
+\citation{liu2024kan}
+\citation{romano2019}
+\citation{gibbs2021}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}The polynomial-neuron network (KAN-style) and the live networks}{6}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Architecture.}{6}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Training and validation.}{6}{section*.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Results.}{6}{section*.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Live v1 and v2.1.}{6}{section*.17}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Left: log-score gain of the probability field over log-HAR-$t$ with constant jumps (blue) and over log-HAR-$t$ $\times $ hour-of-week (orange), from \path {research/reports/btc_field_2026-11-13.md}. Right: pinball-loss differences of the PNN and the equal-size MLP against log-HAR-$t$, and PNN minus MLP (negative is better), from \path {research/reports/btc_pnn_2026-11-13.md}.}}{7}{figure.caption.16}\protected@file@percent }
+\newlabel{fig:fieldpnn}{{5}{7}{Left: log-score gain of the probability field over log-HAR-$t$ with constant jumps (blue) and over log-HAR-$t$ $\times $ hour-of-week (orange), from \protect \path {research/reports/btc_field_2026-11-13.md}. Right: pinball-loss differences of the PNN and the equal-size MLP against log-HAR-$t$, and PNN minus MLP (negative is better), from \protect \path {research/reports/btc_pnn_2026-11-13.md}}{figure.caption.16}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Neuron atlas of the frozen live 1-hour PNN (\path {research/reports/brain_atlas_2026-11-15.md}; descriptive, not a test). Left: receptive fields, the share of each latent unit's edge variation by input. Right: mean activation of each latent unit by hour of week.}}{7}{figure.caption.18}\protected@file@percent }
+\newlabel{fig:brain}{{6}{7}{Neuron atlas of the frozen live 1-hour PNN (\protect \path {research/reports/brain_atlas_2026-11-15.md}; descriptive, not a test). Left: receptive fields, the share of each latent unit's edge variation by input. Right: mean activation of each latent unit by hour of week}{figure.caption.18}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}The cross-sectional network v3}{7}{subsection.4.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Rank IC of predicted relative returns for v3, the MLP arm, v3 without mixing and three simple baselines (\path {research/reports/xs_network_2026-11-15.md}). The IC is genuine median-forecasting skill but mostly a low-volatility ranking, and it does not survive costs as a long-short spread.}}{8}{figure.caption.19}\protected@file@percent }
+\newlabel{fig:xs}{{7}{8}{Rank IC of predicted relative returns for v3, the MLP arm, v3 without mixing and three simple baselines (\protect \path {research/reports/xs_network_2026-11-15.md}). The IC is genuine median-forecasting skill but mostly a low-volatility ranking, and it does not survive costs as a long-short spread}{figure.caption.19}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}The order-book generator and the matching engine}{8}{subsection.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}The vector-open level framework (vecopen)}{8}{subsection.4.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Results across the research programmes}{8}{section.5}\protected@file@percent }
+\newlabel{sec:results}{{5}{8}{Results across the research programmes}{section.5}{}}
+\gdef \LT@i {\LT@entry 
+    {1}{50.10185pt}\LT@entry 
+    {1}{185.56198pt}\LT@entry 
+    {1}{20.47801pt}\LT@entry 
+    {1}{31.26952pt}\LT@entry 
+    {1}{156.79968pt}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Protocol status of the 252 registered hypotheses, grouped by programme (families mapped to groups in \path {paper/make_figures.py}). ``Supported'' needs support in-sample and the same sign in the holdout; a segment flip counts as not supported.}}{9}{figure.caption.20}\protected@file@percent }
+\newlabel{fig:verdicts}{{8}{9}{Protocol status of the 252 registered hypotheses, grouped by programme (families mapped to groups in \protect \path {paper/make_figures.py}). ``Supported'' needs support in-sample and the same sign in the holdout; a segment flip counts as not supported}{figure.caption.20}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Main hypotheses: latest verdict in \texttt  {llm\_in\_sample} / \texttt  {clean\_holdout} (S supports, X contradicts, ? inconclusive, -- not run) and the key number. Sources: \path {research/hypotheses_results.jsonl}, \path {research/BELIEFS.md} and the reports named in the text.}}{9}{table.2}\protected@file@percent }
+\newlabel{tab:results}{{2}{9}{Main hypotheses: latest verdict in \seg {llm\_in\_sample} / \seg {clean\_holdout} (S supports, X contradicts, ? inconclusive, -- not run) and the key number. Sources: \protect \path {research/hypotheses_results.jsonl}, \protect \path {research/BELIEFS.md} and the reports named in the text}{table.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Volatility and the calendar.}{10}{section*.21}\protected@file@percent }
+\citation{kyle2016}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Left: the 16-sleeve book is roughly one bet (\path {research/reports/pnl_decomposition_2026-11-11.md}). Right: choosing the best variant per symbol is a coin flip, with PBO 0.44 (trend zoo) and 0.65 (breakouts) (\path {research/reports/synthetic_robustness_2026-11-11.md}).}}{11}{figure.caption.24}\protected@file@percent }
+\newlabel{fig:book}{{9}{11}{Left: the 16-sleeve book is roughly one bet (\protect \path {research/reports/pnl_decomposition_2026-11-11.md}). Right: choosing the best variant per symbol is a coin flip, with PBO 0.44 (trend zoo) and 0.65 (breakouts) (\protect \path {research/reports/synthetic_robustness_2026-11-11.md})}{figure.caption.24}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Left: held-out P\&L decomposition of the selected wide quoters on replayed real books, by queue model (\path {research/reports/mm_replay_2026-11-14.md}); fees eat the spread. Right: 14-day long ATM BTC straddles after volatility compressions versus all days (\path {research/reports/options_compression_2026-11-14.md}); options are cheaper after compressions, not mispriced.}}{11}{figure.caption.26}\protected@file@percent }
+\newlabel{fig:exec}{{10}{11}{Left: held-out P\&L decomposition of the selected wide quoters on replayed real books, by queue model (\protect \path {research/reports/mm_replay_2026-11-14.md}); fees eat the spread. Right: 14-day long ATM BTC straddles after volatility compressions versus all days (\protect \path {research/reports/options_compression_2026-11-14.md}); options are cheaper after compressions, not mispriced}{figure.caption.26}{}}
+\@writefile{toc}{\contentsline {paragraph}{Direction.}{11}{section*.22}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Strategies and trend.}{11}{section*.23}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Execution and market making.}{11}{section*.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Microstructure.}{11}{section*.27}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces The seven days after a long-liquidation flush (\path {research/reports/post_cascade_2026-11-15.md}): the low is usually still ahead, and comes late; a stop under the flush low is usually hit before the rebound.}}{12}{figure.caption.31}\protected@file@percent }
+\newlabel{fig:postflush}{{11}{12}{The seven days after a long-liquidation flush (\protect \path {research/reports/post_cascade_2026-11-15.md}): the low is usually still ahead, and comes late; a stop under the flush low is usually hit before the rebound}{figure.caption.31}{}}
+\@writefile{toc}{\contentsline {paragraph}{Options.}{12}{section*.28}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{News and sentiment.}{12}{section*.29}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Post-crash.}{12}{section*.30}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Cross-section and the brain.}{12}{section*.32}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}The live system}{12}{section.6}\protected@file@percent }
+\newlabel{sec:live}{{6}{12}{The live system}{section.6}{}}
+\@writefile{toc}{\contentsline {paragraph}{The hourly network and Claude's interpreted forecasts.}{12}{section*.33}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Forward record of the live network v1 from \path {data/journal/live_nn/scores.jsonl} (2026-11-13 to 2026-11-15). Left: realised 1-hour return in units of the network's sigma; the dashed lines are $\pm 1.28$. Right: ACI coverage by horizon and level. The 24-hour windows overlap and cover essentially one crash day.}}{13}{figure.caption.34}\protected@file@percent }
+\newlabel{fig:livescores}{{12}{13}{Forward record of the live network v1 from \protect \path {data/journal/live_nn/scores.jsonl} (2026-11-13 to 2026-11-15). Left: realised 1-hour return in units of the network's sigma; the dashed lines are $\pm 1.28$. Right: ACI coverage by horizon and level. The 24-hour windows overlap and cover essentially one crash day}{figure.caption.34}{}}
+\@writefile{toc}{\contentsline {paragraph}{The dashboard and brain map.}{13}{section*.35}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Regime and players.}{13}{section*.37}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The paper decision book.}{13}{section*.38}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The live desk.}{13}{section*.39}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Screenshots of the local dashboard (top) and the brain map (bottom), captured headless on 2026-11-15 at about 16:10 UTC. The dashboard shows BTC inside the network's ACI bands, the 24-hour cone, the v2.1 and Claude bands and the field touch table; the brain map shows the two seeds (hemispheres) of the 1-hour network, its 19 inputs, 8 latent units and 7 quantile heads.}}{15}{figure.caption.36}\protected@file@percent }
+\newlabel{fig:dash}{{13}{15}{Screenshots of the local dashboard (top) and the brain map (bottom), captured headless on 2026-11-15 at about 16:10 UTC. The dashboard shows BTC inside the network's ACI bands, the 24-hour cone, the v2.1 and Claude bands and the field touch table; the brain map shows the two seeds (hemispheres) of the 1-hour network, its 19 inputs, 8 latent units and 7 quantile heads}{figure.caption.36}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}How we expect to make P\&L}{16}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Small validated edges.}{16}{section*.40}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The LLM as filter and interpreter.}{16}{section*.41}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The cost model.}{16}{section*.42}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Why the expectancy is uncertain.}{16}{section*.43}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{What would falsify it.}{16}{section*.44}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Advantages and disadvantages of each system}{16}{section.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {9}Lessons and mistakes}{16}{section.9}\protected@file@percent }
+\newlabel{sec:lessons}{{9}{16}{Lessons and mistakes}{section.9}{}}
+\@writefile{toc}{\contentsline {paragraph}{Operations: timers, sleep and processes.}{16}{section*.46}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces The single biggest advantage and disadvantage of each component.}}{17}{table.caption.45}\protected@file@percent }
+\newlabel{tab:proscons}{{3}{17}{The single biggest advantage and disadvantage of each component}{table.caption.45}{}}
+\@writefile{toc}{\contentsline {paragraph}{Agents killing processes.}{17}{section*.47}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{GDELT.}{17}{section*.48}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Holdout glimpses.}{17}{section*.49}\protected@file@percent }
+\bibstyle{plainnat}
+\bibdata{ai_trader_paper}
+\bibcite{bailey2014dsr}{{1}{2014}{{Bailey and L{\'o}pez~de Prado}}{{}}}
+\bibcite{bailey2017pbo}{{2}{2017}{{Bailey et~al.}}{{Bailey, Borwein, L{\'o}pez~de Prado, and Zhu}}}
+\bibcite{corsi2009}{{3}{2009}{{Corsi}}{{}}}
+\bibcite{gibbs2021}{{4}{2021}{{Gibbs and Cand{\`e}s}}{{}}}
+\bibcite{glasserman2023}{{5}{2023}{{Glasserman and Lin}}{{}}}
+\bibcite{holm1979}{{6}{1979}{{Holm}}{{}}}
+\@writefile{toc}{\contentsline {paragraph}{Corrections.}{18}{section*.50}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Overfitting traps avoided.}{18}{section*.51}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {10}Conclusion and next steps}{18}{section.10}\protected@file@percent }
+\bibcite{kyle2016}{{7}{2016}{{Kyle and Obizhaeva}}{{}}}
+\bibcite{liu2024kan}{{8}{2024}{{Liu et~al.}}{{Liu, Wang, Vaidya, Ruehle, Halverson, Solja{\v {c}}i{\'c}, Hou, and Tegmark}}}
+\bibcite{lopezlira2023}{{9}{2023}{{Lopez-Lira and Tang}}{{}}}
+\bibcite{neweywest1987}{{10}{1987}{{Newey and West}}{{}}}
+\bibcite{patton2011}{{11}{2011}{{Patton}}{{}}}
+\bibcite{romano2019}{{12}{2019}{{Romano et~al.}}{{Romano, Patterson, and Cand{\`e}s}}}
+\bibcite{sarkar2024}{{13}{2024}{{Sarkar and Vafa}}{{}}}
+\gdef \LT@ii {\LT@entry 
+    {1}{162.49014pt}\LT@entry 
+    {1}{299.06346pt}}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Reproducibility}{19}{appendix.A}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Commands.}{19}{section*.53}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Frozen models.}{19}{section*.54}\protected@file@percent }
+\gdef \@abspage@last{19}

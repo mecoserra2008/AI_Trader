@@ -1,0 +1,78 @@
+# vecopen baseline configuration: SPEC.md section 7 plus the user's section-9 decisions (2026-11-14).
+# Frozen before any data is examined. Read-only for agents; a change needs the user's written approval and a registry line.
+# The sha256 of this file is written to every result.
+
+version: baseline-1
+seed: 20261114
+
+legs:
+  theta_L_atr: 2.0            # leg size threshold (user's choice, 14 Nov)
+  n_confirm: 6                # confirmation window, tau-bars
+  omega_max: 0.25             # max open-side wick, fraction of range
+  atr_len: 14
+  volume_baseline_sessions: 20   # feature only
+
+levels:
+  kappa_atr: 0.10             # zone half-width, frozen at birth
+  a_max_bars: 200             # expiry, tau-bars
+  timeframes_primary: [15m, 30m, 1h, 2h, 4h, 1d, 1w, 1M]   # levels from 15m upward in the primary test
+  timeframe_weights: {5m: 1, 15m: 2, 30m: 3, 1h: 4, 2h: 5, 4h: 6, 1d: 7, 1w: 8, 1M: 9}
+
+labels:
+  k_pt_atr: 1.0               # resolution band and profit target
+  k_sl_atr: 0.5               # stop beyond the opposite zone edge
+  h_tau_bars: 6               # time barrier, in tau-bars, measured in base bars
+  tie_rule: stop_first
+
+events:
+  base_timeframe: 5m
+  approach_lookback_m: 6      # base bars
+
+costs:
+  per_side: one_tick_plus_commission   # per asset; resolved in the asset table
+  stress_multiplier: 2.0
+
+split:
+  research_fraction: 0.75     # by calendar, per asset
+  holdout_fraction: 0.25
+
+robustness_grid:
+  theta_L_atr: [1.5, 2.0, 2.5]
+  n_confirm: [4, 6, 8]
+  omega_max: [0.15, 0.25, 0.35]
+
+stats:
+  bootstrap_resamples: 10000
+  cluster_intraday: day
+  cluster_daily_plus: week
+  holm_alpha: 0.05
+  sign_years_fraction: 0.667
+  placebo_displacement_atr: [1.0, 3.0]
+
+cv:
+  cpcv_groups: 10
+  cpcv_test_groups: 2
+  m2_min_events: 1000
+
+gate_g3:
+  dsr_min: 0.95
+  pbo_max: 0.20
+  wf_positive_fraction: 0.667
+
+# ---- Asset universe (user decision 2026-11-14: crypto + BlackBull CFDs together) ----
+assets:
+  crypto:
+    source: binance_usdm_archive        # data.binance.vision 5m klines; taker-buy volume = aggressor volume
+    session: utc_24h                    # 1h-to-daily bars anchored at 00:00 UTC
+    aggressor_volume: true              # delta_div kept
+    commission_bps_per_side: 5.5        # Bybit taker (config/fees.yaml crypto class) as the cost venue
+    symbols: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, BNBUSDT, DOGEUSDT, ADAUSDT, AVAXUSDT, LINKUSDT, LTCUSDT,
+              BCHUSDT, DOTUSDT, TRXUSDT, ATOMUSDT, ETCUSDT, FILUSDT, XLMUSDT, NEARUSDT, UNIUSDT, AAVEUSDT]
+  cfd:
+    source: ctrader_trendbars_blackbull # m5 trendbars via atx ctrader (read-only token); resolved after login
+    session: exchange                   # per-instrument exchange session; FX daily roll 17:00 America/New_York
+    aggressor_volume: false             # tick volume only: delta_div dropped, not imputed
+    commission: from_symbol_details     # cTrader symbol commission; flagged if unknown
+    candidates: [EURUSD, GBPUSD, USDJPY, AUDUSD, USDCAD, XAUUSD, XAGUSD, USOIL, UKOIL, US500, US30, NAS100,
+                 GER40, UK100, JPN225, BUND]
+    min_history_years: 10

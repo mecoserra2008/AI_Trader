@@ -1,0 +1,13 @@
+[package]
+name = "at-match"
+description = "Deterministic Bybit-semantics limit order book (price-time priority) and JSONL match simulator. Research only: no network or exchange code."
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+at-core.workspace = true
+at-risk.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true

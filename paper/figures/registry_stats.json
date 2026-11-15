@@ -1,0 +1,152 @@
+{
+ "status": {
+  "supported": 33,
+  "flip": 26,
+  "refuted": 90,
+  "open": 47,
+  "untested": 44,
+  "forward": 12
+ },
+ "strict": {
+  "n": 149,
+  "mean_prior": 0.439,
+  "hit_rate": 0.221,
+  "brier": 0.208,
+  "auc": 0.681,
+  "brier_base_rate": 0.172,
+  "brier_half": 0.25,
+  "skill_vs_half": 0.168
+ },
+ "bins": [
+  {
+   "n": 14,
+   "mean_prior": 0.218,
+   "hit_rate": 0.071,
+   "brier": 0.091,
+   "auc": 0.308,
+   "brier_base_rate": 0.066,
+   "brier_half": 0.25,
+   "skill_vs_half": 0.635
+  },
+  {
+   "n": 64,
+   "mean_prior": 0.348,
+   "hit_rate": 0.172,
+   "brier": 0.171,
+   "auc": 0.593,
+   "brier_base_rate": 0.142,
+   "brier_half": 0.25,
+   "skill_vs_half": 0.316
+  },
+  {
+   "n": 46,
+   "mean_prior": 0.493,
+   "hit_rate": 0.217,
+   "brier": 0.239,
+   "auc": 0.679,
+   "brier_base_rate": 0.17,
+   "brier_half": 0.25,
+   "skill_vs_half": 0.045
+  },
+  {
+   "n": 25,
+   "mean_prior": 0.698,
+   "hit_rate": 0.44,
+   "brier": 0.312,
+   "auc": 0.562,
+   "brier_base_rate": 0.246,
+   "brier_half": 0.25,
+   "skill_vs_half": -0.248
+  }
+ ],
+ "by_group": {
+  "Volatility and calendar": {
+   "supported": 6,
+   "flip": 2,
+   "refuted": 19,
+   "open": 9,
+   "untested": 1,
+   "forward": 4
+  },
+  "Direction and price signals": {
+   "refuted": 23,
+   "supported": 6,
+   "untested": 11,
+   "flip": 16,
+   "open": 4
+  },
+  "Microstructure and order flow": {
+   "untested": 9,
+   "flip": 2,
+   "refuted": 19,
+   "open": 5,
+   "forward": 3,
+   "supported": 1
+  },
+  "Execution and market making": {
+   "refuted": 1,
+   "untested": 5,
+   "supported": 3,
+   "flip": 1,
+   "open": 3
+  },
+  "Strategies and trend": {
+   "refuted": 14,
+   "flip": 2,
+   "supported": 5,
+   "open": 5,
+   "forward": 2,
+   "untested": 1
+  },
+  "Options": {
+   "refuted": 3,
+   "flip": 2,
+   "untested": 1,
+   "open": 2
+  },
+  "News, sentiment, geopolitics": {
+   "untested": 2,
+   "open": 2,
+   "refuted": 1,
+   "supported": 1
+  },
+  "ML and probabilistic models": {
+   "open": 15,
+   "refuted": 9,
+   "supported": 9,
+   "forward": 3,
+   "untested": 3
+  },
+  "Live, AI decisions, brain, vecopen": {
+   "untested": 11
+  },
+  "Post-crash (liquidation flush)": {
+   "refuted": 1,
+   "open": 2
+  },
+  "Cross-section (XS v3)": {
+   "supported": 2,
+   "flip": 1
+  }
+ },
+ "seg": {
+  "llm_in_sample": {
+   "supports": 38,
+   "contradicts": 86,
+   "inconclusive": 38
+  },
+  "clean_holdout": {
+   "supports": 60,
+   "inconclusive": 48,
+   "contradicts": 82
+  },
+  "pooled": {
+   "inconclusive": 21,
+   "contradicts": 32,
+   "supports": 11
+  }
+ },
+ "n": 252,
+ "rows": 442,
+ "rules": 188
+}

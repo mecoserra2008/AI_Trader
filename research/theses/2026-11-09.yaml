@@ -1,0 +1,207 @@
+# Ideas / theses for 2026-11-09 .. 2026-11-13 (written 2026-11-08 ~18:00 UTC, before the week's data).
+# Shape matches STOCK SCANNER's POST /api/v1/theses (ThesisCreate). Pushed by scripts/push_theses.py, which records the
+# returned thesis_id per `key` in research/theses/stock_scanner_ids.json (idempotent).
+# House rules: these are interpretations, not sized trades. Directional edge is NOT established in our research
+# (P5; H-TR1-6 failed), so most ideas are event/conditional theses with conviction 1-2. Validated pieces are labelled.
+# Levels from Yahoo daily closes on 2026-11-06; macro numbers from FRED / finviz / prediction markets (see calendar).
+
+defaults:
+  status: idea
+  horizon: 1M            # shortest the app allows; the real horizon is in tags (days-5)
+  origin: {kind: manual, ref: "AI_Trader research/theses/2026-11-09.yaml", label: "AI_Trader week ahead W46"}
+  review_every_days: 2
+  common_tags: [ai_trader, week_2026W46, days-5]
+
+theses:
+  - key: W46-macro-cpi-pivot
+    title: "CPI is the pivot: a December hike is priced, so a soft core is the asymmetric surprise"
+    subject_type: macro_theme
+    subject_id: US_CPI_2026-10
+    direction: neutral
+    conviction: 2
+    tags: [macro, inflation, fed, event]
+    key_drivers: ["Dec 9 hike ~77-80% priced (Kalshi/Polymarket)", "Consensus Oct CPI +0.3% m/m, core +0.2% (Sep +0.6% / +0.3%; 3.7% / 2.6% y/y)", "VIX 28, VXN 38 (1y high): fear already priced"]
+    thesis_md: |
+      **Setup.** After +165k payrolls and claims at a 57-year low, prediction markets price a December 9 hike at ~77-80%. Consensus for October CPI is +0.3% headline / +0.2% core (September +0.6% / +0.3%; 3.7% / 2.6% y/y). Equity fear is near 1-year highs (VIX 28, VXN 38).
+
+      **Read.** With the hike mostly priced, a soft core (<= 0.2%) has more room to move markets (hike odds down, relief for duration: QQQ, small caps, TLT, BTC/ETH) than an in-line print. A hot core (>= 0.4%) locks in December and opens the equity-shock tail, made worse if the 10-year auction (18:00 UTC, same day) tails.
+
+      **Evidence.** BTC's 12-16 UTC window on CPI days has been 1.4x as volatile as other weekdays since 2019 (1.7x in 2022-23); P(> 2% move) 28% vs 16%. Whether the *sign* follows the surprise is registered as H-EV1 (forward-only, untested). Treat this as an event-volatility thesis, not a directional call.
+    catalysts:
+      - {label: "US CPI (Oct), 13:30 UTC", date: 2026-11-10, kind: macro, source: finviz, source_ref: "consensus 0.3% / core 0.2%"}
+      - {label: "10-year note auction, 18:00 UTC (prior 5.300%)", date: 2026-11-10, kind: macro, source: finviz}
+      - {label: "US PPI (Oct), 13:30 UTC (cons 0.4% / core 0.3%; prior 1.3% / 0.7%)", date: 2026-11-13, kind: macro, source: finviz}
+    invalidation:
+      - {label: "Core CPI >= 0.4% m/m: hike locked, no asymmetry left", kind: manual, date: 2026-11-10}
+      - {label: "Thesis expires after PPI", kind: date, date: 2026-11-13}
+
+  - key: W46-crwv-financing-test
+    title: "CoreWeave Q3 (Tue after close) is the AI-financing test for the leveraged edge"
+    subject_type: security
+    subject_id: CRWV
+    direction: neutral
+    conviction: 2
+    tags: [ai, credit, earnings, event, high_beta]
+    key_drivers: ["Bonds ~15-16% yield, CDS-implied default risk reported ~60%", "-43% in a month, -66% from the 52w high", "Neoclouds ~30 bn USD revenue vs ~80 bn USD capex (JPMorgan)"]
+    thesis_md: |
+      **Setup.** The AI selloff is a financing story at the leveraged edge, not a demand story: neocloud revenue ~30 bn USD vs ~80 bn USD capex (JPMorgan), CoreWeave bonds ~15-16%, a 2026-28 refinancing wall. CRWV is -43% in a month (46.40 vs 52w high 138.25), 200d mean 90.
+
+      **Read.** Q3 results (call Tue Nov 10, 22:00 UTC) decide which way contagion runs. Credible funding / backlog / capex discipline: a sharp short-covering rebound across neoclouds and miners-turned-AI (IREN, CORZ, HUT) and semis. A funding gap, guidance cut or new high-cost debt: AI credit stress spreads (VXN up, HY wider), and the crypto-equities tied to AI follow.
+
+      **Evidence.** Weekly beta of CRWV to the AI factor (NVDA orthogonalised to BTC) 1.40 (t 4.1) over 52 weeks; BTC explains ~3% of its variance. Event thesis: avoid holding size into the print; the direction is unknown.
+    catalysts:
+      - {label: "CoreWeave Q3 2026 results call, 22:00 UTC", date: 2026-11-10, kind: earnings, source: "CoreWeave IR", source_ref: "investors.coreweave.com"}
+      - {label: "Applied Materials Q4 FY26, 21:30 UTC", date: 2026-11-12, kind: earnings, source: "AMAT IR"}
+      - {label: "Nvidia Q3 FY27, 22:00 UTC", date: 2026-11-17, kind: earnings}
+    invalidation:
+      - {label: "Below the 10-day low 40.58: market rejects the print", kind: price_below, level: 40.58}
+      - {label: "Above the 10-day high 64.39: financing fear unwinds", kind: price_above, level: 64.39}
+
+  - key: W46-smh-bear-structure
+    title: "Semis broke weekly structure twice; breaks are usually bought, except in Fed-tightening windows"
+    subject_type: security
+    subject_id: SMH
+    direction: neutral
+    conviction: 2
+    tags: [ai, semis, structure, regime]
+    key_drivers: ["Weekly structure breaks Jul 17 and Oct 16, no new high since July", "-31% from the 52w high, -11% vs the 200d mean", "Hike ~80% priced: the 2018/2022 analog"]
+    thesis_md: |
+      **Setup.** SMH 463.96: -31% from its 52w high (671.83), below its 200d mean (521.76), two weekly breaks of structure (Jul 17, Oct 16) with lower highs: a semis bear market.
+
+      **Base rate (2015-2026, n = 22 breaks).** 13 weeks after a weekly break the median return was +6.8% (68% up) and a new high came within a median 8.5 weeks. The failures clustered in Fed-tightening windows (2018-10, 2021-12, 2022), with -10% to -30% further. With a hike ~80% priced, this is the analog to respect, though inflation (3.7%) is far milder than 2022's 7-9%. The tightening conditioning is post hoc on n ~ 5 and inside the model's training data: an observation, not a belief.
+
+      **Read.** Neutral until the AI catalysts (CoreWeave Tue, AMAT Thu, NVDA Nov 17). A reclaim of the 200d mean would say the break was bought, as usual; a loss of the 10-day low says the tightening analog is in play.
+    catalysts:
+      - {label: "CoreWeave Q3", date: 2026-11-10, kind: earnings}
+      - {label: "Applied Materials Q4 FY26 (WFE / China guide)", date: 2026-11-12, kind: earnings}
+      - {label: "Nvidia Q3 FY27", date: 2026-11-17, kind: earnings}
+      - {label: "US CPI (Oct)", date: 2026-11-10, kind: macro}
+    invalidation:
+      - {label: "Reclaims the 200d mean (~522): break bought, bear read wrong", kind: price_above, level: 522.0}
+      - {label: "Loses the 10-day low 445.59: tightening analog in play", kind: price_below, level: 445.59}
+
+  - key: W46-iren-ai-beta
+    title: "Miners-turned-AI (IREN, CORZ, HUT) trade on AI credit, not on bitcoin"
+    subject_type: security
+    subject_id: IREN
+    direction: neutral
+    conviction: 2
+    tags: [ai, crypto_bridge, high_beta, event]
+    key_drivers: ["Weekly AI-factor beta 1.18 (t 3.3), BTC beta 0.97", "-39% in a month", "3.7 bn USD of convertible notes funding the AI build"]
+    thesis_md: |
+      **Setup.** Bitcoin miners became AI landlords: hashrate fell in Q1 2026 for the first time since 2020 as sites were retrofitted; IREN, Core Scientific and TeraWulf are heading for ~70% of revenue from AI. IREN 21.64 (-39% in a month), CORZ 11.76 (-23%).
+
+      **Evidence.** 52-week weekly regressions: IREN AI beta 1.18 (t 3.3) and BTC beta 0.97; Core Scientific AI beta 0.70 (t 2.6) with BTC explaining ~5% of variance. They are the highest-beta expression of the CoreWeave outcome; a crypto view doesn't hedge them.
+
+      **Read.** Pair with the CRWV thesis: same catalyst, more beta. If AI credit cracks, convert-funded miners can become forced BTC sellers: a crypto-side risk to watch.
+    catalysts:
+      - {label: "CoreWeave Q3 (sets the AI-credit tone)", date: 2026-11-10, kind: earnings}
+      - {label: "Nvidia Q3 FY27", date: 2026-11-17, kind: earnings}
+    invalidation:
+      - {label: "Below the 10-day low 17.16", kind: price_below, level: 17.16}
+      - {label: "Above the 10-day high 28.88", kind: price_above, level: 28.88}
+
+  - key: W46-xle-oil-gap
+    title: "Energy as the war / inflation hedge into an oil gap at the Sunday reopen"
+    subject_type: security
+    subject_id: XLE
+    direction: long
+    conviction: 2
+    tags: [energy, war, hedge, event]
+    key_drivers: ["Sunday: three tankers exploded in Hormuz, US strike on a bulk carrier, Houthis target Riyadh", "Oil fell ~12-13% last week; Brent spot 125 -> 107 in a month", "OVX 60 (69th pct)"]
+    thesis_md: |
+      **Setup.** Headlines escalated over the weekend (three tanker explosions in Hormuz since dawn Sunday, a crew abandoning ship, a US strike on a 'blockade runner', Houthis targeting Riyadh; a record 1.28 bn barrels afloat; US gasoline > 4 USD) while oil prices *fell* last week (WTI ~-12%, Brent ~-13%) and XLE dropped 12% to 61.62, near its 10-day low.
+
+      **Read.** The market has been pricing the war premium *out*; the weekend gives it a reason to price some back in at the CME reopen (Sun 23:00 UTC). XLE is the hedge against the scenario that hurts everything else (oil up -> headline inflation up -> hike locked -> duration down). Hedge thesis, not a forecast of escalation; Oman-Iran talks on resuming navigation are the counter-risk.
+    catalysts:
+      - {label: "CME reopen, Sun 23:00 UTC (first oil price after the weekend)", date: 2026-11-08, kind: custom}
+      - {label: "EIA Short-Term Energy Outlook, 17:00 UTC", date: 2026-11-10, kind: macro}
+      - {label: "EIA crude inventories (holiday-delayed), 17:00 UTC", date: 2026-11-12, kind: macro}
+    invalidation:
+      - {label: "Below the 10-day low 61.21: the market keeps fading the war", kind: price_below, level: 61.21}
+      - {label: "Hormuz navigation resumes without obstacles (Oman-Iran talks)", kind: manual}
+
+  - key: W46-gld-haven
+    title: "Gold: haven bid and falling long yields, exposed to a hot CPI"
+    subject_type: security
+    subject_id: GLD
+    direction: long
+    conviction: 1
+    tags: [gold, haven, rates, event]
+    key_drivers: ["+4.7% last week; 2y -33 bp and 10y -43 bp in a month", "Still 27% below its 52w high", "GVZ 26 (51st pct): vol not stretched"]
+    thesis_md: |
+      **Setup.** GLD 372.52, +4.7% last week as yields fell (2y 4.79 -> 4.46, 10y 5.27 -> 4.84 over a month) and war headlines escalated; still far below its 52w high (509.70) and its 200d mean (411).
+
+      **Read.** Gold benefits from both the war tail and a soft CPI (lower real yields); a hot CPI that lifts real yields is the main risk. Low conviction: no tested edge in gold in our research.
+    catalysts:
+      - {label: "US CPI (Oct)", date: 2026-11-10, kind: macro}
+      - {label: "30-year bond auction (prior 5.618%)", date: 2026-11-12, kind: macro}
+    invalidation:
+      - {label: "Below the 10-day low 354.67", kind: price_below, level: 354.67}
+
+  - key: W46-tlt-auctions
+    title: "The long end rallied on growth fear despite hike pricing; the 10y and 30y auctions test it"
+    subject_type: security
+    subject_id: TLT
+    direction: neutral
+    conviction: 1
+    tags: [rates, auctions, event]
+    key_drivers: ["TLT +5.2% in a month", "10y 4.84 vs last auction stop 5.300%", "'Trader angst pivots from inflation to growth'"]
+    thesis_md: |
+      **Setup.** The front end prices a hike (2y 4.46 vs fed funds 3.88) while the long end rallied ~45 bp in a month (TLT +5.2%): the market is pricing a policy mistake / growth scare. 10-year auction Tue 18:00 UTC (4.5 h after CPI), 30-year Thu 18:00 UTC.
+
+      **Read.** Hot CPI plus a tailing 10y auction is the bond-led risk-off path for every long-duration asset (tech, crypto). A soft CPI with solid auctions extends the rally. Watch, not a position.
+    catalysts:
+      - {label: "US CPI (Oct)", date: 2026-11-10, kind: macro}
+      - {label: "10-year note auction, 18:00 UTC", date: 2026-11-10, kind: macro}
+      - {label: "30-year bond auction, 18:00 UTC", date: 2026-11-12, kind: macro}
+    invalidation:
+      - {label: "Below the 10-day low 80.73", kind: price_below, level: 80.73}
+      - {label: "Above the 10-day high 82.42", kind: price_above, level: 82.42}
+
+  - key: W46-xasset-chop-not-trend
+    title: "Crypto and risk assets: volatile chop, not a trend; alts keep lagging BTC"
+    subject_type: macro_theme
+    subject_id: CRYPTO_REGIME_W46
+    direction: neutral
+    conviction: 2
+    tags: [crypto, regime, volatility, models]
+    key_drivers: ["P(trend week, |7d move| >= 4.93%) ~0.30 = base rate (models lack skill)", "P(vol expansion) 0.41-0.44 vs base 0.33 (weak skill, AUC ~0.69)", "Alts: ~95% below their 30d mean; stablecoins -4.6% in 30 d"]
+    thesis_md: |
+      **Models (pre-registered, walk-forward, AI_Trader H-TR5/H-TR6).** Probit and XGBoost on 17 state features give P(BTC moves >= 4.93% net over the next 7 days) of 0.32 / 0.33 vs a 0.285 base rate, but both have negative out-of-sample Brier skill, so read it as the base rate (~30%). P(next-week realised vol > its 30-day level) is 0.44 / 0.41 vs 0.33, where the models do have weak skill (AUC ~0.69). Triangulation for a >= 4.93% move: HAR ~20%, DVOL-implied ~38%.
+
+      **Read.** Expect a choppy, event-driven week (CPI, CoreWeave, AMAT; NVDA on the 17th), not a breakout. Validated rule only: on a >= 4-sigma hourly BTC shock, fade it if vol was high, follow it if vol was low (H-S2/S3). In historical analogs that include macro, alts underperformed BTC by ~2.5% over the following week; alts are broadly below their 30-day means and stablecoin supply is shrinking (-4.6% in 30 d). For equities: MSTR / COIN carry BTC beta (1.4 / 1.1), not AI beta.
+    catalysts:
+      - {label: "US CPI (Oct)", date: 2026-11-10, kind: macro}
+      - {label: "CoreWeave Q3", date: 2026-11-10, kind: earnings}
+      - {label: "Nvidia Q3 FY27", date: 2026-11-17, kind: earnings}
+    invalidation:
+      - {label: "BTC weekly close outside 70.3k-81.5k (HAR 2-sigma band): a trend week happened", kind: manual}
+      - {label: "Thesis expires", kind: date, date: 2026-11-15}
+
+  - key: W46-geo-chokepoint
+    title: "Gulf: chronic chokepoint, receding escalation; the war is a fat tail, rates are the driver"
+    subject_type: macro_theme
+    subject_id: GULF_CHOKEPOINT_W46
+    direction: neutral
+    conviction: 2
+    tags: [geopolitics, oil, polymarket, positioning, scenarios]
+    key_drivers: ["Polymarket: Israel-Iran ceasefire through Nov 30 73.5% (55% a week ago); US invasion by 2027 9.5% (17.5%); oil ATH by YE 7.5% (16.5%)", "Disruption persists: blockade end by Nov 30 13.5% (26.5%); Hormuz normal by Dec 31 7.5%", "Live tail: Saudi East-West pipeline strike by Nov 30 36.5%", "CFTC: WTI managed money 9th pct (light), UST 10y asset managers 99th pct (crowded duration)"]
+    thesis_md: |
+      **Base case.** Supply friction persists (US blockade of Iran on, Hormuz not normal) while escalation stays contained (Israel-Iran ceasefire odds rising: through Nov 15 90.5%, through Nov 30 73.5%). Oil trades headline spikes that fade, as all last week (WTI ~90 now from ~100); the macro driver of the week is rates (CPI Tue, 10y/30y auctions) and AI credit (CoreWeave Tue).
+
+      **Why the tail matters more than its probability.** Speculative oil positioning is light (NYMEX WTI managed money at the 9th percentile of 3 years) while duration longs are crowded (asset managers' 10y net long at the 99th). An escalation (ceasefire break ~10% by Nov 15; Saudi pipeline strike 36.5% by Nov 30; Bab el-Mandeb 9% by YE) would lift oil from light positioning, push breakevens up, lock the December hike and hit duration, tech and crypto together; energy and gold are the hedges.
+
+      **Prediction markets as signals.** Polymarket's BTC / WTI price-level markets match driftless vol touch probabilities (no directional view); they price tail premia: BTC <= 60k by YE 17.5% vs 8-12% from vol; WTI >= 120 in November 7% vs 1-5%. The geopolitical markets are the informative ones; their lead over prices is registered as H-PM1 (forward).
+
+      **Scenarios Nov 9-13 (judgment):** A chop under a priced hike ~50%; B hawkish / duration squeeze ~20% (hot CPI + weak auctions); C relief ~20% (soft CPI + credible CoreWeave); D Gulf escalation ~10%. Full table: AI_Trader research/narratives/SCENARIOS_W46.md.
+    catalysts:
+      - {label: "CME reopen Sun 23:00 UTC: first oil price after the weekend tanker strikes", date: 2026-11-08, kind: custom}
+      - {label: "US CPI (Oct) 13:30 UTC", date: 2026-11-10, kind: macro}
+      - {label: "10-year auction 18:00 UTC", date: 2026-11-10, kind: macro}
+      - {label: "Polymarket: Israel-Iran ceasefire through Nov 15 resolves", date: 2026-11-15, kind: custom}
+      - {label: "Polymarket: Saudi East-West pipeline strike window closes", date: 2026-11-30, kind: custom}
+    invalidation:
+      - {label: "Ceasefire-through-Nov-30 odds below 60%, or a strike on the Saudi pipeline", kind: manual}
+      - {label: "Blockade-end-by-Nov-30 odds above 30% (de-escalation regime instead)", kind: manual}
+      - {label: "Thesis expires", kind: date, date: 2026-11-15}

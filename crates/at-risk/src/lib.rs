@@ -8,6 +8,16 @@
 
 use std::collections::HashMap;
 
+pub mod fees;
+pub mod intent;
+pub mod live;
+pub mod stop_cap;
+
+pub use fees::{FeeRates, FeeSchedule};
+pub use intent::{BookEntry, DecideConfig, IntentDecision, IntentRejection, IntentSide, OrderIntent, PaperEntryCfg, Portfolio, decide};
+pub use live::{LiveAccount, LiveDecision, LivePos, LiveRejection, LiveSmallCfg, SymbolFacts, decide_live};
+pub use stop_cap::{STOP_CAP_FILE, StopCap};
+
 use at_core::config::RiskConfig;
 use at_core::num::{Round, round_to_step};
 use at_core::types::{EntryType, InstrumentRules, Position, Side, TradeProposal};

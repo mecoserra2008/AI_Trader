@@ -1,0 +1,90 @@
+# Economic calendar, week of 2026-11-09 (ISO week 46), with consensus and our pre-written reading.
+# Written 2026-11-08 ~17:45 UTC, BEFORE any of these releases. Times in UTC (US is on EST: ET + 5 h).
+# Sources: finviz economic calendar (consensus/prior), BLS/Fed schedule (fedratecalc.com), company IR pages
+# (CoreWeave, Applied Materials). Prior values cross-checked against FRED where possible.
+# `importance`: 3 = market-moving for crypto/AI this week, 2 = relevant, 1 = background.
+# `reading`: conditional expectation registered before the print (H-EV1 for CPI); not a forecast of the number.
+
+week: 2026-W46
+written_at: 2026-11-08T17:45:00Z
+context:
+  fed_dec9_hike_prob: 0.77          # Kalshi/Polymarket average, Nov 7 (defirate.com); ~0.80 in Sunday coverage
+  fed_funds_effective: 3.88
+  us2y: 4.46                        # FRED, Nov 5
+  us10y: 4.84                       # FRED, Nov 5 (prior 10y auction stop 5.300%: yields ~45 bp lower than a month ago)
+  vix: 28.18
+  vxn: 38.26                        # 1-year high
+  hy_oas: 3.48
+  cpi_yoy_sep: 3.7
+  core_cpi_yoy_sep: 2.6
+  ppi_yoy_sep: 6.3
+  wti: 99.64                        # FRED, Nov 3; Brent spot 107
+  btc: 76040
+  dvol_btc: 40.4
+
+events:
+  - {ts_utc: 2026-11-08T23:00Z, name: "CME Globex reopen (oil, equity index futures)", country: US, importance: 3,
+     reading: "First price for oil after Sunday's three tanker explosions in Hormuz and the US strike on a bulk carrier. A > +5% Brent gap that holds feeds headline-inflation fears into Tuesday's CPI."}
+
+  # ---- Monday Nov 9
+  - {ts_utc: 2026-11-09T13:40Z, name: "Fed Bowman speech", country: US, importance: 1}
+  - {ts_utc: 2026-11-09T15:00Z, name: "Fed Goolsbee speech", country: US, importance: 1}
+  - {ts_utc: 2026-11-09T15:00Z, name: "Wholesale inventories (Sep)", country: US, importance: 1, consensus: "0.6%", prior: "0.5%"}
+  - {ts_utc: 2026-11-09T16:00Z, name: "NY Fed consumer inflation expectations, 1y (Oct)", country: US, importance: 2, prior: "3.9%",
+     reading: "A rise above 4% with oil at 100 USD strengthens the December-hike case before CPI."}
+  - {ts_utc: 2026-11-09T16:00Z, name: "Atlanta Fed GDPNow (Q4)", country: US, importance: 1, prior: "3.4%"}
+  - {ts_utc: 2026-11-09T17:15Z, name: "Fed Barkin, Bowman speeches", country: US, importance: 1}
+  - {ts_utc: 2026-11-09T18:00Z, name: "3-year note auction", country: US, importance: 2, prior: "4.932%"}
+
+  # ---- Tuesday Nov 10
+  - {ts_utc: 2026-11-10T09:00Z, name: "Fed Waller speech", country: US, importance: 2}
+  - {ts_utc: 2026-11-10T11:00Z, name: "NFIB small business optimism (Oct)", country: US, importance: 1, consensus: "97.7", prior: "97.9"}
+  - {ts_utc: 2026-11-10T13:30Z, name: "CPI (Oct)", country: US, importance: 3,
+     consensus: {headline_mom: "0.3%", core_mom: "0.2%"}, prior: {headline_mom: "0.6%", core_mom: "0.3%", headline_yoy: "3.7%", core_yoy: "2.6%"},
+     reading: "Priced hawkish (December hike ~77-80%). Core <= 0.2%: hike odds fall, relief for duration (QQQ, BTC/ETH, TLT); the case for a reversal. Core 0.3%: muted. Core >= 0.4%: hike close to certain, 2y up, equity-shock tail. BTC 12-16 UTC window vol on CPI days is 1.4x normal (1.7x in 2022-23); P(> 2% move) 28% vs 16%.",
+     hypothesis: H-EV1}
+  - {ts_utc: 2026-11-10T13:30Z, name: "Real average earnings (Oct)", country: US, importance: 1, prior: "-0.5% m/m"}
+  - {ts_utc: 2026-11-10T14:35Z, name: "Fed Logan speech", country: US, importance: 1}
+  - {ts_utc: 2026-11-10T17:00Z, name: "EIA Short-Term Energy Outlook; WASDE", country: US, importance: 2}
+  - {ts_utc: 2026-11-10T18:00Z, name: "10-year note auction", country: US, importance: 3, prior: "5.300%",
+     reading: "Four and a half hours after CPI, with yields ~45 bp below the last auction: a weak auction (tail) after a hot CPI is the bond-led risk-off path."}
+  - {ts_utc: 2026-11-10T18:30Z, name: "Fed Bowman, Schmid speeches", country: US, importance: 1}
+  - {ts_utc: 2026-11-10T21:30Z, name: "API crude inventories", country: US, importance: 1, prior: "-5.267M"}
+  - {ts_utc: 2026-11-10T22:00Z, name: "CoreWeave Q3 2026 results call (results after the close)", country: US, importance: 3,
+     reading: "The AI-financing bellwether (bonds ~16%, stock -33% since Oct 15, -45% in a month). Credible funding / backlog: high-beta rebound in neoclouds, miners-turned-AI (IREN, CORZ, HUT) and semis. Funding gap or guidance cut: AI credit contagion, VXN higher, crypto-equities lower."}
+
+  # ---- Wednesday Nov 11 (Veterans Day: Treasury market closed, stocks open)
+  - {ts_utc: 2026-11-11T12:00Z, name: "MBA mortgage applications", country: US, importance: 1, prior: "-1.2%"}
+  - {ts_utc: 2026-11-11T21:05Z, name: "Walt Disney earnings (after close)", country: US, importance: 1}
+
+  # ---- Thursday Nov 12
+  - {ts_utc: 2026-11-12T07:00Z, name: "UK Q3 GDP (first estimate)", country: UK, importance: 1}
+  - {ts_utc: 2026-11-12T13:30Z, name: "Initial jobless claims", country: US, importance: 2, consensus: "195K", prior: "189K (57-year low)",
+     reading: "Another sub-200K print supports the hike case; a jump above 220K would be the first labour crack."}
+  - {ts_utc: 2026-11-12T14:00Z, name: "Fed Hammack speech", country: US, importance: 1}
+  - {ts_utc: 2026-11-12T15:00Z, name: "Existing home sales (Oct)", country: US, importance: 1, consensus: "3.98M", prior: "3.99M"}
+  - {ts_utc: 2026-11-12T15:00Z, name: "Fed Barr speech", country: US, importance: 1}
+  - {ts_utc: 2026-11-12T17:00Z, name: "EIA crude inventories (delayed by the holiday)", country: US, importance: 2, prior: "-0.865M"}
+  - {ts_utc: 2026-11-12T18:00Z, name: "30-year bond auction", country: US, importance: 2, prior: "5.618%"}
+  - {ts_utc: 2026-11-12T18:10Z, name: "Fed Daly speech", country: US, importance: 1}
+  - {ts_utc: 2026-11-12T19:00Z, name: "Monthly budget statement (Oct)", country: US, importance: 1, prior: "-27B USD"}
+  - {ts_utc: 2026-11-12T21:30Z, name: "Applied Materials Q4 FY2026 results call", country: US, importance: 3,
+     reading: "Semis capex read: AMAT guidance on 2027 wafer-fab equipment and China is the second AI test of the week."}
+  - {ts_utc: 2026-11-12T23:30Z, name: "Fed Williams speech", country: US, importance: 2}
+  - {ts_utc: null, name: "Cisco earnings (date unconfirmed: Nov 10 or Nov 12 after the close)", country: US, importance: 2}
+
+  # ---- Friday Nov 13
+  - {ts_utc: 2026-11-13T10:00Z, name: "Euro area Q3 GDP flash", country: EA, importance: 1}
+  - {ts_utc: 2026-11-13T13:30Z, name: "PPI (Oct)", country: US, importance: 2,
+     consensus: {headline_mom: "0.4%", core_mom: "0.3%"}, prior: {headline_mom: "1.3%", core_mom: "0.7%", headline_yoy: "6.3%", core_yoy: "5.0%"},
+     reading: "Pipeline inflation from oil; a second hot print after a hot CPI locks in December."}
+  - {ts_utc: 2026-11-13T15:30Z, name: "EIA natural gas storage", country: US, importance: 1, prior: "77 Bcf"}
+  - {ts_utc: 2026-11-13T15:50Z, name: "Fed Bowman speech", country: US, importance: 1}
+  - {ts_utc: 2026-11-13T17:00Z, name: "Fed Daly speech", country: US, importance: 1}
+  - {ts_utc: 2026-11-13T18:00Z, name: "Baker Hughes rig count", country: US, importance: 1, prior: "463 oil / 604 total"}
+  - {ts_utc: 2026-11-14T00:00Z, name: "Fed Jefferson speech", country: US, importance: 1}
+
+  # ---- Next week, for planning
+  - {ts_utc: 2026-11-17T13:30Z, name: "Retail sales (Oct, advance)", country: US, importance: 2}
+  - {ts_utc: 2026-11-17T22:00Z, name: "Nvidia Q3 FY2027 results call", country: US, importance: 3}
+  - {ts_utc: 2026-11-18T19:00Z, name: "FOMC minutes (Oct 27-28)", country: US, importance: 2}

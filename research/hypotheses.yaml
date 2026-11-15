@@ -869,3 +869,1763 @@ hypotheses:
     prior: 0.45
     family: macro_event
     status: proposed
+
+  # ---- Trend moment vs sideways classifiers (registered 2026-11-08 16:50 UTC BEFORE fitting) ----
+  # Target (BTC, daily, at each UTC close t): y = 1 ("trend moment") if |log(C[t+7]/C[t])| >= sigma30_t * sqrt(7), where
+  # sigma30_t = std of the 30 daily log returns ending at t; else 0 ("sideways"). Secondary target: y2 = 1 if the next-7-day
+  # realised vol exceeds sigma30_t ("vol expansion"). Features at t (causal; scripts/regime_context.state_vectors): r7, r30, dd90,
+  # efficiency ratios er7/er30, log rv30, log rv7/rv30, log rv30/rv180, log DVOL, DVOL/rv30, F&G, alt breadth below MA30,
+  # alt-BTC 30d, stablecoin 30d, funding 7d, log VIX, HY OAS 30d change, SPX 7d. Walk-forward from 2022-06-01: refit every
+  # 21 days on rows with t <= fit_date - 8 (purge the 7-day target overlap). Fixed hyper-parameters, no tuning.
+  # Metric: Brier skill score (BSS) vs the expanding training base rate; 14-day block bootstrap CI; AUC; reliability table.
+  H-TR5:
+    title: "A walk-forward probit forecasts 'trend moment' weeks better than the base rate"
+    statement: "Probit on z-scored state features (scaler fit on each training window) gives a positive out-of-sample Brier skill score for y (and, secondary, y2)."
+    rationale: "Vol clusters and the target is scaled by trailing vol, so compression/expansion state (rv7/rv30, DVOL premium) should carry some information; direction itself was never forecastable (H-TR3/H-TR4)."
+    test: "BSS with 14-day block-bootstrap 90% CI on daily predictions, plus non-overlapping Sunday-only predictions; AUC; segments by target end date vs the knowledge cutoff."
+    success: "BSS > 0 with the 90% CI above 0 in llm_in_sample; BSS > 0 in clean_holdout."
+    prior: 0.30
+    family: regime
+    status: proposed
+    notes: "Deviation logged 2026-11-08 17:05 UTC before any result was seen: FRED's public CSV carries only ~3 years of ICE BofA HY OAS (license), which truncates the sample to 2023-12. Primary spec = the 17 features without hy_chg30 (sample from 2021-09); the registered 18-feature spec (sample from 2023-12) is reported alongside. XGBoost runs through the native API (same hyper-parameters) because scikit-learn isn't installed."
+  H-TR6:
+    title: "A walk-forward XGBoost forecasts 'trend moment' weeks better than the base rate and the probit"
+    statement: "XGBoost (max_depth 2, 300 trees, eta 0.03, subsample 0.8, colsample 0.8, min_child_weight 10, lambda 1; fixed) on the same features gives a positive out-of-sample BSS for y, and beats H-TR5's probit on the same days."
+    rationale: "Nonlinear interactions (e.g. compression x sentiment) may matter; small effective N (~230 independent weeks) makes overfitting the main risk, hence the shallow fixed model."
+    test: "as H-TR5; paired Brier difference vs the probit with block bootstrap."
+    success: "BSS > 0 with CI above 0 in llm_in_sample and > 0 in holdout; paired Brier gain vs probit > 0."
+    prior: 0.20
+    family: regime
+    status: proposed
+    notes: "Same deviation as H-TR5 (primary spec without hy_chg30; registered spec reported alongside)."
+
+  # ---- Prediction markets (registered 2026-11-08 20:50 UTC; forward-only: needs the archived snapshots) ----
+  H-PM1:
+    title: "Daily changes in Polymarket Gulf-escalation probabilities lead oil and BTC"
+    statement: "A composite of daily changes in Polymarket probabilities (Israel-Iran ceasefire holding, end of the Iranian blockade, Hormuz normalisation, Saudi pipeline strike) predicts the sign of the next-day Brent perp return (escalation -> up) and BTC return (escalation -> down) beyond the same-day move."
+    rationale: "Prediction markets aggregate geopolitical information continuously, including on weekends when CME is closed; the question is whether they lead or just follow prices."
+    test: "from the data/polymarket/ archive (>= 60 daily snapshots): next-day returns regressed on the composite change, controlling for the same-day return; NW t; also weekend change -> Monday-open gap."
+    success: "coefficient with the expected sign, t > 2, over >= 60 days; Monday-gap test same sign."
+    prior: 0.25
+    family: geopolitics
+    status: proposed
+  H-PM2:
+    title: "Polymarket price-level markets add nothing beyond driftless volatility"
+    statement: "Polymarket BTC and WTI 'reach / dip to X by date' probabilities are matched by driftless first-passage probabilities computed from DVOL / OVX; residual (market minus model) does not predict which barriers are touched."
+    rationale: "On 2026-11-08 the markets matched vol-implied touch odds within a few points (BTC < 70k by YE 53.5% vs 55-59%; WTI <= 85 in Nov 61.5% vs 60-70%), with tail premia at the extremes."
+    test: "resolved Polymarket price-level markets (CLOB price history at fixed lead times) vs the model at the same timestamp; Brier score of market vs model; residual -> outcome logistic."
+    success: "market Brier not better than model; residual coefficient n.s. (supports = no extra information)."
+    prior: 0.60
+    family: geopolitics
+    status: proposed
+
+  # ---- Day-of-week and regime lifecycle (registered 2026-11-08 21:00 UTC BEFORE testing) ----
+  # Assets (daily): crypto BTC (lake 1h -> UTC days, 2018+), ETH (2021+), equal-weight alt basket (2021+); TradFi from Yahoo
+  # daily closes 2005+: S&P 500 (^GSPC), Nasdaq-100 (^NDX), gold (GC=F), WTI (CL=F), 20y+ Treasuries (TLT), dollar index
+  # (DX-Y.NYB). Scale-free: z_t = r_t / sigma_t|t-1 (EWMA 0.94 of prior days). HAC (Newey-West, 5 lags) t-stats; Holm
+  # correction across the 9 assets for the Monday contrast. Segments by date vs the knowledge cutoff (2026-07-01).
+  H-DOW1:
+    title: "Monday's vol-scaled return differs from the other weekdays"
+    statement: "In a regression of z_t on a Monday dummy (crypto: Monday UTC day vs Tue-Sun; TradFi: Monday close-to-close vs Tue-Fri), the Monday coefficient is non-zero."
+    rationale: "Folk 'Monday effect' (weekend news absorbed at the open; crypto: CME reopen). Null-expected after costs and multiple testing; registered so a Monday view is never used informally."
+    test: "OLS z ~ Monday, HAC SE; Holm across assets; segments."
+    success: "Holm-adjusted p < 0.05 for an asset in llm_in_sample and the same sign in clean_holdout."
+    prior: 0.15
+    family: calendar
+    status: proposed
+  H-DOW2:
+    title: "Monday carries more variance than the other weekdays, beyond vol clustering"
+    statement: "E[z^2 | Monday] / E[z^2 | other weekdays] > 1 (crypto: vs Tue-Fri and vs the weekend separately; TradFi: Monday spans the weekend)."
+    rationale: "Crypto: the CME reopen and Asia/Europe Monday sessions absorb weekend information. TradFi: three calendar days of information in one trading day, but variance accrues mostly in trading time (classic result: weekend variance << 3x)."
+    test: "OLS z^2 ~ Monday (HAC); ratio with 14-day block bootstrap CI; also the Monday gap (Fri close -> Mon open) vs intraday share for ^GSPC / ^NDX."
+    success: "ratio CI above 1 in llm_in_sample and ratio > 1 in clean_holdout."
+    prior: 0.55
+    family: calendar
+    status: proposed
+  H-DOW3:
+    title: "Monday after a down week reverses (or continues)"
+    statement: "Conditional on the prior 5-trading-day (crypto: 7-day) return below -1 sigma, Monday's z has a non-zero mean (sign registered as two-sided)."
+    rationale: "Tests the user's 'weak Monday' prior in the current context (down week, weekend headlines) against history."
+    test: "z_Monday ~ 1[prior week < -1 sigma] + 1[prior week > +1 sigma], HAC; per asset and pooled crypto / pooled TradFi."
+    success: "pooled coefficient |t| > 2 in llm_in_sample and same sign in holdout."
+    prior: 0.15
+    family: calendar
+    status: proposed
+  H-RL1:
+    title: "The current 9-cell regime predicts the next week's vol-scaled return"
+    statement: "Daily v0 regime cells (k = 1, 3, 10 days; vol quantiles over 180 days) predict the mean of z_fwd7 = r_{t->t+7} / (sigma_t sqrt 7); up cells positive, down cells negative (continuation)."
+    rationale: "Direct test of whether a regime label carries directional information (strategy-level tests H-R1/H-R2/H-TR failed)."
+    test: "z_fwd7 ~ cell dummies, SE clustered by regime episode; per asset and pooled; segments."
+    success: "up-minus-down difference > 0 with clustered t > 2 pooled in llm_in_sample and > 0 in holdout."
+    prior: 0.20
+    family: regime
+    status: proposed
+  H-RL2:
+    title: "Regime vol state predicts next-week realised vol relative to the forecast"
+    statement: "Next-7-day realised vol / sigma_t (EWMA forecast) differs by vol state: high-vol states over-forecast (ratio < 1), low-vol states under-forecast (ratio > 1)."
+    rationale: "Vol mean reversion beyond EWMA (HAR already captures some of it, H-VCL1); determines whether vol state matters for sizing beyond sigma."
+    test: "log(rv_fwd7 / sigma_t) ~ vol-state dummies, episode-clustered SE; segments."
+    success: "high minus low < 0 with clustered t < -2 in llm_in_sample and same sign in holdout."
+    prior: 0.60
+    family: regime
+    status: proposed
+  H-RL3:
+    title: "Regime episodes have duration dependence (older regimes are more likely to end)"
+    statement: "The daily hazard of an episode ending rises with its age: logistic(end within the next 5 bars ~ log(age) + cell dummies) has a positive age coefficient."
+    rationale: "If hazard is flat (memoryless), a regime's age carries no timing information and 'it has lasted too long' is not tradeable."
+    test: "logistic on all bars, SE clustered by episode; per asset class; also median durations and the transition matrix (descriptive)."
+    success: "age coefficient > 0 with clustered z > 2 in llm_in_sample and > 0 in holdout."
+    prior: 0.35
+    family: regime
+    status: proposed
+
+  # ---- Sector / panel hypotheses (registered 2026-11-08 21:45 UTC BEFORE testing) ----
+  # Universe: Bybit linear crypto perps listed >= 180 days with 24h turnover >= 1M USD (survivorship-biased: today's
+  # listings only). Sectors: CoinGecko public categories mapped to one primary sector by priority (meme > AI > gaming >
+  # RWA > privacy > oracle > storage/DePIN > exchange > L2 > DeFi > L1 > other); config/sectors.yaml. Daily closes from
+  # Bybit REST. Weekly (Monday) cross-sections; Fama-MacBeth t (NW 4 lags) on Spearman rank ICs; long-short top/bottom
+  # tercile net of 2 x 15 bp round trips per rebalance. Segments by formation date vs the knowledge cutoff.
+  H-SEC1:
+    title: "Sector momentum: last week's best crypto sectors outperform next week"
+    statement: "Equal-weight sector returns over the past 7 days rank-predict next-7-day sector returns (positive IC)."
+    rationale: "Narrative rotation (AI, memes, RWA) suggests sector-level momentum; also tests whether sector labels carry information beyond BTC."
+    test: "weekly rank IC across sectors (>= 6 sectors with >= 3 tokens); FM t."
+    success: "mean IC > 0 with FM t > 2 in llm_in_sample; > 0 in holdout."
+    prior: 0.30
+    family: panel
+    status: proposed
+  H-SEC2:
+    title: "Within-sector short-term reversal: a token's 7-day outperformance vs its sector reverts"
+    statement: "Token 7d return minus its sector's equal-weight 7d return negatively rank-predicts the next-7d relative return."
+    rationale: "Idiosyncratic flow shocks revert within peers that share the narrative; cleaner than BTC-residual reversion (H-RV1 failed at taker costs on 24h)."
+    test: "weekly rank IC of relative returns within sectors (pooled cross-section); FM t; net long-short of within-sector terciles."
+    success: "mean IC < 0 with FM t < -2 in llm_in_sample and net long-short > 0; same sign in holdout."
+    prior: 0.30
+    family: panel
+    status: proposed
+  H-SEC3:
+    title: "Within-sector outliers with volume confirmation continue; without it they revert"
+    statement: "Among |relative 7d return| top-decile tokens, those whose 7d turnover is >= 2x their 30d average have a positive next-7d relative return in the direction of the move; those without a volume spike reverse."
+    rationale: "Information (volume-backed) vs liquidity (thin) moves; classic volume-return interaction."
+    test: "event study on top-decile outliers per week; difference in signed next-7d relative return between volume-spike and no-spike groups, clustered by week."
+    success: "difference > 0 with t > 2 in llm_in_sample; > 0 in holdout."
+    prior: 0.30
+    family: panel
+    status: proposed
+  H-PAN1:
+    title: "Residual momentum: 30-day returns orthogonal to BTC predict the next 30 days cross-sectionally"
+    statement: "Token 30d return residual to a trailing 90d BTC beta rank-predicts the next-30d residual return (positive IC), sampled monthly."
+    rationale: "Residual momentum is more robust than raw momentum in equities; tests it in a crypto panel."
+    test: "monthly rank IC, FM t (NW 2 lags); net long-short top/bottom tercile."
+    success: "mean IC > 0 with FM t > 2 in llm_in_sample and net long-short > 0; > 0 in holdout."
+    prior: 0.30
+    family: panel
+    status: proposed
+  H-PAN2:
+    title: "Low idiosyncratic volatility tokens earn more per unit of risk"
+    statement: "Trailing 60d idiosyncratic vol (residual to BTC) negatively rank-predicts next-30d vol-scaled residual returns."
+    rationale: "Low-vol / lottery-demand anomaly; crypto retail lottery preference should be strong."
+    test: "monthly rank IC of ivol vs next-30d return / ivol; FM t."
+    success: "mean IC < 0 with FM t < -2 in llm_in_sample; same sign in holdout."
+    prior: 0.35
+    family: panel
+    status: proposed
+  H-PAN3:
+    title: "Within-sector funding crowding: the highest-funding tokens underperform their sector"
+    statement: "Token 7d average funding minus its sector's average negatively rank-predicts the next-7d relative return."
+    rationale: "Crowded longs pay funding and unwind; relative version controls for sector beta (absolute version H-P1 failed)."
+    test: "weekly rank IC; FM t (needs funding history per token from Bybit REST)."
+    success: "mean IC < 0 with FM t < -2 in llm_in_sample; same sign in holdout."
+    prior: 0.30
+    family: panel
+    status: proposed
+  H-PAN4:
+    title: "Tokens with the heaviest long-liquidation share rebound vs their sector over the next 24 h (forward)"
+    statement: "Daily cross-section: long-liquidated notional / (long + short) over the last 24 h, top tercile vs bottom, predicts next-24h relative return (positive = rebound after forced selling)."
+    rationale: "Forced sellers push prices below value; liquidation feed recorded since 2026-11-08."
+    test: "forward, >= 45 days of liquidations; daily rank IC, FM t."
+    success: "mean IC > 0 with t > 2 over >= 45 days."
+    prior: 0.40
+    family: panel
+    status: proposed
+  H-PAN5:
+    title: "Cross-sectional order-book imbalance predicts next-hour relative returns (forward)"
+    statement: "Hourly cross-section of the 1h mean OBI (within 0.5% of mid, flow_3s) rank-predicts the next-hour return relative to the equal-weight universe."
+    rationale: "Book pressure as a short-horizon signal; relative version removes market moves."
+    test: "forward, >= 30 days of flow_3s on >= 60 linear streams; hourly IC, FM t (NW 24 lags)."
+    success: "mean IC > 0 with t > 3 and a cost-aware long-short at maker prices > 0."
+    prior: 0.35
+    family: panel
+    status: proposed
+  H-PAN6:
+    title: "BTC leads alt sectors by 1-2 hours"
+    statement: "Hourly BTC returns at t-1 and t-2 predict equal-weight sector basket returns at t beyond the sector's own lags."
+    rationale: "Price discovery concentrates in BTC; slower sectors (gaming, RWA, small caps) may lag."
+    test: "hourly OLS per sector on the 23 long-history symbols (lake) plus new streams once history exists; HAC t; segments."
+    success: "sum of BTC lag coefficients > 0 with t > 3 for >= half the sectors in llm_in_sample; same sign in holdout."
+    prior: 0.35
+    family: panel
+    status: proposed
+  H-EV2:
+    title: "After a down BTC CPI day, the next two days bounce"
+    statement: "Conditional on a negative BTC return on a US CPI release day (UTC), the sum of the next two days' z is positive."
+    rationale: "Tests the user's path (Tuesday CPI fall, Wednesday-Thursday rise) against history; event-day overreaction then relief."
+    test: "CPI release dates from ALFRED vintages 2019+; mean of z(t+1)+z(t+2) after down vs up CPI days; HAC t; small n (~85)."
+    success: "mean > 0 with t > 2 in llm_in_sample; > 0 in holdout (1-2 events)."
+    prior: 0.25
+    family: macro_event
+    status: proposed
+  H-SEC4:
+    title: "In the current regime, volume-spike within-sector outliers reverse (forward)"
+    statement: "Weekly: tokens in the top decile of |7d return relative to their sector| with 7d/30d turnover >= 2x have a negative next-7d signed relative return (reversal)."
+    rationale: "Post-cutoff observation, not a belief: H-SEC3's holdout showed volume-spike outliers reversing (-12%/week signed, 43 cases, diff t -2.0) while the pre-cutoff sample showed nothing. Bear / chop regimes favour pump-and-fade. Only data from 2026-11-09 on counts."
+    test: "forward weekly event study from 2026-11-09 with the sector_study taxonomy; mean signed next-7d relative return, clustered by week; costs 30 bp per leg."
+    success: "mean < 0 net of costs with t < -2 after >= 12 weeks."
+    prior: 0.30
+    family: panel
+    status: proposed
+
+  # ---- Jump-diffusion signal layer (registered 2026-11-08 22:00 UTC BEFORE fitting) ----
+  # Model (src/ai_trader/features/jump_diffusion.py), 1h log returns: r_t = sigma_t * e_t + J_t * 1[jump], e ~ N(0,1);
+  # sigma_t = jump-robust bipower sigma from the previous 72 bars; jumps arrive with per-bar probability p_t (constant in the
+  # MLE stage, Hawkes self-exciting in the intensity stage: lambda_t = l0 + sum alpha exp(-beta (t - t_i)) over detected jumps);
+  # jump sizes Kou double-exponential (p_up, eta_up, eta_down). Parameters by MLE on a trailing 2-year window, refit monthly,
+  # walk-forward from 2023-01. Assets: BTC, ETH, SOL (lake 1h). Detected jump = posterior P(jump | r_t) > 0.9 and the
+  # Lee-Mykland test at 1%. Segments by date vs the knowledge cutoff (2026-07-01).
+  H-JD1:
+    title: "The Kou jump-diffusion mixture forecasts hourly return densities better than a Student-t"
+    statement: "With the same bipower sigma as scale, the out-of-sample mean log score of the jump-diffusion mixture exceeds that of a Student-t (nu fit on the same window) and of a Gaussian."
+    rationale: "Separates continuous and jump risk with asymmetric jump tails; if it doesn't beat a fat-tailed t, it adds nothing for risk."
+    test: "per-bar log-score difference (JD - t), HAC t (24 lags); per asset and pooled; segments."
+    success: "mean difference > 0 with t > 2 pooled in llm_in_sample and > 0 in holdout."
+    prior: 0.45
+    family: volatility
+    status: proposed
+  H-JD2:
+    title: "Jumps cluster: a Hawkes intensity forecasts next-24h jump occurrence better than a constant rate"
+    statement: "The fitted Hawkes excitation alpha > 0 (likelihood-ratio test vs constant intensity), and the walk-forward Hawkes probability of >= 1 detected jump in the next 24 h has a positive Brier skill vs the constant-rate probability."
+    rationale: "Self-excitation means a jump raises the near-term risk of another one: a sizing / quoting / stop signal."
+    test: "LR test per refit; daily forecasts at 00:00 UTC; Brier skill with 14-day block bootstrap CI; segments."
+    success: "Brier skill > 0 with CI above 0 in llm_in_sample and > 0 in holdout."
+    prior: 0.55
+    family: volatility
+    status: proposed
+  H-JD3:
+    title: "After model-detected jumps, the next 6-24 h continue in calm books and reverse in volatile ones"
+    statement: "Signed (by jump sign) next-6h and next-24h returns in sigma units after detected jumps are > 0 when the v0 vol state at the jump was low and < 0 when it was normal/high."
+    rationale: "The jump-detected, scale-robust version of the shock playbook (H-S2 / P1); if it holds it can replace the |z| >= 4 trigger."
+    test: "event study, one event per 24 h per asset (declustered), SE clustered by day; segments."
+    success: "low-vol mean > 0 and high/normal-vol mean < 0 for the 24h horizon with |t| > 2 for at least one leg pooled in llm_in_sample, same signs in holdout."
+    prior: 0.40
+    family: shock
+    status: proposed
+  H-JD4:
+    title: "Jump-aware first-passage probabilities are better calibrated for stop/target brackets than a Gaussian diffusion"
+    statement: "For long and short brackets (stop 1.5 x daily sigma, target 3R, 7-day cap) opened every 3 days, the Monte-Carlo P(target first) from the jump-diffusion (with Hawkes intensity and Kou skew) has a lower Brier score than the same Monte-Carlo without jumps."
+    rationale: "The risk engine's net-E[R] gate uses p_tp; a calibrated, skew-aware p_tp is the jump model's most direct contribution to execution."
+    test: "Brier(JD) - Brier(Gaussian) with 14-day block bootstrap CI; reliability table; segments."
+    success: "difference < 0 with CI below 0 in llm_in_sample and < 0 in holdout."
+    prior: 0.40
+    family: execution
+    status: proposed
+
+  # ---- Multi-asset passive quoting (registered 2026-11-08 22:30 UTC, forward-only; demo first, mainnet only after user sign-off) ----
+  H-MM2:
+    title: "Minimum-lot, vol-adaptive passive quoting across ~50 contracts earns more than fees and adverse selection in high-vol regimes"
+    statement: "atx mm with config/mm_multi.yaml (50 crypto + TradFi perps; ask 0.45 / bid 0.90 sigma around an inventory-, flow- and view-shifted reservation price; sigma = max(4 h, 30 min); shock pause; per-symbol loss stop) has positive net P&L per traded notional on MAINNET, and the per-symbol mean-reversion score (VR15, lag-1 autocorrelation) ranks per-symbol P&L (positive rank correlation)."
+    rationale: "Regime evidence: high-vol states over-forecast next-week vol (H-RL2) and R9 liquidation regimes turn into whipsaw (L1), the environment where liquidity provision earns; diversification across 50 contracts shrinks per-symbol noise. Priors against: VIP0 maker fee +2 bp, adverse selection in a sell-off, H-MM1 tiny sample."
+    test: "per run: net P&L / traded notional (bps) with per-symbol attribution; Spearman(mr_score, per-symbol pnl_bps) across symbols; markouts at 60 s. Demo runs are mechanics checks only."
+    success: "net bps > 0 with t > 2 across >= 10 mainnet run-days; rank correlation > 0 in >= 70% of runs."
+    prior: 0.20
+    family: microstructure
+    status: proposed
+
+  # ==== Program 2026-11-10: volatility, leverage, order-flow anomalies, rules (registered 2026-11-10 BEFORE testing) ====
+  # Shared data definitions: ai_trader.features.realized (daily RV, semivariances, RQ, BV/jumps, Parkinson, Garman-Klass
+  # from 1h bars; complete UTC days; known at day end). Universe L = the 23 long-history crypto perps of trend_zoo_study
+  # (2020-2024 starts); universe T = Bybit TradFi perps with >= 120 complete days (XAU XAG CL BZ TSLA INTC GOOGL AAPL MSTR
+  # NVDA MU QQQ SOXL SPCX, PAXG XAUT); external daily index data from data/lake/alt_series only if already in the lake (no
+  # new ingestion). Segments split at research.knowledge_cutoff by the forecast/decision date. Loss: QLIKE on daily
+  # variance unless stated; paired loss differences with NW (HAC) t pooled over symbol-days and clustered by date.
+  # Multiple testing: Holm within each block. Plan: research/plans/2026-11-10_volatility_program.md.
+
+  # ---- Leverage effect / asymmetry (block LEV) ----
+  H-LEV1:
+    title: "Equity and index perps show a leverage effect: negative returns raise next-day variance more than positive ones"
+    statement: "For universe-T equity/index perps (and lake index series if present), the GJR-GARCH(1,1)-t asymmetry gamma > 0, and in a panel semivariance HAR (SHAR) the coefficient on the previous day's RS- exceeds the one on RS+."
+    rationale: "Black (1976), Christie (1982), Bekaert and Wu (2000), Patton and Sheppard (2015): the most replicated stylised fact in equity volatility."
+    test: "per-asset GJR-GARCH-t MLE (daily close-to-close returns), gamma with robust SE; pooled SHAR with symbol fixed effects, SE clustered by date; difference b(RS-) - b(RS+)."
+    success: "pooled b(RS-) - b(RS+) > 0 with t > 2 and median gamma > 0 in the available segments (holdout dominates for perps)."
+    prior: 0.85
+    family: leverage
+    status: proposed
+  H-LEV2:
+    title: "Crypto has no leverage effect (if anything the asymmetry is inverted)"
+    statement: "For universe L, pooled SHAR b(RS-) - b(RS+) is not significantly positive and median GJR gamma <= 0; an inverted asymmetry (positive returns raise vol: FOMO, short squeezes) is allowed."
+    rationale: "Prior H-VCL2 found RS- adds nothing to HAR forecasts; crypto studies report weak or inverse asymmetry (Baur and Dimpfl 2018). This tests the coefficients with panel power, not only forecast loss."
+    test: "as H-LEV1 on universe L, daily; robustness at 4h (4h semivariances from 1h bars)."
+    success: "difference t < 2 in both segments supports no leverage; report the sign; t < -2 means inverse asymmetry."
+    prior: 0.60
+    family: leverage
+    status: proposed
+  H-LEV3:
+    title: "Asymmetry is state-dependent: negative returns raise vol more in drawdowns than in up or range states"
+    statement: "In the pooled SHAR, the RS- coefficient is larger when the asset is in a drawdown (close below its 30-day high by more than 1.5 x sigma_30d x sqrt(30)) than otherwise, for both universes."
+    rationale: "Leverage and margin-call dynamics bind in drawdowns (Brunnermeier and Pedersen 2009); average symmetry in crypto may hide a drawdown-only leverage effect."
+    test: "SHAR with RS- x 1{drawdown} and RS+ x 1{drawdown} interactions; date-clustered SE."
+    success: "interaction on RS- > 0 with t > 2 pooled in llm_in_sample and same sign in holdout."
+    prior: 0.40
+    family: leverage
+    status: proposed
+  H-LEV4:
+    title: "A panel SHAR beats the panel HAR out of sample for TradFi perps but not for crypto"
+    statement: "Expanding window, refit every 30 days: next-day QLIKE(SHAR) < QLIKE(HAR) for universe T; no improvement for universe L."
+    rationale: "Forecast relevance of the asymmetry: this decides whether the risk engine uses semivariances per asset class."
+    test: "paired QLIKE difference, NW t over date-averaged differences, per universe and segment."
+    success: "T: difference < 0 with t < -2 (holdout); L: |t| < 2."
+    prior: 0.45
+    family: leverage
+    status: proposed
+  H-LEV5:
+    title: "Real leverage: crowded positive funding plus a down day predicts higher next-day vol in crypto"
+    statement: "In the pooled HAR for universe L, the interaction RS-_t x funding_z_t (funding z-score vs its trailing 90 days, known at t) has a positive coefficient: down moves against crowded leveraged longs raise next-day RV."
+    rationale: "In crypto the leverage effect should run through actual leverage (perp positioning, liquidations), not the equity balance-sheet channel."
+    test: "HAR + RS- + funding_z + RS- x funding_z; date-clustered SE; segments."
+    success: "interaction > 0 with t > 2 in llm_in_sample, same sign in holdout."
+    prior: 0.40
+    family: leverage
+    status: proposed
+
+  # ---- Volatility model tournament (block VM) ----
+  H-VM1:
+    title: "Panel HAR (pooled coefficients) forecasts realised variance better than per-asset HAR"
+    statement: "Next-day and next-5-day QLIKE of a pooled HAR (common slopes, symbol-specific level via variance targeting or fixed effects) is below per-asset HAR, pooled over universes L and T."
+    rationale: "Bollerslev, Patton and Quaedvlieg (2018), Risk everywhere: pooling shrinks estimation noise; most valuable for short-history assets (all TradFi perps)."
+    test: "expanding window, monthly refit; paired QLIKE differences, NW t clustered by date; split by universe and history length."
+    success: "difference < 0 with t < -2 in both segments, pooled."
+    prior: 0.65
+    family: vol_model
+    status: proposed
+  H-VM2:
+    title: "HAR-Q and log-HAR beat plain HAR"
+    statement: "HAR-Q (the RV_d coefficient varies with sqrt(RQ_d)) and log-HAR (bias-corrected back-transform) each lower next-day QLIKE vs HAR, panel and per asset."
+    rationale: "HAR-Q down-weights noisy RV measurements (BPQ 2016); log-HAR handles heavy-tailed crypto RV."
+    test: "as H-VM1."
+    success: "each: pooled difference < 0 with t < -2 in both segments."
+    prior: 0.50
+    family: vol_model
+    status: proposed
+  H-VM3:
+    title: "Range-based measures (Parkinson, Garman-Klass from 1h bars) improve HAR inputs over squared returns"
+    statement: "A HAR whose regressors are daily GK (or PK) variance, forecasting the same RV target, has lower QLIKE than the RV-input HAR; a HAR combining both beats either."
+    rationale: "Ranges carry several times more information per bar than close-to-close returns (Alizadeh, Brandt and Diebold 2002); most assets only have 1h bars."
+    test: "as H-VM1, targets RV_{t+1} and mean RV_{t+1..t+5}."
+    success: "pooled difference < 0 with t < -2 in both segments."
+    prior: 0.55
+    family: vol_model
+    status: proposed
+  H-VM4:
+    title: "A common crypto volatility factor drives alt volatility and improves the panel forecast"
+    statement: "The cross-sectional mean of log RV across universe L explains >= 50% of the time-series variance of each alt's log RV (median R^2), and adding the factor's HAR terms to the panel HAR lowers next-day QLIKE."
+    rationale: "Crypto moves as one factor (5m return correlations 0.85-0.96 on 2026-11-09); a market vol factor is the panel analogue of BTC spillover (H-VCL3 found no BTC to alt spillover beyond own HAR, single asset)."
+    test: "per-alt regressions of log RV on the factor (contemporaneous R^2); factor-augmented panel HAR vs panel HAR, paired QLIKE."
+    success: "median R^2 >= 0.5 and QLIKE difference < 0 with t < -2 in both segments."
+    prior: 0.60
+    family: vol_model
+    status: proposed
+  H-VM5:
+    title: "The in-sample tournament winner stays in the holdout 90% Model Confidence Set"
+    statement: "Among EWMA(0.94), robust_bc EWMA (current), GARCH(1,1)-t, GJR-t, EGARCH-t, HAR, log-HAR, HAR-Q, SHAR, HAR-J, range-HAR, panel HAR variants and a stochastic-volatility state-space model (QML Kalman filter on log r^2), the model with the lowest llm_in_sample QLIKE is in the 90% MCS (Hansen, Lunde and Nason 2011) of the clean_holdout, for 1d and 5d horizons."
+    rationale: "The risk engine needs one default; it must be robust to the period, not the in-sample champion."
+    test: "MCS with block bootstrap (block 10 days) on date-averaged QLIKE per model, per horizon, per universe."
+    success: "winner in the holdout MCS for both horizons in universe L (T reported, holdout only)."
+    prior: 0.50
+    family: vol_model
+    status: proposed
+
+  # ---- Volatility-based signals (block VB) ----
+  H-VB1:
+    title: "Variance-managed exposure (Moreira and Muir 2017) raises Sharpe in crypto and TradFi perps"
+    statement: "Scaling a long-only position and the trend-zoo ensemble by c / forecast variance (HAR, or the best H-VM model available at decision time) yields a positive spanning-regression alpha vs the unmanaged series, per universe."
+    rationale: "Vol clusters but returns do not scale with it, so cutting exposure when forecast vol is high improves risk-adjusted returns in equities; crypto evidence is mixed."
+    test: "daily returns; managed = (c / sigma2_hat_t) r_{t+1}, c matching the unmanaged full-sample vol; alpha from r_managed = a + b r_unmanaged, NW t; 7.5 bps per side on turnover; segments."
+    success: "alpha > 0 with t > 2 in llm_in_sample and alpha > 0 in holdout, for at least one of the two base series per universe."
+    prior: 0.35
+    family: vol_signal
+    status: proposed
+  H-VB2:
+    title: "Daily volatility surprises continue in their direction for 1-3 days"
+    statement: "Days with RV > 1.5 x the HAR forecast and |ret| > 1 sigma_forecast are followed by next-1d and next-3d returns with the same sign (signed return > 0, sigma units)."
+    rationale: "Daily analogue of P1 (shocks into calm continue); an information-arrival day should drift if the market under-reacts."
+    test: "event study, declustered 3 days per symbol, SE clustered by date; split by the v0 vol state at t."
+    success: "signed 3d mean > 0 with t > 2 pooled in llm_in_sample, same sign in holdout."
+    prior: 0.30
+    family: vol_signal
+    status: proposed
+  H-VB3:
+    title: "Squeeze-release breakouts continue more than ordinary Bollinger breakouts"
+    statement: "On 4h bars, the first close outside BB(20, 2) after >= 6 bars of BB inside KC(20, 1.5 ATR) has a larger signed next-6-bar return (sigma units, net of 7.5 bps per side) than BB breakouts without a prior squeeze."
+    rationale: "TTM squeeze lore: volatility compression stores energy for a directional move. H-VCL5 found compression under-predicts the vol expansion; the direction question is untested."
+    test: "event study, both universes; difference squeeze minus non-squeeze breakouts, date-clustered SE; random-entry baseline."
+    success: "squeeze signed mean > 0 and difference > 0 with t > 2 in llm_in_sample, same signs in holdout."
+    prior: 0.25
+    family: vol_signal
+    status: proposed
+  H-VB4:
+    title: "A self-exciting (Hawkes) model of 1h 2-sigma exceedances forecasts next-24h exceedances better than the HAR-implied rate"
+    statement: "Log score of the Hawkes next-24h exceedance count (Poisson with integrated intensity) beats a Poisson whose rate comes from the HAR variance forecast under a Student-t, panel."
+    rationale: "Vol clustering at the event level (Hawkes 1971; H-JD2 for jumps); tells the LLM when another big bar soon is likely."
+    test: "expanding-window MLE, paired log-score difference, NW t by date; segments."
+    success: "difference > 0 with t > 2 in both segments."
+    prior: 0.45
+    family: vol_signal
+    status: proposed
+
+  # ---- Order-flow anomaly detectors (block OF; data from 2026-11-07, clean_holdout only; forward continues) ----
+  H-OF1:
+    title: "Order-flow anomalies flag volatility: the next 5-15 minutes move more after a flow anomaly"
+    statement: "Minutes whose signed taker imbalance (flow_3s rolled to 1m) has |robust z| > 4 vs the trailing 24h median/MAD are followed by mean |return| over the next 5 and 15 minutes at least 1.5x that of matched non-anomaly minutes (same symbol, same hour of day)."
+    rationale: "Aggressive flow bursts are information or liquidity events; as a volatility detector this should hold even if direction does not."
+    test: "ratio with block bootstrap CI (1h blocks), per symbol and pooled."
+    success: "pooled ratio >= 1.5 with CI excluding 1."
+    prior: 0.75
+    family: order_flow
+    status: proposed
+  H-OF2:
+    title: "Order-flow anomalies predict direction over the next 5-15 minutes"
+    statement: "After |z| > 4 flow anomalies, the next-5m and next-15m mid return has the sign of the imbalance more than 55% of the time, and the mean signed return exceeds 1 bp."
+    rationale: "Kyle (1985), Cont, Kukanov and Stoikov (2014): order-flow imbalance has price impact; whether it persists beyond the minute is the question (H-F1 is the contemporaneous version)."
+    test: "sign rate and mean signed return, clustered by hour; per symbol and pooled."
+    success: "pooled sign rate > 55% and mean > 1 bp with t > 2."
+    prior: 0.35
+    family: order_flow
+    status: proposed
+  H-OF3:
+    title: "Liquidation clusters are followed by reversals within 15-60 minutes"
+    statement: "Minutes with liquidation notional above the symbol's trailing 99th percentile (and >= 3 liquidations) are followed by next-15m and next-60m returns against the liquidation side (long liquidations, then price up)."
+    rationale: "Forced flow is uninformed; liquidity providers are paid to absorb it."
+    test: "event study, declustered 30 min; signed return vs zero, clustered by hour."
+    success: "pooled signed 60m mean > 0 with t > 2."
+    prior: 0.40
+    family: order_flow
+    status: proposed
+  H-OF4:
+    title: "A multivariate anomaly score detects vol bursts better than the best single feature"
+    statement: "A robust Mahalanobis or isolation-forest score over [imbalance z, trade-count z, volume z, spread z, depth z, liquidation z, |return| z], fitted on the first half of the sample, has a higher AUC for next-15m |return| > 2 sigma_15m in the second half than the best single feature."
+    rationale: "Anomalies are joint (spread blows out while trades spike); a joint detector should be the LLM's something-is-happening flag."
+    test: "time-split AUC with bootstrap CI (1h blocks), pooled."
+    success: "AUC difference > 0 with CI excluding 0."
+    prior: 0.45
+    family: order_flow
+    status: proposed
+  H-OF5:
+    title: "BTC flow anomalies lead alt flow anomalies by 1-3 minutes"
+    statement: "The probability of an alt flow anomaly in the 3 minutes after a BTC anomaly exceeds the unconditional 3-minute rate by >= 2x, and exceeds the reverse direction (alt to BTC)."
+    rationale: "Price discovery concentrates in BTC; tells the LLM to watch BTC flow first."
+    test: "conditional vs unconditional rates with block bootstrap CI."
+    success: "lift >= 2 with CI excluding 1, and BTC-to-alt lift > alt-to-BTC lift."
+    prior: 0.50
+    family: order_flow
+    status: proposed
+
+  # ---- Trend / breakout / state-space / decision budget (block TS; the 2026-11-09 request) ----
+  H-BO1:
+    title: "Classic daily floor pivots are not special: R1/S1 breakouts continue no more than placebo levels"
+    statement: "The first 1h close beyond R1 (S1) of the prior UTC day's floor pivots (P=(H+L+C)/3, R1=2P-L, S1=2P-H) has a signed next-4h / next-12h return (sigma units, net) no larger than for a placebo level at the same sigma distance from the prior close."
+    rationale: "P4: levels do not hold; the open question is whether pivot breakouts carry continuation beyond generic moved-k-sigma momentum."
+    test: "event study vs placebo, date-clustered SE; universes L and T."
+    success: "supports if pivot minus placebo |t| < 2 in both segments (stated as the null; t > 2 contradicts it)."
+    prior: 0.80
+    family: trend_breakout
+    status: proposed
+  H-MC1:
+    title: "Market Cipher B dots have no edge after costs"
+    statement: "WaveTrend(9, 12) crosses with wt2 beyond -/+53 (green / red dots), with the money-flow filter (MC-style RSI/MFI proxy) agreeing, traded on 1h and 4h with exit on the opposite cross or 12 bars: net trade returns are not > 0 and do not beat random entries matched in count and holding period."
+    rationale: "Popular retail indicator; WaveTrend is a smoothed CCI (a short-horizon mean-reversion oscillator), and P2 says intraday mean reversion loses here."
+    test: "trade-level net returns (sigma units), NW t; random-entry baseline (1,000 draws); variants 1h/4h x filter on/off; deflated Sharpe over the variants."
+    success: "supports if no variant has DSR > 0.95 and the best variant's holdout mean <= 0."
+    prior: 0.85
+    family: trend_breakout
+    status: proposed
+  H-KF1:
+    title: "A vol-adaptive local-linear-trend Kalman slope beats the fixed-gain filter"
+    statement: "On 4h bars, a local linear trend model with measurement variance R_t = robust sigma_hat_t^2 (time-varying gain) gives a higher net Sharpe of tanh(slope / sd) than the same model with constant R (equal steady-state gain), universe L."
+    rationale: "A steady-state Kalman filter is a fixed linear filter (already in the zoo); the adaptive gain is the only new ingredient, so test exactly that."
+    test: "q in {1e-4, 1e-3, 1e-2} fixed before testing; paired daily net P&L difference, NW t; 7.5 bps per side."
+    success: "difference > 0 with t > 2 in llm_in_sample for the median q, same sign in holdout."
+    prior: 0.30
+    family: state_space
+    status: proposed
+  H-KF2:
+    title: "The rolling MLE signal-to-noise ratio of a local-linear-trend model predicts trend profitability"
+    statement: "q_hat (slope variance / level variance) estimated on the trailing 180 days ranks the next-30-day trend-ensemble P&L across symbols (Spearman IC > 0)."
+    rationale: "A model-based is-it-trending measure; H-TR4 (directional efficiency) failed, this is the state-space version."
+    test: "monthly cross-sectional IC, NW t over months; segments."
+    success: "mean IC > 0 with t > 2 in llm_in_sample and > 0 in holdout."
+    prior: 0.20
+    family: state_space
+    status: proposed
+  H-IC1:
+    title: "More features saturate: out-of-sample skill peaks at a small feature count"
+    statement: "A walk-forward ridge-logistic model for the sign of the next-24h vol-scaled return, using the first k of a fixed 32-feature list ordered simple to complex before testing (k in 1, 2, 4, 8, 16, 32), has its best OOS Brier skill at k <= 8, and k = 32 is not better than the best smaller k."
+    rationale: "The decision layer's input budget: if skill saturates early, the LLM should see a short card, not every tool output."
+    test: "monthly walk-forward, purged (24h) and embargoed; Brier skill vs base rate with block bootstrap CI; universe L."
+    success: "argmax k <= 8 and skill(32) - max skill(k<=8) <= 0 in both segments (if all skills are ~0, inconclusive)."
+    prior: 0.60
+    family: decision_budget
+    status: proposed
+  H-IC2:
+    title: "Longer training windows do not keep improving out-of-sample skill"
+    statement: "For the H-IC1 model (best k) and the panel HAR, rolling training windows of 90, 180, 365, 730 days and expanding are not ordered by length in OOS loss; an intermediate window is best."
+    rationale: "Non-stationarity: more data is not more information when the regime changes."
+    test: "paired OOS loss differences vs expanding, NW t; segments."
+    success: "some window shorter than expanding wins with t > 2 in at least one segment and no monotone pattern."
+    prior: 0.55
+    family: decision_budget
+    status: proposed
+  H-IC3:
+    title: "Decision latency costs little at 4h horizons but a lot for shock signals"
+    statement: "Delaying execution by d in {0, 1, 2, 4, 8} hours leaves more than half of the 4h trend ensemble's net edge after 4 h, but less than half of shock_regime's after 2 h."
+    rationale: "How much time the LLM can spend thinking before the information is gone, per signal type."
+    test: "re-run each strategy's P&L with the signal lagged d bars; edge ratio vs d with bootstrap CI; segments."
+    success: "both half-life inequalities hold in llm_in_sample with CIs excluding 0.5 on the stated side."
+    prior: 0.60
+    family: decision_budget
+    status: proposed
+  H-IC4:
+    title: "A compact state card leads to better LLM decisions than the full toolkit dump (forward only)"
+    statement: "On the same candidate lists, a decision session given only the per-token market state card plus the top-3 deterministic signals has Brier / net-R at least as good as one given every tool output."
+    rationale: "Principle 1: the LLM layer is evaluated forward only; this registers the context-budget A/B before any session is run."
+    test: "forward, paired by candidate list, two pinned prompt versions as separate track records; >= 60 decisions each."
+    success: "compact arm Brier <= full arm Brier with paired bootstrap CI upper bound < +0.01."
+    prior: 0.50
+    family: decision_budget
+    status: proposed
+
+  H-LEV6:
+    title: "Crowded funding alone predicts higher next-day volatility in crypto (forward confirmation)"
+    statement: "In the pooled HAR for universe L, funding_z_t (funding z-score vs trailing 90 days, known at t) has a positive coefficient on next-day RV (scaled by symbol mean RV): about +0.07 per z unit as found exploratorily."
+    rationale: "Found as a side effect of H-LEV5 on 2026-11-10 (t 2.36 in-sample, 2.71 holdout); because it was seen in both segments before registration, only data after 2026-11-10 can confirm it."
+    test: "same model as H-LEV5 (src/ai_trader/research/leverage_study.py), estimated on decision dates after 2026-11-10 only, date-clustered SE; re-run monthly."
+    success: "coefficient > 0 with t > 2 on >= 120 forward dates."
+    prior: 0.55
+    family: leverage
+    status: proposed
+
+  H-VM6:
+    title: "A weekday-aware HAR removes the Saturday over-forecast without hurting risk forecasts (forward confirmation)"
+    statement: "Adding day-of-week (Saturday, Sunday, Monday) terms to the log-HAR lowers next-day QLIKE for expected variance in universes L and T, while the unshrunk risk sigma (R-VOL-2) is unchanged."
+    rationale: "Found in the 2026-11-10 tournament: crypto Saturday RV is about 0.5x Tue-Fri and TradFi 0.05-0.1x, so every model over-forecasts Saturdays (log bias +2.7 to +3.7). Seen in both segments before registration, so only data after 2026-11-10 can confirm it. Applies to expectations only (V1), never to stops or risk (V3)."
+    test: "log-HAR vs log-HAR + weekday dummies (expanding fit), next-day QLIKE on forecast dates after 2026-11-10, paired NW t."
+    success: "difference < 0 with t < -2 on >= 120 forward dates."
+    prior: 0.75
+    family: vol_model
+    status: proposed
+
+  H-OF6:
+    title: "A selective flow-anomaly detector (per-symbol top 1% of |imbalance z|) flags next-5m volatility (forward confirmation)"
+    statement: "Minutes in the per-symbol top 1% of |robust z| of 1m signed taker imbalance (threshold set on data up to 2026-11-10 22:30 UTC and then frozen per symbol) are followed by mean next-5m |return| at least 1.5x that of matched minutes (same symbol, same hour of day)."
+    rationale: "H-OF1's |z| > 4 rule fires on 22% of minutes (signed flow is roughly Cauchy-tailed); the exploratory top-1% threshold gave a ratio of 1.51 (CI 0.96-2.33) on the first 3 days. Only data after registration can confirm it."
+    test: "features.flow_anomaly with the frozen thresholds; forward data from 2026-11-11; block bootstrap (1h blocks); re-run weekly."
+    success: "pooled ratio >= 1.5 with CI excluding 1 on >= 14 forward days."
+    prior: 0.50
+    family: order_flow
+    status: proposed
+  H-OF7:
+    title: "Liquidation clusters continue rather than revert over the next 60 minutes (forward confirmation)"
+    statement: "After declustered liquidation clusters (as in H-OF3), the next-60m return moves in the direction of the liquidations (long liquidations, then price down)."
+    rationale: "H-OF3 found the opposite of its registered reversal: -1.85 sigma at 60m (t -1.92, 164 clusters, 17 independent hours) on the first 3 days, during a sell-off. A forced-selling cascade would predict continuation."
+    test: "features.flow_anomaly liquidation clusters on data after 2026-11-11; signed 60m return, clustered by hour."
+    success: "pooled signed continuation > 0 with t > 2 over >= 40 independent cluster-hours."
+    prior: 0.40
+    family: order_flow
+    status: proposed
+
+  # ==== Program 2 (registered 2026-11-11 BEFORE testing): regime-conditional strategies, TradFi session effects, PnL
+  # decomposition, new strategies, execution simulator, synthetic-data robustness. Plan: research/plans/2026-11-11_strategy_program.md.
+  # Universes L (23 crypto) and T (TradFi perps >= 120 complete days; equity subset TSLA INTC GOOGL AAPL MSTR NVDA MU QQQ SOXL)
+  # as in Program 2026-11-10. Costs 7.5 bps per side unless stated (maker legs 2 bps). Holm within each block.
+
+  # ---- Regime-conditional strategy map (block RC) ----
+  H-RC1:
+    title: "Per-regime strategy rankings are stable across the cutoff"
+    statement: "For every registered strategy (strategies.REGISTRY) and the trend-zoo ensemble on universe L, the empirical-Bayes shrunk mean net P&L per v0 regime cell in llm_in_sample has a positive rank correlation with the same quantity in clean_holdout, pooled over strategy x cell pairs."
+    rationale: "The user's question: which strategies work in which regimes, robustly. H-R1/H-R2 (trend only in trend cells, MR in range cells) were contradicted for single families; this tests the whole map."
+    test: "evaluate.by_regime per strategy (risk units, costs), cells from research.regimes v0; Spearman over pairs with >= 5 episodes in both segments; bootstrap CI by resampling regime episodes."
+    success: "Spearman > 0 with CI excluding 0."
+    prior: 0.35
+    family: regime_strategy
+    status: proposed
+  H-RC2:
+    title: "A regime-conditional allocator beats the equal-weight strategy book out of sample"
+    statement: "Holding, in each v0 cell, only the strategies whose llm_in_sample shrunk mean net P&L in that cell is > 0 gives a higher clean_holdout Sharpe than the equal-weight book of all strategies and than an unconditional selection (strategies with in-sample mean > 0)."
+    rationale: "Practical test of the regime map: the decision layer would use exactly this kind of conditioning."
+    test: "daily net P&L of the three books on universe L; paired Sharpe difference with block bootstrap (10-day blocks)."
+    success: "conditional minus both alternatives > 0 with bootstrap CI excluding 0 in the holdout."
+    prior: 0.25
+    family: regime_strategy
+    status: proposed
+
+  # ---- TradFi session effects on Bybit perps (block TF; H-TP1 above is tested in this block too) ----
+  H-TF1:
+    title: "Overnight gaps in equity perps fill during the cash session more often than a random walk implies"
+    statement: "For equity perps, when the move from the previous NYSE close to the NYSE open exceeds 1 overnight sigma, price revisits the previous close before the NYSE close more often than the driftless reflection baseline (as in H-W4)."
+    rationale: "Gap-fill is classic, automatable equity lore; Bybit equity perps trade through the closure, so the gap is a traded move and may behave differently from cash-equity gaps."
+    test: "1h bars, NYSE calendar with DST; observed fill rate minus mean baseline probability; binomial z clustered by date."
+    success: "observed minus baseline > 5 pp with z > 2 (holdout dominates)."
+    prior: 0.30
+    family: tradfi_session
+    status: proposed
+  H-TF2:
+    title: "Equity perps earn their return overnight, not intraday (the night effect)"
+    statement: "Mean log return from NYSE close to NYSE open exceeds the mean from open to close for the equity subset, pooled."
+    rationale: "Lou, Polk and Skouras (2019), Kelly and Clark (2011): equity returns accrue overnight; untested on 24/7 perps."
+    test: "paired daily difference overnight minus intraday, NW t clustered by date; per symbol and pooled."
+    success: "pooled difference > 0 with t > 2."
+    prior: 0.35
+    family: tradfi_session
+    status: proposed
+  H-TF3:
+    title: "First-hour opening-range breakouts in equity perps continue to the close"
+    statement: "A 1h close beyond the high or low of the first cash-session hour, taken in that direction and held to the NYSE close, earns a positive net return (sigma units) and beats random entries matched in time and holding."
+    rationale: "Opening-range breakout (Zarattini and Aziz 2023 on QQQ; Crabel 1990): the opening auction sets the day's range."
+    test: "trade-level net returns, NW t; random-entry baseline (1000 draws); per symbol and pooled."
+    success: "pooled net mean > 0 with t > 2 and beats random in > 95% of draws."
+    prior: 0.25
+    family: tradfi_session
+    status: proposed
+  H-TF4:
+    title: "Intraday momentum: the first cash-session hour predicts the last hour in equity perps"
+    statement: "The sign of the first-hour return (previous close to the end of the first cash hour) predicts the last-hour return (the hour before the NYSE close)."
+    rationale: "Gao, Han, Li and Zhou (2018) market intraday momentum."
+    test: "predictive regression of last-hour on first-hour return (vol-scaled), date-clustered SE; sign-agreement rate."
+    success: "slope > 0 with t > 2, pooled."
+    prior: 0.30
+    family: tradfi_session
+    status: proposed
+  H-TF5:
+    title: "Commodity perps' moves after the Sunday CME reopen continue into the Monday Europe session"
+    statement: "For CL, BZ, XAU, XAG perps, the signed return from the Monday 07:00 to 12:00 UTC window has the sign of the move from the Sunday 23:00 CME reopen to Monday 07:00 UTC."
+    rationale: "Weekend news is first priced at the CME reopen in thin Asia hours; Europe adds liquidity. War weekends made WTI Mondays 2.3x more volatile (V10)."
+    test: "event study per weekend, signed continuation in sigma units, clustered by weekend."
+    success: "mean > 0 with t > 2 pooled over the 4 commodities."
+    prior: 0.30
+    family: tradfi_session
+    status: proposed
+
+  # ---- PnL decomposition and context-dependent ranking (block PD) ----
+  H-PD1:
+    title: "The strategy book is a few independent bets"
+    statement: "PCA of daily net P&L of all strategy x universe sleeves: the first 3 components explain > 60% of variance and the effective number of bets (exp of the entropy of normalised eigenvalues) is < 6."
+    rationale: "If most strategies are the same bet, rankings and diversification claims must be made at the factor level, not the strategy level (trend zoo is ~1.9 bets, P7)."
+    test: "correlation-matrix PCA per segment; bootstrap CI of the explained share (10-day blocks)."
+    success: "both inequalities in both segments."
+    prior: 0.70
+    family: pnl_attribution
+    status: proposed
+  H-PD2:
+    title: "Observable factors explain most strategy P&L, leaving no residual alpha"
+    statement: "Regressing each strategy's daily net P&L on observable factors (crypto market, crypto time-series momentum factor, crypto vol-change factor, funding-carry factor, liquidity factor, QQQ, gold, oil) gives median R^2 > 0.4 and no strategy has a residual alpha with t > 2 in both segments."
+    rationale: "Returns-based style analysis (Sharpe 1992; Fung and Hsieh 2001): apparent alpha is usually factor beta. Tells the LLM what each strategy really is."
+    test: "time-series regressions with NW SEs per strategy and segment; factors built point in time from the panel."
+    success: "both conditions in both segments."
+    prior: 0.55
+    family: pnl_attribution
+    status: proposed
+  H-PD3:
+    title: "A conditional factor model (IPCA) ranks strategies by context better than trailing Sharpe"
+    statement: "An instrumented PCA (Kelly, Pruitt and Su 2019) with K = 2-3 latent factors whose loadings depend on context characteristics (regime cell, vol percentile, funding z, trend strength, drawdown flag, weekend) predicts the cross-strategy ranking of next-week net P&L with a higher rank IC than trailing-90-day Sharpe."
+    rationale: "The user's ask: decompose P&L into hidden factors and rank strategy types by context. IPCA is exactly loadings-as-a-function-of-characteristics."
+    test: "expanding-window weekly refit; Spearman IC per week across strategies; IC difference IPCA minus trailing Sharpe, NW t over weeks; segments."
+    success: "IC difference > 0 with t > 2 in llm_in_sample and > 0 in holdout."
+    prior: 0.30
+    family: pnl_attribution
+    status: proposed
+  H-PD4:
+    title: "Costs and exit timing, not direction, account for most of the gross-to-net gap"
+    statement: "For directional strategies at 1h and 4h, decomposing trade P&L into direction (sign right), magnitude capture (share of the favourable excursion kept), and costs shows that costs plus exit leakage exceed 50% of gross positive P&L."
+    rationale: "Points improvement effort to execution (maker entries, exits) rather than new signals."
+    test: "trade-level decomposition (MFE/MAE-based), pooled; bootstrap CI."
+    success: "share > 50% with CI excluding 50% in both segments."
+    prior: 0.60
+    family: pnl_attribution
+    status: proposed
+
+  # ---- Less obvious strategies (block NS) ----
+  H-NS1:
+    title: "Funding-settlement pressure: price leans against funding in the hour before settlement and recovers after"
+    statement: "For crypto perps, the 1h return ending at a funding timestamp (00:00, 08:00, 16:00 UTC) has the opposite sign of the funding rate, and the next hour reverses it."
+    rationale: "Payers close positions just before settlement to avoid paying, then reopen: a mechanical, periodic flow."
+    test: "pooled regression of the pre-settlement return on sign(funding) x |funding z|, date-clustered SE; reversal in the following hour."
+    success: "pre-settlement coefficient < 0 and post coefficient > 0, both with |t| > 2 in llm_in_sample, same signs in holdout."
+    prior: 0.30
+    family: new_strategies
+    status: proposed
+  H-NS2:
+    title: "Options expiry compresses then releases crypto volatility"
+    statement: "BTC and ETH realised variance in the 24h before the Friday 08:00 UTC Deribit expiry is below the HAR forecast, and in the 24h after it is above (relative to the same windows on other days), strongest at monthly expiries."
+    rationale: "Dealer gamma hedging pins price into expiry; the pin releases after (documented in equities: Ni, Pearson and Poteshman 2005)."
+    test: "log RV / HAR forecast by window, pre vs post expiry vs control days; date-clustered SE."
+    success: "pre < control and post > control, both with |t| > 2 in llm_in_sample, same signs in holdout."
+    prior: 0.35
+    family: new_strategies
+    status: proposed
+  H-NS3:
+    title: "Crypto session seasonality in returns persists out of sample"
+    statement: "Mean vol-scaled 1h returns by session (Asia 00-08, Europe 08-13, US 13-20, late 20-24 UTC) differ, and the in-sample session ranking holds in the holdout."
+    rationale: "Trader lore (US session sells, Asia buys); likely noise, so the persistence test is the point."
+    test: "session means with date-clustered SE; Spearman of session ranks across segments; a session-tilt strategy net of costs."
+    success: "in-sample F-test p < 0.01 and the holdout ranking correlation > 0.5 with the tilt strategy net positive in holdout."
+    prior: 0.20
+    family: new_strategies
+    status: proposed
+  H-NS4:
+    title: "An hour-of-week volatility profile improves intraday vol forecasts"
+    statement: "Multiplying the per-bar robust sigma by a smoothed hour-of-week seasonal factor (estimated on trailing data) lowers next-hour QLIKE for universes L and T."
+    rationale: "Intraday vol seasonality is large (US open, funding times, weekends) and directly useful for quote widths and stops."
+    test: "expanding-window seasonal factor; paired QLIKE difference, NW t; segments."
+    success: "difference < 0 with t < -2 in both segments."
+    prior: 0.80
+    family: new_strategies
+    status: proposed
+  H-NS5:
+    title: "QQQ's first cash-session hour leads crypto over the next 3 hours"
+    statement: "The vol-scaled QQQ perp return over the first NYSE hour predicts the BTC and ETH return over the following 3 hours."
+    rationale: "Cross-asset price discovery at the US open (BTC-QQQ hourly correlation about 0.65 in this regime)."
+    test: "predictive regression, date-clustered SE; holdout-dominated (QQQ perp from 2026-05)."
+    success: "slope > 0 with t > 2 pooled over BTC and ETH."
+    prior: 0.30
+    family: new_strategies
+    status: proposed
+
+  # ---- Execution simulator and trader reaction functions (block SIM; flow_3s from 2026-11-07, holdout only) ----
+  H-SIM1:
+    title: "A passive-fill model calibrated on 3s candles reproduces our live market-making fills"
+    statement: "A fill model for post-only quotes (fill when the 3s candle trades through the quote, times a queue-position survival factor fitted on part of our live mainnet fills) predicts the fill rate and the 60s markout of the remaining live quotes within their 95% CIs."
+    rationale: "Every passive strategy test (market making, maker entries) needs a validated fill model; we have about 250 real fills with exact quote prices and times."
+    test: "train on the first half of live quotes in time, test on the second; predicted vs observed fill rate and markout, bootstrap CI."
+    success: "both predicted values inside the observed 95% CIs."
+    prior: 0.45
+    family: simulation
+    status: proposed
+  H-SIM2:
+    title: "A calibrated flow simulator reproduces held-out microstructure stylised facts"
+    statement: "A generative model of 3s signed taker flow, trade intensity and spread (marked Hawkes or VAR with heavy-tailed innovations) plus an impact function fitted on days 1-2 reproduces on day 3: return kurtosis, |r| autocorrelation at 1-60 lags, flow autocorrelation, flow-return impact slope and the spread distribution, each within the day-to-day range of the real data."
+    rationale: "Generated data is only useful for training if it reproduces the facts the strategies depend on."
+    test: "moment and ACF comparison with day-to-day bootstrap envelopes; per symbol class (major crypto, alt, TradFi)."
+    success: ">= 4 of 5 facts inside the envelope for each class."
+    prior: 0.40
+    family: simulation
+    status: proposed
+  H-SIM3:
+    title: "Aggressive-flow reaction functions are stable across days and transfer across markets after liquidity scaling"
+    statement: "The response of 3s signed taker flow to past returns (momentum vs contrarian), book imbalance and spread, estimated per symbol and day, has the same sign on >= 80% of symbol-days, and after scaling by sigma, depth and median trade size the coefficients of different symbols are statistically indistinguishable within each class."
+    rationale: "The user's idea: extract each trader type's implicit reaction function from real data and reuse it to simulate other markets with matched quantities, volatility and liquidity."
+    test: "per symbol-day regressions / VAR; sign stability; pooled test of equal scaled coefficients within class (Wald with clustered SE)."
+    success: "sign stability >= 80% and no rejection of equal scaled coefficients at 5% within at least 2 of 3 classes."
+    prior: 0.35
+    family: simulation
+    status: proposed
+  H-SIM4:
+    title: "Simulator rankings of market-making parameters agree with real-data replay rankings"
+    statement: "Across a grid of quoting parameters (ask/bid offsets, take-profit, requote threshold), the ranking of net P&L per notional in the H-SIM2 simulator has Spearman > 0.5 with the ranking from replaying the same quoter on the real 3s paths with the H-SIM1 fill model."
+    rationale: "The simulator is only a training ground if it ranks choices the way reality does."
+    test: "grid of >= 24 parameter sets; Spearman with bootstrap CI over symbols."
+    success: "Spearman > 0.5 with CI excluding 0."
+    prior: 0.35
+    family: simulation
+    status: proposed
+
+  # ---- Robustness through generated data (block SYN; deterministic strategies only, never the LLM layer) ----
+  H-SYN1:
+    title: "Choosing parameters on generated paths reduces the in-sample to holdout degradation"
+    statement: "For the trend-zoo and breakout parameter grids, the parameter chosen to maximise the median Sharpe over 200 generated paths (stationary block bootstrap plus regime-switching resampling of 1h returns, preserving vol clustering) loses less Sharpe from llm_in_sample to clean_holdout than the parameter chosen on the single historical path."
+    rationale: "Generated data cannot add information but can regularise selection (Lopez de Prado 2018 on synthetic backtests; Bailey et al. 2017 on backtest overfitting)."
+    test: "per symbol, paired difference of degradations; mean over universe L with bootstrap CI."
+    success: "mean degradation difference < 0 with CI excluding 0."
+    prior: 0.45
+    family: synthetic
+    status: proposed
+  H-SYN2:
+    title: "Strategies chosen for worst-case robustness across generated scenarios beat the in-sample champion in the holdout"
+    statement: "Selecting, per symbol, the zoo variant with the best 10th-percentile Sharpe across generated paths gives a higher clean_holdout Sharpe than selecting the best in-sample variant."
+    rationale: "Robust selection should trade a little in-sample performance for less overfitting."
+    test: "paired holdout Sharpe difference over symbols, bootstrap CI."
+    success: "difference > 0 with CI excluding 0."
+    prior: 0.40
+    family: synthetic
+    status: proposed
+
+  H-TP1b:
+    title: "Equity perps continue large overnight moves through the first two cash hours (forward confirmation)"
+    statement: "When the equity perp's move from the previous NYSE close to the 09:00 ET bar exceeds 1 overnight sigma, the return over the first two cash hours has the same sign, net of 7.5 bps per side."
+    rationale: "Found after the fact in the 2026-11-11 TradFi session study: fading such moves lost -67 bp net in the holdout (worse than 99.8% of random draws) and following them made about +37 bp; the in-sample slice had the opposite sign (H-TP1 +0.27 sigma, 16 sessions). Only sessions after registration can confirm it."
+    test: "research/tradfi_session_study.py rules on sessions after 2026-11-11, equity subset; trade-level NW t; random-entry baseline."
+    success: "net mean > 0 with t > 2 over >= 150 forward symbol-sessions."
+    prior: 0.30
+    family: tradfi_session
+    status: proposed
+
+  # ---- Program 2 follow-ups (registered 2026-11-11 after the Program 2 results; forward or new data only) ----
+  H-MM3:
+    title: "Replay-best quoting parameters beat the live mm_multi parameters in paired live runs"
+    statement: "Quoting with ask 0.2 sigma, bid 0.9 sigma, take-profit 0.9 sigma, requote 0.15 sigma (best of the 2026-11-11 replay grid on one sell-off day) earns more net bps per traded notional than the live mm_multi settings (ask 0.45 / bid 0.90 / take-profit 0.6 / requote 0.3), run side by side on disjoint symbol halves matched by liquidity, alternating halves each run."
+    rationale: "The simulator replay (H-SIM4 study) ranked these first (+14.2 bp vs +7.5 bp of turnover, 43/50 symbols positive), but on one day in one market state; only live paired runs can tell."
+    test: "paired per-run difference in net bps per notional (exchange records), sign test and t over runs."
+    success: "difference > 0 in >= 70% of >= 10 paired runs and mean t > 2."
+    prior: 0.40
+    family: microstructure
+    status: proposed
+  H-NS7:
+    title: "Seasonal quote widths (hour-of-week vol factor) improve market-making markouts"
+    statement: "Scaling the quoter's sigma by the H-NS4 hour-of-week factor (seasonality.seasonal_factor) raises the 60s markout of maker fills and net bps per notional vs the unscaled quoter, in paired live runs or 3s-path replays on days after 2026-11-11."
+    rationale: "H-NS4 (grade A): the hour-of-week profile lowers next-hour QLIKE by 0.04-0.38; vol spikes at the US open, funding times and the top of the hour (Hansen, Kim and Kimbrough 2024)."
+    test: "replay on real 3s paths after registration (sim.replay with the H-SIM1 fill model) and paired live runs; paired differences, t."
+    success: "markout and net bps both higher with t > 2 over >= 10 symbol-days."
+    prior: 0.50
+    family: microstructure
+    status: proposed
+  H-PD5:
+    title: "Strategy returns reverse week to week (strategy reversal), so trailing winners underperform next week"
+    statement: "Across the registered strategies, the Spearman correlation between trailing-1-week and next-week net P&L is negative (strategy-level reversal), on weeks after 2026-11-11."
+    rationale: "Found in H-PD3: trailing-Sharpe rankings anti-predicted next week (IC -0.039) and IPCA's win is largely that; Ehsani and Linnainmaa (2022) report factor momentum, the opposite, so this needs forward confirmation."
+    test: "weekly cross-strategy Spearman IC on the strategy panel extended forward; NW t over weeks."
+    success: "mean IC < 0 with t < -2 over >= 26 forward weeks."
+    prior: 0.40
+    family: pnl_attribution
+    status: proposed
+  H-PD6:
+    title: "Exit rules that keep more of the favourable excursion raise trend net P&L"
+    statement: "For the trend family, a trailing exit at k x sigma from the running best price (k in {1.5, 2.5, 3.5}, fixed now) keeps a larger share of the favourable excursion and raises net Sharpe vs the strategies' own exits, on llm_in_sample with confirmation in clean_holdout."
+    rationale: "H-PD4: costs plus exit leakage are 70-75% of the favourable excursion and costs only 5-9% of it, so exits are where the edge leaks."
+    test: "re-run the trend sleeves with each trailing exit; paired daily net P&L difference vs the original exits, NW t; Holm over k."
+    success: "median-k difference > 0 with t > 2 in llm_in_sample and > 0 in holdout."
+    prior: 0.35
+    family: execution
+    status: proposed
+
+  # ==== Microstructure pilot (registered 2026-11-11 21:30 UTC BEFORE the data was analysed) ====
+  # Data: one full UTC day 2026-11-10 (the CPI day) of Bybit public trade archives (every trade: time, taker side, price,
+  # size) for the 50 mm_multi symbols + BTCUSDT (lake table trades_raw), and ob200 L2 book snapshots/deltas for 12 symbols
+  # (BTC ETH SOL XRP DOGE HYPE CARV KAS ATOM NVDA QQQ XAU; data/raw/pilot_2026-11-10/ob200). Pre-specified split: FIT on
+  # 00:00-12:00 UTC, TEST on 12:00-24:00 UTC (the test half contains the CPI release, a known regime break: report it).
+  # All results are segment clean_holdout. Symbol classes: majors (BTC ETH SOL XRP DOGE), alts (other crypto), TradFi
+  # (equity, index, commodity perps). Holm within the MS block.
+  H-MS1:
+    title: "Trade inter-arrival times are not exponential; a heavy-tailed or mixture law fits best, and conditional-duration models absorb most of the excess"
+    statement: "Per symbol, the exponential law is rejected (KS p < 0.01) for raw inter-trade durations; among exponential, Weibull, gamma, log-normal, generalized gamma, Burr XII, log-logistic and 2-3 component exponential mixtures fitted on the FIT half, a non-exponential family has the best TEST-half log-likelihood for > 80% of symbols; after intraday deseasonalisation and an ACD(1,1) (Engle and Russell 1998), standardised residual durations are much closer to exponential (KS statistic at least halved)."
+    rationale: "Simulating realistic order flow needs the arrival law; trade clustering makes Poisson arrivals wrong."
+    test: "MLE per family on FIT, held-out log-likelihood and AIC on TEST; KS / Anderson-Darling; ACD(1,1) with Weibull or generalized-gamma innovations."
+    success: "all three parts hold."
+    prior: 0.80
+    family: microstructure_dist
+    status: proposed
+  H-MS2:
+    title: "Trade sizes have a power-law tail with index between 1 and 2"
+    statement: "For most symbols the upper tail of trade size (notional) follows a power law with Hill / Clauset-Shalizi-Newman index alpha in [1, 2], and the power law is preferred over the log-normal by the Vuong likelihood-ratio test."
+    rationale: "Gopikrishnan et al. (2000), Gabaix et al. (2003): alpha about 1.5 in equities; size tails drive impact and liquidation risk in the simulator."
+    test: "CSN method (x_min by KS minimisation, MLE alpha, bootstrap goodness of fit), Vuong test vs log-normal; per symbol; stability FIT vs TEST."
+    success: "alpha in [1, 2] and power law not rejected for > 70% of symbols, and preferred over log-normal for > 50%."
+    prior: 0.60
+    family: microstructure_dist
+    status: proposed
+  H-MS3:
+    title: "The sign of aggressive trades has long memory (power-law ACF decay)"
+    statement: "The autocorrelation of trade signs decays as a power law k^-gamma with 0 < gamma < 1 over lags 1-1000 trades, fitting better than an exponential decay; the PACF has significant positive coefficients beyond lag 10; signed flow aggregated to 1 s has a Hurst exponent above 0.5."
+    rationale: "Lillo and Farmer (2004), Bouchaud et al.: order splitting makes trade signs persistent; the v0 simulator had near-zero flow autocorrelation (H-SIM2 failed on it)."
+    test: "log-log ACF regression vs exponential fit (held-out MSE), PACF with Bartlett bands, DFA / R-S Hurst; per symbol and class."
+    success: "power law preferred and gamma in (0, 1) for > 80% of symbols with >= 20k trades; Hurst > 0.5 pooled with CI excluding 0.5."
+    prior: 0.75
+    family: microstructure_dist
+    status: proposed
+  H-MS4:
+    title: "Volume per interval is heavy-tailed and long-memory, and co-moves with absolute returns"
+    statement: "Per-symbol volume per 10 s and per 1 min is better described by a generalized gamma / log-normal than a gamma, its ACF decays slowly (power law preferred over exponential), and corr(volume, |return|) at the same interval is positive for every symbol."
+    rationale: "Volume clustering and the volume-volatility link (Clark 1973; Andersen 1996) are inputs to the generator and to quote widths."
+    test: "distribution fits FIT vs TEST log-likelihood; ACF decay fits; Spearman of volume and |return| per symbol."
+    success: "all three hold for > 80% of symbols."
+    prior: 0.75
+    family: microstructure_dist
+    status: proposed
+  H-MS5:
+    title: "The bid-ask spread predicts a symbol's own future volatility beyond current volatility"
+    statement: "In pooled regressions over the 12 L2 symbols, the time-averaged relative spread over the last minute has a positive coefficient for realised variance over the next 5 and 15 minutes, controlling for the last 5 and 60 minutes of realised variance, book depth within 10 bp and the hour-of-week factor (features.seasonality)."
+    rationale: "Spreads widen when market makers expect volatility (adverse selection, inventory risk): the spread is a forward-looking vol signal usable for quoting and stops."
+    test: "OLS on log RV with symbol fixed effects, SE clustered by 5-minute block; estimated on FIT, coefficient and out-of-sample R^2 gain on TEST."
+    success: "coefficient > 0 with t > 2 on TEST and positive out-of-sample R^2 gain."
+    prior: 0.55
+    family: microstructure_dist
+    status: proposed
+  H-MS6:
+    title: "ETH and SOL transmit returns and volatility to other tokens at sub-minute horizons"
+    statement: "ETH and SOL returns lead other crypto tokens' returns (Hayashi-Yoshida cross-correlation peaking at a positive lag of 0.1-30 s, and Granger causality on 1 s returns), and in a Diebold-Yilmaz connectedness table of 1-minute realised volatility ETH and SOL are net transmitters (net directional connectedness > 0); BTC is reported as the reference."
+    rationale: "The user asked for ETH and SOL spillovers; price discovery may concentrate in the most liquid perps (H-OF5 found same-minute co-movement for BTC, not a 1-3 minute lead)."
+    test: "HY lead-lag on trade-time prices; Granger F on 1 s returns (FIT and TEST); generalized-FEVD connectedness (VAR on log 1m RV, 10-step horizon) on TEST."
+    success: "positive peak lag for > 70% of targets for both ETH and SOL, and both net transmitters on TEST."
+    prior: 0.50
+    family: microstructure_dist
+    status: proposed
+  H-MS7:
+    title: "Distribution parameters scale with liquidity, so the sample extrapolates to the population"
+    statement: "Across the ~51 symbols, a cross-sectional model of each fitted parameter (trade rate, duration shape, size-tail alpha, sign-memory gamma, relative spread, impact per unit flow) on log trading activity W = sigma x price x volume (and asset class) predicts held-out symbols' parameters with leave-one-symbol-out R^2 > 0.5 for the liquidity-dependent parameters (rate, spread, impact), while alpha and gamma are approximately universal (between-symbol dispersion within their FIT-vs-TEST noise)."
+    rationale: "Kyle-Obizhaeva invariance held for trade size and count in H-SIM3; if parameters are functions of liquidity, a calibrated generator can create any market we trade."
+    test: "leave-one-symbol-out regressions; dispersion vs bootstrap noise for alpha and gamma."
+    success: "LOO R^2 > 0.5 for rate, spread and impact; alpha and gamma dispersion not significantly above noise."
+    prior: 0.50
+    family: microstructure_dist
+    status: proposed
+  H-MS8:
+    title: "An event-level simulator v1 built from the fitted laws reproduces held-out stylised facts better than v0"
+    statement: "A generator using fitted conditional durations (ACD or the H-MS9 model), power-law sizes, long-memory signs, an empirical impact function and spread dynamics, calibrated on FIT, has more of the H-SIM2 stylised facts (kurtosis, |r| ACF, flow ACF, flow-return impact, spread distribution) inside the TEST-half envelopes than simulator v0, in each class."
+    rationale: "v0 failed H-SIM2 (alts 0/5) mainly on flow autocorrelation; the fitted laws target exactly that."
+    test: "same stylised-fact envelopes as H-SIM2, on the TEST half; v1 vs v0 count per class."
+    success: "v1 count > v0 count in every class and >= 4/5 for majors."
+    prior: 0.45
+    family: microstructure_dist
+    status: proposed
+  H-MS9:
+    title: "A machine-learned conditional duration model beats ACD out of sample"
+    statement: "An XGBoost accelerated-failure-time model of the next inter-trade duration (features: last durations, recent |returns|, signed flow, spread, depth imbalance, time of day) has a higher TEST-half log-likelihood than the best ACD(1,1) model, per symbol class."
+    rationale: "The user asked for heavy machine learning to get the distributions right; AFT gives a full conditional distribution, comparable by log-likelihood."
+    test: "xgboost survival:aft (normal / logistic / extreme distributions) fitted on FIT; paired per-trade log-likelihood difference on TEST with block bootstrap CI."
+    success: "difference > 0 with CI excluding 0 in at least 2 of 3 classes."
+    prior: 0.50
+    family: microstructure_dist
+    status: proposed
+
+  H-MS5b:
+    title: "For free-spread (not tick-bound) perps, the spread predicts own future volatility (forward confirmation)"
+    statement: "For symbols whose spread exceeds one tick at least 25% of the time, adding the last-minute relative spread to the H-MS5 regression raises out-of-sample R^2 for next-5m and next-15m log RV, on days after 2026-11-10."
+    rationale: "H-MS5 failed because 8 of 12 symbols sit at one tick > 96% of the time (spread in bp = tick / price); the free-spread symbols CARV, KAS, NVDA showed a positive out-of-sample gain (+0.009 / +0.006) found after the fact."
+    test: "book_spillover_study design on additional pilot days (book_100ms series), free-spread symbols only; per-day out-of-sample R^2 gain, sign test across symbol-days."
+    success: "gain > 0 on >= 70% of >= 10 symbol-days."
+    prior: 0.45
+    family: microstructure_dist
+    status: proposed
+
+  # ==== Overnight program 2026-11-12 (registered 01:20 UTC BEFORE any new data or model): multi-day microstructure on
+  # random days (batches of 5 random UTC days, at most one week of raw data on disk at a time, raw deleted after
+  # aggregation) and neural-network / tree signal generators with interpretability. Day pool: 2025-08-01 .. 2026-11-09
+  # (Bybit ob200 archives start mid-2025); a day is llm_in_sample if before research.knowledge_cutoff, else clean_holdout.
+  # Plan: research/plans/2026-11-12_overnight_loop.md. Holm within each block (MD, NN).
+
+  # ---- Multi-day microstructure (block MD) ----
+  H-MD1:
+    title: "Trade-level traits are persistent per symbol: between-symbol variance dominates day-to-day variance"
+    statement: "For the sign-memory exponent gamma, lag-1 order-sign ACF, the size-tail index and the 3-component duration mixture weights, the intraclass correlation across symbol-days (symbol as the group) exceeds 0.5."
+    rationale: "The 2026-11-10 pilot (H-MS7) found these neither scale with liquidity nor are universal; if they are stable per symbol, a per-symbol calibration transfers across days."
+    test: "random-effects ICC with bootstrap CI over symbols; per segment where days exist in both."
+    success: "ICC > 0.5 with CI lower bound > 0.3 for at least 3 of the 4 traits."
+    prior: 0.55
+    family: microstructure_dist
+    status: proposed
+  H-MD2:
+    title: "Activity scaling with trading activity W holds across days with stable exponents"
+    statement: "Pooled over symbol-days, order rate, depth and impact scale with W = sigma x dollar volume with leave-one-symbol-out R^2 > 0.5 for rate and impact, and the per-day exponents vary within their sampling error (no significant day effect on the slope)."
+    rationale: "Pilot H-MS7: rate ~W^0.54, depth ~W^0.68, impact ~W^-0.75 (Kyle-Obizhaeva-like) on one day."
+    test: "pooled log-log regressions with day fixed effects and day x log W interactions (Wald test), SE clustered by symbol; LOO by symbol."
+    success: "both LOO R^2 > 0.5 and the interaction Wald p > 0.05."
+    prior: 0.55
+    family: microstructure_dist
+    status: proposed
+  H-MD3:
+    title: "Order-sign long memory holds on most symbol-days"
+    statement: "On >= 80% of symbol-days with >= 20k trades, the sign ACF decays as a power law (preferred over exponential on held-out lags) with gamma in (0, 1), and the pooled Hurst exponent of 1 s signed flow is above 0.5."
+    rationale: "Pilot H-MS3 met its literal criterion (48/48) but not Holm on one day; multi-day power should settle it."
+    test: "as H-MS3 per symbol-day; pooled Hurst with CI clustered by day."
+    success: "both parts, pooled over all batch days."
+    prior: 0.80
+    family: microstructure_dist
+    status: proposed
+  H-MD4:
+    title: "For free-spread perps the spread predicts own next-5m and next-15m volatility on new days"
+    statement: "On symbol-days where the spread exceeds one tick at least 25% of the time, adding the last-minute relative spread to the H-MS5 regression raises out-of-sample (second-half) R^2."
+    rationale: "Pilot H-MS5: only free-spread symbols (CARV, KAS, NVDA) showed a gain, found after the fact; random past days are new data."
+    test: "per symbol-day FIT/TEST halves as H-MS5; sign test of the gain across symbol-days."
+    success: "gain > 0 on >= 70% of >= 10 qualifying symbol-days."
+    prior: 0.45
+    family: microstructure_dist
+    status: proposed
+  H-MD5:
+    title: "ETH, SOL and DOGE are net volatility transmitters on most days"
+    statement: "In the daily Diebold-Yilmaz table of 1-minute realised volatility (same token set as H-MS6), ETH and SOL have positive net directional connectedness on >= 4 of every 5 days, and BTC is not a larger transmitter than ETH on average."
+    rationale: "Pilot H-MS6: ETH +25, SOL +22, DOGE +27, BTC +10 (CI incl. 0) on the CPI day only."
+    test: "per-day connectedness with block bootstrap CI; share of days with net > 0."
+    success: "ETH and SOL net > 0 on >= 80% of days."
+    prior: 0.50
+    family: microstructure_dist
+    status: proposed
+  H-MD6:
+    title: "Simulator v1 calibrated per day beats v0 on held-out half-days"
+    statement: "Calibrating sim.flow_sim_v1 on each day's first half puts more H-SIM2 stylised facts inside the second-half envelopes than v0 on >= 70% of symbol-class-days."
+    rationale: "Pilot H-MS8: v1 > v0 in every class on one day but majors missed (3/5); multi-day envelopes are wider and fairer."
+    test: "per day and class, v1 count minus v0 count; sign test."
+    success: "v1 > v0 on >= 70% of class-days and majors >= 4/5 on >= 50% of days."
+    prior: 0.50
+    family: microstructure_dist
+    status: proposed
+
+  # ---- Neural-network and tree signal generators with interpretability (block NN; deterministic tools only) ----
+  H-NN1:
+    title: "Nonlinear models (MLP, gradient-boosted trees) forecast next-day volatility better than log-HAR"
+    statement: "On the universe-L daily panel, an MLP and an XGBoost model fed the same point-in-time features (realised measures, HAR lags, semivariances, range measures, funding, regime and calendar features) have lower next-day QLIKE than per-asset log-HAR, out of sample (expanding window, monthly refit)."
+    rationale: "Vol is forecastable and partly nonlinear (jumps, regime interactions); log-HAR is the current champion (R-VOL-20)."
+    test: "paired QLIKE differences vs log-HAR, NW t by date; segments; same features and refit schedule for both models."
+    success: "at least one nonlinear model has difference < 0 with t < -2 in both segments."
+    prior: 0.35
+    family: ml_models
+    status: proposed
+  H-NN2:
+    title: "Nonlinear models do not forecast next-day direction better than the base rate"
+    statement: "The same MLP and XGBoost models trained for the sign of the next-24h vol-scaled return have Brier skill <= 0 out of sample in both segments (stated as the null)."
+    rationale: "H-IC1: direction from standard features is a coin flip and more inputs make it worse; nonlinear capacity should not change that."
+    test: "walk-forward, purged 24h, Brier skill vs the training base rate with 10-day block bootstrap CI."
+    success: "supports if the skill CI upper bound is <= +0.005 for both models in both segments."
+    prior: 0.75
+    family: ml_models
+    status: proposed
+  H-NN3:
+    title: "Interactions matter for volatility: TreeSHAP interaction share is large and its top pairs are stable"
+    statement: "For the XGBoost next-day volatility model, interaction attributions (TreeSHAP interaction values, off-diagonal) account for > 10% of total absolute attribution, and the top-5 interaction pairs in llm_in_sample overlap the top-5 in clean_holdout by >= 3."
+    rationale: "If the gain over HAR comes from interactions (e.g. vol level x weekend, jump x funding), they are knowledge the LLM can use as rules."
+    test: "xgboost pred_interactions on out-of-sample predictions per segment; overlap count; bootstrap over dates."
+    success: "both parts."
+    prior: 0.40
+    family: ml_interpretability
+    status: proposed
+  H-NN4:
+    title: "A sparse autoencoder on the MLP's hidden layer yields interpretable features tied to market states"
+    statement: "A sparse autoencoder (dictionary size 4x the hidden width, L1 sparsity) trained on the H-NN1 MLP's last hidden activations has, among its 10 most-used dictionary features, at least 6 whose activations correlate |rho| > 0.6 with a named state variable (vol level, vol-of-vol, recent jump, weekend, trend strength, funding z, drawdown), on held-out data."
+    rationale: "Mechanistic interpretability (Bricken et al. 2023, Towards Monosemanticity; Cunningham et al. 2023): dictionary learning recovers monosemantic features from superposed neurons; here it tells which concepts the network uses to forecast vol."
+    test: "SAE fit on in-sample activations, correlations on holdout activations; also ablate each feature and report the QLIKE change (causal relevance)."
+    success: ">= 6 of 10 features with |rho| > 0.6 on holdout, and ablating the top 3 raises QLIKE."
+    prior: 0.45
+    family: ml_interpretability
+    status: proposed
+  H-NN5:
+    title: "A small convolutional network on 1 s order-flow bars forecasts next-minute absolute returns better than a linear model"
+    statement: "On the multi-day micro data (1 s bars of signed flow, returns, volume, spread), a 1D CNN over the last 5 minutes has lower next-1m QLIKE for |return| than a linear HAR-style model on the same inputs, out of sample by day (train on some days, test on others)."
+    rationale: "Short-horizon vol has nonlinear order-flow structure (bursts, sweeps) that a linear model may miss; useful for quoting."
+    test: "leave-days-out CV; paired QLIKE difference by symbol-day, sign test and t."
+    success: "difference < 0 on >= 70% of held-out symbol-days with mean t < -2."
+    prior: 0.50
+    family: ml_models
+    status: proposed
+  H-NN6:
+    title: "The same network does not predict next-minute direction usefully"
+    statement: "A 1D CNN trained on the same 1 s inputs for the sign of the next-1m return has out-of-sample AUC <= 0.52 on held-out days (stated as the null)."
+    rationale: "Pilot H-MS6 / H-OF2: no sub-minute lead and no flow-anomaly direction; order-sign memory exists but is mostly priced."
+    test: "leave-days-out AUC with bootstrap CI over symbol-days."
+    success: "supports if the AUC CI upper bound <= 0.52."
+    prior: 0.70
+    family: ml_models
+    status: proposed
+
+  # ---- NN round 2 (registered 2026-11-12 ~02:00 UTC after the H-NN1-4 results, before these tests) ----
+  H-NN7:
+    title: "The weekend volatility discount is smaller when volatility is high (forward confirmation)"
+    statement: "In a log-HAR with weekday dummies and their interaction with the vol level (log RV_w above its 1-year median), the Saturday/Sunday discount is less negative in high-vol states, on forecast dates after 2026-11-12, universe L."
+    rationale: "Exploratory TreeSHAP finding in H-NN3 (agent B, 2026-11-12): Saturday about 0.6x, Monday 1.3x, weekend discount shrinks when vol is high. Seen on all history, so only new dates can confirm it."
+    test: "pooled log-HAR with weekday x high-vol interaction, date-clustered SE, forward dates only; re-run monthly."
+    success: "interaction > 0 (smaller discount) with t > 2 on >= 120 forward dates."
+    prior: 0.55
+    family: vol_model
+    status: proposed
+  H-LEV7:
+    title: "A market-wide down day raises next-day volatility of individual crypto perps (forward confirmation)"
+    statement: "Controlling for each symbol's own HAR terms and own RS-/RS+, a negative equal-weight crypto market return on day t raises next-day log RV more than a positive market return of the same size, on forecast dates after 2026-11-12."
+    rationale: "Exploratory attribution in the H-NN1 models (agent B, 2026-11-12) suggested market-wide down days raise vol forecasts; this would be a market-level leverage effect that coexists with the absence of a symbol-level one (V11, H-LEV2)."
+    test: "pooled log-HAR + own semivariances + market negative/positive return terms, date-clustered SE, forward dates only."
+    success: "b(market down) - b(market up) > 0 with t > 2 on >= 120 forward dates."
+    prior: 0.45
+    family: leverage
+    status: proposed
+  H-NN8:
+    title: "A nonlinear next-hour volatility model beats the robust sigma with the hour-of-week profile"
+    statement: "On 1h bars for universe L, an XGBoost and an MLP forecaster of next-hour log squared return (features: robust per-bar sigma, hour-of-week factor, funding-hour flag, recent |returns| at 1-24 h lags, recent jump flag, daily HAR level, weekday) have lower next-hour QLIKE than robust_bc x the H-NS4 seasonal factor, out of sample with monthly expanding refits."
+    rationale: "H-NS4 (grade A) made the seasonal profile the intraday champion; the daily-panel result (H-NN1) says nonlinear gains come mostly from calendar structure - this tests whether that is already captured intraday."
+    test: "paired QLIKE differences NW t by date; segments; same design as H-NN1."
+    success: "at least one model has difference < 0 with t < -2 in both segments."
+    prior: 0.40
+    family: ml_models
+    status: proposed
+  H-NN9:
+    title: "With a wider hidden layer, a sparse autoencoder recovers named market-state features"
+    statement: "Retraining the H-NN1 MLP with a 64-unit last hidden layer (same inputs, same training protocol) and a sparse autoencoder with a 1x-2x dictionary, at least 6 of the 10 most-used dictionary features correlate |rho| > 0.6 with a named state variable (vol level, vol-of-vol, recent jump, weekend, trend strength, funding z, drawdown) on clean_holdout activations, and ablating the top 3 raises QLIKE with t > 2."
+    rationale: "H-NN4 failed with a 16-unit layer and a 4x dictionary (over-complete for so few units; the layer kept only vol level and weekend). A design change, registered as a new test before it is run."
+    test: "as H-NN4, with the wider layer and smaller dictionary; report the MLP's own QLIKE vs the 16-unit version."
+    success: "both parts on clean_holdout."
+    prior: 0.35
+    family: ml_interpretability
+    status: proposed
+
+  H-NN10:
+    title: "The frozen hourly ML volatility forecaster beats robust sigma x hour-of-week on forward data"
+    statement: "The H-NN8 XGBoost next-hour volatility model, frozen as fitted on data up to 2026-11-12, has lower next-hour QLIKE than robust_bc x the H-NN8/H-NS4 seasonal factor on hours after 2026-11-12, universe L."
+    rationale: "H-NN8 supported in both segments (XGB -0.040 / -0.065, t -5.1 / -2.7) with walk-forward refits; a frozen deployed tool must hold forward before the decision layer relies on it (R-ML-7)."
+    test: "tools.vol_ml forecasts logged hourly from 2026-11-13; paired QLIKE difference vs the baseline, NW t by date."
+    success: "difference < 0 with t < -2 over >= 60 forward days."
+    prior: 0.60
+    family: ml_models
+    status: proposed
+
+  # ==== Acceleration (registered 2026-11-12 ~12:30 UTC BEFORE testing): discretised state spaces, sparsity, and FDR-
+  # controlled hypothesis mining on the aggregates. Plan: research/plans/2026-11-12_overnight_loop.md (section Acceleration).
+  # Holm within DS and SP; MINE uses its own pre-registered discovery/confirmation protocol.
+
+  # ---- Discretised observation space (block DS; daily panel, universe L, point-in-time features of ai_trader.ml.features) ----
+  H-DS1:
+    title: "A small discrete state space captures most of the nonlinear volatility signal"
+    statement: "A discretised state model with at most 64 cells (fixed quantile lattice, k-means codebook, or an honest shallow tree; cell = empirical-Bayes shrunk mean log RV ratio to log-HAR) recovers at least 80% of the next-day QLIKE gain that XGBoost (H-NN1) achieves over log-HAR, out of sample with monthly expanding refits."
+    rationale: "Rules for the LLM are discrete statements ('WHEN state X THEN expect Y'); if a few cells carry most of the gain, the nonlinear model's knowledge can be stated as rules."
+    test: "paired QLIKE vs log-HAR for each discretisation (cells and quantile edges fitted on training data only), share of the XGB gain; NW t by date; segments."
+    success: "best discretisation >= 80% of the XGB gain in both segments, with its own difference vs log-HAR t < -2."
+    prior: 0.40
+    family: state_space_discrete
+    status: proposed
+  H-DS2:
+    title: "The ordering of discrete states by next-day volatility is stable across the cutoff"
+    statement: "For the best H-DS1 discretisation, the Spearman correlation between cells' shrunk mean next-day log RV ratio in llm_in_sample and in clean_holdout is > 0.8 (cells with >= 30 observations in both)."
+    rationale: "A rule built on a cell is only usable if the cell means the same thing in new data."
+    test: "Spearman with bootstrap CI over cells (resampling dates)."
+    success: "rho > 0.8 with CI lower bound > 0.6."
+    prior: 0.55
+    family: state_space_discrete
+    status: proposed
+  H-DS3:
+    title: "No discrete state predicts next-day direction in a stable way (null)"
+    statement: "For discretisations of the same features (up to 64 cells), the cell ordering by next-day vol-scaled return has Spearman <= 0.3 between segments and the best cell-based direction rule has holdout Brier skill <= 0."
+    rationale: "Direction from standard features is a coin flip (H-IC1, H-NN2); discretisation should not change that."
+    test: "as H-DS2 for returns, plus a cell-sign direction rule evaluated by Brier skill on the holdout."
+    success: "supports if both hold."
+    prior: 0.75
+    family: state_space_discrete
+    status: proposed
+
+  # ---- Sparsity: the most important inputs, nodes and neurons (block SP) ----
+  H-SP1:
+    title: "A heavily pruned network forecasts next-day volatility as well as the dense one"
+    statement: "Iterative magnitude pruning (lottery-ticket rewinding, Frankle and Carbin 2019) of the H-NN1 MLP to >= 95% weight sparsity keeps next-day QLIKE within 1% of the dense network, out of sample."
+    rationale: "If the function is simple, almost all weights are redundant and the surviving circuit is small enough to read."
+    test: "pruning schedule fixed before evaluation; QLIKE ratio sparse/dense with bootstrap CI by date; segments."
+    success: "ratio <= 1.01 with CI upper bound <= 1.02 in both segments at >= 95% sparsity."
+    prior: 0.55
+    family: ml_sparsity
+    status: proposed
+  H-SP2:
+    title: "Stability selection finds a small, stable set of volatility inputs"
+    statement: "Randomised-lasso stability selection (Meinshausen and Buhlmann 2010) on a wide library (>= 200 candidate features: lags, logs, interactions, discretised indicators) for next-day log RV selects <= 10 features with selection probability > 0.8, and the selected sets of llm_in_sample and clean_holdout overlap by >= 70%."
+    rationale: "Which inputs the decision layer must have; complements TreeSHAP (H-NN3) with a sparsity-based, error-controlled selection."
+    test: "subsampling stability paths, per-family error bound; overlap of the selected sets across segments."
+    success: "both conditions."
+    prior: 0.50
+    family: ml_sparsity
+    status: proposed
+  H-SP3:
+    title: "Surviving neurons of the pruned network compute simple functions of few inputs"
+    statement: "In the H-SP1 pruned network, each surviving hidden unit's activation is explained (R^2 > 0.8 on holdout) by a function of at most 2 inputs (additive spline), and ablating the top-3 units by attribution raises QLIKE by > 5%."
+    rationale: "Mechanistic reading of the sparse circuit: if units are near-monosemantic in input space, each becomes a rule."
+    test: "per-unit GAM fits on 1 and 2 inputs; ablation with bootstrap CI."
+    success: ">= 80% of surviving units meet the R^2 condition and the ablation effect holds."
+    prior: 0.40
+    family: ml_sparsity
+    status: proposed
+
+  # ---- FDR-controlled hypothesis mining on the micro aggregates (block MINE) ----
+  H-MINE1:
+    title: "Effects mined on discovery days replicate on later, unseen confirmation days"
+    statement: "Mining protocol fixed now: on the 1 s / 1 min aggregates of the DISCOVERY days (batches 1-3 plus the 2026-11-10 pilot: 16 days), test a pre-declared family of conditional effects - next-1m and next-5m |return| and signed return conditioned on discretised micro states (signed-flow quintile x recent-vol tercile x spread regime x hour-of-day block x symbol class, plus BTC/ETH/SOL state for alts) - with Benjamini-Hochberg FDR at 10% (day-clustered SEs); then test every discovery once on the CONFIRMATION days (batches 4-6, never looked at during discovery). Claim: >= 50% of discoveries replicate in sign with one-sided p < 0.05, and the volatility effects replicate at a higher rate than the return (direction) effects."
+    rationale: "The user asked to explore many more hypotheses on the aggregates; a discovery/confirmation split with FDR control is the honest way to mine at scale."
+    test: "as stated; the discovery list and the confirmation-day list are frozen in a diary entry before confirmation is run."
+    success: "replication rate >= 50% and vol-effect replication rate > direction-effect replication rate."
+    prior: 0.45
+    family: hypothesis_mining
+    status: proposed
+
+  H-DS4:
+    title: "Weekday x v0-trend cells adjust next-day volatility as the 2026-11-12 cell table says (forward confirmation)"
+    statement: "On forecast dates after 2026-11-12 (universe L), next-day RV relative to the log-HAR forecast is lower on Saturdays when the v0 trend is range or down (about -50%), higher on Mondays (about +25 to +45%), and higher on Tuesday-Friday when the v0 trend is up (about +20 to +28%); each of the three cell effects has the stated sign with t > 2."
+    rationale: "Agent C's best discretisation (36 cells, H-DS1) produced these effects in both segments, but the cell groups behind the rules R-DS-1..4 were chosen after reading the table, so only new dates can confirm them."
+    test: "discrete_states_study cell assignment frozen as of 2026-11-12; pooled mean of log(RV_next / log-HAR) per cell group on forward dates, date-clustered SE."
+    success: "all three cell groups with the stated sign and t > 2 on >= 120 forward dates."
+    prior: 0.55
+    family: state_space_discrete
+    status: proposed
+
+  H-SP4:
+    title: "Cluster-level stability selection keeps one vol-level cluster and the calendar, on new data"
+    statement: "Repeating the H-SP2 randomised-lasso stability selection with features grouped into correlation clusters (|rho| > 0.8 within a cluster), on monthly refits whose training window ends after 2026-11-12, selects the vol-level cluster and the weekend/calendar cluster with probability > 0.8 and no other cluster above 0.5."
+    rationale: "Found after the fact in H-SP2 (agent D, 2026-11-12): single vol-level columns substitute for each other (none stable), but the vol-level cluster was stable at 1.00 / 0.99. Only refits on new data can confirm it."
+    test: "sparsity_study cluster-level stability on the first 3 monthly refits after 2026-11-12."
+    success: "both clusters > 0.8 and no other cluster > 0.5 in all 3 refits."
+    prior: 0.65
+    family: ml_sparsity
+    status: proposed
+
+  # ==== Full-speed round (registered 2026-11-12 22:25 UTC BEFORE testing) ====
+  H-NN11:
+    title: "A nonlinear next-hour volatility model also beats robust sigma x hour-of-week for TradFi perps"
+    statement: "The H-NN8 design (XGBoost and MLP on robust per-bar sigma, hour-of-week factor, recent |returns| at 1-24 h, daily HAR level, weekday, plus a cash-session flag for equities and a CME-session flag for commodities) has lower next-hour QLIKE than robust_bc x the hour-of-week factor for universe T (TradFi perps with >= 120 complete days), out of sample with monthly expanding refits (models may pool training data across universe T)."
+    rationale: "H-NN8 supported for crypto; TradFi perps have a much stronger session structure (H-NS4: -0.29/-0.38 QLIKE from the seasonal factor alone), so the question is whether nonlinearity still adds."
+    test: "paired QLIKE differences NW t by date; segments (TradFi is mostly clean_holdout)."
+    success: "at least one model has difference < 0 with t < -2 in clean_holdout (llm_in_sample reported, likely too short)."
+    prior: 0.45
+    family: ml_models
+    status: proposed
+  H-NN12:
+    title: "Cross-asset activity improves next-hour volatility forecasts beyond each asset's own inputs"
+    statement: "Adding the recent |returns| (1-6 h) and robust sigma of BTC, ETH and QQQ to the H-NN8 / H-NN11 feature sets lowers next-hour QLIKE for the other crypto perps and for TradFi perps, out of sample."
+    rationale: "ETH and SOL transmit volatility on every random day so far (H-MD5 interim 15/15), and connectedness rises in news sessions (H-MS6); a forecasting gain would turn that into a tool input."
+    test: "paired QLIKE differences (with vs without the cross-asset block) per universe, NW t by date; segments."
+    success: "difference < 0 with t < -2 in both segments for crypto, and in clean_holdout for TradFi."
+    prior: 0.50
+    family: ml_models
+    status: proposed
+  H-MINE2:
+    title: "Daily-panel effects mined before the cutoff replicate after it"
+    statement: "Mining protocol fixed now: on the universe-L daily panel (ai_trader.ml.features, point-in-time), declare a family of conditional effects - next-day vol ratio to log-HAR, next-day and next-5-day vol-scaled return - conditioned on discretised daily states (terciles/quintiles of each top feature from H-NN3 TreeSHAP and pairs of them, weekday, v0 regime cell, funding-z tercile, drawdown flag, BTC state for alts), with Benjamini-Hochberg FDR at 10% using date-clustered SEs on llm_in_sample (DISCOVERY); freeze the discovery list; then test each discovery once on clean_holdout (CONFIRMATION). Claim: >= 50% of discoveries replicate in sign with one-sided p < 0.05, and volatility effects replicate at a higher rate than return effects."
+    rationale: "Scale up hypothesis exploration with honest multiple-testing control; the cutoff split is the natural discovery/confirmation boundary and Claude cannot have seen the holdout."
+    test: "as stated; the discovery list is frozen in a diary entry and a JSON file before any clean_holdout statistic is computed."
+    success: "replication rate >= 50% and vol replication rate > return replication rate."
+    prior: 0.50
+    family: hypothesis_mining
+    status: proposed
+
+  H-MINE2a:
+    title: "Alt volatility comes in below log-HAR when BTC is in a whipsaw regime (forward confirmation)"
+    statement: "On forecast dates after 2026-11-12, when BTC's v0 cell is R6 (whipsaw), the next-day RV of universe-L alts is below their log-HAR forecast (mean log ratio < 0)."
+    rationale: "Novel H-MINE2 discovery that replicated marginally (about -16% in-sample, -20% holdout; holdout p 0.04 on 9 dates, date-clustered p 0.07); it contradicts R-VOL-7 / R-VOL-25 (no extra information from the BTC state), so it stays out of the rules until confirmed."
+    test: "daily_mining state definitions frozen as of 2026-11-12; mean log(RV_next / log-HAR) for alts on BTC-R6 dates after registration, date-clustered SE."
+    success: "mean < 0 with t < -2 over >= 30 forward BTC-R6 dates."
+    prior: 0.35
+    family: hypothesis_mining
+    status: proposed
+  H-MINE2b:
+    title: "Calm-weekend days drift up (forward confirmation)"
+    statement: "On forecast dates after 2026-11-12 that fall Friday-Sunday with the 90-day vol level in its bottom tercile (edges frozen as of 2026-11-12), the next-day vol-scaled return of universe-L perps is positive."
+    rationale: "Novel H-MINE2 discovery that replicated marginally (+0.10 sigma in-sample, +0.16 holdout; holdout p 0.04, date-clustered p 0.06); it contradicts R-DS-6 / R-PX-9 (no weekend direction), so it stays out of the rules until confirmed. Note it echoes the calm-weekend damper neurons (H-SP3), which concern volatility, not direction."
+    test: "mean next-day vol-scaled return on qualifying forward dates, date-clustered SE."
+    success: "mean > 0 with t > 2 over >= 60 forward qualifying dates."
+    prior: 0.25
+    family: hypothesis_mining
+    status: proposed
+
+  # ---- Stochastic market generator for backtesting on unseen-like data (block GEN; registered 2026-11-13 BEFORE testing) ----
+  # Calibration uses llm_in_sample data ONLY; clean_holdout is the 'data not seen before' the generated paths must cover.
+  H-GEN1:
+    title: "A parametric, parameter-uncertain market generator calibrated in-sample covers the holdout performance of the strategies"
+    statement: "For each strategy family x universe in the strategy panel, the realised clean_holdout Sharpe lies inside the 5-95% band of its distribution over >= 500 generated paths of the same length, for >= 80% of the family x universe pairs; the generator is calibrated on llm_in_sample only and draws its parameters from their estimation uncertainty on every path (so paths are more dispersed than a single fitted model)."
+    rationale: "User request: simulate from the characteristics of the prior, make it more stochastic, and backtest strategies on generated data that recreates data not seen before. Coverage of the holdout is the honest test of whether the generator is a usable training ground (B5's bootstrap only reshuffled the in-sample)."
+    test: "per pair, rank of the holdout Sharpe within the generated distribution; coverage rate with a binomial CI; compare with a fixed-parameter version (no parameter uncertainty) and with B5's stationary bootstrap."
+    success: "coverage >= 80% for the parameter-uncertain generator and higher than for the fixed-parameter generator."
+    prior: 0.45
+    family: synthetic
+    status: proposed
+  H-GEN2:
+    title: "The generator reproduces the held-out stylised facts at daily and hourly frequency"
+    statement: "Generated paths reproduce, inside the 5-95% generated envelopes, the clean_holdout values of: daily and hourly return kurtosis, |r| autocorrelation at 1-24 h and 1-20 d, the weekday and hour-of-week volatility profile, cross-asset return and volatility correlation (crypto factor share), jump frequency, and v0 regime durations, for at least 8 of 10 facts."
+    rationale: "A generator that misses the facts strategies depend on cannot be trusted for backtests (H-SIM2 / H-MS8 failed at the micro level; this is the daily/hourly level where the deterministic strategies live)."
+    test: "envelope check per fact, pooled over universe L; report per fact."
+    success: ">= 8 of 10 facts inside the envelopes."
+    prior: 0.50
+    family: synthetic
+    status: proposed
+  H-GEN3:
+    title: "Strategy rankings on generated paths agree with their holdout rankings"
+    statement: "The Spearman correlation between strategy families' median Sharpe on generated paths and their realised clean_holdout Sharpe is > 0.3 across family x universe pairs."
+    rationale: "Even with wide bands, a generator is useful for choosing among strategies only if it orders them as reality does."
+    test: "Spearman with bootstrap CI over pairs."
+    success: "rho > 0.3 with CI lower bound > 0."
+    prior: 0.35
+    family: synthetic
+    status: proposed
+
+  # ==== BTC field program (registered 2026-11-13 ~21:00 UTC BEFORE any model is fitted). Plan: research/plans/2026-11-13_btc_field_program.md.
+  # Priors shaded down per the 2026-11-12 calibration (our priors were ~2.3x too optimistic). Holm within each block.
+  # ---- Probability field (block FLD): Kramers-Moyal / Fokker-Planck with jumps, sparse polynomial coefficients ----
+  H-FLD1:
+    title: "Sparse polynomial drift / diffusion / jump-intensity fields give better BTC predictive densities than log-HAR-t"
+    statement: "For BTC, estimating the Kramers-Moyal drift, diffusion and jump intensity as sparse polynomials of a point-in-time state vector (log vol level, weekday / hour-of-week, signed flow (delta), funding, recent jump flag, regime, news intensity where available) and propagating the density over 1h, 4h and 1d gives a higher out-of-sample log score than log-HAR with Student-t innovations and a constant Kou jump rate."
+    rationale: "The user's 'field as the ultimate prior': the Fokker-Planck / Kolmogorov-Feller equation is the PDE that moves a probability density; sparse polynomial coefficients make the field readable (SINDy-style discovery)."
+    test: "expanding monthly refits; mean log score per horizon, paired differences with NW t by date; PIT histograms and coverage; segments."
+    success: "log-score gain with t > 2 at >= 2 of 3 horizons in both segments."
+    prior: 0.30
+    family: btc_field
+    status: proposed
+  H-FLD2:
+    title: "The learned drift field carries no out-of-sample direction skill (null)"
+    statement: "The sign of the field's expected 1h / 1d BTC return has Brier skill <= 0 versus the base rate out of sample, and its drift term adds nothing to the log score once diffusion and jumps are modelled."
+    rationale: "Every direction test so far failed (R-ML-5, H-NN2, H-DS3, H-MINE2); the field's value should be in the second moment and the tails."
+    test: "Brier skill with 10-day block bootstrap; log score with vs without the drift term."
+    success: "supports if the Brier skill CI upper bound <= 0.005 and the drift term's log-score gain has |t| < 2, both segments."
+    prior: 0.75
+    family: btc_field
+    status: proposed
+  H-FLD3:
+    title: "Online Bayesian updating of the field coefficients beats a frozen field"
+    statement: "Updating the polynomial coefficients online (Kalman / recursive least squares with forgetting, prior = the in-sample fit) through clean_holdout gives a higher log score than the field frozen at the cutoff."
+    rationale: "'Update the prior accordingly': the field drifts across regimes (H-MD1: microstructure traits vary by day)."
+    test: "paired log-score difference on clean_holdout, NW t by date."
+    success: "difference > 0 with t > 2."
+    prior: 0.35
+    family: btc_field
+    status: proposed
+
+  # ---- Polynomial-neuron network with conformal intervals and latent dynamics (block PNN) ----
+  H-PNN1:
+    title: "A small polynomial-neuron (Kolmogorov-Arnold style) network gives sharper calibrated BTC quantiles than an MLP of the same size"
+    statement: "A network whose edges carry learnable polynomial / spline functions (<= ~2,000 parameters) forecasting BTC 1h and 1d return quantiles (5/10/25/50/75/90/95) has a lower out-of-sample pinball loss than an MLP with the same parameter budget and than log-HAR-t quantiles."
+    rationale: "Neurons with embedded complexity and few parameters (user request); KANs are also readable as formulas."
+    test: "expanding monthly refits; paired pinball-loss differences, NW t by date; segments; parameter counts reported."
+    success: "beats both baselines with t > 2 at >= 1 horizon in both segments."
+    prior: 0.30
+    family: btc_pnn
+    status: proposed
+  H-PNN2:
+    title: "Adaptive conformal intervals around the network hold nominal coverage on unseen data"
+    statement: "Adaptive conformal inference (Gibbs and Candes 2021) around the H-PNN1 quantiles gives clean_holdout coverage within +/-2 pp of 80%, 90% and 95% at 1h and 1d, with average interval width no wider than the unconformalised log-HAR-t intervals at the same coverage."
+    rationale: "Conformal prediction gives distribution-free calibration - the honest form of 'targets with probabilities'."
+    test: "coverage and width per level and horizon on clean_holdout; block bootstrap CIs."
+    success: "all six coverages within +/-2 pp and widths not larger than the baseline."
+    prior: 0.55
+    family: btc_pnn
+    status: proposed
+  H-PNN3:
+    title: "The network's latent state is predictable and feeding the predicted latent back improves forecasts"
+    statement: "A linear dynamical model of the network's latent (bottleneck) state predicts the next latent state better than persistence (out-of-sample R^2 gain > 0.05), and adding the predicted next latent to the forecaster lowers pinball loss."
+    rationale: "The user's real-space <-> latent-space feedback loop; a learned latent dynamics (world-model style) may generalise better."
+    test: "out-of-sample R^2 of latent prediction; paired pinball-loss difference with vs without the predicted latent; segments."
+    success: "both parts with t > 2 in clean_holdout."
+    prior: 0.25
+    family: btc_pnn
+    status: proposed
+
+  # ---- News, events and on-chain (block NEWS; point-in-time, BTC) ----
+  H-NEWS1:
+    title: "Crypto news and event intensity predicts next-day BTC volatility beyond log-HAR and the weekday factor"
+    statement: "Point-in-time news intensity (GDELT article volume and tone for bitcoin / crypto / blockchain / crypto-industry queries), scheduled macro and crypto events (CPI, FOMC, ETF / regulatory decisions, halving), and on-chain activity (hash rate, transactions, mempool) add to next-day BTC log RV forecasts beyond log-HAR x weekday."
+    rationale: "Information arrival drives volatility; the user asked to include blockchain, industry news and events."
+    test: "pooled log-HAR + weekday + news block, expanding window; paired QLIKE difference with NW t; segments; feature known_ts = publication time."
+    success: "QLIKE difference < 0 with t < -2 in both segments."
+    prior: 0.35
+    family: btc_news
+    status: proposed
+  H-NEWS2:
+    title: "News sentiment does not predict next-day BTC direction (null)"
+    statement: "The same news/event block has Brier skill <= 0 for the sign of the next-day BTC return, out of sample."
+    rationale: "Consistent with every direction result so far; registered as the null."
+    test: "walk-forward logistic with the news block; Brier skill with block bootstrap."
+    success: "supports if the skill CI upper bound <= 0.005 in both segments."
+    prior: 0.75
+    family: btc_news
+    status: proposed
+
+  # ---- Order-book generation through a Bybit-semantics matching engine (block OBG) ----
+  H-OBG1:
+    title: "Generated BTC order books run through the Bybit-semantics matching engine reproduce held-out book and trade facts"
+    statement: "A queue-reactive order-flow generator conditioned on price action and volume, calibrated on real BTC book/trade aggregates and executed by the Rust matching engine (at-match), reproduces on held-out real days >= 6 of 8 facts inside the day-to-day envelopes: spread distribution, depth profile within 25 bp, queue depletion rate at the touch, trade-size distribution, trade inter-arrival law, price impact per unit signed flow, |r| ACF at 1-60 s, signed-flow ACF."
+    rationale: "The user's half-real / half-generated training plan needs a generator that matches reality at the book level."
+    test: "per fact envelope check on held-out days (day-level split), BTC first."
+    success: ">= 6 of 8 facts inside the envelopes."
+    prior: 0.35
+    family: btc_orderbook
+    status: proposed
+  H-OBG2:
+    title: "Training on half real, half generated samples is at least as good as real-only for next-minute volatility"
+    statement: "A next-minute BTC volatility model trained on 50% real + 50% generated samples has QLIKE on held-out real days no worse than the real-only model by more than 1% (non-inferiority), and strictly better when the real training set is cut to 25%."
+    rationale: "Generated data as augmentation only helps if it does not teach the model wrong dynamics."
+    test: "leave-days-out, paired QLIKE ratios with bootstrap CIs over days."
+    success: "both parts."
+    prior: 0.30
+    family: btc_orderbook
+    status: proposed
+
+  # ---- Volatility break of structure as a trend-following filter (block VBOS; registered 2026-11-13 ~21:15 UTC BEFORE testing) ----
+  # Plan: research/plans/2026-11-13_vol_bos_trend.md. Universe L (BTC first, then the 23 crypto), T as holdout robustness.
+  # Hyperparameters chosen ONLY by nested purged walk-forward inside llm_in_sample; DSR and PBO reported for every grid.
+  H-VBOS1:
+    title: "After a volatility break of structure, trend following pays more than unconditionally"
+    statement: "Conditional on a volatility break of structure (vol BoS: log realised vol breaking out of its own trailing range or changepoint, per the pre-declared detector families), the trend ensemble's net P&L over the next 5-20 days is higher than its unconditional mean."
+    rationale: "Trend profits come from rare large moves (R-PD-2, H-PD6 / EX1); a regime of expanding volatility may be when those moves start, so vol BoS could be the timing filter trend has been missing."
+    test: "event study on detector triggers (declustered), paired against unconditional periods; date-clustered SE; Holm over detector families."
+    success: "conditional minus unconditional > 0 with t > 2 in llm_in_sample and > 0 in clean_holdout for the in-sample-selected detector."
+    prior: 0.30
+    family: vol_bos_trend
+    status: proposed
+  H-VBOS2:
+    title: "Directional semivolatility breaks point the trend: upside semivariance breaking out precedes up-moves and vice versa"
+    statement: "When upside realised semivariance (RS+) breaks above its learned threshold while downside (RS-) does not (and vice versa), the next 5-20 day vol-scaled return has the sign of the dominant side, net of 7.5 bps per side."
+    rationale: "The user's idea: decompose volatility into upside and downside parts and track which reaches its threshold; untested directly (H-LEV2 tested asymmetry for vol forecasts, not direction)."
+    test: "event study per side, signed return in sigma units, date-clustered SE; threshold chosen by nested walk-forward in-sample."
+    success: "signed mean > 0 with t > 2 in llm_in_sample and > 0 in clean_holdout."
+    prior: 0.20
+    family: vol_bos_trend
+    status: proposed
+  H-VBOS3:
+    title: "Trend following filtered by vol BoS plus price-structure confirmation beats unfiltered trend after selection penalties"
+    statement: "A strategy that trades trend only after a vol BoS, in the direction of a confirmed price break of structure (break of the last swing high / low, fractal pivots) and of the dominant semivariance, with exits as the trend strategies' own (R-EXIT-1), has a higher net Sharpe than the unfiltered trend ensemble in clean_holdout, with a deflated Sharpe > 0.95 in llm_in_sample given the full hyperparameter grid and a probability of backtest overfitting (CSCV) < 0.5."
+    rationale: "'Trend following with market structure awareness': combine timing (vol BoS), direction (semivariance dominance, structure break) and the existing trend exits; guard against overfitting explicitly."
+    test: "nested purged walk-forward (inner: choose hyperparameters on past data; outer: evaluate); DSR over the grid; PBO by CSCV (16 blocks); paired daily P&L vs the ensemble in clean_holdout, NW t."
+    success: "all three: DSR > 0.95 in-sample, PBO < 0.5, holdout difference > 0 (t reported)."
+    prior: 0.20
+    family: vol_bos_trend
+    status: proposed
+  H-VBOS4:
+    title: "Learned vol-BoS thresholds are stable across the cutoff"
+    statement: "The threshold region that maximises the inner-loop objective in llm_in_sample (vol BoS quantile, semivariance-break quantile) overlaps the region that would be optimal in clean_holdout (the holdout-optimal threshold lies within the in-sample top-quintile region of the grid)."
+    rationale: "A filter is usable only if its threshold means the same thing in new data (cf. R-SYN-2: per-symbol parameter selection is a coin flip)."
+    test: "objective surfaces per segment; overlap test reported, no holdout tuning used for any other verdict."
+    success: "holdout optimum inside the in-sample top-quintile region."
+    prior: 0.35
+    family: vol_bos_trend
+    status: proposed
+
+  H-VBOS5:
+    title: "Trend following earns less than its mean after a volatility range break (forward confirmation)"
+    statement: "On dates after 2026-11-13, in the 5-20 days after a range break (5-20 day realised vol above its trailing 60-180 day 90-100% quantile, detector frozen as in research/reports/vol_bos_2026-11-13.md), the trend ensemble's net P&L is below its unconditional mean, universe L."
+    rationale: "Found in the H-VBOS1 study as the opposite of the registered direction, in both segments (walk-forward -0.037/day t -2.43 daily, -0.075 t -2.37 4h; holdout -0.086 t -2.97, 24 events; 89-100% of grid points negative). Seen before registration, so only forward data can confirm it."
+    test: "event study on forward triggers (declustered), date-clustered SE."
+    success: "conditional minus unconditional < 0 with t < -2 over >= 30 forward events."
+    prior: 0.45
+    family: vol_bos_trend
+    status: proposed
+
+  H-FLD4:
+    title: "When 24h momentum and the trend score agree, BTC next-hour variance and jump risk rise beyond log-HAR-t x hour-of-week (forward)"
+    statement: "On hours after 2026-11-13, the product of 24h momentum and the trend score (agreement, either direction) has a positive coefficient on next-hour log squared return and on jump occurrence, controlling for log-HAR-t and the hour-of-week factor."
+    rationale: "Term found in the H-FLD1 field fit (agent F1); it is part of a model fitted on all pre-cutoff data and was seen in the holdout evaluation, so only forward hours can confirm it as an incremental driver."
+    test: "regression on forward hours with date-clustered SE; logistic for jump occurrence."
+    success: "both coefficients > 0 with t > 2 over >= 60 forward days."
+    prior: 0.40
+    family: btc_field
+    status: proposed
+
+  # ---- News from non-GDELT sources (block NEWS, second attempt; registered 2026-11-13 ~23:00 UTC BEFORE any fetch or test) ----
+  # GDELT rate-limited the history (3 of 20 series); H-NEWS1/2 are not run and are superseded by H-NEWS3/4 on other sources.
+  # Sources (all free, history back to 2015-2018): Wikipedia pageviews (crypto articles), Hacker News story/comment counts
+  # (Algolia search), the alternative.me Fear and Greed index, The Guardian Open Platform article counts, Wikipedia edit counts.
+  # Each daily value is stamped known_ts = the time it became public (next UTC day for daily aggregates).
+  H-NEWS3:
+    title: "Aggregated news attention from non-GDELT sources predicts next-day BTC volatility beyond log-HAR x weekday"
+    statement: "A daily news-attention block (abnormal Wikipedia pageviews and edits for bitcoin / crypto-industry articles, Hacker News crypto story and comment counts, Guardian crypto article counts, Fear and Greed level and change) plus the scheduled-event calendar and on-chain activity lowers next-day BTC log-RV QLIKE versus log-HAR x weekday."
+    rationale: "Same idea as H-NEWS1 (information arrival drives volatility) with sources whose history can actually be downloaded."
+    test: "pooled log-HAR + weekday + block, expanding window; paired QLIKE difference with NW t; segments; known_ts respected; block pre-declared, abnormal = log value minus its trailing 28-day median."
+    success: "QLIKE difference < 0 with t < -2 in both segments."
+    prior: 0.30
+    family: btc_news
+    status: proposed
+  H-NEWS4:
+    title: "Aggregated news attention and sentiment do not predict next-day BTC direction (null)"
+    statement: "The H-NEWS3 block has Brier skill <= 0 for the sign of the next-day BTC return, out of sample."
+    rationale: "Every direction test so far failed; the Fear and Greed index in particular is a well-known contrarian story worth testing as a null."
+    test: "walk-forward logistic with the block; Brier skill with 10-day block bootstrap."
+    success: "supports if the skill CI upper bound <= 0.005 in both segments."
+    prior: 0.75
+    family: btc_news
+    status: proposed
+
+  # ---- Live interpretation of the frozen network (block LIVE; forward only, registered 2026-11-13 ~23:00 UTC before the first live hour) ----
+  # The frozen network (PNN 1h/1d + ACI bands) and the field card run every hour; Claude reads them, writes an interpretation
+  # and its own forecast before the outcome is known. Research only: no orders. Any change to the network starts a new version.
+  H-LIVE1:
+    title: "Claude's interpreted BTC forecasts beat the frozen network it reads"
+    statement: "On forward hours, Claude's own 1h and 24h BTC return quantiles (10/50/90) and sigma, written after reading the network, field and news before the outcome, have lower pinball loss than the frozen network's quantiles for the same hours."
+    rationale: "Principle 1: the LLM layer is only measured forward. The question is whether interpretation adds information (context, news, events) or only noise."
+    test: "paired pinball-loss difference per forecast, NW t clustered by day; only forecasts logged before the target window opens count."
+    success: "difference < 0 with t < -2 over >= 300 forward forecasts per horizon."
+    prior: 0.25
+    family: btc_live
+    status: proposed
+  H-LIVE2:
+    title: "Claude's deviations from the network are informative, not noise"
+    statement: "On forward hours where Claude's sigma differs from the network's by more than 10%, a Gaussian density with Claude's median and sigma gives the realised return a higher log score than the same density with the network's median and sigma."
+    rationale: "Separates useful overrides from random ones even if H-LIVE1 is inconclusive."
+    test: "mean paired log-score difference (Claude minus network) over deviation forecasts, NW t clustered by day; the sign-hit rate is reported descriptively only."
+    success: "mean difference > 0 with t > 2 over >= 100 deviations."
+    prior: 0.30
+    family: btc_live
+    status: proposed
+    amended: "2026-11-13 23:25 UTC, before any Claude forecast existed: the original sign-hit-rate test had no fair null (under a Gaussian, P(|r| > sigma) is about 0.32, so downward deviations 'hit' about 68% by construction); replaced by a paired log score."
+
+  # ---- Phase 4: Claude as the decision layer, paper book every 4 hours (block AI; forward only; registered 2026-11-14 ~00:30 UTC before the first session) ----
+  # Sessions at 00/04/08/12/16/20 UTC. Paper fills on live data; execution.allow_mainnet stays false. Model, prompt and tool
+  # versions are pinned and logged per session; any change starts a new track record.
+  H-AI1:
+    title: "Claude's take/skip decisions beat the deterministic book on the same candidates"
+    statement: "On forward 4-hourly sessions, the AI book (candidates Claude takes, sized by the risk engine) has a higher mean net R per candidate-session than the RULE book (every non-blocked candidate) and than RANDOM picks of the same size, on the same candidates (ai_trader.agent.scorecard)."
+    rationale: "Principle 1: the LLM decision layer is measured only forward, against paired baselines on the same candidate list."
+    test: "paired per-session mean R difference (AI - RULE, AI - RANDOM), NW t clustered by day; costs included; open trades marked to market and excluded from the verdict until closed."
+    success: "AI - RULE > 0 and AI - RANDOM > 0, each with t > 2, over >= 60 closed AI trades."
+    prior: 0.20
+    family: ai_decision
+    status: proposed
+  H-AI2:
+    title: "Claude's skips avoid losers"
+    statement: "Among non-blocked candidates, the ones Claude skips have a lower mean net R than the ones it takes."
+    rationale: "Separates selection skill from the overall level of the book; also informative if H-AI1 lacks power."
+    test: "difference of mean R (taken - skipped), day-clustered bootstrap CI."
+    success: "difference > 0 with the 95% CI above 0 over >= 100 resolved candidates."
+    prior: 0.25
+    family: ai_decision
+    status: proposed
+  H-STOP1:
+    title: "The 4-sigma stop cap prior is too tight or too loose for the trades we actually take (Bayesian update)"
+    statement: "Prior: the stop cap is 4.0 sigma (the 90% quantile of winners' maximum adverse excursion in risk-sigma units, worth 20 pseudo-trades). Updated with the paper trades' closed outcomes by the pinned rule in ai_trader.risk.stop_posterior, the posterior 90% quantile moves outside [3.5, 4.5] sigma with posterior probability > 0.9."
+    rationale: "The user's call (2026-11-14): cap stops at 4 sigma as a prior, then update to a posterior while trading. The update rule is deterministic and pinned, so the LLM never sets the cap."
+    test: "lognormal model of winners' MAE / sigma with a normal-inverse-gamma prior; weekly update; report the posterior and its 80% interval."
+    success: "posterior P(q90 outside [3.5, 4.5]) > 0.9 after >= 40 closed winning trades (direction of the move reported)."
+    prior: 0.35
+    family: ai_decision
+    status: proposed
+
+  # ---- Market making on replayed real order books (block MMR; historical, deterministic; registered 2026-11-14 ~00:30 UTC before any data download) ----
+  # Engine: at-match + the Ob200 replayer with the real trade tape; our quotes use the same Rust quoting code as atx mm.
+  # Days: 20 BTCUSDT days and 20 days for each of 2-3 illiquid contracts from config/mm_illiq20.yaml, split by day
+  # (alternate days or a fixed split file written before any P&L is computed); parameters chosen by purged CV on the fit days only.
+  H-MMR0:
+    title: "The order-book replay reproduces the live market maker's fills"
+    statement: "Replaying the days and symbols the live mm_illiq20 / mm_multi runs quoted (2026-11-09..11-12), with the live configuration, gives per symbol-day fill counts within +/-30% of the live Bybit fills and the same sign of per-symbol P&L in >= 70% of symbol-days, under the pro-rata queue assumption."
+    rationale: "A market-making backtest is only worth believing if it reproduces our own real fills."
+    test: "per symbol-day comparison against the live exchange records (scripts/mm_analyze.py data); report all three queue assumptions."
+    success: "median absolute fill-count error <= 30% and sign agreement >= 70%."
+    prior: 0.40
+    family: mm_replay
+    status: proposed
+  H-MMR1:
+    title: "Vol-adaptive passive quoting earns positive net P&L on held-out replayed days"
+    statement: "The quoter with parameters chosen on fit days earns a positive mean net P&L per symbol-day on held-out days after fees (config/fees.yaml) and adverse selection, separately for BTCUSDT and for the illiquid group, under the pro-rata queue assumption (FIFO-pessimistic and LIFO-optimistic reported)."
+    rationale: "Our forecasting edge is in volatility; quoting width is where volatility forecasts turn directly into P&L."
+    test: "mean net P&L per symbol-day on held-out days, day-clustered bootstrap CI; inventory marked to mid at day end."
+    success: "mean > 0 with the 95% CI above 0 in a group, under pro-rata; reported per group."
+    prior: 0.30
+    family: mm_replay
+    status: proposed
+  H-MMR2:
+    title: "Forecast-informed quote widths beat fixed widths"
+    statement: "Quote widths scaled by a short-horizon volatility forecast (the 15 s micro sigma, and separately the live network's 1h band) earn more net P&L per symbol-day on held-out days than the best fixed width chosen on the same fit days."
+    rationale: "Tests whether our vol forecasts are worth money in market making, not just in log score."
+    test: "paired per symbol-day difference on held-out days, day-clustered bootstrap."
+    success: "difference > 0 with the 95% CI above 0 for at least one forecast in at least one group."
+    prior: 0.30
+    family: mm_replay
+    status: proposed
+
+  # ---- Cross-venue mismatches: Bybit perps vs BlackBull Markets cTrader CFDs (block ARB; registered 2026-11-14 ~00:50 UTC before any cTrader data) ----
+  # Data only (cTrader Open API with a read-only token; Bybit public data). No orders on either venue. SPYUSDT excluded.
+  # gap_t = ln(mid_bybit / mid_ctrader) on aligned ticks; executable gap = |gap| minus both half-spreads, both venues' fees
+  # (Bybit taker from config/fees.yaml, BlackBull commission per the account) and a latency buffer (our measured round trip).
+  H-ARB1:
+    title: "Executable price gaps between Bybit perps and BlackBull CFDs on the same underlying exist and persist beyond our latency"
+    statement: "For instruments listed on both venues (TradFi perps vs stock / metal / energy / index CFDs, and crypto perps vs crypto CFDs), during hours when both venues trade, the executable gap is > 0 for at least 0.5% of seconds, in episodes that last longer than 2x our measured order round trip, on at least 3 of 5 sampled days per instrument."
+    rationale: "The user (2026-11-14) asked whether big mismatches between the two platforms are tradeable. CFD and perp prices both track the same underlying but through different pricing (CFD = broker quote of the cash price; perp = funding-anchored to an index), so gaps may appear in fast moves or around opens."
+    test: "aligned 1 s grid of both venues' best bid/ask (cTrader historical ticks via ProtoOAGetTickDataReq, Bybit trade tape or our ticker/flow records); episode lengths; per-instrument and per-hour tables."
+    success: "the stated frequency and duration on >= 3 of 5 days for at least one instrument."
+    prior: 0.20
+    family: xvenue_arb
+    status: proposed
+  H-ARB2:
+    title: "Gap episodes mean-revert: a convergence trade earns more than both venues' costs after funding and swaps"
+    statement: "Entering at an executable gap (long the cheap venue, short the rich one at the touch, after the latency buffer) and exiting when the gap halves or after 60 minutes earns a positive mean net P&L per episode including Bybit funding and the CFD overnight swap where held."
+    rationale: "A gap that exists but does not converge, or that converges slower than costs accrue, is not an arbitrage."
+    test: "episode-level simulation on the H-ARB1 grid, day-clustered bootstrap CI."
+    success: "mean net P&L > 0 with the 95% CI above 0 over >= 30 episodes."
+    prior: 0.15
+    family: xvenue_arb
+    status: proposed
+
+  # ---- Vector-open level signal generator (block VO; user spec vecopen/SPEC.md, 2026-11-14; registered before any vecopen data) ----
+  # Gate G2 of the spec decides both. Universe: crypto USDT-M perps (Binance 5m) + BlackBull CFDs (cTrader m5). Research sample =
+  # first 75% of each asset's calendar; locked holdout = last 25% (phase 9 only). Families per asset x timeframe group, Holm.
+  H-VO1:
+    title: "Untouched leg-origin opens are decision points: first fills resolve more often and further than at placebo levels (spec H1)"
+    statement: "At the first return of price to an untouched leg-origin open (theta_L 2.0 ATR, n 6, omega 0.25; vecopen/config/baseline.yaml), price leaves the +/-1 ATR band within h bars more often, and with a larger mean absolute excursion, than at all three placebo families (non-origin opens, displaced levels, other prices of the origin candle) and the analytic random-walk baseline."
+    rationale: "The user's discretionary observation, formalised in vecopen/SPEC.md sections 1-3."
+    test: "event study per asset x timeframe group, cluster bootstrap (10,000; day / week clusters), Holm; sign stability by calendar year."
+    success: "gate G2: treated beats all three placebo families with Holm p < 0.05 and the same sign in >= 2/3 of years, on the research sample."
+    prior: 0.25
+    family: vecopen
+    status: proposed
+  H-VO2:
+    title: "Untouched leg-origin opens are magnets: touch probability at a given distance exceeds placebo and diffusion (spec H2)"
+    statement: "Conditional on an untouched leg-origin open at distance d, the probability that price touches it within h bars is higher than for matched placebo levels at the same distance and higher than the driftless diffusion baseline 2*Phi(-d / (sigma sqrt T))."
+    rationale: "The exit-target half of the user's observation (vecopen/SPEC.md sections 1 and 3)."
+    test: "touch-rate difference at matched distance per asset x timeframe group, cluster bootstrap, Holm; by year."
+    success: "gate G2 as for H-VO1."
+    prior: 0.25
+    family: vecopen
+    status: proposed
+
+  # ---- Options after compression, the user's call + short deep-ITM-put structure, and tail-profit continuation (block OPX) ----
+  # User idea 2026-11-14 ~16:40 UTC. Registered before any options data is downloaded or any test is run. BTC first (ETH as robustness).
+  # Compression detector (pre-declared): BTC 7-day realised vol (hourly log returns) in the bottom quintile of its trailing 365-day
+  # history AND 30-day ATM implied vol (deribit_svi iv_atm_30, or DVOL) in the bottom tercile of its trailing 365 days; declustered
+  # (one event per 14 days). Entries at the next 08:00 UTC Deribit fixing. Prices: Deribit option trade history (history.deribit.com,
+  # public) where available, else Black-76 on the lake's daily smile summary (ATM / 25d RR / 25d BF at 7/30/90 days); costs = half the
+  # quoted spread per leg, or 0.0003 BTC per option + 0.0125% of notional fee, whichever is larger. Segments split at the cutoff.
+  H-OPX1:
+    title: "After a volatility compression, long BTC option volatility pays: realised vol beats implied"
+    statement: "Buying the ATM straddle with the first expiry >= 21 days at a compression event and holding 14 days (both delta-unhedged and daily delta-hedged variants) earns a higher net P&L, as % of premium, than the same trade entered on all days."
+    rationale: "Log vol mean-reverts (half-life ~107 h, BELIEFS FL1); if implied vol does not price the expansion after compression, long volatility earns it without a direction view."
+    test: "conditional minus unconditional mean net P&L, block bootstrap by week; both variants; segments."
+    success: "difference > 0 with the 95% CI above 0 in llm_in_sample and > 0 in clean_holdout, for the delta-hedged variant."
+    prior: 0.25
+    family: options_compression
+    status: proposed
+  H-OPX2:
+    title: "Selling a deep-ITM put alongside a long call beats getting the same delta from a perp"
+    statement: "At compression events, the user's structure (long 25-delta call + short put with delta about -0.85, same expiry >= 21 days, held 14 days or to expiry) earns a higher net P&L than long the same call plus long BTC perp sized to the same initial net delta (funding included); the difference is the short put's time value minus its wider spread."
+    rationale: "The short deep-ITM put is mostly a synthetic long future; it only adds value if its time value (theta plus the variance risk premium) exceeds its extra costs. Also reported: net vega of each structure (whether the put leg reduces volatility dependence)."
+    test: "paired per-event difference, block bootstrap by week; segments; also all-days (unconditional) version."
+    success: "difference > 0 with the 95% CI above 0 in both segments."
+    prior: 0.30
+    family: options_compression
+    status: proposed
+  H-OPX3:
+    title: "Extreme unexpected profits are followed by more profit in the same direction (tail continuation)"
+    statement: "When BTC's move since entry over horizon H (1, 3, 7 days) exceeds the q-th percentile of the ex-ante predictive distribution at entry (log-HAR-t x weekday, known at entry), the next H-period return, signed in the direction of the move and in sigma units, is positive, and increases with q across q = 50, 75, 90, 95, 99."
+    rationale: "The user's exit idea ('a good profit is an extremely unexpected amount of profit'; take it off slowly) is right only if tail moves mean-revert; if they continue, scaling out early gives up the convex days (H-PD6, EX1)."
+    test: "for each H and q: mean signed forward return in sigma units for events above q (both tails, signed), NW / weekly-cluster t; monotonicity across q by a trend test; segments; ETH as robustness."
+    success: "supports continuation if the mean is > 0 with t > 2 at q >= 90 for >= 2 of 3 horizons in both segments and the trend across q is positive; contradicts (i.e. reversal) if < 0 with t < -2 under the same conditions."
+    prior: 0.30
+    family: options_compression
+    status: proposed
+  H-OPX4:
+    title: "Scaling out with limit orders after an extreme profit beats holding to the strategy's own exit"
+    statement: "For the trend book's trades (and the H-OPX1/2 option trades), exiting a third of the position at each of the first three closes where open profit exceeds the 95th percentile of the ex-ante distribution (limit orders at the touch, filled only if price trades through) earns a higher net R per trade than holding to the strategy's own exit."
+    rationale: "Direct test of the user's exit plan; H-OPX3 says whether it should help, H-PD6 / R-EXIT-2 say tight exits cost the convex days."
+    test: "paired per-trade difference in net R, weekly-cluster bootstrap; segments."
+    success: "difference > 0 with the 95% CI above 0 in both segments."
+    prior: 0.25
+    family: options_compression
+    status: proposed
+
+  # ---- Execution style (user preference 2026-11-14 ~18:10 UTC; registered before any test) ----
+  H-EXE1:
+    title: "Limit entries at the touch beat market entries for our signals, after missed fills"
+    statement: "For the paper book's signals (shock_regime and trend_4h candidates, and later vecopen signals), entering with a limit order joining the best bid (buys) / ask (sells), re-pegged for up to N minutes and cancelled if unfilled, gives a higher mean net R per signal than a market order at the signal time, counting unfilled signals at 0 R and including the missed winners."
+    rationale: "User preference: always enter with limits, close to the touch when the move is fast. The ob200 replay found adverse selection near the touch (R-MMR-1), and limit entries fill more often on trades that go against you, so the saving in spread and fees must exceed the cost of missed winners."
+    test: "replay each historical signal through at-match on real ob200 days (pro-rata queue), paired per signal, N in {1, 5, 15} min pre-declared; day-clustered bootstrap."
+    success: "difference > 0 with the 95% CI above 0 for at least one N, both sleeves pooled."
+    prior: 0.35
+    family: execution
+    status: proposed
+  H-MMR3:
+    title: "Quoting only in low-vol sideways phases, and stopping before jump risk rises, turns market making positive"
+    statement: "Running the quoter only while short-horizon vol is in its bottom tercile and the 4h range is narrow (pre-declared: |4h return| < 1 sigma and no shock in the last 6 h), and stopping when the jump intensity (Hawkes / field P(jump)) rises above its median, earns a higher held-out net P&L per symbol-day than quoting all day at the same width."
+    rationale: "User idea: market make a little in quiet sideways markets, then stop to prepare for the next jump; adverse selection should be lowest in those phases."
+    test: "atx mm-replay on the H-MMR days (same fit/held-out split), gated vs ungated, paired per symbol-day, pro-rata queue."
+    success: "gated minus ungated > 0 with the 95% CI above 0 on held-out days, in at least one group."
+    prior: 0.30
+    family: mm_replay
+    status: proposed
+
+  # ---- Post-liquidation-cascade plays: rebound longs vs continuation shorts (block RB; user question 2026-11-15 ~09:20 UTC; registered before any test) ----
+  # Universe L (23 crypto perps), Bybit 4h/1h bars and funding/OI history 2020-2026 (liquidation prints exist only from 2026-11-08,
+  # so the flush is defined from price, OI and funding). Segments split at the cutoff. Costs 7.5 bp per side (pegged-limit entries
+  # per R-EXE-1 reported as a variant). Structural stops beyond the flush extreme, capped at the stop-cap prior (4 sigma).
+  # Flush event (pre-declared): 48h log return below the asset's trailing-1y 5th percentile of 48h returns AND open interest down
+  # >= 5% from its 72h high AND v0 cell R9 at the event close; declustered (one per asset per 7 days).
+  H-RB1:
+    title: "After a long-liquidation flush, a rebound long pays"
+    statement: "Entering long at the first 4h close after a flush event, stop below the flush low (capped at 4 sigma), target 2R, time stop 5 days, earns a positive mean net R, and more than the same-geometry long entered on random non-event days in the same regime cell."
+    rationale: "The user sees the market looking for a rebound after the 2026-11-14/15 cascade; capitulation flushes are the classic rebound setup, but our direction tests have failed and liquidation clusters should not be faded within 60 min (R-FLOW-2)."
+    test: "event-level net R, block bootstrap by week, segments; paired difference vs regime-matched random entries."
+    success: "mean net R > 0 with the 95% CI above 0 and above the matched random entries, in both segments."
+    prior: 0.25
+    family: post_cascade
+    status: proposed
+  H-RB2:
+    title: "After a flush, shorting the failed rebound pays"
+    statement: "After a flush event, shorting the first 4h close back below the 4h EMA20 that follows a rebound of >= 1.5 sigma (stop above the rebound high, capped at 4 sigma, target 2R, time stop 5 days) earns a positive mean net R, and more than regime-matched random shorts."
+    rationale: "The continuation case: R9 often hands over to whipsaw or further grind down (R-PX-8, R-OPX-5 mild 3-day continuation)."
+    test: "as H-RB1."
+    success: "as H-RB1."
+    prior: 0.25
+    family: post_cascade
+    status: proposed
+  H-RB3:
+    title: "Negative funding with rebuilding open interest after a flush precedes a short squeeze"
+    statement: "Within 72h after a flush event, when funding turns below its trailing-90d 10th percentile while open interest rises >= 3% from its post-flush low (new shorts piling in), the next 24-72h return is higher than after flush events without that pattern."
+    rationale: "What players did on 2026-11-14/15: long liquidations ~$100M on Bybit BTC in four waves, then funding negative and OI rebuilding while price kept falling, with short-liquidation bursts on the +3.6% hour. Funding-contrarian signals failed unconditionally (R-AVOID-1) and in R5/R7 (R-MAP-5); post-flush is untested."
+    test: "difference in mean 24h and 72h vol-scaled returns, pattern vs no pattern among flush events, block bootstrap; segments."
+    success: "difference > 0 with the 95% CI above 0 at >= 1 horizon in both segments."
+    prior: 0.25
+    family: post_cascade
+    status: proposed
+
+  # ---- Cross-sectional network v3 (block XS; user request 2026-11-15 ~10:40 UTC; registered before any fit) ----
+  # Architecture: a shared per-token encoder (the same small polynomial-edge network, one set of weights for all tokens) ->
+  # a cross-token mixing layer (attention over the tokens at the same timestamp, plus market (BTC) and sector context) ->
+  # per-token heads: own-volatility quantiles, relative-return quantiles (token return minus the equal-weight universe return),
+  # and pairwise outperformance probabilities. Universe L (23 crypto perps) on 1h bars 2020-2026, point-in-time features only.
+  # Training and selection inside llm_in_sample with purged walk-forward; clean_holdout looked at once. Horizons 4h and 24h.
+  H-XS1:
+    title: "v3's relative-return forecasts rank tokens better than cross-sectional momentum and reversal"
+    statement: "The Spearman rank correlation between v3's predicted median relative return and the realised relative return across universe-L tokens (4h and 24h ahead) is positive and higher than the best of three baselines: 24h relative momentum, 7d relative momentum and 1h relative reversal."
+    rationale: "The user wants the network as a cross-sectional relative-strength view. Time-series direction has never been predictable here; relative returns remove the market factor and might be."
+    test: "mean cross-sectional rank IC per timestamp (non-overlapping), NW t by day; paired IC difference vs the best baseline chosen in-sample; segments."
+    success: "IC > 0 and IC minus best baseline > 0, each with t > 2, at >= 1 horizon in both segments."
+    prior: 0.20
+    family: xs_network
+    status: proposed
+  H-XS2:
+    title: "v3's per-token volatility quantiles beat panel log-HAR-t x hour-of-week"
+    statement: "Pooled over universe-L tokens, v3's 1h and 4h volatility / return-magnitude quantiles have lower pinball loss than the panel log-HAR-t with the hour-of-week factor."
+    rationale: "Panel models are our best vol tools (shared parameters across assets); a shared encoder plus cross-token context is the nonlinear version."
+    test: "paired pinball difference per token-hour, NW t clustered by day; segments."
+    success: "difference < 0 with t < -2 at >= 1 horizon in both segments."
+    prior: 0.35
+    family: xs_network
+    status: proposed
+  H-XS3:
+    title: "The cross-token mixing layer adds information (spillovers) beyond each token's own features"
+    statement: "Removing the mixing layer (same encoder and heads, no attention across tokens) raises v3's pinball loss for non-BTC tokens' volatility and lowers its relative-return rank IC."
+    rationale: "ETH and SOL transmit volatility to the rest of the market (R-SPILL); daily HAR spillover terms did not help (R-V), so this tests the intraday, nonlinear version."
+    test: "ablation, paired per token-hour; NW t by day; segments."
+    success: "vol pinball difference > 0 with t > 2 in both segments (the IC part is reported)."
+    prior: 0.35
+    family: xs_network
+    status: proposed
+
+  # ---- Live "brain" (intra-hour firing of the frozen 1h network; user request 2026-11-15 ~14:00 UTC; registered before any build) ----
+  H-BR1:
+    title: "The network fed live intra-hour inputs (nowcast) forecasts the rest of the hour better than its frozen top-of-hour forecast"
+    statement: "At minutes 15, 30 and 45 of each hour, the 1h PNN run on inputs rebuilt from the partial hour (pre-declared recipe: the partial-hour return and range scaled to an hourly equivalent replace the last-bar terms; all other inputs frozen at the last close) gives a lower pinball loss for the remaining-hour return than the frozen top-of-hour quantiles scaled by sqrt(remaining fraction)."
+    rationale: "The user wants the network to fire as price moves. Whether firing on partial-hour inputs adds information, or only noise, decides if the live brain can ever inform decisions."
+    test: "forward-only, paired pinball per (hour, checkpoint), NW t by day; >= 300 hours."
+    success: "difference < 0 with t < -2."
+    prior: 0.30
+    family: brain
+    status: proposed
+
+  # ---- Live desk on the user's Bybit account (block LT; user authorisation 2026-11-15 ~16:10 UTC; registered before the first live order) ----
+  # Hard limits (Rust risk engine + exchange-side stops): <= $2 loss per trade incl. costs, notional $50-$200 by liquidity tier,
+  # <= 20 entries per UTC day, $10 daily loss stop, <= 3 open / <= 2 same side / <= $400 gross; no correlated hedging to escape.
+  # Agents: cross-section / relative value, market geometry, news, sentiment, game-theory trader; Claude orchestrates and decides.
+  H-LT1:
+    title: "The live desk has positive net expectancy"
+    statement: "Live trades (entries decided by the desk, sized by the risk engine) have a mean net P&L per trade > 0 in USD and in R, fees and slippage included."
+    rationale: "The forward test that matters: real fills, real costs, the LLM decision layer measured only forward (principle 1)."
+    test: "mean net R per closed trade, block bootstrap by day; also paired against the paper RULE/RANDOM books on the same candidates where they overlap."
+    success: "mean net R > 0 with the 95% CI above 0 over >= 100 closed live trades."
+    prior: 0.20
+    family: live_desk
+    status: proposed
+  H-LT2:
+    title: "Live execution matches the paper fill model"
+    statement: "Live pegged-limit entries fill within 15 minutes in >= 90% of cases, with mean slippage vs the decision-time mid within 1 bp of the paper model's 1.3 bp, and stop exits within 3 bp of the stop level on liquid tokens."
+    rationale: "Validates the paper book (R-EXE-2) as a stand-in for live trading."
+    test: "per-trade fill time and slippage; t-test of the slippage difference."
+    success: "all three conditions over >= 50 live entries."
+    prior: 0.50
+    family: live_desk
+    status: proposed
+  H-SENT1:
+    title: "Rising social and news sentiment for a token predicts its relative return or volatility"
+    statement: "A token's sentiment change (Reddit post and comment volume and tone, news counts, scored point-in-time) predicts its next 24h relative return (log, vs the equal-weight universe) or its next-day volatility beyond panel log-HAR-t, out of sample."
+    rationale: "The user considers sentiment extremely relevant for crypto; our news-attention test (H-NEWS3) found nothing for BTC volatility, so this must pass before sentiment drives any decision."
+    test: "forward-collected sentiment panel; rank IC for relative returns and paired QLIKE for vol; NW t by day; evaluated after >= 60 days of collection."
+    success: "IC > 0 with t > 2, or QLIKE difference < 0 with t < -2."
+    prior: 0.20
+    family: live_desk
+    status: proposed

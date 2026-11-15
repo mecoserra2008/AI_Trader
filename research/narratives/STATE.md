@@ -40,3 +40,7 @@ Phase vocabulary: emerging, escalating, peaking, fading, resolved, background.
 | any time | Hormuz / Saudi strikes; USD/JPY 160 / BOJ | tail drivers |
 
 Conditional readings for the CPI surprise are registered as H-EV1 (forward-only).
+
+## Correction (2026-11-08 17:40 UTC)
+
+September CPI was **3.7% y/y headline and 2.6% core**, not 4.0% / 2.8% as written above: FRED lacks the October 2025 observation (2025 shutdown), so the 12-row lookback spanned 13 months. The 3-month annualised figures and the September m/m prints (+0.6% / +0.3%) stand; real wages remain negative (AHE +3.1% vs 3.7%). The week-ahead calendar with consensus is now in `research/calendar/2026-W46.yaml`.

@@ -1,0 +1,115 @@
+# vecopen session table (SPEC section 6, construction rule 4; section 9 session decision of 2026-11-14).
+#
+# One bar-boundary convention per asset, fixed BEFORE any CFD data was examined: written 2026-11-14 by the phase 1
+# builder, when no cTrader credentials existed and not a single CFD price, bar or schedule had been fetched. Crypto
+# conventions follow config/baseline.yaml (utc_24h). Its sha256 is recorded in every phase 1 registry line. Changing a
+# convention after data is seen is a counted trial (standing rule 1 spirit, SPEC section 6 rule 4): it moves every open.
+#
+# How a convention defines bars (vecopen.bars.resample):
+#   * trade date of a base bar = calendar date of (local open time + (24h - day_start)), local = `tz` (DST-aware).
+#     For FX (17:00 New York) the session that opens Sunday 17:00 NY has trade date Monday.
+#   * day bar = [day_start of trade date, day_start of the next trade date), computed in `tz`, so it is 23/24/25 h
+#     long in UTC across DST changes and always starts at day_start local time.
+#   * 15m..4h bars are counted in elapsed real time from the trade day's start (a 4h bar starts at day_start,
+#     day_start + 4h, ...); the last one of a day is cut at the next day start (short on DST days).
+#   * week bar = the 7 trade dates Monday..Sunday; month bar = the trade dates of one calendar month.
+#   * every bar is stamped with its nominal close (end of the bucket), never with the time of its last base bar.
+#
+# `hours` are the nominal exchange hours, for documentation and as the fallback trading schedule of the gap
+# classifier. Once the cTrader symbol details are resolved, the classifier uses the symbol's own schedule and holiday
+# list (ProtoOASymbol.schedule / holiday). A difference between `hours` and that schedule is reported in the phase 1
+# report and does NOT change `day_start` (the bar convention stays as fixed here).
+#
+# `roll`: none   = cash CFD, spot or perpetual: no back-adjustment.
+#         panama = futures-based rolling CFD: difference (Panama) back-adjustment at the roll dates listed in
+#                  vecopen/config/rolls/<ASSET>.csv; unadjusted prices kept as o_unadj..c_unadj (+ roll_offset).
+#                  The build refuses to produce an asset whose calendar is missing. CSV columns:
+#                  roll_ts_utc (first bar opening at/after it is in the new contract), gap (new minus old contract
+#                  price if the broker publishes it; empty = open of the first bar at/after the roll minus close of
+#                  the last bar before it), source (broker roll notice or exchange expiry calendar, never a jump
+#                  found in the prices).
+#         panama_if_futures_based = decided from cTrader symbol METADATA at resolve time (description / name carries a
+#                  contract month or expiry, or BlackBull publishes roll notices for it), never from price data. The
+#                  decision and its evidence are written to the data manifest.
+
+version: sessions-1
+written_utc: "2026-11-14T14:10:00Z"
+
+conventions:
+  utc_24h:
+    tz: UTC
+    day_start: "00:00"
+    week_start: monday
+    hours: {open: "always"}
+    source: "config/baseline.yaml assets.crypto.session: 24-hour UTC, 00:00 anchor"
+  fx_ny17:
+    tz: America/New_York
+    day_start: "17:00"
+    week_start: monday
+    hours: {weekly_open: "sun 17:00", weekly_close: "fri 17:00", daily_break: null}
+    source: "FX market convention: the trading day rolls at 17:00 New York (DST-aware); baseline.yaml section-9 decision"
+  cme_ny18:
+    tz: America/New_York
+    day_start: "18:00"
+    week_start: monday
+    hours: {weekly_open: "sun 18:00", weekly_close: "fri 17:00", daily_break: ["17:00", "18:00"]}
+    source: "CME Globex trade date (COMEX metals, NYMEX energy, CME equity index futures): session opens 18:00 ET"
+  ice_brent_ldn23:
+    tz: Europe/London
+    day_start: "23:00"
+    week_start: monday
+    hours: {weekly_open: "sun 23:00", weekly_close: "fri 23:00", daily_break: ["23:00", "01:00"]}
+    source: "ICE Futures Europe Brent: 01:00-23:00 London, Sunday open 23:00"
+  eurex_cet00:
+    tz: Europe/Berlin
+    day_start: "00:00"
+    week_start: monday
+    hours: {weekly_open: "mon 01:10", weekly_close: "fri 22:00", daily_break: ["22:00", "01:10"]}
+    source: "Eurex (FDAX, FGBL) trading day = calendar day in Frankfurt; session 01:10-22:00 CET"
+  ice_ftse_ldn00:
+    tz: Europe/London
+    day_start: "00:00"
+    week_start: monday
+    hours: {weekly_open: "mon 01:00", weekly_close: "fri 21:00", daily_break: ["21:00", "01:00"]}
+    source: "ICE Futures Europe FTSE 100: 01:00-21:00 London; trading day = calendar day in London"
+
+assets:
+  # ---- crypto: Binance USDT-M perpetuals (baseline.yaml assets.crypto), perps need no roll
+  BTCUSDT: {convention: utc_24h, class: crypto, roll: none}
+  ETHUSDT: {convention: utc_24h, class: crypto, roll: none}
+  SOLUSDT: {convention: utc_24h, class: crypto, roll: none}
+  XRPUSDT: {convention: utc_24h, class: crypto, roll: none}
+  BNBUSDT: {convention: utc_24h, class: crypto, roll: none}
+  DOGEUSDT: {convention: utc_24h, class: crypto, roll: none}
+  ADAUSDT: {convention: utc_24h, class: crypto, roll: none}
+  AVAXUSDT: {convention: utc_24h, class: crypto, roll: none}
+  LINKUSDT: {convention: utc_24h, class: crypto, roll: none}
+  LTCUSDT: {convention: utc_24h, class: crypto, roll: none}
+  BCHUSDT: {convention: utc_24h, class: crypto, roll: none}
+  DOTUSDT: {convention: utc_24h, class: crypto, roll: none}
+  TRXUSDT: {convention: utc_24h, class: crypto, roll: none}
+  ATOMUSDT: {convention: utc_24h, class: crypto, roll: none}
+  ETCUSDT: {convention: utc_24h, class: crypto, roll: none}
+  FILUSDT: {convention: utc_24h, class: crypto, roll: none}
+  XLMUSDT: {convention: utc_24h, class: crypto, roll: none}
+  NEARUSDT: {convention: utc_24h, class: crypto, roll: none}
+  UNIUSDT: {convention: utc_24h, class: crypto, roll: none}
+  AAVEUSDT: {convention: utc_24h, class: crypto, roll: none}
+  # ---- CFDs: BlackBull Markets via cTrader (baseline.yaml assets.cfd.candidates)
+  EURUSD: {convention: fx_ny17, class: fx, roll: none}
+  GBPUSD: {convention: fx_ny17, class: fx, roll: none}
+  USDJPY: {convention: fx_ny17, class: fx, roll: none}
+  AUDUSD: {convention: fx_ny17, class: fx, roll: none}
+  USDCAD: {convention: fx_ny17, class: fx, roll: none}
+  XAUUSD: {convention: cme_ny18, class: metal, roll: none, note: "spot metal CFD"}
+  XAGUSD: {convention: cme_ny18, class: metal, roll: none, note: "spot metal CFD"}
+  USOIL: {convention: cme_ny18, class: energy, roll: panama_if_futures_based, note: "WTI; NYMEX CL session"}
+  UKOIL: {convention: ice_brent_ldn23, class: energy, roll: panama_if_futures_based, note: "Brent; ICE session"}
+  US500: {convention: cme_ny18, class: index, roll: none, note: "cash index CFD on CME ES hours"}
+  US30: {convention: cme_ny18, class: index, roll: none, note: "cash index CFD on CME YM hours"}
+  NAS100: {convention: cme_ny18, class: index, roll: none, note: "cash index CFD on CME NQ hours"}
+  GER40: {convention: eurex_cet00, class: index, roll: none, note: "cash index CFD on Eurex FDAX hours"}
+  UK100: {convention: ice_ftse_ldn00, class: index, roll: none, note: "cash index CFD on ICE FTSE hours"}
+  JPN225: {convention: cme_ny18, class: index, roll: none,
+           note: "trades ~23h like CME NKD, so the CME trade date is used rather than OSE's split session; flagged if the cTrader schedule disagrees"}
+  BUND: {convention: eurex_cet00, class: bond, roll: panama, note: "Euro-Bund future (Eurex FGBL, quarterly H/M/U/Z): futures-based by construction"}

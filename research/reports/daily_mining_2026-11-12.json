@@ -1,0 +1,5623 @@
+{
+ "hypothesis": "H-MINE2",
+ "tag": "2026-11-12",
+ "family": {
+  "total": 495,
+  "testable": 495,
+  "by_target": {
+   "r1": 165,
+   "r5": 165,
+   "vr1": 165
+  },
+  "by_kind": {
+   "return": 330,
+   "vol": 165
+  },
+  "by_family": {
+   "F1": 117,
+   "F2": 54,
+   "F3": 228,
+   "F4": 21,
+   "F5": 27,
+   "F6": 12,
+   "F7": 9,
+   "F8": 27
+  }
+ },
+ "edges": {
+  "log_sigma:2": [
+   -3.52351181685228,
+   -3.1125721675961953
+  ],
+  "lrv_w:2": [
+   -7.130554934469404,
+   -6.404992134320451
+  ],
+  "lrv_q:2": [
+   -6.993746708969136,
+   -6.446065081906746
+  ],
+  "next_is_weekend:2": [
+   0.0,
+   0.0
+  ],
+  "dow_sin:2": [
+   -0.433883739117558,
+   0.43388373911755823
+  ],
+  "lrv_m:2": [
+   -7.064638293105619,
+   -6.424368434452459
+  ],
+  "next_wk_hours:2": [
+   0.0,
+   3.0
+  ],
+  "lrv_d:2": [
+   -7.242152482977413,
+   -6.313761202392171
+  ],
+  "rq_ratio_d:2": [
+   -0.010349532623361189,
+   0.16656923374320337
+  ],
+  "v0_dir_score:2": [
+   -0.36787350406797104,
+   0.274715503870407
+  ],
+  "log_sigma:4": [
+   -3.7290888905096176,
+   -3.439127373833143,
+   -3.1978574322219475,
+   -2.9110288031472407
+  ],
+  "lrv_w:4": [
+   -7.514816419251773,
+   -6.98201766195446,
+   -6.548866954232349,
+   -6.055573731343956
+  ],
+  "lrv_q:4": [
+   -7.301195430281185,
+   -6.878267061919839,
+   -6.546043417579788,
+   -6.191049478105837
+  ],
+  "funding_z_90d:2": [
+   -0.3749898125644387,
+   0.4194863508973133
+  ],
+  "dd_90d_z:1": [
+   -1.5739203333260232
+  ]
+ },
+ "protocol": {
+  "fdr_q": 0.1,
+  "alpha_conf": 0.05,
+  "block_days": 10,
+  "clip": 5.0,
+  "min_disc": [
+   100,
+   30
+  ],
+  "min_conf": [
+   20,
+   5
+  ]
+ },
+ "discovery": {
+  "n": 90,
+  "bh_threshold_p": 0.01784716549515123
+ },
+ "summary": {
+  "overall": {
+   "n": 90,
+   "replicated": 55,
+   "rate": 0.6111111111111112,
+   "wilson95": [
+    0.5078245878332724,
+    0.705300828570354
+   ]
+  },
+  "by_kind": {
+   "vol": {
+    "n": 79,
+    "replicated": 54,
+    "rate": 0.6835443037974683,
+    "wilson95": [
+     0.5745191228555816,
+     0.7755471409647389
+    ]
+   },
+   "return": {
+    "n": 11,
+    "replicated": 1,
+    "rate": 0.09090909090909091,
+    "wilson95": [
+     0.016232172705325593,
+     0.3773584391082959
+    ]
+   }
+  },
+  "by_target": {
+   "vr1": {
+    "n": 79,
+    "replicated": 54,
+    "rate": 0.6835443037974683,
+    "wilson95": [
+     0.5745191228555816,
+     0.7755471409647389
+    ]
+   },
+   "r1": {
+    "n": 5,
+    "replicated": 1,
+    "rate": 0.2,
+    "wilson95": [
+     0.03622410822563066,
+     0.6244653729700049
+    ]
+   },
+   "r5": {
+    "n": 6,
+    "replicated": 0,
+    "rate": 0.0,
+    "wilson95": [
+     0.0,
+     0.39033429165637346
+    ]
+   }
+  },
+  "by_family": {
+   "F1": {
+    "n": 17,
+    "replicated": 14,
+    "rate": 0.8235294117647058,
+    "wilson95": [
+     0.5897054122922163,
+     0.938088734108536
+    ]
+   },
+   "F2": {
+    "n": 3,
+    "replicated": 0,
+    "rate": 0.0,
+    "wilson95": [
+     0.0,
+     0.5614970356393196
+    ]
+   },
+   "F3": {
+    "n": 55,
+    "replicated": 34,
+    "rate": 0.6181818181818182,
+    "wilson95": [
+     0.4860922012905995,
+     0.7348404582178194
+    ]
+   },
+   "F4": {
+    "n": 5,
+    "replicated": 2,
+    "rate": 0.4,
+    "wilson95": [
+     0.11762077314099711,
+     0.7692757205908813
+    ]
+   },
+   "F5": {
+    "n": 5,
+    "replicated": 2,
+    "rate": 0.4,
+    "wilson95": [
+     0.11762077314099711,
+     0.7692757205908813
+    ]
+   },
+   "F6": {
+    "n": 2,
+    "replicated": 2,
+    "rate": 1.0,
+    "wilson95": [
+     0.3423802239546494,
+     1.0
+    ]
+   },
+   "F8": {
+    "n": 3,
+    "replicated": 1,
+    "rate": 0.3333333333333333,
+    "wilson95": [
+     0.06149194402093078,
+     0.7923404011921757
+    ]
+   }
+  },
+  "by_known": {
+   "known": {
+    "n": 74,
+    "replicated": 53,
+    "rate": 0.7162162162162162,
+    "wilson95": [
+     0.6048274574445257,
+     0.8062645295234764
+    ]
+   },
+   "contradicts": {
+    "n": 12,
+    "replicated": 2,
+    "rate": 0.16666666666666666,
+    "wilson95": [
+     0.04696514175692082,
+     0.4480308646118111
+    ]
+   },
+   "novel": {
+    "n": 4,
+    "replicated": 0,
+    "rate": 0.0,
+    "wilson95": [
+     0.0,
+     0.4898908403969213
+    ]
+   }
+  },
+  "date_clustered_overall": {
+   "n": 90,
+   "replicated": 58,
+   "rate": 0.6444444444444445,
+   "wilson95": [
+    0.5415017302739045,
+    0.7355613110508099
+   ]
+  },
+  "untestable": 0,
+  "sign_agree": {
+   "n": 90,
+   "replicated": 86,
+   "rate": 0.9555555555555556,
+   "wilson95": [
+    0.891231448986594,
+    0.9825827582682745
+   ]
+  },
+  "restating_known": {
+   "discoveries": 74,
+   "replicated": 53
+  }
+ },
+ "verdict": "supports",
+ "frozen_sha256": "d7e0e93b34af5602b4e2e79f318ab9a4e17e7f8aa23782a891fc00e01c39d6a7",
+ "discoveries": [
+  {
+   "id": "vr1|T3:log_sigma|c1",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:log_sigma",
+   "cell": 1,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the middle third (-3.52 to -3.11)",
+   "d": -0.023992554542140054,
+   "t": -2.459137663209232,
+   "p": 0.015026781296084184,
+   "p_bh": 0.08538627852232393,
+   "n": 10759,
+   "n_dates": 1475,
+   "direction": -1.0,
+   "known": {
+    "status": "novel",
+    "rules": [],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "novel",
+    "rules": [],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.056540082714798656,
+    "se": 0.035456300726069895,
+    "t": -1.5946413347410076,
+    "df": 14,
+    "p": 0.06655613944811414,
+    "t_date": -1.7493453443584424,
+    "p_date": 0.041314077975630775,
+    "n": 917,
+    "n_dates": 129,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3:next_is_weekend|c0",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:next_is_weekend",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Mon-Fri",
+   "d": 0.14085223336070168,
+   "t": 15.711078937743512,
+   "p": 7.029536893513605e-34,
+   "p_bh": 4.970886803270335e-32,
+   "n": 23184,
+   "n_dates": 1108,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.13731773664485256,
+    "se": 0.022564574930366118,
+    "t": 6.0855450221691605,
+    "df": 14,
+    "p": 1.4055166618240328e-05,
+    "t_date": 3.4327277558982816,
+    "p_date": 0.0004450718205458992,
+    "n": 2185,
+    "n_dates": 95,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3:next_is_weekend|c2",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:next_is_weekend",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Sat/Sun",
+   "d": -0.35173612432512996,
+   "t": -16.497042426969443,
+   "p": 6.06641948330045e-36,
+   "p_bh": 7.507194110584306e-34,
+   "n": 9284,
+   "n_dates": 444,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.34329434161213146,
+    "se": 0.07507928428386236,
+    "t": -4.5724242697119,
+    "df": 12,
+    "p": 0.0003203911466839934,
+    "t_date": -3.808191433392653,
+    "p_date": 0.0002552987599881893,
+    "n": 874,
+    "n_dates": 38,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3:next_is_weekend|hi-lo",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:next_is_weekend",
+   "cell": -1,
+   "hi": 2,
+   "lo": 0,
+   "describe": "forecast day Sat/Sun minus forecast day Mon-Fri",
+   "d": -0.49258835768583165,
+   "t": -16.763130303844715,
+   "p": 1.23100007483092e-36,
+   "p_bh": 6.093450370413054e-34,
+   "n": 9284,
+   "n_dates": 444,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.48061207825698404,
+    "se": 0.09502700582628132,
+    "t": -5.057636764180385,
+    "df": 12,
+    "p": 0.00014045958273406993,
+    "t_date": -3.8947327102505453,
+    "p_date": 7.772277753732309e-05,
+    "n": 874,
+    "n_dates": 38,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3:dow_sin|c0",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:dow_sin",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Fri-Sun",
+   "d": -0.19664589545279149,
+   "t": -12.104606605442818,
+   "p": 3.659673859274785e-24,
+   "p_bh": 1.5096154669508487e-22,
+   "n": 13924,
+   "n_dates": 666,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.20912622578486872,
+    "se": 0.06848454054557046,
+    "t": -3.0536267618779385,
+    "df": 12,
+    "p": 0.005008488674834746,
+    "t_date": -3.2951777594007092,
+    "p_date": 0.000854930105715763,
+    "n": 1311,
+    "n_dates": 57,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3:dow_sin|c1",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:dow_sin",
+   "cell": 1,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Mon or Thu",
+   "d": 0.21065317132589464,
+   "t": 9.066769277406452,
+   "p": 5.336415655547532e-16,
+   "p_bh": 1.0159714421138571e-14,
+   "n": 9272,
+   "n_dates": 443,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.21791469184294093,
+    "se": 0.0706702978567233,
+    "t": 3.0835400224963023,
+    "df": 13,
+    "p": 0.004359332147189343,
+    "t_date": 2.685707091204814,
+    "p_date": 0.00538574143606883,
+    "n": 874,
+    "n_dates": 38,
+    "n_clusters": 14,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3:dow_sin|c2",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:dow_sin",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Tue or Wed",
+   "d": 0.08465500903267614,
+   "t": 3.8794569940051025,
+   "p": 0.00015477219259225485,
+   "p_bh": 0.0012768705888861025,
+   "n": 9272,
+   "n_dates": 443,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.09577464683436188,
+    "se": 0.0647581834496864,
+    "t": 1.4789582062439042,
+    "df": 14,
+    "p": 0.08064871158353548,
+    "t_date": 1.3431017071550349,
+    "p_date": 0.09371005153009451,
+    "n": 874,
+    "n_dates": 38,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3:dow_sin|hi-lo",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:dow_sin",
+   "cell": -1,
+   "hi": 2,
+   "lo": 0,
+   "describe": "forecast day Tue or Wed minus forecast day Fri-Sun",
+   "d": 0.28130090448546763,
+   "t": 8.510857347046212,
+   "p": 1.4378970132974566e-14,
+   "p_bh": 2.2242469424445032e-13,
+   "n": 9272,
+   "n_dates": 443,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.3049008726192306,
+    "se": 0.11638985297462974,
+    "t": 2.6196516691682037,
+    "df": 12,
+    "p": 0.011199652916382422,
+    "t_date": 2.6509162096024523,
+    "p_date": 0.004710189352870216,
+    "n": 874,
+    "n_dates": 38,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3:next_wk_hours|c0",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:next_wk_hours",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Mon-Thu (no TradFi-weekend hours)",
+   "d": 0.14765409017928538,
+   "t": 11.245831056348358,
+   "p": 8.493620522472211e-22,
+   "p_bh": 2.8028947724158297e-20,
+   "n": 18544,
+   "n_dates": 886,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.15684466933865143,
+    "se": 0.04365021881456547,
+    "t": 3.5932161074600284,
+    "df": 14,
+    "p": 0.001468881633401283,
+    "t_date": 3.218855104674951,
+    "p_date": 0.0009512375724286562,
+    "n": 1748,
+    "n_dates": 76,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3:next_wk_hours|c1",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:next_wk_hours",
+   "cell": 1,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Fri (TradFi weekend starts)",
+   "d": 0.1136682607650516,
+   "t": 2.956994147883001,
+   "p": 0.003593054595426245,
+   "p_bh": 0.023714160329813216,
+   "n": 4640,
+   "n_dates": 222,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.05921000586965708,
+    "se": 0.13104135453409713,
+    "t": 0.45184213853841504,
+    "df": 12,
+    "p": 0.32972052335916846,
+    "t_date": 0.47313492886565345,
+    "p_date": 0.3209019512268669,
+    "n": 437,
+    "n_dates": 19,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3:next_wk_hours|c2",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:next_wk_hours",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Sat/Sun (TradFi weekend)",
+   "d": -0.35173612432512996,
+   "t": -16.497042426969443,
+   "p": 6.06641948330045e-36,
+   "p_bh": 7.507194110584306e-34,
+   "n": 9284,
+   "n_dates": 444,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.34329434161213146,
+    "se": 0.07507928428386236,
+    "t": -4.5724242697119,
+    "df": 12,
+    "p": 0.0003203911466839934,
+    "t_date": -3.808191433392653,
+    "p_date": 0.0002552987599881893,
+    "n": 874,
+    "n_dates": 38,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3:next_wk_hours|hi-lo",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:next_wk_hours",
+   "cell": -1,
+   "hi": 2,
+   "lo": 0,
+   "describe": "forecast day Sat/Sun (TradFi weekend) minus forecast day Mon-Thu (no TradFi-weekend hours)",
+   "d": -0.49939021450441534,
+   "t": -16.298285305261995,
+   "p": 2.416653690744404e-35,
+   "p_bh": 2.3924871538369598e-33,
+   "n": 9284,
+   "n_dates": 444,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.5001390109507828,
+    "se": 0.10759363885915446,
+    "t": -4.648406878453941,
+    "df": 12,
+    "p": 0.00028099385922574903,
+    "t_date": -3.9844069707536525,
+    "p_date": 6.0085441857294925e-05,
+    "n": 874,
+    "n_dates": 38,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3:rq_ratio_d|c0",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:rq_ratio_d",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "day-D quarticity ratio (one-big-hour share) in the bottom third (<= -0.0103)",
+   "d": 0.10518290313995957,
+   "t": 7.760681445308021,
+   "p": 1.0636427472992463e-12,
+   "p_bh": 1.4229815132787214e-11,
+   "n": 10896,
+   "n_dates": 1394,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-23 (HAR-Q: a day dominated by one big hour gets less weight)",
+     "R-VOL-3 / BELIEFS V4 (spike excess variance decays within hours)"
+    ],
+    "overlap_c": false,
+    "reviewed": true
+   },
+   "known_mechanical": {
+    "status": "novel",
+    "rules": [],
+    "overlap_c": false
+   },
+   "ho": {
+    "d": 0.10649042014168625,
+    "se": 0.031555268980751325,
+    "t": 3.37472706084823,
+    "df": 14,
+    "p": 0.0022676351590914666,
+    "t_date": 2.7026728661871893,
+    "p_date": 0.00392555573399271,
+    "n": 957,
+    "n_dates": 124,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3:rq_ratio_d|c2",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:rq_ratio_d",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "day-D quarticity ratio (one-big-hour share) in the top third (> 0.167)",
+   "d": -0.12792078735902912,
+   "t": -8.369690306358974,
+   "p": 3.179876834181677e-14,
+   "p_bh": 4.769815251272515e-13,
+   "n": 10818,
+   "n_dates": 1470,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-23 (HAR-Q: a day dominated by one big hour gets less weight)",
+     "R-VOL-3 / BELIEFS V4 (spike excess variance decays within hours)"
+    ],
+    "overlap_c": false,
+    "reviewed": true
+   },
+   "known_mechanical": {
+    "status": "novel",
+    "rules": [],
+    "overlap_c": false
+   },
+   "ho": {
+    "d": -0.08857736099932362,
+    "se": 0.021996935454922012,
+    "t": -4.026804605616262,
+    "df": 14,
+    "p": 0.0006243475266733745,
+    "t_date": -2.4012565756386013,
+    "p_date": 0.008877107432612467,
+    "n": 1131,
+    "n_dates": 131,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3:rq_ratio_d|hi-lo",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:rq_ratio_d",
+   "cell": -1,
+   "hi": 2,
+   "lo": 0,
+   "describe": "day-D quarticity ratio (one-big-hour share) in the top third (> 0.167) minus day-D quarticity ratio (one-big-hour share) in the bottom third (<= -0.0103)",
+   "d": -0.23310369049898869,
+   "t": -8.69648981408063,
+   "p": 4.651325052149609e-15,
+   "p_bh": 7.674686336046856e-14,
+   "n": 10818,
+   "n_dates": 1394,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-23 (HAR-Q: a day dominated by one big hour gets less weight)",
+     "R-VOL-3 / BELIEFS V4 (spike excess variance decays within hours)"
+    ],
+    "overlap_c": false,
+    "reviewed": true
+   },
+   "known_mechanical": {
+    "status": "novel",
+    "rules": [],
+    "overlap_c": false
+   },
+   "ho": {
+    "d": -0.19506778114100987,
+    "se": 0.04918038531509292,
+    "t": -3.9663735835177714,
+    "df": 14,
+    "p": 0.0007029075174863664,
+    "t_date": -2.679970956249409,
+    "p_date": 0.004150552325553574,
+    "n": 957,
+    "n_dates": 124,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3:v0_dir_score|c1",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:v0_dir_score",
+   "cell": 1,
+   "hi": -1,
+   "lo": -1,
+   "describe": "v0 trend score in the middle third (-0.368 to 0.275)",
+   "d": -0.09778965065995687,
+   "t": -6.787987225874609,
+   "p": 2.276744401972353e-10,
+   "p_bh": 2.6209034394798018e-09,
+   "n": 10852,
+   "n_dates": 1429,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-DS-4",
+     "R-VOL-8",
+     "R-ML-2"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-DS-4",
+     "R-VOL-8",
+     "R-ML-2"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.11862408401720853,
+    "se": 0.04841309710435535,
+    "t": -2.4502477864928176,
+    "df": 14,
+    "p": 0.014015231295536786,
+    "t_date": -2.902141439138194,
+    "p_date": 0.002211772236063543,
+    "n": 1063,
+    "n_dates": 119,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3:v0_dir_score|c2",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F1",
+   "state": "T3:v0_dir_score",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "v0 trend score in the top third (> 0.275)",
+   "d": 0.06739512923755231,
+   "t": 3.9608515381806715,
+   "p": 0.00011357566426098377,
+   "p_bh": 0.0009863149791085432,
+   "n": 10799,
+   "n_dates": 1276,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-DS-4",
+     "R-VOL-8",
+     "R-ML-2"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-DS-4",
+     "R-VOL-8",
+     "R-ML-2"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.1764382634832318,
+    "se": 0.04742252547878218,
+    "t": 3.7205581461951858,
+    "df": 14,
+    "p": 0.0011412616245742807,
+    "t_date": 3.47845543514218,
+    "p_date": 0.0003535689808216918,
+    "n": 1040,
+    "n_dates": 119,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|Q5:log_sigma|c4",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F2",
+   "state": "Q5:log_sigma",
+   "cell": 4,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the top fifth (> -2.91)",
+   "d": 0.06270602761995653,
+   "t": 2.6377447490023243,
+   "p": 0.009219733791759473,
+   "p_bh": 0.0563428176163079,
+   "n": 6167,
+   "n_dates": 1105,
+   "direction": 1.0,
+   "known": {
+    "status": "novel",
+    "rules": [],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "novel",
+    "rules": [],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.13190892140537694,
+    "se": 0.10564765095292918,
+    "t": 1.248574106623046,
+    "df": 14,
+    "p": 0.11614867061909634,
+    "t_date": 1.5571682502268098,
+    "p_date": 0.06159519155517737,
+    "n": 346,
+    "n_dates": 85,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3xT3:log_sigmaxlrv_q|c0",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxlrv_q",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the bottom third (<= -3.52), 90-day mean log RV in the bottom third (<= -6.99)",
+   "d": -0.04169016307653578,
+   "t": -2.524687568091185,
+   "p": 0.012612842867388221,
+   "p_bh": 0.07259717696926941,
+   "n": 7130,
+   "n_dates": 1384,
+   "direction": -1.0,
+   "known": {
+    "status": "novel",
+    "rules": [],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "novel",
+    "rules": [],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.010973273168040254,
+    "se": 0.03189422118525182,
+    "t": -0.34405208091785594,
+    "df": 14,
+    "p": 0.3679600195761181,
+    "t_date": -0.3551888040642747,
+    "p_date": 0.36150969057476867,
+    "n": 1136,
+    "n_dates": 132,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3xT3:log_sigmaxlrv_q|c4",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxlrv_q",
+   "cell": 4,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the middle third (-3.52 to -3.11), 90-day mean log RV in the middle third (-6.99 to -6.45)",
+   "d": -0.042529179505907566,
+   "t": -2.6777380150833654,
+   "p": 0.008227026042750366,
+   "p_bh": 0.05154908722989154,
+   "n": 4424,
+   "n_dates": 1155,
+   "direction": -1.0,
+   "known": {
+    "status": "novel",
+    "rules": [],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "novel",
+    "rules": [],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.00521735809303836,
+    "se": 0.06119745561805363,
+    "t": 0.08525449367700848,
+    "df": 14,
+    "p": 0.5333668603781403,
+    "t_date": 0.12218526833693609,
+    "p_date": 0.5485208029232007,
+    "n": 364,
+    "n_dates": 120,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3xT3:log_sigmaxnext_is_weekend|c0",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxnext_is_weekend",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the bottom third (<= -3.52), forecast day Mon-Fri",
+   "d": 0.18873934646887225,
+   "t": 10.15724615688824,
+   "p": 7.143717874983491e-19,
+   "p_bh": 1.768070174058414e-17,
+   "n": 7703,
+   "n_dates": 1016,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.1656448213173311,
+    "se": 0.03911829379031425,
+    "t": 4.234459258505416,
+    "df": 14,
+    "p": 0.000416441414201064,
+    "t_date": 3.175986525226032,
+    "p_date": 0.0010131493429577554,
+    "n": 1041,
+    "n_dates": 94,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:log_sigmaxnext_is_weekend|c2",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxnext_is_weekend",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the bottom third (<= -3.52), forecast day Sat/Sun",
+   "d": -0.40201873753293554,
+   "t": -13.00428699991303,
+   "p": 1.4605827236601836e-26,
+   "p_bh": 7.229884482117909e-25,
+   "n": 3668,
+   "n_dates": 415,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.34779687228926925,
+    "se": 0.07017477692504678,
+    "t": -4.9561521607792045,
+    "df": 12,
+    "p": 0.0001664598834914956,
+    "t_date": -3.7835475641319976,
+    "p_date": 0.0002741750561548981,
+    "n": 452,
+    "n_dates": 38,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:log_sigmaxnext_is_weekend|c3",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxnext_is_weekend",
+   "cell": 3,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the middle third (-3.52 to -3.11), forecast day Mon-Fri",
+   "d": 0.10682749022875956,
+   "t": 7.81673094896289,
+   "p": 7.733606168613888e-13,
+   "p_bh": 1.0633708481844096e-11,
+   "n": 7866,
+   "n_dates": 1053,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.10982457168942883,
+    "se": 0.03426825687584207,
+    "t": 3.2048485012627337,
+    "df": 14,
+    "p": 0.003179463455425244,
+    "t_date": 2.0795058865572287,
+    "p_date": 0.020176558988363128,
+    "n": 669,
+    "n_dates": 93,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:log_sigmaxnext_is_weekend|c5",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxnext_is_weekend",
+   "cell": 5,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the middle third (-3.52 to -3.11), forecast day Sat/Sun",
+   "d": -0.37968922656699194,
+   "t": -12.093575944843593,
+   "p": 4.29708420045741e-24,
+   "p_bh": 1.6361974455587831e-22,
+   "n": 2893,
+   "n_dates": 422,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.50532215447459,
+    "se": 0.12597498602689067,
+    "t": -4.011289625122274,
+    "df": 12,
+    "p": 0.0008631405579117863,
+    "t_date": -4.517934636831488,
+    "p_date": 3.4080462413521915e-05,
+    "n": 248,
+    "n_dates": 36,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:log_sigmaxnext_is_weekend|c6",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxnext_is_weekend",
+   "cell": 6,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the top third (> -3.11), forecast day Mon-Fri",
+   "d": 0.12755797166715196,
+   "t": 6.235820799638395,
+   "p": 4.078439952173813e-09,
+   "p_bh": 4.3887560354913853e-08,
+   "n": 7615,
+   "n_dates": 969,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.11395864656301746,
+    "se": 0.04483897432451292,
+    "t": 2.541508771772187,
+    "df": 14,
+    "p": 0.011750555820184043,
+    "t_date": 1.868165341748372,
+    "p_date": 0.03277161913816709,
+    "n": 475,
+    "n_dates": 78,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:log_sigmaxnext_is_weekend|c8",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxnext_is_weekend",
+   "cell": 8,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the top third (> -3.11), forecast day Sat/Sun",
+   "d": -0.25430500055284305,
+   "t": -5.984772131717219,
+   "p": 1.58409224414119e-08,
+   "p_bh": 1.600256450714059e-07,
+   "n": 2723,
+   "n_dates": 371,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.10066191945146591,
+    "se": 0.26818439639159175,
+    "t": -0.37534592170859765,
+    "df": 10,
+    "p": 0.35762097596978654,
+    "t_date": -0.3914025990327835,
+    "p_date": 0.34923124404732253,
+    "n": 174,
+    "n_dates": 29,
+    "n_clusters": 11,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3xT3:log_sigmaxdow_sin|c0",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxdow_sin",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the bottom third (<= -3.52), forecast day Fri-Sun",
+   "d": -0.26463293408041527,
+   "t": -9.032059657441621,
+   "p": 6.566817306872965e-16,
+   "p_bh": 1.2039165062600436e-14,
+   "n": 5045,
+   "n_dates": 615,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.2527825751917189,
+    "se": 0.07087355279168375,
+    "t": -3.566670009258802,
+    "df": 12,
+    "p": 0.0019380182327430947,
+    "t_date": -3.7459003799168697,
+    "p_date": 0.00021617772963773395,
+    "n": 639,
+    "n_dates": 56,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:log_sigmaxdow_sin|c1",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxdow_sin",
+   "cell": 1,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the bottom third (<= -3.52), forecast day Mon or Thu",
+   "d": 0.2683578339006536,
+   "t": 8.967260445705836,
+   "p": 1.0473502447956916e-15,
+   "p_bh": 1.8515656113352404e-14,
+   "n": 3475,
+   "n_dates": 416,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.27866865470359936,
+    "se": 0.08014759537907352,
+    "t": 3.47694342401144,
+    "df": 13,
+    "p": 0.002045511466861098,
+    "t_date": 3.097534334777565,
+    "p_date": 0.0018568233417168365,
+    "n": 428,
+    "n_dates": 38,
+    "n_clusters": 14,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:log_sigmaxdow_sin|c2",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxdow_sin",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the bottom third (<= -3.52), forecast day Tue or Wed",
+   "d": 0.13391235924582212,
+   "t": 4.376174055865979,
+   "p": 2.259923191066575e-05,
+   "p_bh": 0.00020715962584776936,
+   "n": 2851,
+   "n_dates": 400,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.13495294378159606,
+    "se": 0.09221386472247467,
+    "t": 1.4634777990028747,
+    "df": 14,
+    "p": 0.08271264472431876,
+    "t_date": 1.340205671840146,
+    "p_date": 0.09417542603695447,
+    "n": 426,
+    "n_dates": 38,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3xT3:log_sigmaxdow_sin|c3",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxdow_sin",
+   "cell": 3,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the middle third (-3.52 to -3.11), forecast day Fri-Sun",
+   "d": -0.21381448883574822,
+   "t": -8.629376229955561,
+   "p": 6.916525633398139e-15,
+   "p_bh": 1.104412964042606e-13,
+   "n": 4461,
+   "n_dates": 634,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.2630845825619116,
+    "se": 0.08452016116345733,
+    "t": -3.1126843458464366,
+    "df": 12,
+    "p": 0.004487985410975766,
+    "t_date": -2.8624205289853575,
+    "p_date": 0.002985764426186044,
+    "n": 373,
+    "n_dates": 55,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:log_sigmaxdow_sin|c4",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxdow_sin",
+   "cell": 4,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the middle third (-3.52 to -3.11), forecast day Mon or Thu",
+   "d": 0.16282759652837647,
+   "t": 5.81217276986816,
+   "p": 3.469036454656742e-08,
+   "p_bh": 3.434346090110174e-07,
+   "n": 3029,
+   "n_dates": 421,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.13636112526057578,
+    "se": 0.11330765121378497,
+    "t": 1.2034591115413231,
+    "df": 13,
+    "p": 0.12512832601507493,
+    "t_date": 1.2415565319657629,
+    "p_date": 0.11132828606176265,
+    "n": 269,
+    "n_dates": 36,
+    "n_clusters": 14,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3xT3:log_sigmaxdow_sin|c6",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxdow_sin",
+   "cell": 6,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the top third (> -3.11), forecast day Fri-Sun",
+   "d": -0.10167448192682199,
+   "t": -3.559534799057736,
+   "p": 0.0004970383421909276,
+   "p_bh": 0.003905301260071574,
+   "n": 4418,
+   "n_dates": 574,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.04851460588916856,
+    "se": 0.18956787474352935,
+    "t": -0.2559220857162906,
+    "df": 11,
+    "p": 0.4013668535247615,
+    "t_date": -0.3154406931545192,
+    "p_date": 0.3769426732186847,
+    "n": 299,
+    "n_dates": 46,
+    "n_clusters": 12,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3xT3:log_sigmaxdow_sin|c7",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxdow_sin",
+   "cell": 7,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the top third (> -3.11), forecast day Mon or Thu",
+   "d": 0.19054477667791608,
+   "t": 4.462754470337522,
+   "p": 1.5928425680480035e-05,
+   "p_bh": 0.00014876548512901165,
+   "n": 2768,
+   "n_dates": 374,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.19494979526833328,
+    "se": 0.08120909930301543,
+    "t": 2.400590536547109,
+    "df": 12,
+    "p": 0.0167412868590582,
+    "t_date": 2.0221380220206195,
+    "p_date": 0.026079060884542402,
+    "n": 177,
+    "n_dates": 31,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_wxnext_is_weekend|c0",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_wxnext_is_weekend",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "7-day mean log RV in the bottom third (<= -7.13), forecast day Mon-Fri",
+   "d": 0.1552735893580959,
+   "t": 8.733101407426716,
+   "p": 4.028953881897115e-15,
+   "p_bh": 6.877007488065765e-14,
+   "n": 8197,
+   "n_dates": 1052,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.15405866405674432,
+    "se": 0.034819961952120906,
+    "t": 4.424435163616269,
+    "df": 14,
+    "p": 0.0002885238659279975,
+    "t_date": 2.914510481024304,
+    "p_date": 0.0022262420581980946,
+    "n": 1083,
+    "n_dates": 95,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_wxnext_is_weekend|c2",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_wxnext_is_weekend",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "7-day mean log RV in the bottom third (<= -7.13), forecast day Sat/Sun",
+   "d": -0.45710828943598486,
+   "t": -13.615735201353125,
+   "p": 4.171400581120099e-28,
+   "p_bh": 2.5810541095680613e-26,
+   "n": 3262,
+   "n_dates": 427,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.4072167979718183,
+    "se": 0.05903400067021902,
+    "t": -6.89800442708684,
+    "df": 12,
+    "p": 8.278509193538306e-06,
+    "t_date": -4.6377578730945626,
+    "p_date": 2.1470480349227472e-05,
+    "n": 439,
+    "n_dates": 38,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_wxnext_is_weekend|c3",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_wxnext_is_weekend",
+   "cell": 3,
+   "hi": -1,
+   "lo": -1,
+   "describe": "7-day mean log RV in the middle third (-7.13 to -6.4), forecast day Mon-Fri",
+   "d": 0.13226364428772797,
+   "t": 10.286015895955753,
+   "p": 3.0522031419187006e-19,
+   "p_bh": 8.393558640276427e-18,
+   "n": 7685,
+   "n_dates": 1063,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.13363657161799214,
+    "se": 0.029730990379184433,
+    "t": 4.494857719625618,
+    "df": 14,
+    "p": 0.00025206505487552735,
+    "t_date": 2.795241443373532,
+    "p_date": 0.0031436877625897882,
+    "n": 643,
+    "n_dates": 95,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_wxnext_is_weekend|c5",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_wxnext_is_weekend",
+   "cell": 5,
+   "hi": -1,
+   "lo": -1,
+   "describe": "7-day mean log RV in the middle third (-7.13 to -6.4), forecast day Sat/Sun",
+   "d": -0.3381222679601273,
+   "t": -12.126032879649943,
+   "p": 4.647718947388863e-24,
+   "p_bh": 1.6433006278267767e-22,
+   "n": 3108,
+   "n_dates": 425,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.2669875483088452,
+    "se": 0.14593307433489155,
+    "t": -1.8295204807112762,
+    "df": 12,
+    "p": 0.04613162599608455,
+    "t_date": -2.026064821572837,
+    "p_date": 0.025006851134744375,
+    "n": 258,
+    "n_dates": 38,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_wxnext_is_weekend|c6",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_wxnext_is_weekend",
+   "cell": 6,
+   "hi": -1,
+   "lo": -1,
+   "describe": "7-day mean log RV in the top third (> -6.4), forecast day Mon-Fri",
+   "d": 0.1337023363345667,
+   "t": 6.99653478962871,
+   "p": 8.964868548101859e-11,
+   "p_bh": 1.0823438856854683e-09,
+   "n": 7302,
+   "n_dates": 957,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.10297474040344184,
+    "se": 0.06376012021706885,
+    "t": 1.6150336613680831,
+    "df": 13,
+    "p": 0.06515090312680752,
+    "t_date": 1.8537390336206963,
+    "p_date": 0.0338810317788808,
+    "n": 459,
+    "n_dates": 75,
+    "n_clusters": 14,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_wxnext_is_weekend|c8",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_wxnext_is_weekend",
+   "cell": 8,
+   "hi": -1,
+   "lo": -1,
+   "describe": "7-day mean log RV in the top third (> -6.4), forecast day Sat/Sun",
+   "d": -0.24830025026569974,
+   "t": -7.903028215559056,
+   "p": 6.847522573525735e-13,
+   "p_bh": 9.684353353986397e-12,
+   "n": 2914,
+   "n_dates": 386,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.2959790553428965,
+    "se": 0.12963031100225209,
+    "t": -2.2832549968791973,
+    "df": 10,
+    "p": 0.022766509490889854,
+    "t_date": -2.2633101623664817,
+    "p_date": 0.0156382810134267,
+    "n": 177,
+    "n_dates": 30,
+    "n_clusters": 11,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_wxdow_sin|c0",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_wxdow_sin",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "7-day mean log RV in the bottom third (<= -7.13), forecast day Fri-Sun",
+   "d": -0.2705829997763283,
+   "t": -9.632292156713786,
+   "p": 1.9474148416415468e-17,
+   "p_bh": 4.59033498386936e-16,
+   "n": 4907,
+   "n_dates": 640,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.27698204550506555,
+    "se": 0.08233806632137786,
+    "t": -3.3639610192442824,
+    "df": 12,
+    "p": 0.0028163850862336754,
+    "t_date": -3.8546004582735396,
+    "p_date": 0.00015056154351609195,
+    "n": 657,
+    "n_dates": 57,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_wxdow_sin|c1",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_wxdow_sin",
+   "cell": 1,
+   "hi": -1,
+   "lo": -1,
+   "describe": "7-day mean log RV in the bottom third (<= -7.13), forecast day Mon or Thu",
+   "d": 0.23368692716778244,
+   "t": 7.025893605036365,
+   "p": 6.81012152187494e-11,
+   "p_bh": 8.427525383320237e-10,
+   "n": 3279,
+   "n_dates": 420,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.27434273322560176,
+    "se": 0.07885349433815282,
+    "t": 3.479144906998276,
+    "df": 13,
+    "p": 0.002036890456406416,
+    "t_date": 2.7498482269639912,
+    "p_date": 0.004584851198419618,
+    "n": 433,
+    "n_dates": 38,
+    "n_clusters": 14,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_wxdow_sin|c2",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_wxdow_sin",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "7-day mean log RV in the bottom third (<= -7.13), forecast day Tue or Wed",
+   "d": 0.10485234266648771,
+   "t": 3.9242605491178915,
+   "p": 0.000133189294806967,
+   "p_bh": 0.001136701740162908,
+   "n": 3273,
+   "n_dates": 419,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.11866703535640818,
+    "se": 0.09932910866928431,
+    "t": 1.1946853943037925,
+    "df": 14,
+    "p": 0.1260288759123404,
+    "t_date": 1.2152455211413336,
+    "p_date": 0.11598518040341771,
+    "n": 432,
+    "n_dates": 38,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3xT3:lrv_wxdow_sin|c3",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_wxdow_sin",
+   "cell": 3,
+   "hi": -1,
+   "lo": -1,
+   "describe": "7-day mean log RV in the middle third (-7.13 to -6.4), forecast day Fri-Sun",
+   "d": -0.18404652780518754,
+   "t": -7.592421920391024,
+   "p": 2.8865891938393123e-12,
+   "p_bh": 3.7601622393433146e-11,
+   "n": 4647,
+   "n_dates": 639,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.11874977956552268,
+    "se": 0.10005048507338594,
+    "t": -1.1868985890315376,
+    "df": 12,
+    "p": 0.12911664557982422,
+    "t_date": -1.341915807812067,
+    "p_date": 0.0925195887990617,
+    "n": 383,
+    "n_dates": 57,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3xT3:lrv_wxdow_sin|c4",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_wxdow_sin",
+   "cell": 4,
+   "hi": -1,
+   "lo": -1,
+   "describe": "7-day mean log RV in the middle third (-7.13 to -6.4), forecast day Mon or Thu",
+   "d": 0.1940687276436154,
+   "t": 6.922167986471399,
+   "p": 1.1683833018817533e-10,
+   "p_bh": 1.3770231772177807e-09,
+   "n": 3078,
+   "n_dates": 424,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.16464770345455537,
+    "se": 0.08198435852497828,
+    "t": 2.008281901777544,
+    "df": 13,
+    "p": 0.03292791641105104,
+    "t_date": 1.7900026163302019,
+    "p_date": 0.04082007267936904,
+    "n": 263,
+    "n_dates": 38,
+    "n_clusters": 14,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_wxdow_sin|c5",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_wxdow_sin",
+   "cell": 5,
+   "hi": -1,
+   "lo": -1,
+   "describe": "7-day mean log RV in the middle third (-7.13 to -6.4), forecast day Tue or Wed",
+   "d": 0.07284314490051252,
+   "t": 2.790632713156792,
+   "p": 0.005935243322697392,
+   "p_bh": 0.03766596724019499,
+   "n": 3068,
+   "n_dates": 425,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.07538959863425093,
+    "se": 0.059867861481829494,
+    "t": 1.2592666042887208,
+    "df": 14,
+    "p": 0.1142626210292523,
+    "t_date": 0.9762248451483713,
+    "p_date": 0.1676464502122578,
+    "n": 255,
+    "n_dates": 38,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3xT3:lrv_wxdow_sin|c6",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_wxdow_sin",
+   "cell": 6,
+   "hi": -1,
+   "lo": -1,
+   "describe": "7-day mean log RV in the top third (> -6.4), forecast day Fri-Sun",
+   "d": -0.12702115644657153,
+   "t": -4.8495158109697885,
+   "p": 3.1915584540616025e-06,
+   "p_bh": 3.097689087765673e-05,
+   "n": 4370,
+   "n_dates": 576,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.17234727872154842,
+    "se": 0.06541830079060498,
+    "t": -2.6345422708732293,
+    "df": 11,
+    "p": 0.011609129898112336,
+    "t_date": -1.7754787578562912,
+    "p_date": 0.04129099679802447,
+    "n": 271,
+    "n_dates": 46,
+    "n_clusters": 12,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_wxdow_sin|c7",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_wxdow_sin",
+   "cell": 7,
+   "hi": -1,
+   "lo": -1,
+   "describe": "7-day mean log RV in the top third (> -6.4), forecast day Mon or Thu",
+   "d": 0.2022549662653476,
+   "t": 6.074874575307157,
+   "p": 1.0657626446576133e-08,
+   "p_bh": 1.1224521470330184e-07,
+   "n": 2915,
+   "n_dates": 385,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.1593521976151504,
+    "se": 0.0782911150203624,
+    "t": 2.035380356681664,
+    "df": 11,
+    "p": 0.033315774695605524,
+    "t_date": 1.6688816161536315,
+    "p_date": 0.05314321172446254,
+    "n": 178,
+    "n_dates": 29,
+    "n_clusters": 12,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3xT3:lrv_qxnext_is_weekend|c0",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_qxnext_is_weekend",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the bottom third (<= -6.99), forecast day Mon-Fri",
+   "d": 0.13550461276567008,
+   "t": 9.276228579425963,
+   "p": 1.6594615784095053e-16,
+   "p_bh": 3.733788551421387e-15,
+   "n": 8275,
+   "n_dates": 1080,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.11733935684111499,
+    "se": 0.020379163985399906,
+    "t": 5.757810130247716,
+    "df": 14,
+    "p": 2.4779760846444226e-05,
+    "t_date": 2.682926262532317,
+    "p_date": 0.004311630949241289,
+    "n": 1245,
+    "n_dates": 95,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_qxnext_is_weekend|c2",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_qxnext_is_weekend",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the bottom third (<= -6.99), forecast day Sat/Sun",
+   "d": -0.4204830276535732,
+   "t": -12.664817691779994,
+   "p": 1.4953861251640916e-25,
+   "p_bh": 6.729237563238413e-24,
+   "n": 3266,
+   "n_dates": 432,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.39332654318855576,
+    "se": 0.07904417069414858,
+    "t": -4.976034788327188,
+    "df": 12,
+    "p": 0.00016099430555465043,
+    "t_date": -3.9071632435377395,
+    "p_date": 0.00019141165481185917,
+    "n": 485,
+    "n_dates": 38,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_qxnext_is_weekend|c3",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_qxnext_is_weekend",
+   "cell": 3,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the middle third (-6.99 to -6.45), forecast day Mon-Fri",
+   "d": 0.14279645736870325,
+   "t": 10.630076862334281,
+   "p": 3.8760465254746645e-20,
+   "p_bh": 1.1286135471235053e-18,
+   "n": 7844,
+   "n_dates": 1094,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.1490321220242272,
+    "se": 0.03344547228571155,
+    "t": 4.455973016350442,
+    "df": 14,
+    "p": 0.00027156832009539434,
+    "t_date": 3.4999321952273945,
+    "p_date": 0.00035667763695790457,
+    "n": 652,
+    "n_dates": 95,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_qxnext_is_weekend|c5",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_qxnext_is_weekend",
+   "cell": 5,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the middle third (-6.99 to -6.45), forecast day Sat/Sun",
+   "d": -0.33856731614967,
+   "t": -13.224594951284917,
+   "p": 3.701709558508841e-27,
+   "p_bh": 2.0359402571798626e-25,
+   "n": 3152,
+   "n_dates": 438,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.28441397475596164,
+    "se": 0.0708069026072926,
+    "t": -4.016754924775781,
+    "df": 12,
+    "p": 0.0008547007482547439,
+    "t_date": -3.1677965678860525,
+    "p_date": 0.001537670626857387,
+    "n": 274,
+    "n_dates": 38,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_qxnext_is_weekend|c6",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_qxnext_is_weekend",
+   "cell": 6,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the top third (> -6.45), forecast day Mon-Fri",
+   "d": 0.14495712611443443,
+   "t": 9.334409014317185,
+   "p": 2.5842201931689817e-16,
+   "p_bh": 5.561691285298461e-15,
+   "n": 7065,
+   "n_dates": 965,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.19716254077089757,
+    "se": 0.04266668956465578,
+    "t": 4.620994569361271,
+    "df": 14,
+    "p": 0.00019816048877223217,
+    "t_date": 4.057077471776094,
+    "p_date": 5.1300419414564616e-05,
+    "n": 288,
+    "n_dates": 95,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_qxnext_is_weekend|c8",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_qxnext_is_weekend",
+   "cell": 8,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the top third (> -6.45), forecast day Sat/Sun",
+   "d": -0.28787733057019443,
+   "t": -9.321813647569842,
+   "p": 2.778378577583624e-16,
+   "p_bh": 5.730405816266224e-15,
+   "n": 2866,
+   "n_dates": 387,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.2725778438210431,
+    "se": 0.10282874688239618,
+    "t": -2.650794180471601,
+    "df": 12,
+    "p": 0.010574000656398689,
+    "t_date": -2.7353024539714066,
+    "p_date": 0.004756127676985917,
+    "n": 115,
+    "n_dates": 38,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_qxdow_sin|c0",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_qxdow_sin",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the bottom third (<= -6.99), forecast day Fri-Sun",
+   "d": -0.25738753683967347,
+   "t": -10.299396879407098,
+   "p": 3.3612987401750257e-19,
+   "p_bh": 8.757067770455988e-18,
+   "n": 4928,
+   "n_dates": 648,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.24720061097724189,
+    "se": 0.07844111933129817,
+    "t": -3.151416158828426,
+    "df": 12,
+    "p": 0.004176467126244524,
+    "t_date": -3.333416921785525,
+    "p_date": 0.0007627253494979573,
+    "n": 734,
+    "n_dates": 57,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_qxdow_sin|c1",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_qxdow_sin",
+   "cell": 1,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the bottom third (<= -6.99), forecast day Mon or Thu",
+   "d": 0.22403501079269333,
+   "t": 6.656661187886445,
+   "p": 4.869875227873584e-10,
+   "p_bh": 5.478609631357782e-09,
+   "n": 3309,
+   "n_dates": 432,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.1984714070340229,
+    "se": 0.07877176558158845,
+    "t": 2.519575454081382,
+    "df": 13,
+    "p": 0.012812272779145697,
+    "t_date": 2.240006365431258,
+    "p_date": 0.015591471370009274,
+    "n": 501,
+    "n_dates": 38,
+    "n_clusters": 14,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_qxdow_sin|c2",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_qxdow_sin",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the bottom third (<= -6.99), forecast day Tue or Wed",
+   "d": 0.08325576063929718,
+   "t": 3.3018826669357235,
+   "p": 0.0011987814614982792,
+   "p_bh": 0.008726423874141886,
+   "n": 3304,
+   "n_dates": 432,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.07542464515957314,
+    "se": 0.06953500645027233,
+    "t": 1.084700340302877,
+    "df": 14,
+    "p": 0.14819035757677806,
+    "t_date": 0.9891729808369144,
+    "p_date": 0.16450174565907089,
+    "n": 495,
+    "n_dates": 38,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3xT3:lrv_qxdow_sin|c3",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_qxdow_sin",
+   "cell": 3,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the middle third (-6.99 to -6.45), forecast day Fri-Sun",
+   "d": -0.18193314995317472,
+   "t": -7.953990562868392,
+   "p": 3.6273222011146717e-13,
+   "p_bh": 5.280954381034595e-12,
+   "n": 4722,
+   "n_dates": 657,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.17178511642890526,
+    "se": 0.05559571225661846,
+    "t": -3.0898986532626873,
+    "df": 12,
+    "p": 0.004682048542531347,
+    "t_date": -2.738874968720359,
+    "p_date": 0.004126136894264154,
+    "n": 406,
+    "n_dates": 57,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_qxdow_sin|c4",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_qxdow_sin",
+   "cell": 4,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the middle third (-6.99 to -6.45), forecast day Mon or Thu",
+   "d": 0.20080240712719147,
+   "t": 7.518236269898908,
+   "p": 4.371525148652641e-12,
+   "p_bh": 5.548474227136044e-11,
+   "n": 3133,
+   "n_dates": 437,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.24369916161275762,
+    "se": 0.06871954208128252,
+    "t": 3.546286168852909,
+    "df": 13,
+    "p": 0.0017908997615857368,
+    "t_date": 3.097866553852801,
+    "p_date": 0.0018551764924222712,
+    "n": 257,
+    "n_dates": 38,
+    "n_clusters": 14,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_qxdow_sin|c5",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_qxdow_sin",
+   "cell": 5,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the middle third (-6.99 to -6.45), forecast day Tue or Wed",
+   "d": 0.09006864808842704,
+   "t": 3.322035991670838,
+   "p": 0.0011177992056908572,
+   "p_bh": 0.00825836726592499,
+   "n": 3141,
+   "n_dates": 438,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.10020375365900924,
+    "se": 0.07251453271079604,
+    "t": 1.3818437479097319,
+    "df": 14,
+    "p": 0.09433643532072229,
+    "t_date": 1.31491879608497,
+    "p_date": 0.0983145280180668,
+    "n": 263,
+    "n_dates": 38,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3xT3:lrv_qxdow_sin|c6",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_qxdow_sin",
+   "cell": 6,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the top third (> -6.45), forecast day Fri-Sun",
+   "d": -0.14286460754793295,
+   "t": -6.065078679374548,
+   "p": 1.2289693125636848e-08,
+   "p_bh": 1.2673746035812998e-07,
+   "n": 4274,
+   "n_dates": 581,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.1343536624358586,
+    "se": 0.08045469229887657,
+    "t": -1.6699294795231558,
+    "df": 12,
+    "p": 0.060395005422502576,
+    "t_date": -1.921557019207469,
+    "p_date": 0.029878089333422404,
+    "n": 171,
+    "n_dates": 57,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_qxdow_sin|c7",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_qxdow_sin",
+   "cell": 7,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the top third (> -6.45), forecast day Mon or Thu",
+   "d": 0.2059118064633152,
+   "t": 6.530262348351247,
+   "p": 1.2503146799135155e-09,
+   "p_bh": 1.375346147904867e-08,
+   "n": 2830,
+   "n_dates": 386,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.24476363113970878,
+    "se": 0.07842658783982265,
+    "t": 3.1209266892958616,
+    "df": 13,
+    "p": 0.004056632660778328,
+    "t_date": 2.6768290250931255,
+    "p_date": 0.0055062804244298295,
+    "n": 116,
+    "n_dates": 38,
+    "n_clusters": 14,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:lrv_qxdow_sin|c8",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:lrv_qxdow_sin",
+   "cell": 8,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the top third (> -6.45), forecast day Tue or Wed",
+   "d": 0.0802754110198039,
+   "t": 2.6061409400834155,
+   "p": 0.01019289066679398,
+   "p_bh": 0.06153025463491488,
+   "n": 2827,
+   "n_dates": 385,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17",
+     "R-ML-2",
+     "R-SP-3"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.17257116178382886,
+    "se": 0.0589676722482109,
+    "t": 2.926538477853257,
+    "df": 14,
+    "p": 0.0055234913378646435,
+    "t_date": 2.2067544283171596,
+    "p_date": 0.01680788145168676,
+    "n": 116,
+    "n_dates": 38,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:next_is_weekendxdow_sin|c0",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:next_is_weekendxdow_sin",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Mon-Fri, forecast day Fri-Sun",
+   "d": 0.1136682607650516,
+   "t": 2.956994147883001,
+   "p": 0.003593054595426245,
+   "p_bh": 0.023714160329813216,
+   "n": 4640,
+   "n_dates": 222,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.05921000586965708,
+    "se": 0.13104135453409713,
+    "t": 0.45184213853841504,
+    "df": 12,
+    "p": 0.32972052335916846,
+    "t_date": 0.47313492886565345,
+    "p_date": 0.3209019512268669,
+    "n": 437,
+    "n_dates": 19,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3xT3:next_is_weekendxdow_sin|c1",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:next_is_weekendxdow_sin",
+   "cell": 1,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Mon-Fri, forecast day Mon or Thu",
+   "d": 0.21065317132589464,
+   "t": 9.066769277406452,
+   "p": 5.336415655547532e-16,
+   "p_bh": 1.0159714421138571e-14,
+   "n": 9272,
+   "n_dates": 443,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.21791469184294093,
+    "se": 0.0706702978567233,
+    "t": 3.0835400224963023,
+    "df": 13,
+    "p": 0.004359332147189343,
+    "t_date": 2.685707091204814,
+    "p_date": 0.00538574143606883,
+    "n": 874,
+    "n_dates": 38,
+    "n_clusters": 14,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3xT3:next_is_weekendxdow_sin|c2",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:next_is_weekendxdow_sin",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Mon-Fri, forecast day Tue or Wed",
+   "d": 0.08465500903267614,
+   "t": 3.8794569940051025,
+   "p": 0.00015477219259225485,
+   "p_bh": 0.0012768705888861025,
+   "n": 9272,
+   "n_dates": 443,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.09577464683436188,
+    "se": 0.0647581834496864,
+    "t": 1.4789582062439042,
+    "df": 14,
+    "p": 0.08064871158353548,
+    "t_date": 1.3431017071550349,
+    "p_date": 0.09371005153009451,
+    "n": 874,
+    "n_dates": 38,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|T3xT3:next_is_weekendxdow_sin|c6",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F3",
+   "state": "T3xT3:next_is_weekendxdow_sin",
+   "cell": 6,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Sat/Sun, forecast day Fri-Sun",
+   "d": -0.35173612432512996,
+   "t": -16.497042426969443,
+   "p": 6.06641948330045e-36,
+   "p_bh": 7.507194110584306e-34,
+   "n": 9284,
+   "n_dates": 444,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.34329434161213146,
+    "se": 0.07507928428386236,
+    "t": -4.5724242697119,
+    "df": 12,
+    "p": 0.0003203911466839934,
+    "t_date": -3.808191433392653,
+    "p_date": 0.0002552987599881893,
+    "n": 874,
+    "n_dates": 38,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|weekday|c0",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F4",
+   "state": "weekday",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Monday",
+   "d": 0.3701053068475836,
+   "t": 10.970236329794961,
+   "p": 4.709830991462723e-21,
+   "p_bh": 1.45710396298378e-19,
+   "n": 4646,
+   "n_dates": 222,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.2198681580404462,
+    "se": 0.10047811697647142,
+    "t": 2.188219332294333,
+    "df": 13,
+    "p": 0.023756917192118702,
+    "t_date": 2.3399872699158992,
+    "p_date": 0.015503259313916168,
+    "n": 437,
+    "n_dates": 19,
+    "n_clusters": 14,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|weekday|c2",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F4",
+   "state": "weekday",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Wednesday",
+   "d": 0.12320362077591157,
+   "t": 3.1653521635174866,
+   "p": 0.0018672144655734692,
+   "p_bh": 0.0133952342095488,
+   "n": 4626,
+   "n_dates": 221,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.20827678299155164,
+    "se": 0.11842320880957907,
+    "t": 1.7587497002082961,
+    "df": 13,
+    "p": 0.05106024131142616,
+    "t_date": 1.8885108936267916,
+    "p_date": 0.037591101476909375,
+    "n": 437,
+    "n_dates": 19,
+    "n_clusters": 14,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|weekday|c4",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F4",
+   "state": "weekday",
+   "cell": 4,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Friday",
+   "d": 0.1136682607650516,
+   "t": 2.956994147883001,
+   "p": 0.003593054595426245,
+   "p_bh": 0.023714160329813216,
+   "n": 4640,
+   "n_dates": 222,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.05921000586965708,
+    "se": 0.13104135453409713,
+    "t": 0.45184213853841504,
+    "df": 12,
+    "p": 0.32972052335916846,
+    "t_date": 0.47313492886565345,
+    "p_date": 0.3209019512268669,
+    "n": 437,
+    "n_dates": 19,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|weekday|c5",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F4",
+   "state": "weekday",
+   "cell": 5,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Saturday",
+   "d": -0.5926338059635614,
+   "t": -16.07958105461686,
+   "p": 7.515675272459981e-35,
+   "p_bh": 6.200432099779485e-33,
+   "n": 4640,
+   "n_dates": 222,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.6174159577973112,
+    "se": 0.10714693130658728,
+    "t": -5.762329823806658,
+    "df": 12,
+    "p": 4.493932422113804e-05,
+    "t_date": -4.080981045978381,
+    "p_date": 0.0003506397869840442,
+    "n": 437,
+    "n_dates": 19,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|weekday|c6",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F4",
+   "state": "weekday",
+   "cell": 6,
+   "hi": -1,
+   "lo": -1,
+   "describe": "forecast day Sunday",
+   "d": -0.11104593422988412,
+   "t": -3.489388340812713,
+   "p": 0.0006304842135342489,
+   "p_bh": 0.004801379779991588,
+   "n": 4644,
+   "n_dates": 222,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-VOL-1",
+     "R-VOL-27",
+     "R-ML-1",
+     "R-DS-1",
+     "R-DS-2",
+     "BELIEFS V1/V10/V17"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.0691727254269518,
+    "se": 0.08990886163305353,
+    "t": -0.7693649343405942,
+    "df": 12,
+    "p": 0.22827701208815698,
+    "t_date": -0.6267964957340656,
+    "p_date": 0.26933097987565985,
+    "n": 437,
+    "n_dates": 19,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|v0cell|c0",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F5",
+   "state": "v0cell",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "v0 cell R1 quiet trend up",
+   "d": 0.08196279892559022,
+   "t": 2.598984908685777,
+   "p": 0.010493043589630102,
+   "p_bh": 0.06257899490201085,
+   "n": 2549,
+   "n_dates": 615,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-DS-4",
+     "R-VOL-8",
+     "R-ML-2"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-DS-4",
+     "R-VOL-8",
+     "R-ML-2"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.09974159785505232,
+    "se": 0.1368987452724085,
+    "t": 0.7285793427586288,
+    "df": 10,
+    "p": 0.24148604150609643,
+    "t_date": 0.8782434839350046,
+    "p_date": 0.19174935551496738,
+    "n": 182,
+    "n_dates": 58,
+    "n_clusters": 11,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|v0cell|c1",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F5",
+   "state": "v0cell",
+   "cell": 1,
+   "hi": -1,
+   "lo": -1,
+   "describe": "v0 cell R2 trend up",
+   "d": 0.08459377513814087,
+   "t": 3.110480692644374,
+   "p": 0.002266870601768196,
+   "p_bh": 0.0160300135410751,
+   "n": 2287,
+   "n_dates": 731,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-DS-4",
+     "R-VOL-8",
+     "R-ML-2"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-DS-4",
+     "R-VOL-8",
+     "R-ML-2"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.17132622385386864,
+    "se": 0.10896857007824252,
+    "t": 1.5722535748688962,
+    "df": 12,
+    "p": 0.07093663813170385,
+    "t_date": 1.628927412464152,
+    "p_date": 0.05391048412798842,
+    "n": 170,
+    "n_dates": 71,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|v0cell|c2",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F5",
+   "state": "v0cell",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "v0 cell R3 momentum burst",
+   "d": 0.14176646935271597,
+   "t": 4.528428632858471,
+   "p": 1.2422918467242346e-05,
+   "p_bh": 0.00011825662771701849,
+   "n": 2598,
+   "n_dates": 763,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-DS-4",
+     "R-VOL-8",
+     "R-ML-2"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-DS-4",
+     "R-VOL-8",
+     "R-ML-2"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.24708176856232245,
+    "se": 0.0692631794884569,
+    "t": 3.567288859494243,
+    "df": 12,
+    "p": 0.001935815612354905,
+    "t_date": 2.826240814734342,
+    "p_date": 0.0030075557354231216,
+    "n": 402,
+    "n_dates": 77,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|v0cell|c4",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F5",
+   "state": "v0cell",
+   "cell": 4,
+   "hi": -1,
+   "lo": -1,
+   "describe": "v0 cell R5 balanced range",
+   "d": -0.06788403940596899,
+   "t": -4.146487497775085,
+   "p": 5.576231532029172e-05,
+   "p_bh": 0.0005018608378826255,
+   "n": 5115,
+   "n_dates": 1154,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-DS-4",
+     "R-VOL-8",
+     "R-ML-2"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-DS-4",
+     "R-VOL-8",
+     "R-ML-2"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.03075014404304488,
+    "se": 0.055781982726567855,
+    "t": -0.5512558453466229,
+    "df": 14,
+    "p": 0.2950742324630624,
+    "t_date": -0.5603399700280974,
+    "p_date": 0.28818335229996783,
+    "n": 437,
+    "n_dates": 113,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "vr1|v0cell|c5",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F5",
+   "state": "v0cell",
+   "cell": 5,
+   "hi": -1,
+   "lo": -1,
+   "describe": "v0 cell R6 whipsaw",
+   "d": -0.0945435021463173,
+   "t": -3.8173120390276685,
+   "p": 0.00019638889729936437,
+   "p_bh": 0.001593647609232547,
+   "n": 4588,
+   "n_dates": 960,
+   "direction": -1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-DS-4",
+     "R-VOL-8",
+     "R-ML-2"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-DS-4",
+     "R-VOL-8",
+     "R-ML-2"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": -0.14303263283638168,
+    "se": 0.06284173717292617,
+    "t": -2.276077003453746,
+    "df": 13,
+    "p": 0.020205720323197097,
+    "t_date": -2.1645365408519774,
+    "p_date": 0.01658116112060233,
+    "n": 542,
+    "n_dates": 88,
+    "n_clusters": 14,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3:funding_z_90d|c2",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F6",
+   "state": "T3:funding_z_90d",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "funding z (90d) in the top third (> 0.419)",
+   "d": 0.053294600806976844,
+   "t": 3.4867008963690203,
+   "p": 0.0006406218987902735,
+   "p_bh": 0.004804664240927052,
+   "n": 11161,
+   "n_dates": 1320,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-LEV-5",
+     "BELIEFS H1 (funding crowding tilts next-day vol up)"
+    ],
+    "overlap_c": false
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-LEV-5",
+     "BELIEFS H1 (funding crowding tilts next-day vol up)"
+    ],
+    "overlap_c": false
+   },
+   "ho": {
+    "d": 0.09037926421197856,
+    "se": 0.03069044848737932,
+    "t": 2.9448661934394598,
+    "df": 14,
+    "p": 0.005326795394009877,
+    "t_date": 2.6581897121447224,
+    "p_date": 0.004417470163025396,
+    "n": 1323,
+    "n_dates": 132,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|T3:funding_z_90d|hi-lo",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F6",
+   "state": "T3:funding_z_90d",
+   "cell": -1,
+   "hi": 2,
+   "lo": 0,
+   "describe": "funding z (90d) in the top third (> 0.419) minus funding z (90d) in the bottom third (<= -0.375)",
+   "d": 0.08671330893548373,
+   "t": 3.1010783337904666,
+   "p": 0.0023039133284970905,
+   "p_bh": 0.016062494332479717,
+   "n": 10318,
+   "n_dates": 1307,
+   "direction": 1.0,
+   "known": {
+    "status": "known",
+    "rules": [
+     "R-LEV-5",
+     "BELIEFS H1 (funding crowding tilts next-day vol up)"
+    ],
+    "overlap_c": false
+   },
+   "known_mechanical": {
+    "status": "known",
+    "rules": [
+     "R-LEV-5",
+     "BELIEFS H1 (funding crowding tilts next-day vol up)"
+    ],
+    "overlap_c": false
+   },
+   "ho": {
+    "d": 0.2291020902019082,
+    "se": 0.06963014368537251,
+    "t": 3.290271685164375,
+    "df": 14,
+    "p": 0.0026825684337327678,
+    "t_date": 3.302683619872619,
+    "p_date": 0.0006162202505821384,
+    "n": 871,
+    "n_dates": 126,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": -0.359679789313717
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "vr1|btc_v0cell|c5",
+   "target": "vr1",
+   "kind": "vol",
+   "family": "F8",
+   "state": "btc_v0cell",
+   "cell": 5,
+   "hi": -1,
+   "lo": -1,
+   "describe": "BTC v0 cell R6 whipsaw [alts only]",
+   "d": -0.17143075380497486,
+   "t": -4.156385916434901,
+   "p": 9.510601980109194e-05,
+   "p_bh": 0.0008406692821703663,
+   "n": 4271,
+   "n_dates": 211,
+   "direction": -1.0,
+   "known": {
+    "status": "contradicts",
+    "rules": [
+     "R-VOL-7",
+     "R-VOL-25 (no BTC vol spillover beyond own HAR)"
+    ],
+    "overlap_c": false
+   },
+   "known_mechanical": {
+    "status": "contradicts",
+    "rules": [
+     "R-VOL-7",
+     "R-VOL-25 (no BTC vol spillover beyond own HAR)"
+    ],
+    "overlap_c": false
+   },
+   "ho": {
+    "d": -0.22132043815511504,
+    "se": 0.10068023884161244,
+    "t": -2.198251024248072,
+    "df": 5,
+    "p": 0.039634156068520256,
+    "t_date": -1.62162328366543,
+    "p_date": 0.07177088704025782,
+    "n": 198,
+    "n_dates": 9,
+    "n_clusters": 6,
+    "n_pop": 2926,
+    "pop_mean": -0.35321228074115496
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "r1|Q5:lrv_q|c0",
+   "target": "r1",
+   "kind": "return",
+   "family": "F2",
+   "state": "Q5:lrv_q",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the bottom fifth (<= -7.3)",
+   "d": 0.0672077964907249,
+   "t": 2.9084192402417117,
+   "p": 0.004217319298446212,
+   "p_bh": 0.02746806648330099,
+   "n": 7044,
+   "n_dates": 1407,
+   "direction": 1.0,
+   "known": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)"
+    ],
+    "overlap_c": false
+   },
+   "known_mechanical": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)"
+    ],
+    "overlap_c": false
+   },
+   "ho": {
+    "d": 0.03685397122163661,
+    "se": 0.025128768000106296,
+    "t": 1.4666047782955662,
+    "df": 14,
+    "p": 0.0822922183659785,
+    "t_date": 1.3082318611949266,
+    "p_date": 0.09653408157687952,
+    "n": 1049,
+    "n_dates": 133,
+    "n_clusters": 15,
+    "n_pop": 3059,
+    "pop_mean": 0.022898542696629953
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "r1|T3xT3:log_sigmaxlrv_q|c6",
+   "target": "r1",
+   "kind": "return",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxlrv_q",
+   "cell": 6,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the top third (> -3.11), 90-day mean log RV in the bottom third (<= -6.99)",
+   "d": 0.09464763102090185,
+   "t": 2.4649824228818624,
+   "p": 0.015179782848413141,
+   "p_bh": 0.08538627852232393,
+   "n": 1552,
+   "n_dates": 521,
+   "direction": 1.0,
+   "known": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)"
+    ],
+    "overlap_c": false
+   },
+   "known_mechanical": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)"
+    ],
+    "overlap_c": false
+   },
+   "ho": {
+    "d": 0.12484157804970407,
+    "se": 0.09109966553200656,
+    "t": 1.3703845927496054,
+    "df": 9,
+    "p": 0.10188701574478118,
+    "t_date": 1.0357163026874174,
+    "p_date": 0.15276219227665794,
+    "n": 163,
+    "n_dates": 49,
+    "n_clusters": 10,
+    "n_pop": 3059,
+    "pop_mean": 0.022898542696629953
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "r1|T3xT3:lrv_wxlrv_q|c6",
+   "target": "r1",
+   "kind": "return",
+   "family": "F3",
+   "state": "T3xT3:lrv_wxlrv_q",
+   "cell": 6,
+   "hi": -1,
+   "lo": -1,
+   "describe": "7-day mean log RV in the top third (> -6.4), 90-day mean log RV in the bottom third (<= -6.99)",
+   "d": 0.10436894811452269,
+   "t": 2.6806502032602655,
+   "p": 0.009183104560960305,
+   "p_bh": 0.0563428176163079,
+   "n": 1009,
+   "n_dates": 403,
+   "direction": 1.0,
+   "known": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)"
+    ],
+    "overlap_c": false
+   },
+   "known_mechanical": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)"
+    ],
+    "overlap_c": false
+   },
+   "ho": {
+    "d": -0.12624496291221265,
+    "se": 0.12147145088977979,
+    "t": -1.0392973985859792,
+    "df": 6,
+    "p": 0.8306384567484817,
+    "t_date": -0.8771520994113028,
+    "p_date": 0.807041999929594,
+    "n": 137,
+    "n_dates": 39,
+    "n_clusters": 7,
+    "n_pop": 3059,
+    "pop_mean": 0.022898542696629953
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "r1|T3xT3:lrv_qxdow_sin|c0",
+   "target": "r1",
+   "kind": "return",
+   "family": "F3",
+   "state": "T3xT3:lrv_qxdow_sin",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the bottom third (<= -6.99), forecast day Fri-Sun",
+   "d": 0.10049748156075056,
+   "t": 2.865208921870187,
+   "p": 0.004696703132442628,
+   "p_bh": 0.030193091565702608,
+   "n": 5010,
+   "n_dates": 710,
+   "direction": 1.0,
+   "known": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)",
+     "R-PX-9 (no weekend direction)"
+    ],
+    "overlap_c": true
+   },
+   "known_mechanical": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)",
+     "R-PX-9 (no weekend direction)"
+    ],
+    "overlap_c": true
+   },
+   "ho": {
+    "d": 0.15672934146766349,
+    "se": 0.08216423875395036,
+    "t": 1.9075128528483825,
+    "df": 12,
+    "p": 0.04033411420205624,
+    "t_date": 1.5911984107922248,
+    "p_date": 0.05859742467653288,
+    "n": 734,
+    "n_dates": 57,
+    "n_clusters": 13,
+    "n_pop": 3059,
+    "pop_mean": 0.022898542696629953
+   },
+   "ho_testable": true,
+   "replicated": true,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "r1|btc_v0cell|c2",
+   "target": "r1",
+   "kind": "return",
+   "family": "F8",
+   "state": "btc_v0cell",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "BTC v0 cell R3 momentum burst [alts only]",
+   "d": 0.13791990759289163,
+   "t": 2.6102982122013514,
+   "p": 0.011537882204389463,
+   "p_bh": 0.06799109156158076,
+   "n": 2748,
+   "n_dates": 145,
+   "direction": 1.0,
+   "known": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)",
+     "R-PX-3 (thin trend edge)"
+    ],
+    "overlap_c": false
+   },
+   "known_mechanical": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)",
+     "R-PX-3 (thin trend edge)"
+    ],
+    "overlap_c": false
+   },
+   "ho": {
+    "d": 0.06412272625798124,
+    "se": 0.21574818056047163,
+    "t": 0.2972109711025276,
+    "df": 5,
+    "p": 0.38912857516762717,
+    "t_date": 0.24300312442153263,
+    "p_date": 0.4060535121851331,
+    "n": 286,
+    "n_dates": 13,
+    "n_clusters": 6,
+    "n_pop": 2926,
+    "pop_mean": 0.019012896790543164
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "r5|Q5:lrv_q|c0",
+   "target": "r5",
+   "kind": "return",
+   "family": "F2",
+   "state": "Q5:lrv_q",
+   "cell": 0,
+   "hi": -1,
+   "lo": -1,
+   "describe": "90-day mean log RV in the bottom fifth (<= -7.3)",
+   "d": 0.15993243036357002,
+   "t": 3.0818933821071464,
+   "p": 0.002471243015520917,
+   "p_bh": 0.016989795731706305,
+   "n": 7016,
+   "n_dates": 1403,
+   "direction": 1.0,
+   "known": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)"
+    ],
+    "overlap_c": false
+   },
+   "known_mechanical": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)"
+    ],
+    "overlap_c": false
+   },
+   "ho": {
+    "d": 0.05808456785201144,
+    "se": 0.05618915353009799,
+    "t": 1.0337327438274748,
+    "df": 13,
+    "p": 0.1600547012606036,
+    "t_date": 1.9730519374084872,
+    "p_date": 0.025322191416534502,
+    "n": 1029,
+    "n_dates": 129,
+    "n_clusters": 14,
+    "n_pop": 2967,
+    "pop_mean": 0.08090891534081496
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "r5|T3xT3:log_sigmaxlrv_q|c3",
+   "target": "r5",
+   "kind": "return",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxlrv_q",
+   "cell": 3,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the middle third (-3.52 to -3.11), 90-day mean log RV in the bottom third (<= -6.99)",
+   "d": 0.12392243432092663,
+   "t": 2.530724760935724,
+   "p": 0.012324277101374431,
+   "p_bh": 0.07177079017859227,
+   "n": 2939,
+   "n_dates": 1020,
+   "direction": 1.0,
+   "known": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)"
+    ],
+    "overlap_c": false
+   },
+   "known_mechanical": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)"
+    ],
+    "overlap_c": false
+   },
+   "ho": {
+    "d": 0.10611560250894159,
+    "se": 0.15683887644489616,
+    "t": 0.676589917718674,
+    "df": 13,
+    "p": 0.2552629125090512,
+    "t_date": 1.1009112297829498,
+    "p_date": 0.13675072504191083,
+    "n": 424,
+    "n_dates": 104,
+    "n_clusters": 14,
+    "n_pop": 2967,
+    "pop_mean": 0.08090891534081496
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "r5|T3xT3:log_sigmaxlrv_q|c5",
+   "target": "r5",
+   "kind": "return",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxlrv_q",
+   "cell": 5,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the middle third (-3.52 to -3.11), 90-day mean log RV in the top third (> -6.45)",
+   "d": -0.13623142194380106,
+   "t": -2.3933307959584353,
+   "p": 0.01784716549515123,
+   "p_bh": 0.09815941022333177,
+   "n": 4015,
+   "n_dates": 1146,
+   "direction": -1.0,
+   "known": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)"
+    ],
+    "overlap_c": false
+   },
+   "known_mechanical": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)"
+    ],
+    "overlap_c": false
+   },
+   "ho": {
+    "d": -0.2533995098931101,
+    "se": 0.14485374657019634,
+    "t": -1.7493472961040213,
+    "df": 13,
+    "p": 0.05189207393269489,
+    "t_date": -2.115886646520692,
+    "p_date": 0.01912529750548893,
+    "n": 111,
+    "n_dates": 65,
+    "n_clusters": 14,
+    "n_pop": 2967,
+    "pop_mean": 0.08090891534081496
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": true
+  },
+  {
+   "id": "r5|T3xT3:log_sigmaxlrv_q|c6",
+   "target": "r5",
+   "kind": "return",
+   "family": "F3",
+   "state": "T3xT3:log_sigmaxlrv_q",
+   "cell": 6,
+   "hi": -1,
+   "lo": -1,
+   "describe": "robust 1h sigma (log) in the top third (> -3.11), 90-day mean log RV in the bottom third (<= -6.99)",
+   "d": 0.20368378153659972,
+   "t": 3.5239089558197456,
+   "p": 0.0006112426797070115,
+   "p_bh": 0.004727580100858917,
+   "n": 1544,
+   "n_dates": 519,
+   "direction": 1.0,
+   "known": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)"
+    ],
+    "overlap_c": false
+   },
+   "known_mechanical": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)"
+    ],
+    "overlap_c": false
+   },
+   "ho": {
+    "d": -0.05100842617401165,
+    "se": 0.17449136576253368,
+    "t": -0.2923263621159875,
+    "df": 9,
+    "p": 0.61166796593554,
+    "t_date": -0.44746913308526803,
+    "p_date": 0.6717253644067102,
+    "n": 163,
+    "n_dates": 49,
+    "n_clusters": 10,
+    "n_pop": 2967,
+    "pop_mean": 0.08090891534081496
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "r5|T3xT3:lrv_wxlrv_q|c6",
+   "target": "r5",
+   "kind": "return",
+   "family": "F3",
+   "state": "T3xT3:lrv_wxlrv_q",
+   "cell": 6,
+   "hi": -1,
+   "lo": -1,
+   "describe": "7-day mean log RV in the top third (> -6.4), 90-day mean log RV in the bottom third (<= -6.99)",
+   "d": 0.27528905648894786,
+   "t": 3.8607567074298146,
+   "p": 0.0002516978176810607,
+   "p_bh": 0.0020095228992278234,
+   "n": 1005,
+   "n_dates": 399,
+   "direction": 1.0,
+   "known": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)"
+    ],
+    "overlap_c": false
+   },
+   "known_mechanical": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)"
+    ],
+    "overlap_c": false
+   },
+   "ho": {
+    "d": -0.22478067051219067,
+    "se": 0.21912091776383255,
+    "t": -1.0258293585391887,
+    "df": 6,
+    "p": 0.8277305356407617,
+    "t_date": -1.8809609579545052,
+    "p_date": 0.9661718049920109,
+    "n": 137,
+    "n_dates": 39,
+    "n_clusters": 7,
+    "n_pop": 2967,
+    "pop_mean": 0.08090891534081496
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  },
+  {
+   "id": "r5|btc_v0cell|c2",
+   "target": "r5",
+   "kind": "return",
+   "family": "F8",
+   "state": "btc_v0cell",
+   "cell": 2,
+   "hi": -1,
+   "lo": -1,
+   "describe": "BTC v0 cell R3 momentum burst [alts only]",
+   "d": 0.22086669524164215,
+   "t": 2.487275432529516,
+   "p": 0.015823057599679613,
+   "p_bh": 0.08800464620046526,
+   "n": 2748,
+   "n_dates": 145,
+   "direction": 1.0,
+   "known": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)",
+     "R-PX-3 (thin trend edge)"
+    ],
+    "overlap_c": false
+   },
+   "known_mechanical": {
+    "status": "contradicts",
+    "rules": [
+     "R-DS-6",
+     "R-BUDGET-1",
+     "R-ML-5",
+     "R-PX-6 (no direction from states / weekday / regime)",
+     "R-PX-3 (thin trend edge)"
+    ],
+    "overlap_c": false
+   },
+   "ho": {
+    "d": 0.05075611450830027,
+    "se": 0.17030344117678203,
+    "t": 0.29803340530044437,
+    "df": 5,
+    "p": 0.3888323953488152,
+    "t_date": 0.27695604432713145,
+    "p_date": 0.3932634137495853,
+    "n": 286,
+    "n_dates": 13,
+    "n_clusters": 6,
+    "n_pop": 2838,
+    "pop_mean": 0.07750706910020623
+   },
+   "ho_testable": true,
+   "replicated": false,
+   "replicated_date_clustered": false
+  }
+ ],
+ "rule_candidates": [
+  {
+   "id": "R-MINE-20",
+   "kind": "expect",
+   "rule": "WHEN the perp is an alt (not BTC) and BTC's v0 cell is R6 whipsaw THEN expect next-day RV relative to the log-HAR forecast -15.8% vs the average (in-sample), -19.9% holdout",
+   "when": "daily (1d) decision at 00:00 UTC for a universe-L crypto perp; H-MINE2 state btc_v0cell (edges fitted on llm_in_sample)",
+   "then": "central next-day variance expectation = log-HAR x 0.84 relative to the average residual; stops and risk keep the unshrunk risk sigma (R-VOL-2)",
+   "scope": {
+    "assets": "crypto perps (universe L)",
+    "horizon": "1d",
+    "sides": "both"
+   },
+   "effect": "vr1 effect -0.1714 (t -4.16, 4271 rows, 211 dates) in-sample, -0.2213 (t -2.20, one-sided p 0.0396, 198 rows, 9 dates) holdout; date-clustered holdout p 0.0718; BH-FDR 10% discovery among 495 effects",
+   "confidence": "C",
+   "evidence": [
+    "H-MINE2"
+   ],
+   "review": "register as a forward hypothesis; demote if the effect on dates after 2026-11-12 changes sign or falls below half; it contradicts R-VOL-7, R-VOL-25 (no BTC vol spillover beyond own HAR), which stay in force until a forward test confirms this",
+   "status": "provisional",
+   "known_tag": "contradicts: R-VOL-7, R-VOL-25 (no BTC vol spillover beyond own HAR)"
+  },
+  {
+   "id": "R-MINE-21",
+   "kind": "expect",
+   "rule": "WHEN 90-day mean log RV in the bottom third (<= -6.99), forecast day Fri-Sun THEN expect next-day vol-scaled return +0.100 sigma vs the average (in-sample), +0.157 sigma holdout",
+   "when": "daily (1d) decision at 00:00 UTC for a universe-L crypto perp; H-MINE2 state T3xT3:lrv_qxdow_sin (edges fitted on llm_in_sample)",
+   "then": "treat the next-day vol-scaled return as tilted by about +0.10 sigma; context for the decision layer only, not a reason to change risk limits",
+   "scope": {
+    "assets": "crypto perps (universe L)",
+    "horizon": "1d",
+    "sides": "both"
+   },
+   "effect": "r1 effect +0.1005 (t 2.87, 5010 rows, 710 dates) in-sample, +0.1567 (t 1.91, one-sided p 0.0403, 734 rows, 57 dates) holdout; date-clustered holdout p 0.0586; BH-FDR 10% discovery among 495 effects",
+   "confidence": "C",
+   "evidence": [
+    "H-MINE2"
+   ],
+   "review": "register as a forward hypothesis; demote if the effect on dates after 2026-11-12 changes sign or falls below half; it contradicts R-DS-6, R-BUDGET-1, R-ML-5, R-PX-6 (no direction from states / weekday / regime), R-PX-9 (no weekend direction), which stay in force until a forward test confirms this",
+   "status": "provisional",
+   "known_tag": "contradicts: R-DS-6, R-BUDGET-1, R-ML-5, R-PX-6 (no direction from states / weekday / regime), R-PX-9 (no weekend direction)"
+  }
+ ]
+}

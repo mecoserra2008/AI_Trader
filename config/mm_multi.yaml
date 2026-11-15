@@ -1,0 +1,70 @@
+# Multi-asset passive quoting in a sell-off: `atx mm --config config/mm_multi.yaml` (H-MM2). Read by crates/atx/src/mm.rs.
+# Changing any value starts a new track record (log it in the diary).
+#
+# 50 contracts, minimum lot on the side that adds inventory, skew by DISTANCE (ask closer than bid), never crossing.
+# The side that reduces inventory scales 1 -> reduce_lots_max lots with |inventory| / cap. Sigma = max(4 h, 30 min)
+# from 1m klines, so quotes widen as soon as volatility bursts; a mid move > shock_pause_sigma per tick pauses adding on
+# that symbol for shock_cooldown_s. Leverage 20x is a margin setting only (shares margin across contracts); exposure is
+# bounded by the USD caps, the per-symbol loss stop and the global loss limit. NEVER add SPYUSDT (the user's own position).
+
+symbols: [ETHUSDT, SOLUSDT, XRPUSDT, HYPEUSDT, NEARUSDT, 1000PEPEUSDT, ENAUSDT, DOGEUSDT, SUIUSDT, TRUMPUSDT,
+          WLDUSDT, UNIUSDT, LINKUSDT, BNBUSDT, AAVEUSDT, ADAUSDT, AVAXUSDT, LTCUSDT, DOTUSDT, TRXUSDT,
+          ATOMUSDT, ETCUSDT, FILUSDT, XLMUSDT, ZECUSDT, ONDOUSDT, INJUSDT, ARBUSDT, TAOUSDT, GRAMUSDT,
+          MONUSDT, CARVUSDT, MAVIAUSDT, RENDERUSDT, WIFUSDT, KASUSDT, CRVUSDT, WLFIUSDT, ASTERUSDT,
+          CLUSDT, BZUSDT, XAUUSDT, XAGUSDT, QQQUSDT, NVDAUSDT, TSLAUSDT, MSTRUSDT, COINUSDT, CRWVUSDT, GOOGLUSDT]
+refresh_s: 10
+sigma_lookback_min: 240        # slow sigma window (1m klines)
+sigma_fast_min: 30             # fast sigma window; sigma used = max(slow, fast)
+sigma_floor_bps: 20.0
+
+ask_offset_sigma: 0.45         # sell quote: r * (1 + 0.45 sigma)
+bid_offset_sigma: 0.90         # buy quote:  r * (1 - 0.90 sigma)   (falling-knife protection in a sell-off)
+requote_sigma: 0.30
+min_rest_s: 45
+
+inventory_shift_sigma: 0.60
+take_profit_sigma: 0.60
+max_short_usd: 25.0            # per symbol after a fill (one lot from flat is always allowed)
+max_long_usd: 15.0
+max_gross_usd: 400.0           # all symbols
+reduce_lots_max: 3             # reducing side: 1 lot near flat -> 3 lots at the cap
+
+flow_window_s: 300
+flow_depth_bps: 25
+flow_shift_sigma: 0.30
+flow_batch: 8                  # symbols whose book + trades are refreshed per tick (rotating)
+
+tox_horizon_s: 60
+tox_alpha: 0.30
+tox_widen: 1.0
+tox_pause_sigma: 0.75
+
+shock_pause_sigma: 3.0         # |mid move| between ticks > 3 x sigma scaled to the tick -> no adding for the cooldown
+shock_cooldown_s: 120
+
+level_lookback_h: 48
+level_pivot_bars: 3
+level_snap_sigma: 0.5
+level_buffer_sigma: 0.05
+
+loss_limit_usd: 10.0           # global: fill-ledger P&L since start -> cancel all, flatten all, stop
+symbol_loss_limit_usd: 1.5     # per symbol: cancel + flatten that symbol only, stop quoting it
+exit_window_min: 30
+leverage: 20
+order_pause_ms: 80             # throttle between order operations (~12/s max)
+
+# Structural zones (scripts/levels.py, 4h pivots clustered by ATR; refresh before each run). Quotes go just BEYOND zones.
+levels_file: data/mm/levels.json
+
+# Discretionary views from the user (2026-11-08 22:25 UTC). Logged inventory skews, NOT tested signals.
+bias:
+  XAUUSDT: {sigma: -0.40, off_below: 3500, max_short_usd: 40, max_long_usd: 8,
+            note: "slightly negative gold until 3500; void on a full global war breakout (manual)"}
+  CLUSDT:  {sigma: 0.30, max_long_usd: 30, max_short_usd: 10,
+            note: "Iran war prolonged -> risk selling, oil bid; review on Hormuz normalisation / ceasefire"}
+  BZUSDT:  {sigma: 0.30, max_long_usd: 30, max_short_usd: 10,
+            note: "same oil view as WTI"}
+
+# Portfolio balance (added 2026-11-08 23:10 UTC after the first run filled 38 shorts in 2 min on a bounce):
+max_net_usd: 60.0              # signed sum of all inventory; adds that push |net| beyond it pause on every symbol
+portfolio_shift_sigma: 0.6     # every reservation leans against the portfolio net by up to 0.6 sigma

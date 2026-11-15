@@ -1,9 +1,8 @@
-"""LLM decision layer (phase 4). Planned contents:
+"""LLM decision layer (phase 4, forward only, paper book).
 
-- session runner: build market + candidate cards from `snapshots`, run the pinned model with
-  tool use, enforce the tool-call budget and the mandatory per-candidate checklist
-- view schema: bounded Δ log-odds views (ARCHITECTURE §2.4), validated before reaching the combiner
-- hand-off to the Rust risk engine and broker via JSON proposals
-
-Nothing here is wired yet; the deterministic layers come first.
+- session: state cards, candidates from the validated sleeves (shock_regime, trend_4h), structural placement with
+  the H-STOP1 stop cap
+- decision: the 4-hourly harness (scripts/decision_session.py prepare / decide / status): PACKET.md, validated
+  take / skip answers with bounded log-odds tilts (ARCHITECTURE 2.4), OrderIntents -> Rust risk engine -> paper book
+- scorecard: AI vs RULE vs RANDOM vs ALL on the same candidates, H-AI1 / H-AI2 running statistics
 """

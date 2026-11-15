@@ -2,6 +2,7 @@
 .venv/
 target/
 data/
+vecopen/data/
 logs/
 __pycache__/
 *.pyc

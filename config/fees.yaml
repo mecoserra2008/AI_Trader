@@ -1,0 +1,25 @@
+# Fee schedule for risk-engine sizing (at-risk) and paper fills (at-exec PaperBook).
+# Owned by agent L (docs/EXECUTION_PIPELINE.md). Units: basis points of notional.
+# Changing any value starts a new paper track record (log it in the journal).
+#
+# A position's round-trip cost, used in sizing (qty = risk / (|entry - stop| + entry * cost_frac)):
+#   entry leg: maker_bps (limit) or taker_bps + slippage_bps (market)
+#   exit leg:  taker_bps + slippage_bps (stops and targets trigger market orders)
+#
+# Class resolution for a symbol: `symbols` override > lake instruments symbol_type
+# ('' = crypto, ETF | stock | commodity = tradfi) > the intent's asset_class > default_class.
+
+default_class: crypto            # the more expensive schedule: an unknown class never under-costs a trade
+
+classes:
+  crypto:                        # Bybit linear USDT perps, VIP0
+    maker_bps: 2.0
+    taker_bps: 5.5
+    slippage_bps: 2.0            # per market leg, same as config/risk.yaml costs.slippage_bps
+  tradfi:                        # Bybit TradFi perps (stocks, ETFs, commodities)
+    maker_bps: 0.0
+    taker_bps: 2.75
+    slippage_bps: 2.0            # not yet measured for TradFi books; kept at the crypto value
+
+# Per-symbol overrides: a class name, or explicit rates {maker_bps, taker_bps, slippage_bps}.
+symbols: {}
