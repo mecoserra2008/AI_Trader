@@ -2838,3 +2838,63 @@ hypotheses:
     prior: 0.12
     family: rough_vol
     status: proposed
+
+  # ---- Kalman fair value and dynamic-beta pairs (block KFD; research agent, registered 2026-11-16 ~00:00 UTC BEFORE any KFD result) ----
+  # IDs H-KF1 / H-KF2 are taken (trend state space, 2026-11-10), hence KFD. Data: lake 1h bars (universe L, 2020/21-2026), the 5m
+  # Bybit public klines cache (data/research/bos/bars/5m, 2022-2026), lake 15m BTC/ETH (2024-01 -> 2026-11-07) with lake flow_bars
+  # 15m taker buy/sell volume (BTC/ETH only, 2026-05-11 -> 2026-11-10), and lake flow_3s rolled to 1m (104 perps, 2026-11-07 ->
+  # 2026-11-15; delta and L1 OFI). No 1m klines exist in the lake. Segments by entry time vs 2026-07-01.
+  # Common execution (all KFD rules): signal at the close of bar t; entry = limit at close_t, filled only if bar t+1 trades THROUGH it
+  # (long: low < price; short: high > price), else cancelled; maker 2 bp. Exits: target = limit at the close where the exit condition
+  # first holds, filled iff the next bar trades through, else crossed at the next close (taker 5.5 + 2 bp slip); time stop = taker at the
+  # close; price stop = resting (single asset: intrabar, worst case first, gap-through at the open) or close-based (pairs), taker.
+  # One position per instrument. R unit = stop distance + entry fee + stop fee (a plain stop-out = -1 R). Variant grid for DSR / PBO:
+  # k in {1.5, 2, 2.5, 3, 3.5} x time stop {12, 48} bars; primary variant k = 2.5, time stop 12. PBO by CSCV (S = 10 blocks of
+  # llm_in_sample time) over the 10 variants; DSR of the primary with N = 10 trials.
+  H-KFD1:
+    title: "Fading large standardised Kalman fair-value deviations earns positive net R (single asset)"
+    statement: >-
+      Local-level model on x_t = log close: mu_t = mu_{t-1} + eta_t, x_t = mu_t + eps_t, Var(eta_t) = Q s_t^2, Var(eps_t) = R s_t^2, s_t = the
+      robust_bc one-bar-ahead vol known at t-1 (frame.sigma_risk_next lagged; on 5m / 1m the same VolModel without weekend shrink). Steady-
+      state gain K and innovation scale S = P + R (vol units) by Gaussian QML on the training fold only (expanding yearly refits, 1-day purge);
+      Q = K^2 S, R = (1 - K) S reported. Innovation v_t = x_t - mu_{t|t-1}, z_t = v_t / (s_t sqrt(S)). Rule: z_t >= k -> short, z_t <= -k ->
+      long; target exit when z crosses 0; stop 1.5 sqrt(S) s_t (log) beyond the entry; time stop. A local-linear-trend variant (slope state) is
+      secondary. Frequencies 1h, 5m (universe L) and 1m (flow_3s, 8 days, clean_holdout only).
+    rationale: "User request: a Kalman fair value with order-flow confirmation. Prior is low: hourly deviations continue (H-T1), 1h mean reversion loses (R-MAP), and a steady-state KF is an EWMA."
+    test: "Net R per trade, per-day mean, NW t; DSR (N = 10) and PBO over the grid; per own-token v0 cell table (4h cell at entry, 1h bars only)."
+    success: >-
+      Supports in a segment iff the primary variant's mean net R > 0 with NW t > 2 at >= 1 frequency, with DSR > 0.95 and PBO < 0.5 (in-sample
+      grid). Contradicts iff the primary mean net R <= 0 at every frequency. Else inconclusive. Pooled per the protocol.
+    prior: 0.10
+    family: kalman_fair_value
+    status: proposed
+  H-KFD2:
+    title: "Fading the standardised innovation of a dynamic-beta Kalman pairs filter earns positive net R on the most correlated liquid pairs"
+    statement: >-
+      Kalman regression log P_A = alpha_t + beta_t log P_B + e_t, (alpha, beta) random walks with Q = diag(q_a, q_b), Var(e) = R, MLE on the
+      training fold only (Gaussian, 1h: data < 2025-01-01; 5m: the last 120 days before 2025-01-01). Spread = log P_A - beta_t log P_B - alpha_t
+      (log ratio); z = innovation / sqrt(S_t). Rule: z >= k -> short A / long beta B (notional 1 : beta), z <= -k the reverse; target z crosses 0;
+      stop when the spread has moved 1.5 sqrt(S_entry) against at a close; time stop. Costs on both legs. Pairs: ETHUSDT/BTCUSDT,
+      SOLUSDT/ETHUSDT, and the 6 same-sector universe-L pairs (config/sectors.yaml) with the highest correlation of 1h log returns over
+      2023-01-01 .. 2024-12-31 (selection uses training data only).
+    rationale: "Classic dynamic-beta pairs filter (log ratio, R-house); RV spreads revert but below costs at taker fees (H-RV1-3); maker entries may change that."
+    test: "As H-KFD1 at 1h and 5m (trades pooled over pairs, per-day mean, NW t; DSR / PBO over the same grid)."
+    success: "As H-KFD1."
+    prior: 0.12
+    family: kalman_fair_value
+    status: proposed
+  H-KFD3:
+    title: "An order-flow guardrail (no fade while taker flow pushes in the direction of the deviation) improves the net R of the KF fade"
+    statement: >-
+      For H-KFD1 primary-variant signals: skip the entry if the taker delta (buy - sell volume) over the last N minutes has the sign of the
+      deviation (z >= k and delta > 0, or z <= -k and delta < 0), and, where L1 OFI exists (flow_3s), also if the OFI sum over N has that sign.
+      N = 60 min on 15m bars (BTC/ETH flow_bars), 15 min on 1m (flow_3s). Validation variant: additionally require the last N/4 minutes'
+      delta to point toward fair value.
+    rationale: "User idea: a deviation still pushed by aggressive flow is information, not noise; one that is no longer pushed is the fade."
+    test: "Mean net R per trade guarded minus unguarded (and validation minus unguarded), day-block bootstrap 95% CI (2000 resamples, seed 0); per segment where data exists (in-sample = BTC/ETH 2026-05-11 .. 06-30 only)."
+    success: >-
+      Supports in a segment iff guarded - unguarded > 0 with the CI above 0 and >= 30 guarded trades; contradicts iff the difference <= 0
+      with >= 30 guarded trades; else inconclusive.
+    prior: 0.30
+    family: kalman_fair_value
+    status: proposed

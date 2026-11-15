@@ -3495,3 +3495,51 @@ rules:
   - research/reports/bos_regimes_2026-11-15.md
   review: a registered allocator with a different unit (regime-only, not variant x regime) that beats the static pick with DSR > 0.95 in-sample
   status: provisional
+# 2026-11-16 00:00 UTC: merged rough-vol candidates (research/reports/rough_vol_2026-11-16.md; H-RFSV1 supports both segments -> A; H-RFSV2 inconclusive -> C provisional; H-VOLT1 contradicts/inconclusive -> B avoid).
+- id: R-ROUGH-1
+  kind: expect
+  rule: WHEN reasoning about how crypto volatility evolves THEN expect log volatility to be rough (Hurst H about 0.1-0.15 daily) in every vol state, so vol shocks are anti-persistent at short lags while
+    the level has long memory
+  when: interpreting a vol spike, a vol compression, or the term structure of vol forecasts for a crypto perp
+  then: do not extrapolate a one-day vol change; expect partial give-back within days and a slow drift of the level (a power-law, not exponential, memory)
+  scope:
+    assets: universe L
+    horizon: 1d-20d
+    sides: both
+  effect: daily H median 0.129 in-sample, 0.139 holdout; 23 of 23 token CIs below 0.35; H by vol state 0.12-0.15 / 0.08-0.17
+  confidence: A
+  evidence:
+  - H-RFSV1
+  review: a holdout quarter with median H > 0.3
+  status: active
+- id: R-ROUGH-2
+  kind: prefer
+  rule: WHEN a median (log-scale) forecast of next-hour realised volatility is needed THEN a power-law rough kernel on deseasonalised log RV is slightly better than log-HAR; for the variance level the risk
+    engine reads keep log-HAR
+  when: intraday vol bands or medians at 1h-4h for universe-L perps
+  then: rough-kernel log-RV median as a challenger (forward shadow); the risk sigma and stops stay on sigma_risk_next (log-HAR)
+  scope:
+    assets: universe L
+    horizon: 1h-4h
+    sides: both
+  effect: log-MSE -3.4% (t -7.6) in-sample, -1.5% (t -3.1) holdout at 1h; QLIKE tie (registered verdict inconclusive)
+  confidence: C
+  evidence:
+  - H-RFSV2
+  review: a forward shadow (vol.rough vs log-HAR, median pinball) over 60 days
+  status: provisional
+- id: R-ROUGH-3
+  kind: avoid
+  rule: WHEN a long-memory (fractional / power-law) weighting of past returns is offered as a direction signal THEN do not expect it to beat plain EWMA momentum or to pay after costs
+  when: momentum or drift signals built from Volterra or fractional kernels of past standardised returns, 1h-4h
+  then: treat it as the same thin trend exposure as EWMA momentum; no separate sleeve
+  scope:
+    assets: universe L
+    horizon: 1h-4h
+    sides: both
+  effect: IC difference vs EWMA |t| < 1.5; in-sample net Sharpe -0.56 (1h) and -0.43 (4h)
+  confidence: B
+  evidence:
+  - H-VOLT1
+  review: a registered kernel test with positive net Sharpe in both segments
+  status: active
