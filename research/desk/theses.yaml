@@ -200,3 +200,45 @@ theses:
       - "hyperscaler capex guidance and the AI-related bond issuance calendar: not backtestable; the news agent logs them as narrative events in research/narratives/events.yaml"
       - "Nvidia earnings Tue 2026-11-17 22:00 UTC (the next test)"
     links: [research/reports/macro_narrative_2026-11-15.md, T-USER-20261115-c]
+
+  - id: T-CLAUDE-20261115-deep
+    component: deep
+    title: "Not the bottom yet: BTC prints below the 61,899 flush low within 14 days (P = 0.60)"
+    author: claude
+    created_ts: 2026-11-15T20:45:00Z
+    claim: >-
+      The 2026-11-15 01:00 UTC flush low (61,899 on Bybit BTCUSDT) is undercut by any print within 14 days, i.e.
+      before 2026-11-29 20:45 UTC. Probability 0.60 for the lower low, 0.40 for "the bottom is in". Expected shape if
+      it happens: a bounce first, then the undercut; about half shallow retests (-3% to -7%) and half deep (-15% to
+      -23%); P(a print at or below 58,000 within 14 days) about 0.25-0.30.
+    mechanism: >-
+      Forced selling happened (Bybit long liquidations ~9:1, volume climax ~9x, Fear & Greed 10, top traders cut
+      longs) but the positioning reset did not: OI fell only ~6.5-7% into the low (analog median ~13%), funding just
+      negative, DVOL 44 without a spike, no CVD absorption after the low (the cleanest separator of analogs that held),
+      no catalyst, spot ETF outflows running, the front end repricing up (user thesis a), and BTC weak while the S&P
+      rose. The driftless base rate of touching a level 4.7% below in 14 days is already ~0.6-0.66.
+    direction: short
+    direction_note: >-
+      A lower-low claim, not a 14-day return call (2 of 5 analog undercuts ended the 14 days higher). Score on
+      `resolution`, not on the sign of the 14-day return.
+    assets: [BTCUSDT]
+    horizon_days: 14
+    probability: 0.60
+    resolution:
+      event: "min(Bybit BTCUSDT 1m low) over [created_ts, created_ts + 14 d] < 61899"
+      also_record: ["the date and depth of the lowest print", "the high before that print", "whether 58,000 printed"]
+    trigger: on_create
+    proxies:
+      - {id: btc_close_below_63k, series: "lake:BTCUSDT", transform: level, op: "<", value: 63000}
+      - {id: btc_3d_down, series: "lake:BTCUSDT", transform: logret_3, op: "<", value: 0.0}
+      - {id: eth_lags_btc_3d, series: "lake:ETHUSDT", vs: "lake:BTCUSDT", transform: rel_logret_3, op: "<", value: 0.0}
+      - {id: y2_up_5obs, series: "fred:DGS2", transform: chg_5, op: ">", value: 0.0}
+      - {id: hy_wider_5obs, series: "fred:BAMLH0A0HYM2", transform: chg_5, op: ">", value: 0.0}
+      - {id: vix_above_20, series: "fred:VIXCLS", transform: level, op: ">", value: 20.0}
+    invalidation:
+      any:
+        - {series: "lake:BTCUSDT", transform: level, op: ">=", value: 72058}
+    status: active
+    watch: ["CME reopen 2026-11-15 23:00 UTC", "Nvidia results 2026-11-17 22:00 UTC", "FOMC minutes 2026-11-18 19:00 UTC",
+            "spot ETF flows", "a second OI flush >= 10% would be the missing reset"]
+    links: [research/reports/deep_analogs_2026-11-15.md, research/reports/analogs_2026-11-15.md, research/reports/post_cascade_2026-11-15.md]

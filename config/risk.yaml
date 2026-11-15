@@ -57,7 +57,7 @@ slot_replacement_hurdle_r: 0.15
 # hash is logged with every live journal event).
 live_small:
   max_loss_per_trade_usd: 2.00     # worst case at the stop, fees + the tier's stop slip included
-  risk_to_stop_usd: 1.00           # user 2026-11-15 ~20:10 UTC: "1 usd risk" for the first trades (cap stays 2.00). sizing budget: qty * (|entry - stop| + entry fee + exit fee + 2 bp slippage)
+  risk_to_stop_usd: 1.30           # user 2026-11-15: "1 usd risk", then accepted ~1.25 on BTC (min lot 0.001); 1.30 so the peg loop matches the min-lot decision (cap stays 2.00). sizing budget: qty * (|entry - stop| + entry fee + exit fee + 2 bp slippage)
   max_entries_per_day: 20          # bot entry orders submitted per UTC day (filled or not)
   daily_loss_stop_usd: 10.0        # realised (bot trades closed today) + open losses <= -10 -> no new entries today
   daily_loss_budget: true          # also refuse an entry if realised - every open worst case - this worst case < -10

@@ -99,7 +99,13 @@ class Manifest:
         self.d[key] = {**self.d.get(key, {}), **kw, "ts": datetime.now(UTC).isoformat(timespec="seconds")}
         tmp = MANIFEST.with_suffix(".tmp")
         tmp.write_text(json.dumps(self.d, indent=1))
-        tmp.replace(MANIFEST)
+        for i in range(20):  # Windows: a reader can hold the target briefly
+            try:
+                tmp.replace(MANIFEST)
+                return
+            except PermissionError:
+                time.sleep(0.5 * (i + 1))
+        MANIFEST.write_text(json.dumps(self.d, indent=1))
 
 
 def http_get(url: str, dest: Path | None = None, tries: int = 6) -> tuple[int, bytes | None, int]:
@@ -180,8 +186,9 @@ def fetch_binance(ep: str, man: Manifest, log=print) -> None:
             url = url_fn(day)
             cache = d / "cache" / kind / f"{day}.parquet"
             if man.done(url):
-                if cache.exists():
-                    frames.append(pl.read_parquet(cache))
+                src = cache if cache.exists() else next(iter(OUT.glob(f"*/cache/{kind}/{day}.parquet")), None)
+                if src is not None:  # another episode's window already holds this day
+                    frames.append(pl.read_parquet(src))
                 continue
             st, b, n = http_get(url)
             if st == 200 and b is not None:
@@ -245,8 +252,9 @@ def fetch_binance(ep: str, man: Manifest, log=print) -> None:
         url = f"{BV}/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-{mo}.zip"
         cache = d / "cache" / "funding" / f"{mo}.parquet"
         if man.done(url):
-            if cache.exists():
-                fr.append(pl.read_parquet(cache))
+            src = cache if cache.exists() else next(iter(OUT.glob(f"*/cache/funding/{mo}.parquet")), None)
+            if src is not None:
+                fr.append(pl.read_parquet(src))
             continue
         st, b, n = http_get(url)
         if st == 200 and b is not None:
@@ -564,7 +572,8 @@ def main() -> None:
         if not a.skip_bybit:
             fetch_bybit(ep, man, skip_ob=a.skip_ob, log=log)
         lake_extract(ep, log)
-    shutil.rmtree(RAW, ignore_errors=True)
+    for p in RAW.glob("*.gz"):  # transient raw files of this stage (the ob200 side job keeps its own subfolder)
+        p.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

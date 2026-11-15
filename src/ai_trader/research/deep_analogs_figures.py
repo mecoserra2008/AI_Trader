@@ -76,10 +76,11 @@ def overlay(al, cls, col, xcol, fname, ylabel, title, scale=1.0, xlim=(-72, 168)
 
 def liq_profiles(res, al, cls):
     eps = [e for e in res["fingerprints"]]
-    fig, axs = plt.subplots(4, 3, figsize=(10, 9), sharex=True)
+    fig, axs = plt.subplots(4, 3, figsize=(10, 9))
     for ax, e in zip(axs.flat, eps, strict=False):
         d = al.filter(pl.col("ep") == e).sort("k")
         d = d.filter((pl.col("k") >= -72) & (pl.col("k") <= 72))
+        ax.set_xlim(-75, 75)
         ax.bar(d["k"].to_numpy(), -d["fs_h"].fill_null(0).to_numpy(), width=1.0, color=C_LL, label="forced selling (proxy)")
         ax.bar(d["k"].to_numpy(), d["fb_h"].fill_null(0).to_numpy(), width=1.0, color=C_BOT, label="forced buying (proxy)")
         ax.axvline(0, color=INK2, lw=0.8, ls=":")
@@ -101,6 +102,7 @@ def liq_profiles(res, al, cls):
         ax.bar(sh["k"].to_numpy(), sh["usd"].to_numpy() / 1e6, width=1.0, color=C_BOT)
         ax.axvline(0, color=INK2, lw=0.8, ls=":")
         ax.set_title("NOW: real Bybit liquidations, $M/h (longs down)", fontsize=8, loc="left", color=INK)
+        ax.set_xlim(-75, 75)
     for a in axs.flat[len(eps) + 1:]:
         a.axis("off")
     axs.flat[0].legend(fontsize=7, loc="lower left")

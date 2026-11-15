@@ -91,6 +91,16 @@ pub enum LiveCmd {
         #[arg(long, default_value = "")]
         reason: String,
     },
+    /// Move ONE open bot trade's stop. Only tightening is allowed (short: lower, long: higher) and the new stop must stay
+    /// beyond the current mark; the exchange stop is then synced through verify_stop (journaled).
+    Stop {
+        #[arg(long)]
+        id: String,
+        #[arg(long)]
+        stop: f64,
+        #[arg(long, default_value = "")]
+        reason: String,
+    },
     /// Write the KILL flag and cancel every bot order. Bot positions keep their exchange-side stops.
     Kill,
     /// Cancel bot orders and close bot positions with reduce-only market orders. Never touches anything else.
@@ -127,6 +137,7 @@ pub async fn run(ctx: &Ctx, cmd: LiveCmd) -> anyhow::Result<()> {
         LiveCmd::Submit { id, test } => desk.submit(&id, &test).await,
         LiveCmd::Reconcile { read_only } => desk.reconcile_cmd(read_only).await,
         LiveCmd::Close { id, reason } => desk.close(&id, &reason).await,
+        LiveCmd::Stop { id, stop, reason } => desk.move_stop(&id, stop, &reason).await,
         LiveCmd::Kill => desk.kill().await,
         LiveCmd::FlattenBot { yes } => desk.flatten_bot(yes).await,
     }
@@ -1699,6 +1710,34 @@ impl<'a> Desk<'a> {
         }
         println!("bot positions keep their exchange-side stops; use `atx live flatten-bot --yes` to close them");
         self.jw("manual_action", json!({"action": "kill", "flag": flag.display().to_string(), "cancelled": cancelled}), &self.versions(None))?;
+        Ok(())
+    }
+
+    /// Tighten one open bot trade's stop and sync the exchange stop (verify_stop). Never widens a stop.
+    pub async fn move_stop(&self, id: &str, new_stop: f64, reason: &str) -> anyhow::Result<()> {
+        self.ensure_writes(&TestOpts::default())?;
+        let _l = StateLock::acquire(&self.paths.root).await?;
+        let mut st = LiveState::load(&self.paths.state())?;
+        let snap = self.snapshot().await?;
+        self.reconcile(&mut st, &snap, true).await?;
+        let i = st.trades.iter().position(|t| t.id == id && t.active()).with_context(|| format!("no active bot trade {id}"))?;
+        let side = st.trades[i].side.context("trade has no side")?;
+        let old = st.trades[i].stop;
+        let p = self.bot_position(&snap, &st.trades[i]).with_context(|| format!("trade {id} has no open position"))?;
+        let mark = p.mark_price;
+        match side {
+            Side::Short => ensure!(new_stop < old && new_stop > mark, "short stop must move DOWN and stay above mark {mark}: {old} -> {new_stop} refused"),
+            Side::Long => ensure!(new_stop > old && new_stop < mark, "long stop must move UP and stay below mark {mark}: {old} -> {new_stop} refused"),
+        }
+        let rule = self.rules_for(&st.trades[i].symbol).await?;
+        st.trades[i].stop = new_stop;
+        st.trades[i].notes.push(format!("stop {old} -> {new_stop}: {reason}"));
+        let mut tr = st.trades[i].clone();
+        self.verify_stop(&mut tr, &rule).await?;
+        st.trades[i] = tr.clone();
+        st.save(&self.paths.state())?;
+        self.jw("manual_action", json!({"action": "move_stop", "trade_id": id, "from": old, "to": new_stop, "mark": mark, "reason": reason}), &tr.versions)?;
+        println!("{id} {}: stop {old} -> {new_stop} (mark {mark})", tr.symbol);
         Ok(())
     }
 
