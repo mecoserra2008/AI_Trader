@@ -1,0 +1,614 @@
+{
+ "contract": "alpha_v0 (agent ALPHA; not desk_report_v1)",
+ "agent": "alpha",
+ "model": "claude-opus-5-5",
+ "prompt_version": "desk-alpha-v1",
+ "as_of": "2026-11-15T22:00:52Z",
+ "data_cut": {
+  "universe_books": "2026-11-15T21:52Z (refreshed 22:01Z for liquid names)",
+  "flush_state_4h": "4h bars closed <= 20:00Z (last bar 16:00)",
+  "shock_state_1h": "1h bars closed <= 22:00Z (last bar 21:00)"
+ },
+ "method": "public Bybit REST, closed bars only. z / sigma from research.frame.enrich_bars (EWMA 0.94) + add_robust_vol; v0 cells from research.regimes.label; shock state = strategies.shock.ShockRegime on ~2,500 1h bars; flush and H-RB2 state = the post_cascade_study frozen design (r48 < 1y p5, OI <= -5% vs 72h max, R9, 42-bar decluster, 1.5 sigma arm, first 4h close back below EMA20) on ~3,000 4h bars + Bybit 4h OI. Scratch scripts (not in repo): alpha_scan.py, rescan_1h.py. Liquidations from the lake (Lake.read_asof). DVOL from Deribit public API.",
+ "universe": {
+  "scanned": 125,
+  "liquid": 52,
+  "liquid_crypto": 34,
+  "liquid_tradfi": 18,
+  "filter": "spread <= 3 bp and min depth25 >= $50k; innovation zone and SPY excluded; TradFi listed separately"
+ },
+ "regime": {
+  "summary": "Post-crash weekend. BTC and ETH are v0 R9 (liquidation) on 1h and 4h with 4h vol in its top 1y tercile; no crypto calm cell exists. Deleveraging is ending quietly: OI flat to -2% over 24h, funding ~0, small short-liquidation bursts, DVOL near its 90d high.",
+  "BTCUSDT": {
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol_tercile_4h": "high",
+   "funding_8h": 6.956e-05,
+   "funding_pct_last200": 0.715,
+   "oi_chg_24h": -0.0032,
+   "oi_dd_72h": -0.0402,
+   "basis_bp": -4.8,
+   "dvol": 44.32,
+   "dvol_pct_90d": 0.98,
+   "liq_4h_usd": {
+    "long": 37611,
+    "short": 486044
+   },
+   "liq_1h_usd": {
+    "long": 4397,
+    "short": 53789
+   }
+  },
+  "ETHUSDT": {
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol_tercile_4h": "high",
+   "funding_8h": 1.416e-05,
+   "oi_chg_24h": -0.0199,
+   "oi_dd_72h": -0.0459,
+   "basis_bp": -5.7,
+   "dvol": 57.66,
+   "dvol_pct_90d": 0.94,
+   "liq_4h_usd": {
+    "long": 71389,
+    "short": 233331
+   }
+  },
+  "rules": [
+   "R-RB-3",
+   "R-PX-8",
+   "R-PX-9",
+   "R-VOL-27"
+  ]
+ },
+ "live_edges": [
+  {
+   "rank": 1,
+   "symbol": "ETHUSDT",
+   "mechanism": "shock_regime fade: the sleeve is still short from the 02:00 +4.39 sigma shock (R9, high vol)",
+   "rules": [
+    "R-PX-1",
+    "R-BUDGET-4",
+    "R-MAP-2"
+   ],
+   "hypotheses": [
+    "H-S2",
+    "H-S3"
+   ],
+   "status": "tested mechanism, STALE (20h): a late entry is PATTERN-ONLY",
+   "signal_age_h": 20,
+   "side": "short",
+   "entry_zone": "touch 1818.25 (ask at 22:01)",
+   "stop": 1836.7,
+   "stop_basis": "sleeve invalidation: shock high 1822.37 + 0.5 sigma_1h",
+   "target": 1729.64,
+   "target_basis": "shock bar open (sleeve target)",
+   "rr": 4.8,
+   "p_tp_driftless": 0.168,
+   "p_tp_with_edge": 0.168,
+   "edge_note": "R(20h) ~ 0 (R-BUDGET-4: half-life ~1.2h)",
+   "net_er": -0.118,
+   "liquidity": "spread 0.05 bp, depth25 $6.0M / $7.9M: $200 tier",
+   "cluster": "crypto_beta",
+   "proposed": false,
+   "why_not": "same crypto-beta short as the armed zec-s1 (one per cluster); E[R] -0.12 vs ZEC -0.07; 1% from its invalidation"
+  },
+  {
+   "rank": 2,
+   "symbol": "BNBUSDT",
+   "mechanism": "shock_regime fade sleeve (02:00 +4.58 sigma, R9 high vol)",
+   "rules": [
+    "R-PX-1",
+    "R-BUDGET-4"
+   ],
+   "hypotheses": [
+    "H-S2",
+    "H-S3"
+   ],
+   "status": "STALE (20h): PATTERN-ONLY",
+   "signal_age_h": 20,
+   "side": "short",
+   "entry_zone": "touch 593.04",
+   "stop": 598.2,
+   "target": 571.16,
+   "rr": 4.24,
+   "p_tp_driftless": 0.187,
+   "p_tp_with_edge": 0.187,
+   "net_er": -0.128,
+   "liquidity": "spread 0.17 bp, depth25 $1.05M / $0.78M",
+   "cluster": "crypto_beta",
+   "proposed": false,
+   "why_not": "same cluster as ZEC / ETH; stale; stop 0.87% = 1.06 x 1h ATR"
+  },
+  {
+   "rank": 3,
+   "symbol": "H-RB2 basket (XRP, LINK, ETH, SUI, DOGE, SOL, BTC + 13)",
+   "mechanism": "H-RB2 failed-rebound short after a flush: armed, not triggered",
+   "rules": [
+    "R-RB-5",
+    "R-RB-1",
+    "R-RB-3"
+   ],
+   "hypotheses": [
+    "H-RB2"
+   ],
+   "status": "TESTED, about breakeven (IS -0.00 R [-0.15, +0.15], HO +0.42 [-0.42, +1.21]); NOT TRIGGERED",
+   "signal_age_h": null,
+   "side": "short (conditional)",
+   "entry_zone": "first 4h close back below EMA20 after a 4h close >= EMA20; earliest arm 00:00Z, earliest entry the 04:00Z close",
+   "stop": "rebound high x exp(0.5 sigma_4h), capped at 4 sigma",
+   "target": "2R",
+   "rr": 2.0,
+   "p_tp_driftless": 0.333,
+   "net_er": "IS -0.00 / HO +0.42 (study costs 7.5 bp/side; pegged entry +0.01)",
+   "cluster": "crypto_beta",
+   "proposed": false,
+   "why_not": "not triggered: every armed name is 1.3-3.7 sigma_4h below its EMA20"
+  },
+  {
+   "rank": 4,
+   "symbol": "NVDAUSDT (also SOXL, SKHY, SKHYNIX, MSTR, MU)",
+   "mechanism": "funding capture: NVDA predicted funding +0.265%/8h (above all 200 recent prints), settles 00:00Z; SOXL +0.223% with basis +35 bp",
+   "rules": [
+    "R-CARRY-1",
+    "R-CARRY-2",
+    "R-AVOID-1"
+   ],
+   "hypotheses": [],
+   "status": "UNTESTED (hypothesis candidate HC-1) and TradFi: NEEDS PLAN EXTENSION",
+   "side": "short",
+   "net_er": "unknown; carry alone 26.5 bp per settlement (~ +0.18 R at a 1.5% stop before the 4.75 bp TradFi exit cost)",
+   "cluster": "tradfi_equity",
+   "proposed": false
+  },
+  {
+   "rank": 5,
+   "symbol": "CLUSDT / BZUSDT",
+   "mechanism": "shock_regime CONTINUATION leg (1h vol low, cell R4) if the CME-reopen bar (23:00, closes 00:00) is a |z| >= 4 shock",
+   "rules": [
+    "R-PX-1",
+    "R-TF-6",
+    "R-VOL-9"
+   ],
+   "hypotheses": [
+    "H-S2",
+    "H-S3",
+    "H-TF5"
+   ],
+   "status": "tested mechanism (R-PX-1) but R-TF-6 conflicts (the reopen move does not continue into Mon 07-12Z; follow net -32 bp); TradFi: NEEDS PLAN EXTENSION; not triggered",
+   "side": "follow the shock",
+   "cluster": "tradfi_commodity",
+   "proposed": false
+  }
+ ],
+ "not_alpha_today": [
+  {
+   "item": "a fresh shock_regime signal",
+   "why": "no liquid name has |z| >= 4 on the 21:00 bar (max |z| XMR 1.07); ASTER -9.80 sigma fails liquidity (spread 3.86 bp, depth $29k / $27k, ATR 5.8%)",
+   "rules": [
+    "R-BUDGET-4"
+   ]
+  },
+  {
+   "item": "flush rebound longs (19 crypto names are inside a flush window)",
+   "why": "H-RB1 contradicts in both segments",
+   "rules": [
+    "R-RB-1",
+    "R-RB-2"
+   ]
+  },
+  {
+   "item": "calm swing BoS / shock continuation in crypto",
+   "why": "no crypto 4h vol in the low tercile; every crypto 1h vol state is normal or high",
+   "rules": [
+    "R-BOS-2",
+    "R-BOS-3",
+    "R-BOS-4"
+   ]
+  },
+  {
+   "item": "crypto funding / carry",
+   "why": "funding ~0 on every liquid name (BTC +0.007%, pct 0.72); funding contrarian fails; carry has decayed",
+   "rules": [
+    "R-AVOID-1",
+    "R-CARRY-1",
+    "R-CARRY-2",
+    "R-RB-4"
+   ]
+  },
+  {
+   "item": "cross-section leaders / laggards",
+   "why": "a ranking is not an entry",
+   "rules": [
+    "R-XS-2",
+    "R-XS-3"
+   ]
+  },
+  {
+   "item": "weekend move direction / Monday tilt",
+   "why": "no information",
+   "rules": [
+    "R-PX-9",
+    "R-PX-6"
+   ]
+  },
+  {
+   "item": "TradFi open fades, ORB, gap fills",
+   "why": "all tested negative",
+   "rules": [
+    "R-TF-1",
+    "R-TF-2",
+    "R-TF-3",
+    "R-TF-4"
+   ]
+  }
+ ],
+ "rb2_watch": [
+  {
+   "symbol": "XRPUSDT",
+   "flush_event_bar": "2026-11-14T16:00:00+00:00",
+   "armed": true,
+   "low_since": 0.8918,
+   "ema20_4h": 0.988285,
+   "close_4h_16utc": 0.9606,
+   "gap_to_ema_pct": 2.84,
+   "gap_sigma4h": 1.33,
+   "sigma_risk_4h": 0.02131,
+   "window_left_4h_bars": 36,
+   "spread_bp": 1.04,
+   "depth25_min_usd": 2695728
+  },
+  {
+   "symbol": "SEIUSDT",
+   "flush_event_bar": "2026-11-14T20:00:00+00:00",
+   "armed": true,
+   "low_since": 0.03623,
+   "ema20_4h": 0.04062,
+   "close_4h_16utc": 0.03936,
+   "gap_to_ema_pct": 3.15,
+   "gap_sigma4h": 1.62,
+   "sigma_risk_4h": 0.01941,
+   "window_left_4h_bars": 37,
+   "spread_bp": 5.09,
+   "depth25_min_usd": 79861
+  },
+  {
+   "symbol": "LINKUSDT",
+   "flush_event_bar": "2026-11-14T16:00:00+00:00",
+   "armed": true,
+   "low_since": 8.567,
+   "ema20_4h": 9.514411,
+   "close_4h_16utc": 9.233,
+   "gap_to_ema_pct": 3.0,
+   "gap_sigma4h": 1.66,
+   "sigma_risk_4h": 0.01805,
+   "window_left_4h_bars": 36,
+   "spread_bp": 1.08,
+   "depth25_min_usd": 645226
+  },
+  {
+   "symbol": "ARBUSDT",
+   "flush_event_bar": "2026-11-12T04:00:00+00:00",
+   "armed": true,
+   "low_since": 0.1227,
+   "ema20_4h": 0.14036,
+   "close_4h_16utc": 0.13493,
+   "gap_to_ema_pct": 3.95,
+   "gap_sigma4h": 1.71,
+   "sigma_risk_4h": 0.02302,
+   "window_left_4h_bars": 21,
+   "spread_bp": 0.74,
+   "depth25_min_usd": 80058
+  },
+  {
+   "symbol": "ETHUSDT",
+   "flush_event_bar": "2026-11-10T12:00:00+00:00",
+   "armed": true,
+   "low_since": 1709.06,
+   "ema20_4h": 1887.993763,
+   "close_4h_16utc": 1823.68,
+   "gap_to_ema_pct": 3.47,
+   "gap_sigma4h": 1.81,
+   "sigma_risk_4h": 0.01912,
+   "window_left_4h_bars": 11,
+   "spread_bp": 0.05,
+   "depth25_min_usd": 5969012
+  },
+  {
+   "symbol": "TIAUSDT",
+   "flush_event_bar": "2026-11-14T16:00:00+00:00",
+   "armed": true,
+   "low_since": 0.3272,
+   "ema20_4h": 0.375242,
+   "close_4h_16utc": 0.3585,
+   "gap_to_ema_pct": 4.56,
+   "gap_sigma4h": 2.06,
+   "sigma_risk_4h": 0.02216,
+   "window_left_4h_bars": 36,
+   "spread_bp": 2.79,
+   "depth25_min_usd": 54577
+  },
+  {
+   "symbol": "TAOUSDT",
+   "flush_event_bar": "2026-11-14T20:00:00+00:00",
+   "armed": true,
+   "low_since": 177.4,
+   "ema20_4h": 200.543204,
+   "close_4h_16utc": 191.02,
+   "gap_to_ema_pct": 4.87,
+   "gap_sigma4h": 2.09,
+   "sigma_risk_4h": 0.02326,
+   "window_left_4h_bars": 37,
+   "spread_bp": 0.52,
+   "depth25_min_usd": 122909
+  },
+  {
+   "symbol": "UNIUSDT",
+   "flush_event_bar": "2026-11-14T20:00:00+00:00",
+   "armed": true,
+   "low_since": 4.614,
+   "ema20_4h": 5.474124,
+   "close_4h_16utc": 5.182,
+   "gap_to_ema_pct": 5.48,
+   "gap_sigma4h": 2.11,
+   "sigma_risk_4h": 0.02602,
+   "window_left_4h_bars": 37,
+   "spread_bp": 1.94,
+   "depth25_min_usd": 165365
+  },
+  {
+   "symbol": "SUIUSDT",
+   "flush_event_bar": "2026-11-15T04:00:00+00:00",
+   "armed": true,
+   "low_since": 0.6741,
+   "ema20_4h": 0.757356,
+   "close_4h_16utc": 0.7249,
+   "gap_to_ema_pct": 4.38,
+   "gap_sigma4h": 2.16,
+   "sigma_risk_4h": 0.02024,
+   "window_left_4h_bars": 39,
+   "spread_bp": 1.37,
+   "depth25_min_usd": 528025
+  },
+  {
+   "symbol": "SHIB1000USDT",
+   "flush_event_bar": "2026-11-15T16:00:00+00:00",
+   "armed": false,
+   "low_since": 0.003691,
+   "ema20_4h": 0.004081,
+   "close_4h_16utc": 0.00393,
+   "gap_to_ema_pct": 3.77,
+   "gap_sigma4h": 2.24,
+   "sigma_risk_4h": 0.0168,
+   "window_left_4h_bars": 42,
+   "spread_bp": 2.55,
+   "depth25_min_usd": 80753
+  },
+  {
+   "symbol": "DOTUSDT",
+   "flush_event_bar": "2026-11-15T00:00:00+00:00",
+   "armed": true,
+   "low_since": 0.6812,
+   "ema20_4h": 0.772449,
+   "close_4h_16utc": 0.7367,
+   "gap_to_ema_pct": 4.74,
+   "gap_sigma4h": 2.29,
+   "sigma_risk_4h": 0.0207,
+   "window_left_4h_bars": 38,
+   "spread_bp": 1.37,
+   "depth25_min_usd": 129507
+  },
+  {
+   "symbol": "DOGEUSDT",
+   "flush_event_bar": "2026-11-14T16:00:00+00:00",
+   "armed": true,
+   "low_since": 0.05536,
+   "ema20_4h": 0.061813,
+   "close_4h_16utc": 0.059,
+   "gap_to_ema_pct": 4.66,
+   "gap_sigma4h": 2.34,
+   "sigma_risk_4h": 0.01994,
+   "window_left_4h_bars": 36,
+   "spread_bp": 1.7,
+   "depth25_min_usd": 771294
+  },
+  {
+   "symbol": "SOLUSDT",
+   "flush_event_bar": "2026-11-14T16:00:00+00:00",
+   "armed": true,
+   "low_since": 67.32,
+   "ema20_4h": 75.414982,
+   "close_4h_16utc": 71.65,
+   "gap_to_ema_pct": 5.12,
+   "gap_sigma4h": 2.66,
+   "sigma_risk_4h": 0.01928,
+   "window_left_4h_bars": 36,
+   "spread_bp": 1.39,
+   "depth25_min_usd": 2946609
+  },
+  {
+   "symbol": "BTCUSDT",
+   "flush_event_bar": "2026-11-13T12:00:00+00:00",
+   "armed": true,
+   "low_since": 61899.2,
+   "ema20_4h": 67289.80003,
+   "close_4h_16utc": 64919.9,
+   "gap_to_ema_pct": 3.59,
+   "gap_sigma4h": 2.7,
+   "sigma_risk_4h": 0.01329,
+   "window_left_4h_bars": 29,
+   "spread_bp": 0.02,
+   "depth25_min_usd": 6170085
+  },
+  {
+   "symbol": "VIRTUALUSDT",
+   "flush_event_bar": "2026-11-14T20:00:00+00:00",
+   "armed": true,
+   "low_since": 0.4166,
+   "ema20_4h": 0.477528,
+   "close_4h_16utc": 0.4475,
+   "gap_to_ema_pct": 6.49,
+   "gap_sigma4h": 2.9,
+   "sigma_risk_4h": 0.02239,
+   "window_left_4h_bars": 37,
+   "spread_bp": 4.44,
+   "depth25_min_usd": 54913
+  },
+  {
+   "symbol": "OPUSDT",
+   "flush_event_bar": "2026-11-15T00:00:00+00:00",
+   "armed": true,
+   "low_since": 0.07556,
+   "ema20_4h": 0.087305,
+   "close_4h_16utc": 0.08201,
+   "gap_to_ema_pct": 6.26,
+   "gap_sigma4h": 2.92,
+   "sigma_risk_4h": 0.02145,
+   "window_left_4h_bars": 38,
+   "spread_bp": 1.23,
+   "depth25_min_usd": 87634
+  },
+  {
+   "symbol": "AVAXUSDT",
+   "flush_event_bar": "2026-11-14T12:00:00+00:00",
+   "armed": true,
+   "low_since": 6.725,
+   "ema20_4h": 7.707212,
+   "close_4h_16utc": 7.237,
+   "gap_to_ema_pct": 6.29,
+   "gap_sigma4h": 3.01,
+   "sigma_risk_4h": 0.02091,
+   "window_left_4h_bars": 35,
+   "spread_bp": 1.38,
+   "depth25_min_usd": 378018
+  },
+  {
+   "symbol": "1000PEPEUSDT",
+   "flush_event_bar": "2026-11-12T00:00:00+00:00",
+   "armed": true,
+   "low_since": 0.003688,
+   "ema20_4h": 0.00421,
+   "close_4h_16utc": 0.003895,
+   "gap_to_ema_pct": 7.78,
+   "gap_sigma4h": 3.07,
+   "sigma_risk_4h": 0.02532,
+   "window_left_4h_bars": 20,
+   "spread_bp": 2.59,
+   "depth25_min_usd": 478307
+  },
+  {
+   "symbol": "MNTUSDT",
+   "flush_event_bar": "2026-11-14T20:00:00+00:00",
+   "armed": true,
+   "low_since": 0.3625,
+   "ema20_4h": 0.392205,
+   "close_4h_16utc": 0.3716,
+   "gap_to_ema_pct": 5.4,
+   "gap_sigma4h": 3.34,
+   "sigma_risk_4h": 0.01617,
+   "window_left_4h_bars": 37,
+   "spread_bp": 2.69,
+   "depth25_min_usd": 335676
+  },
+  {
+   "symbol": "APTUSDT",
+   "flush_event_bar": "2026-11-14T20:00:00+00:00",
+   "armed": true,
+   "low_since": 0.4276,
+   "ema20_4h": 0.496284,
+   "close_4h_16utc": 0.4561,
+   "gap_to_ema_pct": 8.44,
+   "gap_sigma4h": 3.69,
+   "sigma_risk_4h": 0.02289,
+   "window_left_4h_bars": 37,
+   "spread_bp": 2.2,
+   "depth25_min_usd": 87636
+  }
+ ],
+ "watch": [
+  {
+   "id": "W1",
+   "what": "hourly shock_regime scan",
+   "when": "every hour at HH:00:10. The 23:00 close falls in the blackout (entry only after 23:30, edge mostly decayed); the 00:00 close (CME-reopen bar) is the next clean one",
+   "trigger": "a liquid crypto perp (spread <= 3 bp, depth25 >= $50k, ATR1h <= 3%) closes a 1h bar with |z| >= 4 (24-bar decluster)",
+   "action": "fade in normal / high vol (every crypto name now), follow in low vol; skip cell R2 (R-MAP-7); pegged entry at the touch within 60 min of the close; stop = shock extreme + 0.5 sigma_1h; target = shock open; >= 3 names in one bar = one bet",
+   "rules": [
+    "R-PX-1",
+    "R-BUDGET-4",
+    "R-MAP-7",
+    "R-EXE-1",
+    "R-MM-2"
+   ]
+  },
+  {
+   "id": "W2",
+   "what": "H-RB2 arm and trigger",
+   "when": "4h closes at 00:00, 04:00, 08:00, 12:00, 16:00, 20:00Z",
+   "trigger": "a 4h close >= the name's EMA20 (XRP 0.9883, LINK 9.514, ETH 1888.0, SUI 0.7574, DOGE 0.06181, SOL 75.41, BTC 67,290; the EMA moves each bar), then the FIRST later 4h close < EMA20",
+   "action": "short at the touch on that close; stop above the rebound high + 0.5 sigma_4h (cap 4 sigma); 2R target; 5-day time stop; expect ~0 R (learning trade only)",
+   "rules": [
+    "R-RB-5",
+    "R-RB-1",
+    "R-BOS-3"
+   ]
+  },
+  {
+   "id": "W3",
+   "what": "ETH / BNB / ZEC sleeves",
+   "trigger": "a 1h close above ETH 1836.7, BNB 598.2 or ZEC 927.07 kills that sleeve; a touch of 1729.64 / 571.16 / 849.3 is its target",
+   "action": "log for H-S3. If zec-s1 is voided, the ETH sleeve short is the in-scope substitute (pattern-only, E[R] -0.12)",
+   "rules": [
+    "R-PX-1",
+    "R-BUDGET-4"
+   ]
+  },
+  {
+   "id": "W4",
+   "what": "new flush",
+   "trigger": "SHIB1000 arms at the 00:00 close if >= 0.003785; any new flush (r48 < 1y p5, OI <= -5% vs the 72h max, R9)",
+   "action": "no long at the next 4h close (R-RB-1); start the H-RB2 clock",
+   "rules": [
+    "R-RB-1",
+    "R-RB-2"
+   ]
+  },
+  {
+   "id": "W5",
+   "what": "TradFi at the CME reopen (report only; needs plan extension)",
+   "trigger": "CL / BZ 23:00 bar |z| >= 4 with 1h vol low; NVDA / SOXL funding print at 00:00Z",
+   "action": "log; register HC-1 / HC-2 before any test",
+   "rules": [
+    "R-TF-6",
+    "R-PX-1",
+    "R-CARRY-2"
+   ]
+  },
+  {
+   "id": "W6",
+   "what": "liquidation cluster",
+   "trigger": "1m liquidation notional > the trailing-24h p99 with >= 3 prints on a traded name",
+   "action": "no fade for 60 min",
+   "rules": [
+    "R-FLOW-2"
+   ]
+  }
+ ],
+ "hypothesis_candidates": [
+  {
+   "id": "HC-1",
+   "statement": "On Bybit TradFi perps, when the predicted funding is >= its 90d p95 within 2h of settlement, a short held through the settlement earns the funding without an offsetting adverse price drift (net of the 4.75 bp exit)",
+   "test": "all TradFi perps since listing; event = a settlement with funding pct >= 0.95; signed return T-2h..T+1h vs funding received; llm_in_sample vs clean_holdout"
+  },
+  {
+   "id": "HC-2",
+   "statement": "the shock_regime continuation leg at the Sunday CME-reopen bar for commodity perps in low 1h vol beats R-TF-6's no-continuation over the next 4h",
+   "test": "H-TF5 events split by vol_state; forward only (data-generated)"
+  }
+ ],
+ "proposals": [],
+ "proposals_note": "No proposals.json was written: no tested edge is live inside the plan scope (CONTRACT section 5: no proposal file when there is no trade). zec-s1 stays the only crypto-beta short.",
+ "data_gaps": [
+  "scripts/alt_shock_scan.py 22:00 run: 10 KeyErrors (SOL, HYPE, SOPH, ADA, ONDO, PUMPFUN, HBAR, USELESS, DOT, OP); SOL / HYPE / HBAR / DOT / OP were covered by this scan (|z| < 1)",
+  "Bybit has no public liquidation REST: liquidations from the lake for BTC / ETH / SOL / XRP / DOGE only"
+ ]
+}

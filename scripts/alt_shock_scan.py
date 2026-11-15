@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import time
 import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
@@ -28,9 +29,18 @@ TRADFI_HINT = ("XAU", "XAG", "CL", "BZ", "NVDA", "QQQ", "SOX", "MU", "SNDK", "MS
                "KORU", "SKHYNIX", "SPY", "AAPL", "AMZN", "GOOG", "META", "MSFT", "HOOD", "PLTR", "AMD", "NG")
 
 
-def get(url: str):
-    with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=15) as r:
-        return json.loads(r.read().decode())["result"]
+def get(url: str, tries: int = 4):
+    """Public GET with retry: a rate-limited reply (retCode != 0, no result) waits and retries."""
+    for i in range(tries):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=15) as r:
+                d = json.loads(r.read().decode())
+            if d.get("retCode", 0) == 0 and "result" in d:
+                return d["result"]
+        except OSError:
+            pass
+        time.sleep(0.5 * 2 ** i)
+    raise RuntimeError(f"bybit GET failed after {tries} tries: {url.split('?')[0]}")
 
 
 def universe(top: int) -> list[dict]:
@@ -80,6 +90,7 @@ def main() -> None:
     bar = None
     for t in universe(a.top):
         s = t["symbol"]
+        time.sleep(0.1)
         try:
             k = closed_1h(s)
             if len(k) < 200:
