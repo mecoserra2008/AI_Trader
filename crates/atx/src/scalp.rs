@@ -35,7 +35,6 @@ use std::time::Duration;
 use anyhow::{Context, bail, ensure};
 use at_bybit::market::MarketData;
 use at_bybit::ws::{self, WsMessage};
-use at_core::config::Environment;
 use at_core::time::{format_date, now_ms};
 use at_core::types::Side;
 use at_flow::book::{Book, L1, ofi};
@@ -122,6 +121,42 @@ pub struct ScalpCfg {
     pub taker_bps: f64,
     pub limits: ScalpLimits,
     pub status_every_s: u64,
+    /// Live-only settings. Not part of the strategy: excluded from `hash()`, so the H-SCALP1 track record (whose
+    /// shadow trades carry the strategy hash) is the same with or without this section.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub live: Option<ScalpLiveCfg>,
+}
+
+/// `live:` section of the scalper config (used only by `--mode live`).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ScalpLiveCfg {
+    /// Where the EV gate's p_tp comes from. Only "h_scalp1_shadow": the 95 % CI LOWER bound of the TP-hit rate in the
+    /// frozen H-SCALP1 evaluation (`verdict_file`, written by `scripts/scalp_eval.py --write`).
+    pub p_tp_source: String,
+    pub verdict_file: String,
+    /// Horizon of the sigma handed to the risk engine's placement check: sd of 1 s mid log returns x sqrt(horizon).
+    pub sigma_horizon_s: i64,
+    /// REST fallback poll of the venue state (the private WS is primary).
+    pub poll_s: u64,
+    /// Scalper tag inside the bot's link prefix: orderLinkId `<link_prefix>-<tag>-...` (lsb-sc-...).
+    pub link_tag: String,
+    /// After a refused entry decision, no new decision for this long.
+    pub refusal_backoff_s: i64,
+    /// A position without its exchange stop longer than this (after a re-attach attempt) halts the run.
+    pub stop_grace_s: i64,
+}
+
+impl ScalpLiveCfg {
+    pub fn validate(&self) -> anyhow::Result<()> {
+        ensure!(self.p_tp_source == "h_scalp1_shadow", "live.p_tp_source must be h_scalp1_shadow");
+        ensure!(!self.verdict_file.is_empty(), "live.verdict_file must be set");
+        ensure!((10..=3600).contains(&self.sigma_horizon_s), "live.sigma_horizon_s in [10, 3600]");
+        ensure!((1..=5).contains(&self.poll_s), "live.poll_s in [1, 5] (REST fallback every <= 5 s)");
+        ensure!(!self.link_tag.is_empty() && self.link_tag.len() <= 4 && self.link_tag.chars().all(|c| c.is_ascii_alphanumeric()), "live.link_tag: 1-4 ASCII letters/digits");
+        ensure!(self.refusal_backoff_s >= 1 && self.stop_grace_s >= 1, "live.refusal_backoff_s and stop_grace_s >= 1");
+        Ok(())
+    }
 }
 
 impl ScalpCfg {
@@ -147,12 +182,17 @@ impl ScalpCfg {
         ensure!(self.long_hold_min_r >= 1.0, "long_hold_min_r must be >= 1 (user rule)");
         ensure!(self.maker_bps >= 0.0 && self.taker_bps >= self.maker_bps, "fees: 0 <= maker <= taker");
         ensure!(self.ofi_z_entry > 0.0 && self.sweep_min_levels >= 2 && self.imbalance_ticks >= 1, "ofi_z_entry > 0, sweep_min_levels >= 2, imbalance_ticks >= 1");
+        if let Some(l) = &self.live {
+            l.validate()?;
+        }
         Ok(())
     }
 
     /// FNV-1a 64 of the config JSON: logged with every journal line; a change starts a new record.
     pub fn hash(&self) -> String {
-        let s = serde_json::to_string(self).unwrap_or_default();
+        let mut strategy = self.clone();
+        strategy.live = None;
+        let s = serde_json::to_string(&strategy).unwrap_or_default();
         let h = s.bytes().fold(0xcbf2_9ce4_8422_2325_u64, |h, b| (h ^ b as u64).wrapping_mul(0x0100_0000_01b3));
         format!("{h:016x}")
     }
@@ -161,7 +201,7 @@ impl ScalpCfg {
         self.ofi_windows_s.iter().copied().max().unwrap_or(60)
     }
 
-    fn signal_idx(&self) -> usize {
+    pub fn signal_idx(&self) -> usize {
         self.ofi_windows_s.iter().position(|w| *w == self.signal_window_s).unwrap_or(0)
     }
 }
@@ -264,6 +304,17 @@ impl RollingZ {
         let var = ((self.sumsq - m as f64 * mean * mean) / (m as f64 - 1.0)).max(0.0);
         let sd = var.sqrt();
         (sd > 0.0 && sd.is_finite()).then(|| (x - mean) / sd)
+    }
+
+    /// Sample sd of the window (None before min_obs).
+    pub fn sd(&self) -> Option<f64> {
+        let m = self.q.len();
+        if m < self.min_obs.max(2) {
+            return None;
+        }
+        let mean = self.sum / m as f64;
+        let sd = ((self.sumsq - m as f64 * mean * mean) / (m as f64 - 1.0)).max(0.0).sqrt();
+        (sd > 0.0 && sd.is_finite()).then_some(sd)
     }
 
     pub fn z_then_push(&mut self, x: f64) -> Option<f64> {
@@ -507,24 +558,6 @@ pub fn tp_hit(side: Side, tp: i64, print: i64) -> bool {
     }
 }
 
-// ---------------------------------------------------------------- live gate
-
-/// Live mode pre-flight. Order of refusals: the two-key mainnet guard, the kill switch, the tighter-only sub-limits, the
-/// shared approval gate. This build never routes live orders: it always refuses after the checks (shadow only), so the
-/// global daily counters of `atx live` cannot be bypassed.
-pub fn live_preflight(env: Environment, guard: Result<(), String>, kill: bool, gate_manual: bool, cfg: &ScalpCfg, live: &LiveSmallCfg) -> anyhow::Result<()> {
-    ensure!(env == Environment::Mainnet, "live mode needs environment mainnet (AI_TRADER_ENVIRONMENT=mainnet); got {}", env.as_str());
-    if let Err(e) = guard {
-        bail!("live mode refused: two-key mainnet guard not satisfied ({e})");
-    }
-    ensure!(!kill, "live mode refused: data/live/KILL is present");
-    cfg.limits.validate_against_live(live).context("live mode refused: scalper sub-limits")?;
-    ensure!(!gate_manual, "live mode refused: the live_small approval gate is MANUAL (each entry needs the user's `atx live approve`); a per-second scalper cannot be hand-approved");
-    bail!(
-        "live mode refused: order routing is not implemented in {SCALP_VERSION} (shadow only). Needed: scalper trades registered in data/live/state.json under its lock (shared entries_today / realised P&L), decide_live per entry, exchange stop + reduce-only TP, private fills stream"
-    )
-}
-
 // ---------------------------------------------------------------- engine (no I/O: returns journal events)
 
 #[derive(Clone, Debug)]
@@ -608,6 +641,12 @@ pub struct Engine {
     pub stats: Stats,
     pub last_feat: Option<Feat>,
     pub resets: u64,
+    /// false (live mode): features and the signal only; positions are managed by the live runner, nothing simulated.
+    simulate: bool,
+    /// The entry rule's output at the last evaluation (side and the features it fired on).
+    pub last_signal: Option<(Side, Feat)>,
+    ret1s: RollingZ,
+    last_mid_sec: Option<(i64, f64)>,
 }
 
 fn ev(kind: &str, ms: i64, mut payload: Value) -> Value {
@@ -645,6 +684,10 @@ impl Engine {
             stats: Stats::default(),
             last_feat: None,
             resets: 0,
+            simulate: mode == "shadow",
+            last_signal: None,
+            ret1s: RollingZ::new(cfg.z_window_s, cfg.z_min_obs),
+            last_mid_sec: None,
             cfg,
         }
     }
@@ -731,7 +774,9 @@ impl Engine {
             self.delta.add(now.div_euclid(1000), if t.buy { t.vol } else { -t.vol });
             self.absorb.on_trade(t, keep);
             self.trades.push_back(*t);
-            out.extend(self.on_print(now, t));
+            if self.simulate {
+                out.extend(self.on_print(now, t));
+            }
         }
         while self.trades.front().is_some_and(|x| x.ms < now - keep) {
             self.trades.pop_front();
@@ -808,6 +853,14 @@ impl Engine {
             self.mids.pop_front();
         }
         f.ret_60s = self.mids.front().map(|m| (mid / m.1).ln()).unwrap_or(0.0);
+        // 1 s mid log returns (one sample per evaluated second) for the live sigma
+        if let Some((ps, pm)) = self.last_mid_sec
+            && sec > ps
+            && pm > 0.0
+        {
+            self.ret1s.z_then_push((mid / pm).ln() / ((sec - ps) as f64).sqrt());
+        }
+        self.last_mid_sec = Some((sec, mid));
         Some(f)
     }
 
@@ -838,6 +891,10 @@ impl Engine {
         let Some(f) = self.features(now) else { return out };
         self.last_feat = Some(f.clone());
         let sig = signal(&self.cfg, &f);
+        self.last_signal = sig.map(|s| (s, f.clone()));
+        if !self.simulate {
+            return out;
+        }
         out.extend(self.manage(now, &f, sig));
         if let Some(side) = sig {
             out.extend(self.on_signal(now, &f, side));
@@ -1055,6 +1112,11 @@ impl Engine {
         }
     }
 
+    /// Volatility over `horizon_s`: sd of 1 s mid log returns x sqrt(horizon). None during warm-up.
+    pub fn sigma_over(&self, horizon_s: i64) -> Option<f64> {
+        self.ret1s.sd().map(|s| s * (horizon_s.max(1) as f64).sqrt())
+    }
+
     pub fn status_line(&self, now: i64) -> String {
         let s = &self.stats;
         let ts = chrono::DateTime::from_timestamp_millis(now).unwrap_or_default().format("%Y-%m-%dT%H:%M:%SZ");
@@ -1128,6 +1190,12 @@ pub struct ScalpArgs {
     /// Stop after this many minutes (default: run until killed / Ctrl-C).
     #[arg(long)]
     pub minutes: Option<u64>,
+    /// Live only: run id; with the approval gate MANUAL the run needs data/live/approvals/scalp-<run_id>.ok.
+    #[arg(long)]
+    pub run_id: Option<String>,
+    /// Live only: most entries this run (<= limits.max_entries_per_run).
+    #[arg(long, default_value_t = 12)]
+    pub max_entries: u32,
 }
 
 pub async fn run(ctx: &Ctx, a: ScalpArgs) -> anyhow::Result<()> {
@@ -1135,14 +1203,8 @@ pub async fn run(ctx: &Ctx, a: ScalpArgs) -> anyhow::Result<()> {
     match a.mode.as_str() {
         "shadow" => {}
         "live" => {
-            let live = LiveSmallCfg::load(&ctx.s.root)?;
-            let guard = ctx.s.ensure_execution_allowed().map_err(|e| e.to_string());
-            let data = ctx.s.abs(&ctx.s.paths.data_root).join("live");
-            let kill = data.join("KILL").exists();
-            let st: Value = std::fs::read_to_string(data.join("state.json")).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or(Value::Null);
-            let confirmed = st["confirmed_trades"].as_u64().unwrap_or(0) as u32;
-            live_preflight(ctx.s.environment, guard, kill, confirmed < live.approval.manual_trades, &cfg, &live)?;
-            unreachable!("live_preflight always refuses in this build");
+            let run_id = a.run_id.clone().context("--mode live needs --run-id (the run approval is data/live/approvals/scalp-<run_id>.ok)")?;
+            return crate::scalp_live::run_live(ctx, cfg, &a.config, &run_id, a.max_entries, a.minutes).await;
         }
         m => bail!("--mode must be shadow or live, got {m:?}"),
     }
@@ -1430,17 +1492,13 @@ mod tests {
     }
 
     #[test]
-    fn live_mode_refuses_without_the_guard() {
-        let (c, lv) = (cfg(), live());
-        let e = live_preflight(Environment::Mainnet, Err("no key".into()), false, false, &c, &lv).unwrap_err().to_string();
-        assert!(e.contains("guard"), "{e}");
-        assert!(live_preflight(Environment::Demo, Ok(()), false, false, &c, &lv).is_err(), "live means mainnet");
-        let e = live_preflight(Environment::Mainnet, Ok(()), true, false, &c, &lv).unwrap_err().to_string();
-        assert!(e.contains("KILL"), "{e}");
-        let e = live_preflight(Environment::Mainnet, Ok(()), false, true, &c, &lv).unwrap_err().to_string();
-        assert!(e.contains("approval gate"), "{e}");
-        let e = live_preflight(Environment::Mainnet, Ok(()), false, false, &c, &lv).unwrap_err().to_string();
-        assert!(e.contains("not implemented"), "this build never routes live orders: {e}");
+    fn strategy_hash_ignores_the_live_section() {
+        let c = cfg();
+        assert!(c.live.is_some(), "config/scalp_kava.yaml carries the live section");
+        let mut bare = c.clone();
+        bare.live = None;
+        assert_eq!(c.hash(), bare.hash());
+        assert_eq!(c.hash(), "17416371082833e8", "H-SCALP1 strategy hash as registered and logged by the shadow run");
     }
 
     fn snapshot(e: &mut Engine, now: i64, bid: &str, bq: &str, ask: &str, aq: &str) {

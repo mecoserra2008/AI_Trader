@@ -55,3 +55,17 @@ limits:
   max_consecutive_losses: 4
 
 status_every_s: 60
+
+# ---- live-only settings (`--mode live`; NOT part of the H-SCALP1 strategy: excluded from the config hash)
+# Live stays disabled until H-SCALP1 passes: without a frozen passing verdict file the live run refuses to start.
+live:
+  p_tp_source: h_scalp1_shadow       # EV gate p_tp = 95 % CI LOWER bound of the TP-hit rate in the frozen evaluation
+  verdict_file: research/scalp/H-SCALP1_eval.json   # written once by `scripts/scalp_eval.py --cfg-hash ... --write ...`
+  # Sigma for the risk engine's placement check (stop between 0.5 and the stop cap in sigma units): sd of 1 s mid log
+  # returns x sqrt(60 s), the horizon the structural stop is built on (swing_lookback_s). At the 5 min time-stop horizon
+  # most 4-12 tick stops would sit inside 0.5 sigma and be refused.
+  sigma_horizon_s: 60
+  poll_s: 5                          # REST fallback poll; the private WS (order / execution / position) is primary
+  link_tag: sc                       # orderLinkId lsb-sc-...: a bot order (lsb-), from the scalper (sc)
+  refusal_backoff_s: 30
+  stop_grace_s: 10

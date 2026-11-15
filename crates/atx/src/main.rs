@@ -35,6 +35,7 @@ mod match_sim;
 mod mm;
 mod mm_replay;
 mod scalp;
+mod scalp_live;
 mod updater;
 
 use clap::{Parser, Subcommand};

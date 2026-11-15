@@ -1,11 +1,15 @@
 """H-SCALP1 evaluator: reads data/journal/scalp/*.jsonl (atx scalp shadow runs) and applies the pre-registered metric.
 
-    uv run python scripts/scalp_eval.py [--n 30] [--cfg-hash HASH]
+    uv run python scripts/scalp_eval.py [--n 30] [--cfg-hash HASH] [--write research/scalp/H-SCALP1_eval.json]
 
 Metric (research/hypotheses.yaml H-SCALP1): mean net R per FILLED trade on the first N trades (fixed N = 30, evaluated
 once), 95 % circular block-bootstrap CI (block 5, 10 000 resamples, seed 0); TP-hit rate vs the ex-ante break-even
 p* = 1 / (1 + W), W = mean net R of the TP exits. Secondary: fill rate per entry order, mean net R per order (unfilled = 0).
 Only trades of one config hash are pooled (a config change is a new hypothesis id).
+
+--write freezes the evaluation (written once, never overwritten; needs --cfg-hash and >= N trades). `atx scalp --mode
+live` reads it: it refuses unless verdict == "supported" for its strategy hash, and uses the 95 % CI LOWER bound of the
+TP-hit rate (`tp_hit_ci95[0]`, same block bootstrap of the per-trade TP indicator) as p_tp in the EV gate.
 """
 
 from __future__ import annotations
@@ -13,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 from collections import Counter
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -48,7 +53,12 @@ def main() -> None:
     a = argparse.ArgumentParser()
     a.add_argument("--n", type=int, default=30)
     a.add_argument("--cfg-hash", default=None)
+    a.add_argument("--write", default=None, help="freeze the evaluation to this JSON file (once)")
     args = a.parse_args()
+    if args.write and not args.cfg_hash:
+        raise SystemExit("--write needs --cfg-hash")
+    if args.write and (ROOT / args.write).exists():
+        raise SystemExit(f"{args.write} exists: the H-SCALP1 evaluation is frozen (a new evaluation is a new hypothesis id)")
     rows = load(args.cfg_hash)
     hashes = Counter(r.get("cfg_hash") for r in rows if r["type"] == "exit")
     if len(hashes) > 1 and not args.cfg_hash:
@@ -73,9 +83,32 @@ def main() -> None:
         w = float(np.mean(tp)) if tp else float("nan")
         p_star = 1.0 / (1.0 + w) if tp else float("nan")
         hit = len(tp) / len(first)
-        ok = r.mean() > 0 and lo > -0.05 and tp and hit > p_star
-        out |= {"n": len(first), "mean_net_r": float(r.mean()), "ci95": [lo, hi], "tp_hit_rate": hit, "tp_mean_net_r": w, "break_even_p": p_star, "verdict": "supported" if ok else "rejected"}
+        ind = np.array([1.0 if x["kind"] == "tp" else 0.0 for x in first])
+        h_lo, h_hi = block_bootstrap_ci(ind)
+        ok = bool(r.mean() > 0 and lo > -0.05 and tp and hit > p_star)
+        out |= {
+            "n": len(first),
+            "mean_net_r": float(r.mean()),
+            "ci95": [lo, hi],
+            "tp_hit_rate": hit,
+            "tp_hit_ci95": [h_lo, h_hi],
+            "tp_mean_net_r": w,
+            "break_even_p": p_star,
+            "first_ms": first[0]["ms"],
+            "last_ms": first[-1]["ms"],
+            "verdict": "supported" if ok else "rejected",
+        }
     print(json.dumps(out, indent=2))
+    if args.write:
+        if "n" not in out:
+            raise SystemExit(f"not written: {out['verdict']}")
+        rec = {"hypothesis": "H-SCALP1", "cfg_hash": args.cfg_hash, "segment": "forward_shadow (clean_holdout)", "written_utc": datetime.now(UTC).isoformat(timespec="seconds"),
+               "bootstrap": {"block": 5, "n_boot": 10_000, "seed": 0}} | out
+        path = ROOT / args.write
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("x", encoding="utf-8") as f:
+            json.dump(rec, f, indent=2)
+        print(f"frozen: {args.write}")
 
 
 if __name__ == "__main__":

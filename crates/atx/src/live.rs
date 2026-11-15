@@ -159,13 +159,13 @@ impl LivePaths {
         let journal = if env == Environment::Mainnet { journal_base.join("live") } else { journal_base.join(format!("live_{}", env.as_str())) };
         Self { global_kill: base.join("KILL"), corr_cache: base.join("corr_cache.json"), root, journal }
     }
-    fn state(&self) -> PathBuf {
+    pub(crate) fn state(&self) -> PathBuf {
         self.root.join("state.json")
     }
     fn pending(&self, id: &str) -> PathBuf {
         self.root.join("pending").join(format!("{id}.json"))
     }
-    fn approval(&self, id: &str) -> PathBuf {
+    pub(crate) fn approval(&self, id: &str) -> PathBuf {
         self.root.join("approvals").join(format!("{id}.ok"))
     }
     fn done(&self, id: &str) -> PathBuf {
@@ -217,10 +217,26 @@ pub struct TradeRec {
     pub approved_by: String,
     pub versions: Value,
     pub notes: Vec<String>,
+    /// "" = desk (`atx live propose`), "scalp" = `atx scalp --mode live` (orderLinkId `lsb-sc-...`). Both are bot trades:
+    /// they share entries_today, realised P&L, the daily stop, open slots, same side and gross.
+    #[serde(default)]
+    pub source: String,
+    /// Trigger of this trade's exchange stop when it differs from live_small.stop_trigger_by (scalper: LastPrice).
+    #[serde(default)]
+    pub stop_trigger_by: String,
+    /// Reduce-only take-profit order (scalper), kept out of `order_ids` (those are the entry orders).
+    #[serde(default)]
+    pub tp_order_id: Option<String>,
 }
 
 impl TradeRec {
-    fn active(&self) -> bool {
+    /// A scalper trade (`atx scalp --mode live`): by its source, or by its id `sc-...` (an older binary that saved the
+    /// state may have dropped the source field; desk proposal ids never start with "sc-").
+    pub(crate) fn is_scalp(&self) -> bool {
+        self.source == "scalp" || self.id.starts_with("sc-")
+    }
+
+    pub(crate) fn active(&self) -> bool {
         matches!(self.status.as_str(), "submitting" | "pending" | "open")
     }
 }
@@ -276,7 +292,7 @@ fn day_of(ms: i64) -> String {
     at_core::time::format_date(ms)
 }
 
-fn write_json(path: &Path, v: &Value) -> anyhow::Result<()> {
+pub(crate) fn write_json(path: &Path, v: &Value) -> anyhow::Result<()> {
     if let Some(d) = path.parent() {
         std::fs::create_dir_all(d)?;
     }
@@ -286,10 +302,10 @@ fn write_json(path: &Path, v: &Value) -> anyhow::Result<()> {
 }
 
 /// Exclusive lock on the live state for short read-decide-write sections.
-struct StateLock(PathBuf);
+pub(crate) struct StateLock(PathBuf);
 
 impl StateLock {
-    async fn acquire(root: &Path) -> anyhow::Result<Self> {
+    pub(crate) async fn acquire(root: &Path) -> anyhow::Result<Self> {
         std::fs::create_dir_all(root)?;
         let p = root.join("LOCK");
         for _ in 0..300 {
@@ -354,25 +370,25 @@ pub fn entry_link(cfg: &LiveSmallCfg, id: &str, n: u32) -> String {
     format!("{}{id}-{n}", cfg.link_tag()).chars().take(36).collect()
 }
 
-fn close_link(cfg: &LiveSmallCfg, id: &str) -> String {
+pub(crate) fn close_link(cfg: &LiveSmallCfg, id: &str) -> String {
     format!("{}x-{id}-{}", cfg.link_tag(), now_ms() % 100_000).chars().take(36).collect()
 }
 
 // ---------------------------------------------------------------- venue
 
-struct Venue {
-    exec: BybitRest,
+pub(crate) struct Venue {
+    pub(crate) exec: BybitRest,
     mkt: BybitRest,
     category: String,
     settle: String,
-    writable: bool,
+    pub(crate) writable: bool,
 }
 
 impl Venue {
-    fn trading(&self) -> Trading<'_> {
+    pub(crate) fn trading(&self) -> Trading<'_> {
         Trading::new(&self.exec, &self.category, &self.settle)
     }
-    fn exec_market(&self) -> MarketData<'_> {
+    pub(crate) fn exec_market(&self) -> MarketData<'_> {
         MarketData::new(&self.exec, &self.category)
     }
     fn main_market(&self) -> MarketData<'_> {
@@ -382,7 +398,7 @@ impl Venue {
         ensure!(self.writable, "read-only: venue writes are blocked (mainnet needs execution.allow_mainnet=true AND AI_TRADER_ALLOW_MAINNET=1)");
         Ok(())
     }
-    async fn place(&self, req: &OrderRequest) -> anyhow::Result<String> {
+    pub(crate) async fn place(&self, req: &OrderRequest) -> anyhow::Result<String> {
         self.w()?;
         Ok(self.trading().create_order(req).await?.order_id)
     }
@@ -390,11 +406,11 @@ impl Venue {
         self.w()?;
         self.trading().amend_order(symbol, order_id, Some(price), qty).await
     }
-    async fn cancel(&self, symbol: &str, order_id: &str) -> anyhow::Result<()> {
+    pub(crate) async fn cancel(&self, symbol: &str, order_id: &str) -> anyhow::Result<()> {
         self.w()?;
         self.trading().cancel_order(symbol, order_id).await
     }
-    async fn set_stop(&self, symbol: &str, stop: &str, trigger: &str) -> anyhow::Result<()> {
+    pub(crate) async fn set_stop(&self, symbol: &str, stop: &str, trigger: &str) -> anyhow::Result<()> {
         self.w()?;
         self.trading().set_trading_stop(symbol, Some(stop), None, trigger).await
     }
@@ -404,16 +420,16 @@ impl Venue {
     }
 }
 
-struct Snapshot {
-    equity: f64,
-    available: f64,
-    coin: Option<Value>,
-    positions: Vec<VenuePosition>,
-    orders: Vec<Value>,
+pub(crate) struct Snapshot {
+    pub(crate) equity: f64,
+    pub(crate) available: f64,
+    pub(crate) coin: Option<Value>,
+    pub(crate) positions: Vec<VenuePosition>,
+    pub(crate) orders: Vec<Value>,
 }
 
 impl Snapshot {
-    fn bot_order(o: &Value, tag: &str) -> bool {
+    pub(crate) fn bot_order(o: &Value, tag: &str) -> bool {
         o["orderLinkId"].as_str().is_some_and(|l| l.starts_with(tag))
     }
 
@@ -433,11 +449,11 @@ impl Snapshot {
 // ---------------------------------------------------------------- the desk
 
 pub struct Desk<'a> {
-    ctx: &'a Ctx,
-    cfg: LiveSmallCfg,
-    paths: LivePaths,
-    env: Environment,
-    venue: Venue,
+    pub(crate) ctx: &'a Ctx,
+    pub(crate) cfg: LiveSmallCfg,
+    pub(crate) paths: LivePaths,
+    pub(crate) env: Environment,
+    pub(crate) venue: Venue,
     journal: Journal,
     fees: FeeSchedule,
 }
@@ -463,6 +479,40 @@ fn rules_of(i: &Instrument) -> InstrumentRules {
     }
 }
 
+/// Bot positions and resting bot entries (desk and scalper alike) as the risk engine sees them: an active trade with a
+/// venue position on its symbol and side is open at the venue's numbers, otherwise a pending entry at its planned price.
+pub(crate) fn positions_of(st: &LiveState, venue: &[VenuePosition]) -> Vec<LivePos> {
+    st.trades
+        .iter()
+        .filter(|t| t.active())
+        .filter_map(|t| {
+            let side = t.side?;
+            Some(match venue.iter().find(|p| p.symbol == t.symbol && side_of(&p.side) == side) {
+                Some(p) => LivePos {
+                    symbol: t.symbol.clone(),
+                    side,
+                    qty: p.size,
+                    entry_price: p.avg_price,
+                    mark: p.mark_price,
+                    open_pnl_usd: p.unrealised_pnl + p.cur_realised_pnl,
+                    max_loss_usd: t.max_loss_usd,
+                    pending: false,
+                },
+                None => LivePos {
+                    symbol: t.symbol.clone(),
+                    side,
+                    qty: t.qty,
+                    entry_price: t.first_peg_price.max(t.entry_ref),
+                    mark: 0.0,
+                    open_pnl_usd: 0.0,
+                    max_loss_usd: t.max_loss_usd,
+                    pending: true,
+                },
+            })
+        })
+        .collect()
+}
+
 fn usdt_perp(i: &Instrument) -> bool {
     i.status == "Trading" && i.contract_type == "LinearPerpetual" && i.quote == "USDT" && i.settle == "USDT"
 }
@@ -481,7 +531,7 @@ impl<'a> Desk<'a> {
         Ok(Self { ctx, cfg, paths, env, venue, journal, fees })
     }
 
-    fn versions(&self, intent: Option<&OrderIntent>) -> Value {
+    pub(crate) fn versions(&self, intent: Option<&OrderIntent>) -> Value {
         let c = intent.and_then(|i| i.context.as_ref());
         json!({
             "env": self.env.as_str(),
@@ -495,7 +545,7 @@ impl<'a> Desk<'a> {
         })
     }
 
-    fn jw(&self, kind: &str, mut payload: Value, versions: &Value) -> anyhow::Result<()> {
+    pub(crate) fn jw(&self, kind: &str, mut payload: Value, versions: &Value) -> anyhow::Result<()> {
         payload["versions"] = versions.clone();
         payload["environment"] = json!(self.env.as_str());
         self.journal.write(kind, payload)
@@ -511,7 +561,7 @@ impl<'a> Desk<'a> {
         Ok(())
     }
 
-    async fn snapshot(&self) -> anyhow::Result<Snapshot> {
+    pub(crate) async fn snapshot(&self) -> anyhow::Result<Snapshot> {
         let t = self.venue.trading();
         let w = t.wallet().await?;
         let coin = t.settle_coin_row().await.ok().flatten();
@@ -546,7 +596,7 @@ impl<'a> Desk<'a> {
     // ------------------------------------------------------------ reconcile
 
     /// Venue -> state. With `write`, missing stops are re-attached, stale / orphan bot entry orders cancelled.
-    async fn reconcile(&self, st: &mut LiveState, snap: &Snapshot, write: bool) -> anyhow::Result<Vec<String>> {
+    pub(crate) async fn reconcile(&self, st: &mut LiveState, snap: &Snapshot, write: bool) -> anyhow::Result<Vec<String>> {
         let now = now_ms();
         let mut notes = Vec::new();
         st.env = self.env.as_str().into();
@@ -585,7 +635,8 @@ impl<'a> Desk<'a> {
                 x.avg_entry = v / q;
                 x.notes.push("revived: the entry orders filled (cumExecQty) after the trade was marked cancelled".into());
                 notes.push(format!("{} {}: REVIVED as open (its orders filled {q})", x.id, x.symbol));
-                let confirmed = x.approved_by != "auto";
+                // scalper trades are covered by a run approval, never by the per-trade manual gate
+                let confirmed = x.approved_by != "auto" && !x.is_scalp();
                 self.jw("position_update", json!({"action": "revived", "trade_id": x.id, "symbol": x.symbol, "filled_qty": q, "avg_entry": x.avg_entry}), &x.versions)?;
                 if confirmed {
                     st.confirmed_trades += 1;
@@ -629,7 +680,8 @@ impl<'a> Desk<'a> {
                         notes.push(msg.clone());
                         if write {
                             let tick = self.rules_for(&x.symbol).await.map(|r| r.tick_size).unwrap_or(0.0);
-                            let res = self.venue.set_stop(&x.symbol, &format_step(x.stop, tick), &self.cfg.stop_trigger_by).await;
+                            let trig = if x.stop_trigger_by.is_empty() { self.cfg.stop_trigger_by.clone() } else { x.stop_trigger_by.clone() };
+                            let res = self.venue.set_stop(&x.symbol, &format_step(x.stop, tick), &trig).await;
                             notes.push(format!("  re-attach stop: {}", res.as_ref().map(|_| "ok".to_string()).unwrap_or_else(|e| format!("FAILED {e:#}"))));
                             self.jw("position_update", json!({"action": "reattach_stop", "trade_id": x.id, "symbol": x.symbol, "stop": x.stop, "ok": res.is_ok()}), &x.versions)?;
                         }
@@ -672,6 +724,16 @@ impl<'a> Desk<'a> {
                         .find_map(|e| {
                             if e["orderLinkId"].as_str().is_some_and(|l| l.starts_with(&close_tag)) {
                                 return Some("bot_close".to_string());
+                            }
+                            // scalper exits: reduce-only take profit `<tag><id>-tp`, passive time exit `<tag><id>-tx`
+                            let own = format!("{tag}{}-", tr.id);
+                            if let Some(l) = e["orderLinkId"].as_str().filter(|l| l.starts_with(&own)) {
+                                if l.ends_with("-tp") {
+                                    return Some("take_profit_limit".to_string());
+                                }
+                                if l.ends_with("-tx") {
+                                    return Some("time_exit_limit".to_string());
+                                }
                             }
                             e["stopOrderType"].as_str().filter(|s| !s.is_empty() && *s != "UNKNOWN").map(String::from).or_else(|| e["createType"].as_str().map(String::from))
                         })
@@ -826,7 +888,7 @@ impl<'a> Desk<'a> {
         Ok(rows.into_iter().enumerate().map(|(k, t)| (t.symbol.clone(), ((k + 1) as u32, t.turnover_24h, t.bid1, t.ask1, ins[&t.symbol].symbol_type.clone()))).collect())
     }
 
-    async fn facts(&self, symbols: &[String], snap: &Snapshot, st: &LiveState) -> anyhow::Result<HashMap<String, SymbolFacts>> {
+    pub(crate) async fn facts(&self, symbols: &[String], snap: &Snapshot, st: &LiveState) -> anyhow::Result<HashMap<String, SymbolFacts>> {
         let ins: HashMap<String, Instrument> = self.venue.exec_market().instruments().await?.into_iter().map(|i| (i.symbol.clone(), i)).collect();
         let ranks = self.ranks().await?;
         let sectors = self.sectors();
@@ -864,7 +926,7 @@ impl<'a> Desk<'a> {
     }
 
     /// Fee rates for sizing: config/fees.yaml by class, never below the account's own rates when the venue reports them.
-    async fn fee_rates(&self, symbol: &str, symbol_type: &str) -> FeeRates {
+    pub(crate) async fn fee_rates(&self, symbol: &str, symbol_type: &str) -> FeeRates {
         let class = if symbol_type.is_empty() || symbol_type == "innovation" { "crypto" } else { "tradfi" };
         let mut r = self.fees.rates(symbol, Some(class));
         if let Ok(Some((m, t))) = self.venue.trading().fee_rate_bps(symbol).await {
@@ -874,36 +936,8 @@ impl<'a> Desk<'a> {
         r
     }
 
-    fn live_positions(&self, st: &LiveState, snap: &Snapshot) -> Vec<LivePos> {
-        st.trades
-            .iter()
-            .filter(|t| t.active())
-            .filter_map(|t| {
-                let side = t.side?;
-                Some(match self.bot_position(snap, t) {
-                    Some(p) => LivePos {
-                        symbol: t.symbol.clone(),
-                        side,
-                        qty: p.size,
-                        entry_price: p.avg_price,
-                        mark: p.mark_price,
-                        open_pnl_usd: p.unrealised_pnl + p.cur_realised_pnl,
-                        max_loss_usd: t.max_loss_usd,
-                        pending: false,
-                    },
-                    None => LivePos {
-                        symbol: t.symbol.clone(),
-                        side,
-                        qty: t.qty,
-                        entry_price: t.first_peg_price.max(t.entry_ref),
-                        mark: 0.0,
-                        open_pnl_usd: 0.0,
-                        max_loss_usd: t.max_loss_usd,
-                        pending: true,
-                    },
-                })
-            })
-            .collect()
+    pub(crate) fn live_positions(&self, st: &LiveState, snap: &Snapshot) -> Vec<LivePos> {
+        positions_of(st, &snap.positions)
     }
 
     /// Full decision for `intent` against the current venue state; sized at the current touch.
@@ -1016,10 +1050,12 @@ impl<'a> Desk<'a> {
         for t in st.trades.iter().filter(|t| t.active()) {
             match self.bot_position(snap, t) {
                 Some(p) => println!(
-                    "  {} {:<12} {:<5} size {} avg {} mark {} EXCHANGE STOP {} TP {} uPnL {:+.4} (+realised {:+.4}) | planned stop {} max-loss {:.2} tier {}",
-                    t.id, p.symbol, p.side, p.size, p.avg_price, p.mark_price, p.stop_loss, p.take_profit, p.unrealised_pnl, p.cur_realised_pnl, t.stop, t.max_loss_usd, t.tier
+                    "  {}{} {:<12} {:<5} size {} avg {} mark {} EXCHANGE STOP {} TP {} uPnL {:+.4} (+realised {:+.4}) | planned stop {} max-loss {:.2} tier {}",
+                    if t.is_scalp() { "[scalp] " } else { "" },
+                    t.id,
+                    p.symbol, p.side, p.size, p.avg_price, p.mark_price, p.stop_loss, p.take_profit, p.unrealised_pnl, p.cur_realised_pnl, t.stop, t.max_loss_usd, t.tier
                 ),
-                None => println!("  {} {:<12} {:?} {} pending entry qty {} stop {} (orders {:?})", t.id, t.symbol, t.side, t.status, t.qty, t.stop, t.order_ids),
+                None => println!("  {}{} {:<12} {:?} {} pending entry qty {} stop {} (orders {:?})", if t.is_scalp() { "[scalp] " } else { "" }, t.id, t.symbol, t.side, t.status, t.qty, t.stop, t.order_ids),
             }
         }
         let tag = c.link_tag();
@@ -1399,7 +1435,7 @@ impl<'a> Desk<'a> {
     /// PostOnly limit at the touch, re-pegged every poll until filled, the window ends, the stop is breached, the chase
     /// would break the $2 cap, or KILL appears. The stop is attached to every entry order.
     /// Set `lev` on the symbol (Bybit's "leverage not modified" counts as success), then read it back.
-    async fn apply_leverage(&self, symbol: &str, lev: f64) -> anyhow::Result<()> {
+    pub(crate) async fn apply_leverage(&self, symbol: &str, lev: f64) -> anyhow::Result<()> {
         self.venue.set_leverage(symbol, &format!("{lev}")).await.context("set-leverage")?;
         let got = self.venue.trading().leverage(symbol).await.context("leverage read-back")?;
         leverage_matches(lev, got)
@@ -1656,7 +1692,7 @@ impl<'a> Desk<'a> {
         Ok(())
     }
 
-    async fn close_qty(&self, tr: &TradeRec, qty: f64, rule: &InstrumentRules, why: &str) -> anyhow::Result<String> {
+    pub(crate) async fn close_qty(&self, tr: &TradeRec, qty: f64, rule: &InstrumentRules, why: &str) -> anyhow::Result<String> {
         let side = tr.side.context("side")?;
         ensure!(qty > 0.0, "nothing to close");
         let req = OrderRequest {
