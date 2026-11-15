@@ -232,11 +232,42 @@ def basis_bp(last: float | None, mark: float | None, index: float | None) -> dic
 
 # ---------------------------------------------------------------- regime and v3
 
+def enrich_min(bars: pl.DataFrame, lam: float = 0.94) -> pl.DataFrame:
+    """The columns research.regimes.label reads (ret, sigma_next), computed exactly as research.frame.enrich_bars does
+    (features.transforms.ewma_sigma_ahead + one more EWMA step). A local copy because importing research.frame pulls in
+    statsmodels (~6 s cold); tests/test_desk.py checks equality with enrich_bars."""
+    bars = bars.sort("event_ts")
+    close = bars["close"].to_numpy()
+    ret = np.r_[np.nan, np.diff(np.log(close))]
+    r0 = np.nan_to_num(ret, nan=0.0)
+    warm = max(1, min(30, len(ret) - 1))
+    sig_prev = np.full_like(r0, np.nan)
+    if len(r0) > warm:
+        var = float(np.nanmean(r0[:warm] ** 2))
+        sig_prev[warm] = math.sqrt(var)
+        for t in range(warm, len(r0) - 1):
+            if math.isfinite(r0[t]):
+                var = lam * var + (1 - lam) * r0[t] ** 2
+            sig_prev[t + 1] = math.sqrt(var)
+    sig_next = np.sqrt(lam * sig_prev ** 2 + (1 - lam) * r0 ** 2)
+    return bars.with_columns(pl.Series("ret", ret), pl.Series("sigma_prev", sig_prev), pl.Series("sigma_next", sig_next))
+
+
 def regime_cells(bars: dict[str, pl.DataFrame], as_of: datetime) -> dict[str, dict]:
-    """v0 cell per symbol on closed 1h bars (research.regimes.label on research.frame.enrich_bars; the players.py call
-    without the robust-vol columns it does not use). Needs ~90 days of bars; shorter histories give no cell."""
-    from ai_trader.research.frame import enrich_bars
-    from ai_trader.research.regimes import CELL_LABELS, label
+    """v0 cell per symbol on closed 1h bars (research.regimes.label on enrich_min = research.frame.enrich_bars; the
+    players.py call without the robust-vol columns label does not use). Needs ~90 days of bars; shorter histories give
+    no cell. players.py reads the full history; the 200-day window used here gives the same last cell once the EWMA and
+    the hysteresis have converged (180-day vol-quantile window + 20 days)."""
+    from unittest import mock
+
+    from ai_trader.core.config import load
+    from ai_trader.research import regimes as RG
+    CELL_LABELS = RG.CELL_LABELS
+    cfg = load()
+
+    def label(f, h):  # regimes.label re-reads the yaml config on every call; hand it one loaded config (same values)
+        with mock.patch.object(RG, "load", lambda: cfg):
+            return RG.label(f, h)
 
     out = {}
     for s, b in bars.items():
@@ -247,7 +278,7 @@ def regime_cells(bars: dict[str, pl.DataFrame], as_of: datetime) -> dict[str, di
         b = b.filter((pl.col("open") > 0) & (pl.col("low") > 0) & (pl.col("high") >= pl.max_horizontal("open", "close"))
                      & (pl.col("low") <= pl.min_horizontal("open", "close")))
         try:
-            f = label(enrich_bars(b), 1.0)
+            f = label(enrich_min(b), 1.0)
         except Exception as e:  # noqa: BLE001
             out[s] = {"status": f"error: {type(e).__name__}"}
             continue

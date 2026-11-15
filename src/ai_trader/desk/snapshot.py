@@ -29,7 +29,7 @@ from ai_trader.desk import news as N  # noqa: E402
 from ai_trader.desk import sentiment as S  # noqa: E402
 from ai_trader.desk import tape as T  # noqa: E402
 from ai_trader.desk import xs as X  # noqa: E402
-from ai_trader.desk.public import Bybit, Deribit, Http, pmap  # noqa: E402
+from ai_trader.desk.public import Bybit, Deribit, Http, pmap, resample  # noqa: E402
 
 N_XS, N_GEO, N_TAPE, MAX_GEO, MAX_TAPE = 60, 20, 10, 30, 25
 DIGEST_MAX = 60
@@ -54,19 +54,48 @@ def lake_bars_1h(lake, symbols: list[str], as_of: datetime, days: int = 200) -> 
     return {s: g.drop("symbol").sort("event_ts") for (s,), g in d.group_by(["symbol"])}
 
 
-def read_flow_3s(root: Path, symbols: list[str], start: datetime, as_of: datetime, con) -> dict[str, pl.DataFrame]:
-    """flow_3s rows of the given symbols with event_ts >= start and known_ts <= as_of (date partitions read directly)."""
-    days = sorted({(start + timedelta(days=k)).date() for k in range((as_of.date() - start.date()).days + 1)})
-    globs = [(root / "flow_3s" / "venue=bybit" / "category=linear" / f"date={d.isoformat()}").as_posix() + "/*.parquet" for d in days]
-    globs = [g for g in globs if Path(g).parent.is_dir() and any(Path(g).parent.glob("*.parquet"))]
-    if not globs:
+def recent_files(table_dir: Path, since: datetime, margin: timedelta = timedelta(minutes=15)) -> list[str]:
+    """Parquet parts written at or after `since - margin` (parts are named part-<write ms>-<hash>.parquet by the Rust
+    writer). Selecting by name avoids opening every file of a partition; rows are still filtered by event_ts / known_ts."""
+    lo = int((since - margin).timestamp() * 1000)
+    out = []
+    for p in table_dir.rglob("part-*.parquet"):
+        try:
+            ms = int(p.name.split("-")[1])
+        except (IndexError, ValueError):
+            out.append(p.as_posix())
+            continue
+        if ms >= lo:
+            out.append(p.as_posix())
+    return sorted(out)
+
+
+def read_recent(con, files: list[str], cols: str, pk: str, symbols: list[str], start: datetime, as_of: datetime) -> dict[str, pl.DataFrame]:
+    """Rows with event_ts >= start and known_ts <= as_of, latest revision per primary key (the Lake.read_asof rule)."""
+    if not files:
         return {}
-    cols = "symbol, event_ts, buy_notional, sell_notional, n_buy, n_sell, spread_bps, depth_bid_25, depth_ask_25, obi_5, known_ts"
-    sql = f"""SELECT {cols} FROM (SELECT *, row_number() OVER (PARTITION BY symbol, event_ts ORDER BY known_ts DESC) AS _rn
-              FROM read_parquet({globs!r}, union_by_name = true) WHERE known_ts <= ? AND event_ts >= ? AND symbol IN (SELECT unnest(?)))
+    sql = f"""SELECT {cols} FROM (SELECT *, row_number() OVER (PARTITION BY {pk} ORDER BY known_ts DESC) AS _rn
+              FROM read_parquet({files!r}, union_by_name = true) WHERE known_ts <= ? AND event_ts >= ? AND symbol IN (SELECT unnest(?)))
               WHERE _rn = 1 ORDER BY symbol, event_ts"""
     d = pl.from_arrow(con.sql(sql, params=[as_of, start, list(symbols)]).to_arrow_table())
-    return {s: g.drop("symbol") for (s,), g in d.group_by(["symbol"])} if d.height else {}
+    return {sym: g.drop("symbol") for (sym,), g in d.group_by(["symbol"])} if d.height else {}
+
+
+def read_flow_3s(root: Path, symbols: list[str], start: datetime, as_of: datetime, con) -> dict[str, pl.DataFrame]:
+    cols = "symbol, event_ts, buy_notional, sell_notional, n_buy, n_sell, spread_bps, depth_bid_25, depth_ask_25, obi_5, known_ts"
+    files = recent_files(root / "flow_3s" / "venue=bybit" / "category=linear", start)
+    return read_recent(con, files, cols, "symbol, event_ts", symbols, start, as_of)
+
+
+def read_liquidations(root: Path, symbols: list[str], start: datetime, as_of: datetime, con) -> dict[str, pl.DataFrame]:
+    files = recent_files(root / "liquidations" / "venue=bybit", start)
+    return read_recent(con, files, "symbol, event_ts, side, price, size, known_ts", "symbol, event_ts, side, price, size", symbols, start, as_of)
+
+
+def lake_funding(lake, symbols: list[str], as_of: datetime) -> dict[str, pl.DataFrame]:
+    d = lake.read_asof("funding", as_of, symbols=symbols, start=as_of - timedelta(days=91), filters={"venue": "bybit"},
+                       columns=["symbol", "event_ts", "rate", "known_ts"])
+    return {sym: g.drop("symbol").sort("event_ts") for (sym,), g in d.group_by(["symbol"])} if d.height else {}
 
 
 def read_account(root: Path, as_of: datetime, path: Path | None = None) -> dict:
@@ -307,14 +336,24 @@ def run(root: Path | None = None, *, out_root: Path | None = None, watch: list[s
     universe = X.select_universe(tickers, instruments, n_xs)
     syms = [u["symbol"] for u in universe]
     lap("universe")
-    b1h = _vec(pmap(lambda s: by.kline(s, "1h", 400), syms), syms, "kline1h", errors)
-    fund = _vec(pmap(lambda s: by.funding_history(s, 200), syms), syms, "funding", errors)
+    # lake first (bulk, local): 1h bars (regime, RS, 4h / 1d resamples), funding history
+    t_lake = datetime.now(UTC)
+    lb = lake_bars_1h(lake, syms, t_lake)
+    lfund = lake_funding(lake, syms, t_lake)
+    hour = t_lake.replace(minute=0, second=0, microsecond=0)
+    fresh = {s for s, b in lb.items() if b.height >= 400 and b["close_ts"].max() >= hour}
+    fund_fresh = {s for s, f in lfund.items() if f.height and f["event_ts"].max() >= t_lake - timedelta(hours=9)}
+    regimes = X.regime_cells(lb, t_lake)
+    lap("lake_bars_regime")
+    need1h = [s for s in syms if s not in fresh]
+    needf = [s for s in syms if s not in fund_fresh]
+    b1h = {s: lb[s].tail(400) for s in fresh}
+    b1h.update(_vec(pmap(lambda s: by.kline(s, "1h", 400), need1h), need1h, "kline1h", errors))
+    fund = {s: lfund[s] for s in fund_fresh}
+    fund.update(_vec(pmap(lambda s: by.funding_history(s, 200), needf), needf, "funding", errors))
     oi = _vec(pmap(lambda s: by.open_interest(s, "1h", 200), syms), syms, "oi", errors)
     lap("xs_rest")
-    lb = lake_bars_1h(lake, syms, datetime.now(UTC))
-    regimes = X.regime_cells(lb, datetime.now(UTC))
-    lap("regime")
-    v3 = X.v3_context(X.read_v3_lines(root / "data" / "journal" / "live_xs_v3", datetime.now(UTC)), datetime.now(UTC))
+    v3 = X.v3_context(X.read_v3_lines(root / "data" / "journal" / "live_xs_v3", t_lake), t_lake)
     ysec = X.load_sectors(root)
     pre = X.build_xs(datetime.now(UTC), universe, b1h, fund, oi, ticker_known=tk_known, regimes=regimes, v3=v3, yaml_sectors=ysec)
     flagged = [t["symbol"] for t in pre["tokens"] if t["flags"]]
@@ -337,7 +376,12 @@ def run(root: Path | None = None, *, out_root: Path | None = None, watch: list[s
     lap("select")
 
     def geo_fetch(s):
-        return {"1m": by.kline_n(s, "1m", 1500), "15m": by.kline(s, "15m", 1000), "4h": by.kline(s, "4h", 500), "1d": by.kline(s, "1d", 400)}
+        out = {"1m": by.kline_n(s, "1m", 1440), "15m": by.kline(s, "15m", 1000)}
+        if s in lb and lb[s].height >= 24 * 120:        # 4h / 1d from the lake's 1h bars (exact OHLCV aggregation)
+            out["4h"], out["1d"] = resample(lb[s], "4h"), resample(lb[s], "1d")
+        else:
+            out["4h"], out["1d"] = by.kline(s, "4h", 500), by.kline(s, "1d", 400)
+        return out
     gb = _vec(pmap(geo_fetch, geo_syms), geo_syms, "geometry bars", errors)
     lap("geo_rest")
     books = _vec(pmap(lambda s: by.orderbook(s, 200), tape_syms), tape_syms, "orderbook", errors)
@@ -354,24 +398,25 @@ def run(root: Path | None = None, *, out_root: Path | None = None, watch: list[s
     lap("tape_rest")
 
     as_of = max(http.last_known or started, datetime.now(UTC))      # the data cut: every fetch above is <= as_of
-    liq = {}
     try:
-        L = lake.read_asof("liquidations", as_of, symbols=tape_syms, start=as_of - timedelta(hours=24))
-        liq = {s: g for (s,), g in L.group_by(["symbol"])} if L.height else {}
+        liq = read_liquidations(lake.root, tape_syms, as_of - timedelta(hours=24), as_of, lake.con)
     except Exception as e:  # noqa: BLE001
+        liq = {}
         errors.append(f"lake liquidations: {e}"[:160])
     try:
         flow = read_flow_3s(lake.root, tape_syms, as_of - timedelta(minutes=61), as_of, lake.con)
     except Exception as e:  # noqa: BLE001
         flow = {}
         errors.append(f"lake flow_3s: {e}"[:160])
-    players = {}
-    for s in tape_syms:
-        if s in lb:
-            try:
-                players[s] = T.player_read(s, as_of, lake, regimes.get(s))
-            except Exception as e:  # noqa: BLE001
-                errors.append(f"players {s}: {e}"[:160])
+    dv = {}
+    from ai_trader.live.players import DVOL_ENTITY, dvol
+
+    for s in DVOL_ENTITY:
+        try:
+            dv[s] = dvol(s, as_of, lake)
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"dvol {s}: {e}"[:120])
+    players = {s: T.player_read(as_of, regimes.get(s), funding=fund.get(s), oi=oi.get(s), liq=liq.get(s), dvol=dv.get(s)) for s in tape_syms}
     lap("lake_tape")
 
     tk = {u["symbol"]: u["ticker"] for u in universe}

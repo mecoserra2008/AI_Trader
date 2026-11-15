@@ -13,8 +13,9 @@ Per token, everything known at as_of:
              percentile of 1m liquidation notional with >= 3 prints)
   flow       lake `flow_3s` (atx collect): taker buy / sell notional and imbalance (b - s) / (b + s) over 5 / 15 / 60 min, the
              share of 3 s candles present (coverage), mean spread and 25 bp depth over the last 5 minutes
-  players    the live.players read (funding percentile, OI 24h / 72h, liquidations 4h / 24h, DVOL, pattern words) with
-             the v0 cell computed by desk.xs.regime_cells
+  players    the live.players read: players.pattern (unchanged) on the same inputs loaded in bulk (lake funding 90d,
+             OI at 4h boundaries of the 1h REST series, lake liquidations 4h / 24h, DVOL via players.dvol) and the v0 cell
+             of desk.xs.regime_cells
 """
 
 from __future__ import annotations
@@ -130,22 +131,66 @@ def flow_summary(f3: pl.DataFrame | None, as_of: datetime, windows=FLOW_WIN_MIN)
     return out
 
 
-def player_read(sym: str, as_of: datetime, lake, regime: dict | None) -> dict:
-    from ai_trader.live import players as P
+def _players_funding(fund: pl.DataFrame | None, as_of: datetime) -> dict:
+    """live.players.funding on an already-loaded funding frame (same definition: last settlement, 90d percentile)."""
+    from ai_trader.live.players import _pct
 
-    p: dict = {"regime": regime or {"status": "none"}}
-    for k, fn in (("funding", P.funding), ("oi", P.open_interest), ("liq", P.liquidations), ("dvol", P.dvol)):
-        try:
-            p[k] = fn(sym, as_of, lake)
-        except Exception as e:  # noqa: BLE001
-            p[k] = {"status": f"error: {type(e).__name__}"}
-    if "long_24h_usd" not in p["liq"]:
-        p["liq"] = {**p["liq"], "long_24h_usd": 0.0, "short_24h_usd": 0.0, "long_4h_usd": 0.0, "short_4h_usd": 0.0}
+    if fund is None or fund.height == 0:
+        return {"status": "none"}
+    d = fund.filter((pl.col("known_ts") <= as_of) & (pl.col("event_ts") >= as_of - timedelta(days=90))).sort("event_ts")
+    if d.height == 0:
+        return {"status": "none"}
+    r = d["rate"].cast(pl.Float64).to_numpy()
+    ev = d["event_ts"].to_list()
+    iv = (ev[-1] - ev[-2]).total_seconds() / 3600 if len(ev) > 1 else None
+    return {"status": "ok", "ts": ev[-1].isoformat(), "rate_pct": 100 * float(r[-1]), "pct_90d": _pct(r, r[-1]), "n_90d": len(r), "interval_h": iv}
+
+
+def _players_oi(oi: pl.DataFrame | None, as_of: datetime) -> dict:
+    """live.players.open_interest on the 4h-boundary points of the 1h OI series (= Bybit's 4h snapshots)."""
+    if oi is None or oi.height == 0:
+        return {"status": "none"}
+    d = oi.filter((pl.col("known_ts") <= as_of) & (pl.col("event_ts") <= as_of) & (pl.col("event_ts") >= as_of - timedelta(days=5))
+                  & (pl.col("event_ts").dt.hour() % 4 == 0) & (pl.col("event_ts").dt.minute() == 0)).sort("event_ts")
+    if d.height == 0:
+        return {"status": "none"}
+    t, v = d["event_ts"].to_list(), d["oi"].cast(pl.Float64).to_list()
+    out = {"status": "ok", "ts": t[-1].isoformat(), "oi": v[-1]}
+    for k in (24, 72):
+        prev = [x for x, tt in zip(v, t, strict=True) if tt <= t[-1] - timedelta(hours=k)]
+        out[f"chg_{k}h_pct"] = 100 * (v[-1] / prev[-1] - 1) if prev and prev[-1] > 0 else None
+    w = [x for x, tt in zip(v, t, strict=True) if tt >= t[-1] - timedelta(hours=72)]
+    prev72 = [x for x, tt in zip(v, t, strict=True) if tt <= t[-1] - timedelta(hours=72)]
+    if w and prev72 and prev72[-1] > 0 and min(w) > 0:
+        out["low_72h_pct"] = 100 * (min(w) / prev72[-1] - 1)
+        out["from_low_pct"] = 100 * (v[-1] / min(w) - 1)
+    return out
+
+
+def _players_liq(liq: pl.DataFrame | None, as_of: datetime) -> dict:
+    from ai_trader.live.players import LIQ_START
+
+    out: dict = {"status": "ok", "partial_24h": as_of - timedelta(hours=24) < LIQ_START, "partial_4h": as_of - timedelta(hours=4) < LIQ_START}
+    d = liq.filter(pl.col("known_ts") <= as_of).with_columns((pl.col("price") * pl.col("size")).alias("usd")) if liq is not None and liq.height else None
+    for lab, h in (("4h", 4), ("24h", 24)):
+        w = d.filter(pl.col("event_ts") > as_of - timedelta(hours=h)) if d is not None else None
+        for side in ("long", "short"):
+            out[f"{side}_{lab}_usd"] = float(w.filter(pl.col("side") == side)["usd"].sum()) if w is not None and w.height else 0.0
+    return out
+
+
+def player_read(as_of: datetime, regime: dict | None, *, funding: pl.DataFrame | None, oi: pl.DataFrame | None, liq: pl.DataFrame | None,
+                dvol: dict | None = None) -> dict:
+    """The live.players read (pattern words from players.pattern, unchanged) on inputs already loaded in bulk."""
+    from ai_trader.live.players import pattern
+
+    p = {"regime": regime or {"status": "none"}, "funding": _players_funding(funding, as_of), "oi": _players_oi(oi, as_of),
+         "liq": _players_liq(liq, as_of), "dvol": dvol or {"status": "no index"}}
     try:
-        p["pattern"] = P.pattern(p)
+        words = pattern(p)
     except Exception as e:  # noqa: BLE001
-        p["pattern"] = f"error: {type(e).__name__}"
-    return {"pattern": p["pattern"], "funding": p["funding"], "oi": p["oi"], "dvol": p["dvol"],
+        words = f"error: {type(e).__name__}"
+    return {"pattern": words, "cell": (regime or {}).get("cell"), "funding": p["funding"], "oi": p["oi"], "dvol": p["dvol"],
             "liq_4h_24h_usd": {k: round(v) for k, v in p["liq"].items() if k.endswith("_usd")}}
 
 

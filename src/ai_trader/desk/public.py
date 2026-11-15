@@ -201,4 +201,17 @@ def forming_open(bars: pl.DataFrame, as_of: datetime) -> float | None:
     return float(f["open"][-1]) if f.height else None
 
 
-__all__ = ["Bybit", "Deribit", "Http", "PublicError", "closed", "forming_open", "kline_frame", "pmap"]
+def resample(bars: pl.DataFrame, tf: str) -> pl.DataFrame:
+    """Aggregate 1h bars to 4h / 1d bars aligned to 00:00 UTC (Bybit's alignment). The last group may be forming: its
+    close_ts is the period end, so `closed` drops it and `forming_open` reads its open. `n` = 1h bars in the group."""
+    if bars.height == 0:
+        return bars
+    every = {"4h": "4h", "1d": "1d"}[tf]
+    ms = int(TF_DELTA[tf].total_seconds() * 1000)
+    return (bars.sort("event_ts").group_by_dynamic("event_ts", every=every, closed="left", label="left")
+            .agg(pl.col("open").first(), pl.col("high").max(), pl.col("low").min(), pl.col("close").last(), pl.col("volume").sum(),
+                 pl.col("known_ts").max(), pl.len().alias("n"))
+            .with_columns((pl.col("event_ts") + pl.duration(milliseconds=ms)).alias("close_ts")))
+
+
+__all__ = ["Bybit", "Deribit", "Http", "PublicError", "closed", "forming_open", "kline_frame", "pmap", "resample"]

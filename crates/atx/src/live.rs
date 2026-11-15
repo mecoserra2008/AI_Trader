@@ -642,9 +642,13 @@ impl<'a> Desk<'a> {
                         .iter()
                         .filter(|e| !tr.order_ids.iter().any(|id| e["orderId"] == id.as_str()) && e["side"] == tr.side.map(|s| s.bybit_close()).unwrap_or_default())
                         .collect();
+                    let close_tag = format!("{tag}x-");
                     let kind = exits
                         .iter()
                         .find_map(|e| {
+                            if e["orderLinkId"].as_str().is_some_and(|l| l.starts_with(&close_tag)) {
+                                return Some("bot_close".to_string());
+                            }
                             e["stopOrderType"].as_str().filter(|s| !s.is_empty() && *s != "UNKNOWN").map(String::from).or_else(|| e["createType"].as_str().map(String::from))
                         })
                         .unwrap_or_else(|| "unknown".into());
