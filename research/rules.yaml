@@ -3262,3 +3262,58 @@ rules:
   - research/reports/xs_network_2026-11-15.md
   review: a spillover model that beats its no-mixing ablation in a holdout
   status: provisional
+- id: R-ANA-1
+  kind: avoid
+  rule: WHEN the market looks like a past episode (multi-scale analog search on price shape, vol percentile, drawdown, cell, funding, OI, weekend) THEN do not use what followed the analogs
+    as a forecast of the next 24h/72h move size; use log-HAR-t x weekday
+  when: an analog list or 'this looks like <date>' argument is offered for BTC
+  then: move-size expectations come from the volatility tools (log-HAR-t x weekday, field card), not from analog outcomes
+  scope:
+    assets:
+    - BTCUSDT
+    horizon: 24h-72h
+    sides: both
+  effect: 'QLIKE analog minus HAR: 24h in-sample +0.288 (t +6.3), holdout +0.399 (t +1.4); 72h in-sample +0.279 (t +4.4), holdout +0.110 (t +0.8); verdicts contradicts / inconclusive'
+  confidence: B
+  evidence:
+  - H-ANA1
+  - research/reports/analogs_2026-11-15.md
+  review: a registered analog variant with QLIKE t < -2 vs log-HAR-t in both segments
+  status: active
+- id: R-ANA-2
+  kind: avoid
+  rule: WHEN reading the direction of past analogs THEN treat their up/down split as no information about the next 24h/72h sign
+  when: analog up-share is quoted as a direction call
+  then: no directional weight from analogs; the sign stays at the base rate
+  scope:
+    assets:
+    - BTCUSDT
+    horizon: 24h-72h
+    sides: both
+  effect: 'Brier skill vs expanding base rate: 24h in-sample -0.025 [-0.047, -0.002], holdout +0.002 [-0.051, +0.073]; 72h in-sample -0.046 [-0.073, -0.021], holdout +0.026 [-0.031,
+    +0.118]'
+  confidence: C
+  evidence:
+  - H-ANA1
+  - research/reports/analogs_2026-11-15.md
+  review: Brier skill CI above 0 in both segments for a registered variant
+  status: provisional
+- id: R-ANA-3
+  kind: expect
+  rule: WHEN BTC is in a weekend post-crash state like 2026-11-15 (R9, 30d drawdown > 20%, rv pct > 0.95, funding pct < 0.1) THEN expect a two-branch week (policy or relief rebound vs
+    a further leg down days later), not a known direction
+  when: cell R9, dd30 < -0.20, rv_pct > 0.95, funding_pct < 0.10, weekend
+  then: plan for both branches; the 24h low being undercut within the week is common; no edge in either direction from the analogs
+  scope:
+    assets:
+    - BTCUSDT
+    horizon: 1d-7d
+    sides: both
+  effect: '20 combined analogs (chosen after seeing today): 7d median +3.9%, q10 -8.8%, q90 +7.9%, up 70%; unconditional median +0.5%; trailing 24h low undercut within 7d 12/20'
+  confidence: C
+  evidence:
+  - H-ANA1
+  - H-RB1
+  - research/reports/analogs_2026-11-15.md
+  review: descriptive only; retire if the forward sample of such states shows a consistent direction
+  status: provisional
