@@ -98,7 +98,7 @@ def agg_tf(tf: str) -> None:
     hist_s = np.zeros_like(hist_c)
     fam_ws = np.zeros((len(S.ARMS), NREG, 2, W), np.float64)
     fam_wn = np.zeros_like(fam_ws)
-    alloc = []
+    alloc: dict[str, list] = {}
     for ai, a in enumerate(S.ARMS):
         for ei, e in enumerate(S.EXITS):
             xc = f"{X_COL[a]}_{e}_x"
@@ -152,9 +152,9 @@ def agg_tf(tf: str) -> None:
                                     hist_s[ai, rid, sg] += np.bincount(hi, weights=x, minlength=len(HBINS) - 1)
                                     fam_ws[ai, rid, sg] += np.bincount(wk[mt], weights=x, minlength=W)[:W]
                                     fam_wn[ai, rid, sg] += np.bincount(wk[mt], minlength=W)[:W]
-                    if a == "p":
+                    if a in ("p", "m"):
                         ok = tr
-                        alloc.append(pl.DataFrame({
+                        alloc.setdefault(a, []).append(pl.DataFrame({
                             "vid": np.full(ok.sum(), variant_id(tf, s, g, ei), np.int16),
                             "rcs": d["rcs"].to_numpy()[ok].astype(np.int8), "wk": wk[ok].astype(np.int16),
                             "xday": d["xday"].to_numpy()[ok].astype(np.int16), "xwk": d["xwk"].to_numpy()[ok].astype(np.int16),
@@ -163,8 +163,8 @@ def agg_tf(tf: str) -> None:
             gc.collect()
             print(f"agg {tf} {a} {e}", flush=True)
     np.savez_compressed(out / f"{tf}.npz", WS=WS, WN=WN, stats=stats, hist_c=hist_c, hist_s=hist_s, fam_ws=fam_ws, fam_wn=fam_wn)
-    if alloc:
-        pl.concat(alloc).write_parquet(out / f"{tf}_alloc_p.parquet")
+    for a, lst in alloc.items():
+        pl.concat(lst).write_parquet(out / f"{tf}_alloc_{a}.parquet")
     exec_pass(tf)
     print(f"done {tf} class={cls}", flush=True)
 

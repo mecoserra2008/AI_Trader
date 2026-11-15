@@ -1,0 +1,202 @@
+# Thesis ledger (theses_v1). Loaded, validated and scored by src/ai_trader/narrative/theses.py; checked every desk
+# cycle by `uv run python scripts/thesis_check.py` (after desk_snapshot), which writes <snapshot>/theses.json + theses.md
+# and keeps the running state in data/journal/theses/. This file holds definitions only: code never rewrites it.
+#
+# Rules
+# - Append new theses; never edit a past thesis's claim, proxies, trigger or invalidation. A changed view is a new id
+#   (e.g. T-USER-20261115-a2) that names the one it supersedes in `supersedes`.
+# - `status` here is the status at creation; the live status is in <snapshot>/theses.json.
+# - Numbers in `user_numbers` are the author's own figures, recorded as stated. They are not ours, are not
+#   verified, and no rule or tool uses them as a threshold unless a proxy says so explicitly.
+# - Proxies are observable, point-in-time series (fred: = data/research/macro, curve:regime = the registered MAC
+#   curve regime, lake: = Bybit perps; never SPYUSDT). A proxy `supports` the thesis when its condition holds.
+# - Theses are narrative context for the desk, not entries: the LLM interprets, the risk engine sizes. Scoring is
+#   forward only: realised crypto return over the horizon vs the implied direction (+ Brier if `probability` is set).
+# - Historical evidence for the curve-regime link is in research/reports/macro_narrative_2026-11-15.md: H-MAC1 and
+#   H-MAC2 were inconclusive (2020-2026), so these theses carry no tested edge.
+
+source_user_view: >-
+  "the narrative is the direction... equity has been volatile, technicals pointing to the downside, liquidity thin and
+  leverage quite high, then we don't see a reason to buy crypto since AI hasn't really started to flush out unless
+  memory plays, GPU's and google, but the index is somehow still very high, which is conflicting and could indicate
+  further pain in Sp500 until 7000 or develop into something worse but probably won't for now. Yields are again going
+  higher and specially the short term is moving quite a lot, there is a bear flattening going on that could translate
+  into a bull steepening once the central banks intervene which would be amazing for crypto."
+  (user, 2026-11-15 ~19:00 UTC)
+
+source_user_view_addendum: >-
+  "They are not intervening now because of unemployment being low and inflation being high. With higher issuance in AI
+  buildouts we see the IRR close to 25%-30% in some projects and 6% of financing costs, which means that they could go
+  to 9-10% while IRR goes to 15% and converges, but that could widen the spreads and anchor government debt into those
+  yield levels." (user, 2026-11-15 ~19:15 UTC)
+
+theses:
+  - id: T-USER-20261115-a
+    component: a
+    title: "Bear flattening = tighter liquidity = crypto headwind"
+    author: user
+    created_ts: 2026-11-15T19:00:00Z
+    claim: >-
+      Yields are going higher again, the short end most of all: a bear flattening is under way. It tightens dollar
+      liquidity, which is a headwind for crypto (user: "we don't see a reason to buy crypto").
+    mechanism: >-
+      The 2y reprices the policy path upward (December hike priced after the hot October CPI); higher front-end
+      yields raise the cost of carrying leveraged risk, firm the dollar and drain the marginal bid for long-duration
+      assets such as crypto. Context the user gives: equity volatile, technicals pointing down, liquidity thin,
+      leverage high.
+    direction: short
+    direction_note: "user: short or neutral (a headwind, not necessarily a short call)"
+    assets: [BTCUSDT, ETHUSDT]
+    horizon_days: 20
+    probability: null
+    trigger: on_create
+    proxies:
+      - {id: curve_regime, series: "curve:regime", transform: regime, op: in, value: [bear_flattening],
+         note: "registered MAC regime (5-obs changes, 5 bp band, dominant leg)"}
+      - {id: y2_up_5obs, series: "fred:DGS2", transform: chg_5, op: ">", value: 0.0, note: "short end rising"}
+      - {id: curve_flatter_20obs, series: "fred:DGS10", vs: "fred:DGS2", transform: spread_chg_20, op: "<", value: 0.0,
+         note: "10y-2y narrowing over 20 obs"}
+      - {id: dollar_up_20obs, series: "fred:DTWEXBGS", transform: chg_20, op: ">", value: 0.0, note: "broad dollar firming"}
+      - {id: hy_wider_20obs, series: "fred:BAMLH0A0HYM2", transform: chg_20, op: ">", value: 0.0, note: "credit tightening"}
+    invalidation:
+      any:
+        - {series: "fred:DGS2", transform: chg_20, op: "<=", value: -0.30, note: "the front end has turned: 2y down >= 30 bp in 20 obs"}
+        - all:
+            - {series: "fred:DGS10", vs: "fred:DGS2", transform: spread_chg_20, op: ">=", value: 0.25}
+            - {series: "fred:DGS2", transform: chg_20, op: "<", value: 0.0}
+    status: active
+    watch: ["FOMC minutes 2026-11-18 19:00 UTC", "Fed speakers Nov 17-18", "retail sales 2026-11-17 13:30 UTC"]
+    links: [research/reports/macro_narrative_2026-11-15.md, H-MAC1]
+
+  - id: T-USER-20261115-b
+    component: b
+    title: "AI concentration fragility: index high on narrow AI leadership, risk of further S&P downside"
+    author: user
+    created_ts: 2026-11-15T19:00:00Z
+    claim: >-
+      AI "hasn't really started to flush out" outside memory, GPUs and Google, yet the index is "somehow still very
+      high", which is conflicting: the narrow leadership is fragile, and the S&P 500 risks further pain toward the
+      user's level of 7000, possibly worse, though probably not for now.
+    mechanism: >-
+      Index level rests on a few AI names; if AI capex payback doubts (the Nov 5 selloff) spread, the index has little
+      breadth to absorb it; crypto trades as high-beta risk to the same AI/Nasdaq factor (BTC~QQQ 0.65 in W46).
+    direction: short
+    direction_note: "user: no reason to buy crypto while this is unresolved"
+    assets: [BTCUSDT, ETHUSDT]
+    horizon_days: 30
+    probability: null
+    user_numbers:
+      sp500_target_level: 7000
+      note: "the user's level, not ours; FRED SP500 7561.67 on 2026-11-13 (7000 is -7.7% log away, -10.5% from the 7818.93 ATH)"
+    trigger: on_create
+    proxies:
+      - {id: spx_down_20obs, series: "fred:SP500", transform: logret_20, op: "<", value: 0.0}
+      - {id: spx_dd_gt_5pct, series: "fred:SP500", transform: dd_from_high, op: "<=", value: -5.0}
+      - {id: ndx_lags_spx_20obs, series: "fred:NASDAQ100", vs: "fred:SP500", transform: rel_logret_20, op: "<", value: 0.0,
+         note: "AI-heavy index underperforming = leadership cracking"}
+      - {id: nvda_lags_spx_20obs, series: "lake:NVDAUSDT", vs: "fred:SP500", transform: rel_logret_20, op: "<", value: 0.0,
+         note: "GPU leader vs index (Bybit TradFi perp, from 2026-05)"}
+      - {id: mu_lags_spx_20obs, series: "lake:MUUSDT", vs: "fred:SP500", transform: rel_logret_20, op: "<", value: 0.0,
+         note: "memory vs index"}
+      - {id: vix_above_20, series: "fred:VIXCLS", transform: level, op: ">", value: 20.0}
+    invalidation:
+      any:
+        - all:
+            - {series: "fred:SP500", transform: dd_from_high, op: ">=", value: -0.5, note: "back at the high"}
+            - {series: "fred:NASDAQ100", vs: "fred:SP500", transform: rel_logret_20, op: ">", value: 0.0, note: "with AI leading again"}
+        - {series: "fred:VIXCLS", transform: level, op: "<", value: 14.0}
+    status: active
+    watch: ["Nvidia Q3 FY2027 results 2026-11-17 22:00 UTC (the next AI test)", "SP500 vs the user's 7000"]
+    links: [research/reports/macro_narrative_2026-11-15.md, research/narratives/events.yaml]
+
+  - id: T-USER-20261115-c
+    component: c
+    title: "A bull steepening on central-bank intervention would be strongly crypto-positive"
+    author: user
+    created_ts: 2026-11-15T19:00:00Z
+    claim: >-
+      The current bear flattening "could translate into a bull steepening once the central banks intervene", which
+      "would be amazing for crypto".
+    mechanism: >-
+      Intervention (cuts, liquidity facilities, balance-sheet support) pulls the front end down faster than the long
+      end and eases credit; cheaper dollars and a lower discount rate re-rate long-duration risk, crypto most of all.
+      The credit leg separates intervention (spreads ease, e.g. SVB 2023) from recession steepening (spreads widen).
+    direction: long
+    direction_note: "conditional: only from the trigger"
+    assets: [BTCUSDT, ETHUSDT]
+    horizon_days: 20
+    max_wait_days: 180
+    probability: null
+    trigger:
+      all:
+        - {series: "curve:regime", transform: regime, op: in, value: [bull_steepening]}
+        - {series: "fred:BAMLH0A0HYM2", transform: chg_5, op: "<", value: 0.0, note: "credit easing over the same 5 obs"}
+    proxies:
+      - {id: curve_regime_bull_steep, series: "curve:regime", transform: regime, op: in, value: [bull_steepening]}
+      - {id: y2_down_20obs, series: "fred:DGS2", transform: chg_20, op: "<", value: 0.0}
+      - {id: curve_steeper_20obs, series: "fred:DGS10", vs: "fred:DGS2", transform: spread_chg_20, op: ">", value: 0.0}
+      - {id: hy_easing_5obs, series: "fred:BAMLH0A0HYM2", transform: chg_5, op: "<", value: 0.0}
+      - {id: ig_easing_20obs, series: "fred:BAMLC0A0CM", transform: chg_20, op: "<", value: 0.0}
+    invalidation:
+      any:
+        - {series: "fred:BAMLH0A0HYM2", transform: chg_20, op: ">=", value: 0.50, note: "credit blowing out: recession steepening, not intervention"}
+        - {series: "fred:SAHMREALTIME", transform: level, op: ">=", value: 0.5, note: "recession signal: the steepening would be recession-driven"}
+    status: active
+    watch: ["Fed emergency action or facility announcements", "curve regime switch to bull_steepening with HY easing"]
+    links: [research/reports/macro_narrative_2026-11-15.md, H-MAC1, H-MAC2]
+
+  - id: T-USER-20261115-d
+    component: d
+    title: "AI capex financing convergence keeps yields and spreads high; no intervention yet"
+    author: user
+    created_ts: 2026-11-15T19:15:00Z
+    claim: >-
+      The Fed holds because unemployment is low and inflation is high. Heavy AI-buildout debt issuance raises financing
+      costs (from about 6% toward 9-10%) while project IRRs compress (from about 25-30% toward about 15%); this widens
+      credit spreads and anchors government yields high via the term premium.
+    mechanism: >-
+      Supply of AI-related corporate debt competes with Treasuries for duration buyers; issuers pay up (wider OAS),
+      the term premium and real yields stay high, and with the labour market tight and core inflation elevated the Fed
+      has no reason to cut. That delays component (c)'s bull-steepening trigger and keeps a headwind on crypto.
+    direction: short
+    direction_note: "user: headwind (short or neutral) while this holds; delays the trigger of T-USER-20261115-c"
+    assets: [BTCUSDT, ETHUSDT]
+    horizon_days: 30
+    probability: null
+    user_numbers:
+      project_irr_now_pct: [25, 30]
+      financing_cost_now_pct: 6
+      financing_cost_could_reach_pct: [9, 10]
+      project_irr_converges_to_pct: 15
+      note: "the user's figures, recorded as stated; not ours, not verified"
+    trigger: on_create
+    proxies:
+      - {id: ig_oas_wider_20obs, series: "fred:BAMLC0A0CM", transform: chg_20, op: ">", value: 0.0}
+      - {id: bbb_oas_wider_20obs, series: "fred:BAMLC0A4CBBB", transform: chg_20, op: ">", value: 0.0}
+      - {id: hy_oas_wider_20obs, series: "fred:BAMLH0A0HYM2", transform: chg_20, op: ">", value: 0.0}
+      - {id: term_premium_up_20obs, series: "fred:THREEFYTP10", transform: chg_20, op: ">", value: 0.0, note: "Kim-Wright (ACM not on FRED)"}
+      - {id: real_yield_up_20obs, series: "fred:DFII10", transform: chg_20, op: ">", value: 0.0}
+      - {id: y2_high_1y, series: "fred:DGS2", transform: pct_1y, op: ">=", value: 0.75, note: "2y high: no cut priced"}
+      - {id: y2_rising_20obs, series: "fred:DGS2", transform: chg_20, op: ">", value: 0.0}
+      - {id: sahm_below_half, series: "fred:SAHMREALTIME", transform: level, op: "<", value: 0.5, note: "no-intervention condition (monthly)"}
+      - id: core_inflation_above_3
+        note: "core CPI or core PCE y/y above 3% (monthly; Oct 2025 is missing on FRED, so that month's y/y is skipped)"
+        any:
+          - {series: "fred:CPILFESL", transform: yoy_pct, op: ">", value: 3.0}
+          - {series: "fred:PCEPILFE", transform: yoy_pct, op: ">", value: 3.0}
+    invalidation:
+      any:
+        - {series: "fred:SAHMREALTIME", transform: level, op: ">=", value: 0.5}
+        - all:
+            - any:
+                - {series: "fred:CPILFESL", transform: yoy_falling_3m, op: "==", value: 1.0}
+                - {series: "fred:PCEPILFE", transform: yoy_falling_3m, op: "==", value: 1.0}
+            - {series: "fred:DGS2", transform: chg_21, op: "<", value: -0.50, note: "2y down more than 50 bp in a month"}
+        - all:
+            - {series: "fred:BAMLC0A0CM", transform: minus_median_1y, op: "<", value: 0.0, note: "IG OAS back below its 1y median"}
+            - {series: "fred:DGS10", transform: chg_20, op: "<", value: 0.0, note: "while the 10y falls"}
+    status: active
+    watch:
+      - "hyperscaler capex guidance and the AI-related bond issuance calendar: not backtestable; the news agent logs them as narrative events in research/narratives/events.yaml"
+      - "Nvidia earnings Tue 2026-11-17 22:00 UTC (the next test)"
+    links: [research/reports/macro_narrative_2026-11-15.md, T-USER-20261115-c]

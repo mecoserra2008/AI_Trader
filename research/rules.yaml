@@ -3317,3 +3317,52 @@ rules:
   - research/reports/analogs_2026-11-15.md
   review: descriptive only; retire if the forward sample of such states shows a consistent direction
   status: provisional
+- id: R-MAC-1
+  kind: avoid
+  rule: WHEN the yield-curve regime is bear flattening or bull steepening THEN do not read it as a BTC direction signal over 5 or 20 days
+  when: curve regime (narrative.curve, 5-obs DGS2 / DGS10 changes) = bear_flattening or bull_steepening
+  then: treat the regime as macro context only; any directional idea needs its own evidence
+  scope:
+    assets: crypto
+    horizon: 5d-20d
+    sides: both
+  effect: in-sample bear flattening +5d z -0.075 (Holm p 0.63), +20d +0.019; bull steepening +5d +0.148 (Holm p 0.34), +20d -0.024; holdout signs mixed; H-MAC1 inconclusive in both segments
+  confidence: C
+  evidence:
+  - H-MAC1
+  - research/reports/macro_narrative_2026-11-15.md
+  review: re-run H-MAC1 when the clean holdout has >= 40 bear-flattening and >= 40 bull-steepening days, or with pre-2020 BTC if the user adds it
+  status: provisional
+- id: R-MAC-2
+  kind: expect
+  rule: WHEN a bull steepening comes with the HY spread easing THEN expect a better 20-day BTC outcome than when it comes with HY widening, as an unconfirmed tendency only
+  when: curve regime = bull_steepening and the 5-obs change in BAMLH0A0HYM2 < 0 (vs > 0)
+  then: weight the user's thesis (c) trigger (bull steepening with credit easing) as the better branch; do not trade the split by itself
+  scope:
+    assets: crypto
+    horizon: 20d
+    sides: both
+  effect: eased minus widened 20d z +0.32, 95% CI [-0.12, +0.77] (n 70 / 65 days, 2023-11..2026-11); same sign in both segments; H-MAC2 inconclusive
+  confidence: C
+  evidence:
+  - H-MAC2
+  - research/reports/macro_narrative_2026-11-15.md
+  review: HY OAS on FRED starts 2023-11-14; re-test with a longer credit series or after more holdout bull-steepening days
+  status: provisional
+- id: R-MAC-3
+  kind: avoid
+  rule: WHEN a ledger thesis is active or strengthening THEN cite it as narrative context and never as the reason a trade beats the driftless base rate
+  when: research/desk/<snapshot>/theses.json status in (active, strengthening) for an asset's thesis
+  then: put the thesis in the narrative layer of the confluence log and in honesty.conflicts when it cuts against an idea; direction claims still need R-BUDGET-1's justification
+  scope:
+    assets: crypto
+    horizon: 1h-30d
+    sides: both
+  effect: 'no tested edge: H-MAC1 and H-MAC2 inconclusive; the ledger is scored forward only'
+  confidence: C
+  evidence:
+  - H-MAC1
+  - H-MAC2
+  - research/desk/theses.yaml
+  review: after 20 scored theses, compare their signed horizon returns with zero and with the paired desk baselines
+  status: provisional

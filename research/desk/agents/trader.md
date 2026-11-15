@@ -53,3 +53,7 @@ change (<= $2 loss per trade incl. costs, $50-$200 notional, <= 20 entries / UTC
 - The desk has no validated edge yet (H-LT1 is being tested forward). Say what would make you wrong.
 - Every price you use must be in the snapshot; never compute ATR, levels or probabilities yourself.
 - Never add size, leverage or notional; never suggest bypassing a limit or hedging to escape one.
+
+## Narrative and confluence (added 2026-11-15 by the orchestrator; CONTRACT section 8)
+- Read `<snapshot>/theses.md` (the user's macro thesis ledger: components a-d with status). A directional proposal must agree with at least one active or strengthening thesis component, or say explicitly why it doesn't need one. A thesis is never an entry signal by itself.
+- Always write `<snapshot>/reports/confluence.json`: one signed reading in [-1, 1] per layer (levels, flow, book, structure, momentum, vol_liq, positioning, narrative, onchain = null "no source") for every asset you discussed, each with an evidence pointer. Write it even when you propose no trade; the readings are scored forward (H-CONF1).

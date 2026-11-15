@@ -2696,3 +2696,37 @@ hypotheses:
     prior: 0.30
     family: bos_regime
     status: proposed
+
+  # ---- Macro narrative layer: yield-curve regimes and the thesis ledger (block MAC; user view 2026-11-15 ~19:00 UTC; registered before any data) ----
+  # Daily FRED series (DGS2, DGS10, VIXCLS, BAMLH0A0HYM2, DTWEXBGS, SP500, NASDAQCOM), known_ts = next UTC day 00:00 (conservative).
+  # Curve regime per day from 5-day changes: bear flattening (2y up > 10y up), bear steepening (10y up > 2y up), bull flattening
+  # (10y down > 2y down), bull steepening (2y down > 10y down); a "no regime" band when both |changes| < 5 bp.
+  H-MAC1:
+    title: "BTC forward returns differ by yield-curve regime: bear flattening weak, bull steepening strong"
+    statement: "BTC's next 5- and 20-day log returns (vol-scaled) are lower after bear-flattening days than unconditional, and higher after bull-steepening days, 2017-2026."
+    rationale: "The user's macro view: the current bear flattening tightens liquidity; a later bull steepening on central-bank intervention would be very good for crypto."
+    test: "regime-conditional mean vol-scaled returns, week-clustered bootstrap; segments split at the cutoff; Holm over the 2 x 2 (regime x horizon) cells."
+    success: "bear-flattening mean < 0 and bull-steepening mean > 0, each with Holm p < 0.05 in llm_in_sample and the same signs in clean_holdout."
+    prior: 0.30
+    family: macro_narrative
+    status: proposed
+  H-MAC2:
+    title: "Bull steepening is good for crypto only when credit eases (intervention), not when credit tightens (recession fear)"
+    statement: "Among bull-steepening days, BTC's next 20-day vol-scaled return is higher when the high-yield spread fell over the same 5 days than when it rose."
+    rationale: "The cause of the steepening matters: SVB 2023 (intervention, credit stabilised) vs recession-driven steepening (credit widening, risk assets down first)."
+    test: "difference in means between the two sub-regimes, week-clustered bootstrap; full sample and segments."
+    success: "difference > 0 with the 95% CI above 0 in the full sample, same sign in both segments."
+    prior: 0.35
+    family: macro_narrative
+    status: proposed
+
+  # ---- Confluence of the user's discretionary layers (registered 2026-11-15 ~19:45 UTC, before the first confluence reading) ----
+  H-CONF1:
+    title: "A walk-forward linear combination of the desk's nine layer readings forecasts 24h vol-scaled returns and P(up)"
+    statement: "The trader's per-cycle signed readings (levels, flow, book, structure, momentum, vol_liq, positioning, narrative, onchain) combined by ridge / L2-logistic regression, fitted walk-forward with purging, have out-of-sample rank IC > 0 for the next 24h vol-scaled return and beat the base-rate Brier for P(up)."
+    rationale: "Turns the user's discretionary process into numbers logged before outcomes; the fit shows which layers carry information once the others are known."
+    test: "scripts/confluence_fit.py after >= 300 logged cycles; 5 expanding purged folds; IC NW t; Brier skill with block bootstrap; segments by time."
+    success: "IC > 0 with t > 2 and Brier skill CI above 0."
+    prior: 0.25
+    family: confluence
+    status: proposed
