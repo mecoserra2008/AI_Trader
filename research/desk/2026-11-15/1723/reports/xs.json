@@ -1,0 +1,100 @@
+{
+  "contract": "desk_report_v1",
+  "agent": "xs",
+  "cycle_id": "20261115T1723",
+  "as_of": "2026-11-15T17:23:34.695628+00:00",
+  "snapshot": "research/desk/2026-11-15/1723",
+  "model": "claude-sonnet-5",
+  "prompt_version": "desk-xs-v1",
+  "regime": {
+    "summary": "Broad R9 (liquidation): 17 of 60 lake tokens sit in R9, 5 in R8, 3 in R6, 3 in R4; the crypto EW basket (n=46) is -162bp 4h / -36bp 24h / -1479bp 7d, so the weekend crash is still unwinding, not reversing. Funding on the majors (BTC/ETH/SOL/XRP/DOGE/WLD/AVAX) sits at the 0th-5th percentile of its own 90d window simultaneously (shorts paying the most in 90 days), but OI behaviour under that is split: BTC and XRP are rebuilding OI off a 72h low (new shorts into the drop), ETH/SOL/AVAX are deleveraging (OI falling with price). TradFi basket (n=14) is flat-to-up (24h +65bp) on thin weekend liquidity. No sector is decoupled from the move; this is beta, not rotation.",
+    "cells": {"BTCUSDT": "R9", "ETHUSDT": "R9", "SOLUSDT": "R9", "XRPUSDT": "R9", "UNIUSDT": "R9"},
+    "evidence": [
+      {"source": "xs.json", "symbol": null, "metric": "basket.crypto_ret_bp.4h", "value": -161.8},
+      {"source": "xs.json", "symbol": null, "metric": "basket.crypto_ret_bp.24h", "value": -36.3},
+      {"source": "xs.json", "symbol": null, "metric": "basket.crypto_ret_bp.7d", "value": -1479.3},
+      {"source": "xs.json", "symbol": null, "metric": "basket.tradfi_ret_bp.24h", "value": 65.1},
+      {"source": "xs.json", "symbol": "BTCUSDT", "metric": "regime.cell", "value": "R9"},
+      {"source": "xs.json", "symbol": "BTCUSDT", "metric": "funding.pct", "value": 0.039},
+      {"source": "xs.json", "symbol": "XRPUSDT", "metric": "funding.pct", "value": 0.009}
+    ]
+  },
+  "ideas": [
+    {
+      "rank": 1,
+      "id": "xs-1",
+      "symbols": ["BTCUSDT", "XRPUSDT", "ETHUSDT", "SOLUSDT"],
+      "kind": "positioning",
+      "direction": "none",
+      "horizon": "24h",
+      "thesis": "BTC and XRP match the R-RB-4 pattern exactly: funding below the 90d 10th percentile while OI has rebuilt >=3% off its 72h low after the weekend flush. That pattern tested as no evidence for a squeeze (if anything the next 24h was weaker). Combined with R-RB-1 (don't buy the rebound in R9), there is no tested long or short edge here, only a crowded, split-positioning posture worth watching.",
+      "evidence": [
+        {"source": "xs.json", "symbol": "BTCUSDT", "metric": "funding.pct", "value": 0.039},
+        {"source": "xs.json", "symbol": "BTCUSDT", "metric": "oi.chg_pct.24h", "value": 0.79},
+        {"source": "tape.json", "symbol": "BTCUSDT", "metric": "players.oi.from_low_pct", "value": 3.15},
+        {"source": "xs.json", "symbol": "XRPUSDT", "metric": "funding.pct", "value": 0.009},
+        {"source": "tape.json", "symbol": "XRPUSDT", "metric": "players.oi.from_low_pct", "value": 6.63},
+        {"source": "xs.json", "symbol": "ETHUSDT", "metric": "oi.chg_pct.24h", "value": -2.28},
+        {"source": "xs.json", "symbol": "SOLUSDT", "metric": "oi.chg_pct.24h", "value": -0.74}
+      ],
+      "invalidation": {"symbol": "BTCUSDT", "condition": "BTC funding.pct (90d) closes back above 0.50 or BTC OI falls back within 1% of its 72h low (the rebuild thesis unwinds)"},
+      "conviction": 0.35,
+      "reasoning": "Highest-confidence item because it is a direct, cited rule match (R-RB-4) on two of the three most liquid majors, not an inference; ranked above the single-name dislocations because it covers the whole desk's trading universe (BTC/ETH/SOL/XRP are the names most likely to be proposed).",
+      "rules": ["R-RB-4", "R-RB-1", "R-RB-2", "R-AVOID-1", "R-MAP-5", "R-BUDGET-1"]
+    },
+    {
+      "rank": 2,
+      "id": "xs-2",
+      "symbols": ["SOPHUSDT"],
+      "kind": "watch",
+      "direction": "none",
+      "horizon": "24h",
+      "thesis": "SOPH is the lake's largest dislocation: -5332bp (-2.21sd) 24h vs a basket at -36bp, with OI +26.4% into the drop (new shorts), funding at p5 and ann -3393%, and a -54.5bp basis beyond the 25bp flag threshold. This is the funding-contrarian / OI-divergence squeeze shape R-AVOID-1 says has no tested edge; the book is also thin (15.5bp spread, ~$330/$91 top) for this desk's $50-200 tier.",
+      "evidence": [
+        {"source": "xs.json", "symbol": "SOPHUSDT", "metric": "rs_sigma.24h", "value": -2.21},
+        {"source": "xs.json", "symbol": "SOPHUSDT", "metric": "oi.chg_pct.24h", "value": 26.37},
+        {"source": "xs.json", "symbol": "SOPHUSDT", "metric": "funding.ann_pct_last", "value": -3393.4},
+        {"source": "xs.json", "symbol": "SOPHUSDT", "metric": "funding.pct", "value": 0.048},
+        {"source": "xs.json", "symbol": "SOPHUSDT", "metric": "basis_bp.mark_index", "value": -54.5},
+        {"source": "tape.json", "symbol": "SOPHUSDT", "metric": "book.spread_bp", "value": 15.48},
+        {"source": "xs.json", "symbol": null, "metric": "basket.crypto_ret_bp.24h", "value": -36.3}
+      ],
+      "invalidation": {"symbol": "SOPHUSDT", "condition": "basis_bp.mark_index returns inside +-25bp and oi.chg_pct.24h turns negative (shorts covering rather than building)"},
+      "conviction": 0.25,
+      "reasoning": "Flagged on more criteria (rs_sigma, funding, OI, basis) than any other token this cycle, so it earns a watch slot, but ranked below idea 1 because it is a single thin-book name with no tested edge for trading the dislocation itself, and is marginal at $50-200 notional.",
+      "rules": ["R-AVOID-1", "R-PD-4", "R-BUDGET-1"]
+    },
+    {
+      "rank": 3,
+      "id": "xs-3",
+      "symbols": ["VVVUSDT"],
+      "kind": "watch",
+      "direction": "none",
+      "horizon": "4h",
+      "thesis": "VVV is +1436bp (+2.53sd) 24h vs basket while its sector (ai, n=4, incl. VVV) averages only +3.5bp 24h -- idiosyncratic, not sector beta -- in a tight, liquid book (2.98bp spread, ~$1.8-2.2k at 10bp) unlike SOPH/KAVA/INIT. No rule gives sigma dislocations a tested edge either way (R-XS-2/3 cover momentum ranks and lose after costs); context flag, not a signal.",
+      "evidence": [
+        {"source": "xs.json", "symbol": "VVVUSDT", "metric": "rs_sigma.24h", "value": 2.53},
+        {"source": "xs.json", "symbol": null, "metric": "sectors.8.rs_bp_mean.24h", "value": 3.5},
+        {"source": "xs.json", "symbol": null, "metric": "sectors.8.n", "value": 4},
+        {"source": "tape.json", "symbol": "VVVUSDT", "metric": "book.spread_bp", "value": 2.98},
+        {"source": "tape.json", "symbol": "VVVUSDT", "metric": "book.depth_usd.10bp.bid", "value": 1761}
+      ],
+      "invalidation": {"symbol": "VVVUSDT", "condition": "rs_sigma.24h reverts back inside +-1.5 (the move fades toward the AI sector mean)"},
+      "conviction": 0.2,
+      "reasoning": "Lowest-conviction of the three: it is the cleanest textbook dislocation example (liquid book, flat sector) but the desk has no tested edge for trading a sigma outlier either way, so it is listed for awareness only, below the two ideas that carry a directly cited rule result.",
+      "rules": ["R-XS-2", "R-XS-3", "R-BUDGET-1"]
+    }
+  ],
+  "no_trade": "No relative-value trade this cycle. All three items are posture/watch, not entries: the majors' positioning extreme matches a pattern (R-RB-4) that tested as no squeeze evidence, and the two single-name dislocations (SOPH, VVV) have no tested reversion or continuation edge (R-XS-2/3, R-AVOID-1).",
+  "data_gaps": [
+    "SOPH, INIT, KAVA, ASTER, ZRO show regime.cell 'not in lake' or 'short history' in xs.json, so their v0 cell (and therefore R-MAP-*/R-RB-* applicability) is unknown despite being flagged on rs_sigma/funding/OI/basis.",
+    "xs.json only carries oi.chg_pct at 1h/4h/24h/7d; the 72h-from-72h-low figure used for the R-RB-4 screen on BTC/XRP comes from tape.json players.oi, which only covers the ~25 tape tokens, not the full 60-token xs universe.",
+    "account.json is still 'pending agent LIVE' at this cycle (not used for this report, noted for the trader)."
+  ],
+  "honesty": {
+    "direction_claim": false,
+    "base_rate": "A random entry on any of BTC/XRP (positioning), SOPH or VVV (dislocation) ahead of its stated invalidation has roughly zero expected edge net of costs per this desk's own tests (R-XS-2/3 quintile spreads lose after costs both segments; R-RB-4 CIs include 0; R-AVOID-1 funding-contrarian/OI-divergence failed its test); none of these ideas claims otherwise.",
+    "conflicts": ["R-AVOID-1", "R-MAP-5", "R-XS-2", "R-XS-3", "R-RB-1", "R-RB-4", "R-BUDGET-1", "R-PD-4"],
+    "what_would_change_my_mind": "A v0 cell transition out of R9 into R6 (the modal next cell per R-RB-3, ~80%) together with funding on the majors normalizing back above its 90d median; or, for SOPH/VVV, their basis/rs_sigma reverting inside the flag thresholds without a cell/sector confirmation that would make either move a genuine regime signal rather than noise."
+  }
+}

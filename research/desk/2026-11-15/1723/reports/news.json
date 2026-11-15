@@ -1,0 +1,125 @@
+{
+ "contract": "desk_report_v1",
+ "agent": "news",
+ "cycle_id": "20261115T1723",
+ "as_of": "2026-11-15T17:23:34.695628+00:00",
+ "snapshot": "research/desk/2026-11-15/1723",
+ "model": "claude-sonnet-5",
+ "prompt_version": "desk-news-v1",
+ "regime": {
+  "summary": "Risk-off, deepening but off the lows: BTC fell from ~68k to a four-month low near 62k over Nov 13-15 on a seventh straight day of spot-ETF outflows, a hot-CPI hangover and continued AI-capex doubt, then rebounded to ~64.8k by this snapshot; Fear & Greed is at 10 (extreme fear, down from 28 a week ago), BTCUSDT sits in v0 cell R9 (liquidation, dir down, vol high), and funding is negative (ann -3.2% predicted, z -1.78) -- shorts paying longs, consistent with a flush rather than fresh conviction. No new network-wide hack, exchange insolvency or regulator action beyond what the feed and a web check turned up (isolated: Kava Lend hack -$3.8M/-40% KAVA Nov 14; Coinone data-breach phishing warning Nov 15). Active narratives in force per research/narratives/STATE.md: inflation_fed (Dec-hike odds re-priced up after the hot Oct CPI print, Nov 10), ai (capex-payback doubt, documented same-day BTC~NVDA co-move ~0.53), and crypto-specific bleed (ETF outflows, CLARITY Act stalled in the lame-duck Senate, stablecoin supply contraction). Per R-NEWS-7/R-NEWS-5, none of the attention/F&G/outflow readings below are used as a direction or next-day-vol call; they are regime and forced-flow context only.",
+  "cells": {"BTCUSDT": "R9"},
+  "evidence": [
+   {"source": "xs.json", "symbol": "BTCUSDT", "metric": "regime.ret_24h_pct", "value": -0.99},
+   {"source": "news.json", "metric": "fear_greed.value", "value": 10.0},
+   {"source": "xs.json", "symbol": "BTCUSDT", "metric": "funding.ann_pct_predicted", "value": -3.2}
+  ]
+ },
+ "ideas": [
+  {
+   "rank": 1,
+   "id": "news-1",
+   "symbols": ["NVDAUSDT", "BTCUSDT"],
+   "kind": "event",
+   "direction": "none",
+   "horizon": "24h",
+   "thesis": "Nvidia Q3 FY2027 reports Tue Nov 17 22:00 UTC (2026-W46.yaml, importance 3): next AI-capex test after the Nov 5 selloff (BTC -5.5%, NVDA -10.2% same day). NVDA is #2 in our 24h feed (14); both NVDAUSDT/BTCUSDT sit in v0 cell R9 tonight. A weak guide risks same-session spillover; R-PX-12 caps that co-move to the same hour -- a vol window, not a directional lean.",
+   "evidence": [
+    {"source": "news.json", "metric": "counts_24h.by_ticker.NVDA", "value": 14},
+    {"source": "xs.json", "symbol": "NVDAUSDT", "metric": "regime.ret_24h_pct", "value": 1.13},
+    {"source": "research/narratives/events.yaml", "metric": "events.E-2026-11-05-ai-selloff.reaction.NVDA", "value": -10.2}
+   ],
+   "invalidation": {"symbol": "NVDAUSDT", "condition": "1h close within the pre-print 24h range for NVDAUSDT 4h after the call (no repeat of a Nov-5-style cross-asset shock)"},
+   "conviction": 0.35,
+   "reasoning": "Highest rank: it is the one scheduled catalyst this window with a documented, sized precedent (Nov 5) and a direct in-universe ticker; everything below is either softer-dated (web-sourced) or purely a context read.",
+   "rules": ["R-PX-12", "R-NEWS-7", "R-AVOID-4"]
+  },
+  {
+   "rank": 2,
+   "id": "news-2",
+   "symbols": ["BTCUSDT", "ETHUSDT"],
+   "kind": "volatility",
+   "direction": "none",
+   "horizon": "24h",
+   "thesis": "Three BTC/ETH daily Deribit expiries in-window (08:00 UTC Nov 16/17/18): notional 343.8M/146.1M/59.5M, P/C 1.99/1.52/1.36 (put-heavy, easing), max pain 68,000/66,000/65,000 vs 64,843 underlying -- above spot on the nearest two, converging by the 18th. R-VOL-28 found no pin/release edge for the weekly Friday case; OI/max-pain is hedging-flow context, not a pin forecast.",
+   "evidence": [
+    {"source": "news.json", "metric": "options.BTC.expiries.0.max_pain", "value": 68000.0},
+    {"source": "news.json", "metric": "options.BTC.expiries.0.put_call_oi", "value": 1.99},
+    {"source": "news.json", "metric": "options.BTC.underlying", "value": 64842.78}
+   ],
+   "invalidation": {"symbol": "BTCUSDT", "condition": "BTC trades through 68,000 (above the Nov 16 08:00 UTC max pain) before that expiry, which would flip the near-dated skew read"},
+   "conviction": 0.3,
+   "reasoning": "Ranked just under NVDA: it is pure snapshot data (no web uncertainty) but R-VOL-28 explicitly found no edge from this kind of signal for the weekly case, and these are smaller daily expiries, so it is context, not a catalyst with a tested edge.",
+   "rules": ["R-VOL-28", "R-NEWS-7"]
+  },
+  {
+   "rank": 3,
+   "id": "news-3",
+   "symbols": ["BTCUSDT"],
+   "kind": "event",
+   "direction": "none",
+   "horizon": "12h",
+   "thesis": "FOMC minutes (Oct 27-28 meeting) release Wed Nov 18 19:00 UTC (14:00 ET; financecalendar.com), second Fed read since the Nov 10 hot CPI re-priced December-hike odds (Polymarket all-hike 92.0% -> 97.2% -> 95.2%; events.yaml logged BTC -1.60%, z -2.4 that window). Lower-amplitude than CPI but in the still-active inflation_fed narrative; a vol, not direction, event (R-NEWS-5).",
+   "evidence": [
+    {"source": "research/narratives/events.yaml", "metric": "events.E-2026-11-10-cpi-october-hot.reaction.BTC", "value": -1.60},
+    {"source": "web:https://www.financecalendar.com/events/category/central-banks-monetary-policy/day/2026-11-18/", "metric": "release_time_et", "value": 1400}
+   ],
+   "invalidation": {"symbol": "BTCUSDT", "condition": "no repricing of December hike odds in the hour around the minutes (Polymarket fed-decision-in-december market unchanged)"},
+   "conviction": 0.25,
+   "reasoning": "Below the options/NVDA ideas: minutes rarely move markets as much as the original print, and we have a web-sourced (not snapshot-verified) release time rather than a value from this snapshot's calendar file.",
+   "rules": ["R-NEWS-5", "R-NEWS-7", "R-VOL-27"]
+  },
+  {
+   "rank": 4,
+   "id": "news-4",
+   "symbols": ["BTCUSDT"],
+   "kind": "flow",
+   "direction": "none",
+   "horizon": "24h",
+   "thesis": "Forced-flow context, not a timed catalyst: spot BTC ETFs on a 7th straight outflow day (~2.1B USD in Nov per Decrypt, already in our feed); CLARITY Act lame-duck odds stay low (Polymarket ~3% as of Nov 6, after a 49-50 cloture failure) -- a regulatory tailwind removed while ETF selling runs. Continuing supply pressure, not a direction signal (R-NEWS-7); no single forced seller is sizeable here.",
+   "evidence": [
+    {"source": "news.json", "metric": "counts_24h.items", "value": 147},
+    {"source": "web:https://decrypt.co/383282/bitcoin-etfs-lose-2-1-billion-november-outflow-streak-seven-days", "metric": "etf_outflow_november_usd", "value": 2100000000},
+    {"source": "web:https://www.analyticsinsight.net/news/cynthia-lummis-says-2026-may-be-congresss-last-chance-to-pass-clarity-act", "metric": "clarity_act_2026_passage_odds_pct", "value": 3}
+   ],
+   "invalidation": {"symbol": "BTCUSDT", "condition": "a single day of net ETF inflows breaks the outflow streak"},
+   "conviction": 0.2,
+   "reasoning": "Lower rank than the scheduled items: it is already fully reflected in this snapshot's own headlines (not new information) and explicitly not a direction signal per R-NEWS-7 -- included for completeness on forced flows, not as a trade idea.",
+   "rules": ["R-NEWS-7", "R-NEWS-5"]
+  },
+  {
+   "rank": 5,
+   "id": "news-5",
+   "symbols": ["ARBUSDT"],
+   "kind": "flow",
+   "direction": "none",
+   "horizon": "24h",
+   "thesis": "Arbitrum unlocks ~92.65M ARB (~27.6M USD, 2.33% of circulating supply) at 2026-11-16 13:00 UTC per Tokenomist-sourced coverage. ARBUSDT's own 24h turnover in this snapshot is ~25.8M USD, i.e. the unlock is roughly a full day's turnover in size -- a real supply-side forced-flow candidate in-universe, though unlock-day price impact is not a tested edge here (data gap).",
+   "evidence": [
+    {"source": "xs.json", "symbol": "ARBUSDT", "metric": "turnover_24h_usd", "value": 25818927.0},
+    {"source": "web:https://itiger.com/news/2482738291", "metric": "arb_unlock_usd", "value": 27630000}
+   ],
+   "invalidation": {"symbol": "ARBUSDT", "condition": "ARBUSDT 24h turnover absorbs the unlock without a >1 sigma move in the hour around 13:00 UTC Nov 16"},
+   "conviction": 0.15,
+   "reasoning": "Lowest rank: single-token, unverified-by-us-tools unlock size (web only, no on-chain confirmation), and R-NEWS-7-style caution applies to reading any forced-supply headline as a direction call without a sizing edge.",
+   "rules": ["R-NEWS-7"]
+  }
+ ],
+ "data_gaps": [
+  "No NVDA Q3 FY2027 consensus/guidance figures sourced (earnings-estimate feeds not in our toolset); only the scheduled time from research/calendar/2026-W46.yaml and precedent reaction sizing.",
+  "FOMC minutes release time is web-sourced (financecalendar.com, federalreserve.gov), not present in research/calendar/2026-W46.yaml or this snapshot's scheduled_24h, which is empty for the coming 24h.",
+  "ARB/STRK/ZRO unlock sizes are web-sourced from secondary aggregators (Tokenomist, iTiger, Kucoin), not independently verified on-chain; FinancialJuice was not used (scraping its calendar is against its terms).",
+  "Deribit daily (not weekly) expiry pin/release behaviour has no dedicated rule in research/rules.yaml; R-VOL-28 covers the weekly Friday case only."
+ ],
+ "honesty": {
+  "direction_claim": false,
+  "base_rate": "No idea above calls BTC or ETH direction; R-NEWS-7 and R-NEWS-5 (news attention, F&G level/change, event flags and on-chain activity are neither a direction nor a next-day-vol signal for BTC) apply directly to this report's inputs. A random long or short on any symbol here has no documented edge from these inputs alone.",
+  "conflicts": [
+   "R-NEWS-7: the extreme F&G (10) and the capitulation-toned headlines read as 'the bottom is in' to a human eye but carry no measured direction edge.",
+   "R-VOL-28: the put-heavy, above-spot max-pain Deribit skew (idea 2) looks like upside pin pressure but the tested rule found no pinning/release edge even for the larger weekly case.",
+   "R-PX-12: the NVDA-BTC co-move (idea 1) is same-hour only; do not extend any reaction past the print window.",
+   "R-AVOID-4: none of these events should be read as a session-of-day tilt."
+  ],
+  "what_would_change_my_mind": "A forward re-run of R-VOL-28/R-NEWS-7 (scripts/news_alt_study.py) showing a holdout Brier or QLIKE skill flip, or a scheduled event this week producing a >2 sigma BTC move that holds past the same-hour window against R-PX-12's finding."
+ }
+}

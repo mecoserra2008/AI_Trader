@@ -1,0 +1,320 @@
+{
+ "contract": "desk_report_v1",
+ "agent": "geometry",
+ "cycle_id": "20261115T1723",
+ "as_of": "2026-11-15T17:23:34.695628+00:00",
+ "snapshot": "research/desk/2026-11-15/1723",
+ "model": "claude-sonnet-5",
+ "prompt_version": "desk-geometry-v1",
+ "regime": {
+  "summary": "Sunday 17:23 UTC in a post-liquidation R9 cell across BTC, ETH and SOL (xs.json regime.cell); CME reopens 23:00 UTC. All three have bounced back inside their 24h value areas after the flush, each pinned within ~0.5 x 1h ATR of its 24h POC with unswept swing lows and round numbers stacked close by on both sides.",
+  "cells": {
+   "BTCUSDT": "R9",
+   "ETHUSDT": "R9",
+   "SOLUSDT": "R9"
+  },
+  "evidence": [
+   {
+    "source": "geometry.json",
+    "symbol": "BTCUSDT",
+    "metric": "price",
+    "value": 64783.6
+   },
+   {
+    "source": "geometry.json",
+    "symbol": "ETHUSDT",
+    "metric": "price",
+    "value": 1813.84
+   },
+   {
+    "source": "geometry.json",
+    "symbol": "SOLUSDT",
+    "metric": "price",
+    "value": 71.27
+   },
+   {
+    "source": "xs.json",
+    "symbol": "BTCUSDT",
+    "metric": "regime.ret_24h_pct",
+    "value": -0.99
+   }
+  ]
+ },
+ "ideas": [
+  {
+   "rank": 1,
+   "id": "geometry-1",
+   "symbols": [
+    "BTCUSDT"
+   ],
+   "kind": "level",
+   "direction": "none",
+   "horizon": "4h",
+   "thesis": "BTC (64,784) sits almost exactly on its 24h POC (64,795, +0.0A) with the 65,000 round stacked +0.3A above - tight overhead confluence. Below, an unswept 15m swing low at 64,235 (-0.7A) rests just above the day open 64,122 (-0.8A); traders who bought that 16:15Z low still have stops resting under it, not yet released.",
+   "evidence": [
+    {
+     "source": "geometry.json",
+     "symbol": "BTCUSDT",
+     "metric": "nearest.above.0.price",
+     "value": 64794.79
+    },
+    {
+     "source": "geometry.json",
+     "symbol": "BTCUSDT",
+     "metric": "nearest.above.1.price",
+     "value": 65000
+    },
+    {
+     "source": "geometry.json",
+     "symbol": "BTCUSDT",
+     "metric": "nearest.below.0.price",
+     "value": 64234.6
+    },
+    {
+     "source": "geometry.json",
+     "symbol": "BTCUSDT",
+     "metric": "nearest.below.0.dist_atr_1h",
+     "value": -0.71
+    }
+   ],
+   "invalidation": {
+    "symbol": "BTCUSDT",
+    "price": 64234.6,
+    "condition": "1h close below the unswept 15m swing low 64,235 releases those resting stops and opens the day open 64,122 / 64,000 round"
+   },
+   "conviction": 0.52,
+   "reasoning": "Ranked 1: BTC anchors the regime and has the tightest, cleanest level stack on both sides (two kinds within 0.3A each way); the other majors repeat this pattern at wider spacing.",
+   "rules": [
+    "R-PX-4",
+    "R-PX-10",
+    "R-EXEC-1",
+    "R-FLD-5"
+   ]
+  },
+  {
+   "rank": 2,
+   "id": "geometry-2",
+   "symbols": [
+    "ETHUSDT"
+   ],
+   "kind": "level",
+   "direction": "none",
+   "horizon": "4h",
+   "thesis": "ETH (1,813.84) trades inside its 24h value area, 0.5A under the POC (1,828.72) and 1.0A under the VAH (1,841.10). The nearest stop pool is an unswept 15m low at 1,801.85 (-0.4A) stacked on the 1,800 round just beneath. The model's estimated long-liq cluster sits far lower at 1,664 (-8.6%), consistent with R-RB-2: the flush low is usually still ahead of the first local pool.",
+   "evidence": [
+    {
+     "source": "geometry.json",
+     "symbol": "ETHUSDT",
+     "metric": "nearest.above.0.price",
+     "value": 1828.72
+    },
+    {
+     "source": "geometry.json",
+     "symbol": "ETHUSDT",
+     "metric": "nearest.below.0.price",
+     "value": 1801.85
+    },
+    {
+     "source": "geometry.json",
+     "symbol": "ETHUSDT",
+     "metric": "nearest.below.1.price",
+     "value": 1800
+    },
+    {
+     "source": "geometry.json",
+     "symbol": "ETHUSDT",
+     "metric": "liq_map.long_liq_below.0.price",
+     "value": 1664.13
+    }
+   ],
+   "invalidation": {
+    "symbol": "ETHUSDT",
+    "price": 1801.85,
+    "condition": "1h close below 1,801.85 (unswept 15m low) stacked on the 1,800 round sweeps that pool, with no further live level until the 1h+15m low at 1,772.02 (-1.5A)"
+   },
+   "conviction": 0.5,
+   "reasoning": "Ranked 2: same stack pattern as BTC, but the nearby pool (one swing + one round) is thinner and the liq cluster underneath is a model estimate, not an observed level.",
+   "rules": [
+    "R-PX-4",
+    "R-EXEC-1",
+    "R-RB-2",
+    "R-AVOID-1"
+   ]
+  },
+  {
+   "rank": 3,
+   "id": "geometry-3",
+   "symbols": [
+    "SOLUSDT"
+   ],
+   "kind": "level",
+   "direction": "none",
+   "horizon": "4h",
+   "thesis": "SOL (71.27) is pinned almost on its 24h POC (71.11, -0.1A) with the 71.00 round and two unswept 15m swing lows (70.94, 70.91) stacked within the same 0.3A band below - four level kinds in a tight box. Above, 72.00 round + 24h VAH 72.45 sit near +1.0A, then a confluence 15m+1h swing high at 73.23 (+1.7A).",
+   "evidence": [
+    {
+     "source": "geometry.json",
+     "symbol": "SOLUSDT",
+     "metric": "nearest.below.0.price",
+     "value": 71.11
+    },
+    {
+     "source": "geometry.json",
+     "symbol": "SOLUSDT",
+     "metric": "nearest.below.1.price",
+     "value": 71.0
+    },
+    {
+     "source": "geometry.json",
+     "symbol": "SOLUSDT",
+     "metric": "nearest.above.2.price",
+     "value": 73.23
+    },
+    {
+     "source": "geometry.json",
+     "symbol": "SOLUSDT",
+     "metric": "nearest.above.2.dist_atr_1h",
+     "value": 1.67
+    }
+   ],
+   "invalidation": {
+    "symbol": "SOLUSDT",
+    "price": 70.91,
+    "condition": "1h close below 70.91 (stacked with the 71.00 round and the 24h POC) sweeps that stop pool and opens air toward the 24h VAL"
+   },
+   "conviction": 0.48,
+   "reasoning": "Ranked 3: the downside stack is the tightest confluence of the three majors (four kinds inside 0.3A), but SOL's book is thinner than BTC/ETH (tape.md depth25 ~3.5M/3.7M), so the same distance moves on less size.",
+   "rules": [
+    "R-PX-4",
+    "R-EXEC-1",
+    "R-MAP-6"
+   ]
+  },
+  {
+   "rank": 4,
+   "id": "geometry-4",
+   "symbols": [
+    "SOPHUSDT"
+   ],
+   "kind": "positioning",
+   "direction": "none",
+   "horizon": "1h",
+   "thesis": "SOPH is flagged (rs24h -2.2sd, funding p5 ann -3393%, OI24h +26.4%, basis -54bp); tape.md's pattern reads OI rising into the drop, i.e. new shorts opened as price fell. Those shorts' stops sit at the overhead confluence of the 0.0013 round (+0.1A) and the 7d POC 0.001327 (+0.2A). A separate three-way confluence (7d VAL, week open, 15m low) sits -0.2A below.",
+   "evidence": [
+    {
+     "source": "geometry.json",
+     "symbol": "SOPHUSDT",
+     "metric": "nearest.above.0.price",
+     "value": 0.0013
+    },
+    {
+     "source": "geometry.json",
+     "symbol": "SOPHUSDT",
+     "metric": "nearest.above.1.price",
+     "value": 0.0013273
+    },
+    {
+     "source": "geometry.json",
+     "symbol": "SOPHUSDT",
+     "metric": "nearest.below.2.price",
+     "value": 0.001228
+    },
+    {
+     "source": "xs.json",
+     "symbol": "SOPHUSDT",
+     "metric": "oi.chg_pct.24h",
+     "value": 26.37
+    },
+    {
+     "source": "xs.json",
+     "symbol": "SOPHUSDT",
+     "metric": "funding.ann_pct_last",
+     "value": -3393.4
+    }
+   ],
+   "invalidation": {
+    "symbol": "SOPHUSDT",
+    "price": 0.0013,
+    "condition": "1h close above the 0.0013 round / 0.001327 7d-POC confluence stops out shorts opened into this drop"
+   },
+   "conviction": 0.45,
+   "reasoning": "Ranked 4: the flag plus the tape's new-shorts-into-the-drop pattern gives a specific trapped-party story the majors lack, but SOPH's book is thin (bid $329 / ask $91 at 10bp) and the 24h move is -57.7%, so this is informative structure, not a liquid setup.",
+   "rules": [
+    "R-EXEC-1",
+    "R-PX-4",
+    "R-VOL-3"
+   ]
+  },
+  {
+   "rank": 5,
+   "id": "geometry-5",
+   "symbols": [
+    "INITUSDT"
+   ],
+   "kind": "positioning",
+   "direction": "none",
+   "horizon": "1h",
+   "thesis": "INIT is flagged for OI24h +23.1% and basis +27bp, and pays extreme funding (ann +1205%, p95) - crowded longs rebuilding after a drop (tape.md). Price (0.1131) sits just above a thin cushion at the 7d POC 0.1114 (-0.2A) and the 0.11 round (-0.4A), below the reclaimed prior week low 0.1172 (+0.5A), now role-reversed resistance.",
+   "evidence": [
+    {
+     "source": "geometry.json",
+     "symbol": "INITUSDT",
+     "metric": "nearest.above.0.price",
+     "value": 0.1172
+    },
+    {
+     "source": "geometry.json",
+     "symbol": "INITUSDT",
+     "metric": "nearest.below.0.price",
+     "value": 0.11139
+    },
+    {
+     "source": "geometry.json",
+     "symbol": "INITUSDT",
+     "metric": "nearest.below.2.price",
+     "value": 0.10787
+    },
+    {
+     "source": "xs.json",
+     "symbol": "INITUSDT",
+     "metric": "funding.ann_pct_last",
+     "value": 1204.9
+    },
+    {
+     "source": "xs.json",
+     "symbol": "INITUSDT",
+     "metric": "oi.chg_pct.24h",
+     "value": 23.1
+    }
+   ],
+   "invalidation": {
+    "symbol": "INITUSDT",
+    "price": 0.1114,
+    "condition": "1h close below the 7d POC 0.1114 and the 0.11 round opens air to the prior day high 0.1079 with nothing live between, flushing the rich-funding longs"
+   },
+   "conviction": 0.42,
+   "reasoning": "Ranked 5 (last): the funding/OI flag is extreme and the cushion below is thin, but INIT's 60m move already round-tripped (-2.4% per tape.md) on thin liquidity, so this stays watch-only structure, not a high-confidence setup.",
+   "rules": [
+    "R-EXEC-1",
+    "R-PX-4",
+    "R-RB-2"
+   ]
+  }
+ ],
+ "data_gaps": [
+  "tape.json flow is 'not collected' for SOPHUSDT and INITUSDT, so the OI/funding-driven trapped-party stories can't be cross-checked against taker flow this cycle.",
+  "research/live/LATEST.md: ls_ratio stale since 2026-11-07T20:00 (one-off backfill; no live updater) - positioning context for BTC/ETH/SOL beyond funding/OI is incomplete.",
+  "tape.md marks BTCUSDT depth25 with a '*' (book did not reach 25bp), so BTC's cited book depth is a lower bound, not the full picture.",
+  "SOPHUSDT book is thin (l1_usd bid $329 / ask $91): the cited confluence is a place where stops concentrate, not a level with size behind it."
+ ],
+ "honesty": {
+  "direction_claim": false,
+  "base_rate": "R-PX-4: an approached structural level breaks slightly more often than it holds (52-55%); a flat coin-flip is the right prior for any single touch cited here.",
+  "conflicts": [
+   "R-AVOID-1 / R-MAP-6: pivot-geometry and swing-structure trend ideas have failed historically - every stack above is a place where stops concentrate, not a forecast of which way price goes.",
+   "R-RB-2: after a flush the 7-day low is usually still ahead of the first local pool (true for BTC/ETH/SOL here; ETH's modeled long-liq cluster sits -8.6%, well below the cited stop pool).",
+   "SOPHUSDT / INITUSDT theses lean on tape.json's players.pattern label (OI/funding behaviour), which is a pattern, not an observed position book."
+  ],
+  "what_would_change_my_mind": "the next geometry snapshot showing any cited swing flip to swept=true, or a tape.json liq cluster firing (R-FLOW-2) at one of these prices."
+ }
+}

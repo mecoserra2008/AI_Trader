@@ -1,0 +1,101 @@
+{
+ "contract": "desk_report_v1",
+ "agent": "sentiment",
+ "cycle_id": "20261115T1723",
+ "as_of": "2026-11-15T17:23:34.695628+00:00",
+ "snapshot": "research/desk/2026-11-15/1723",
+ "model": "claude-sonnet-5",
+ "prompt_version": "desk-sentiment-v1",
+ "regime": {
+  "summary": "Market-wide mood is extreme fear: Fear & Greed is 10.0 today, down from 28.0-32.0 a week ago and 13.0 yesterday (news.json fear_greed), echoed by uniformly negative RSS tone on BTC/ETH/XRP (ETF-outflow and 'worst asset' headlines) while BTC/ETH/SOL/XRP all sit in xs.json's R9 (liquidation) cell with funding at the bottom of their 90d range (p0-p4). The sentiment panel itself is brand new (collecting since 16:21Z, ~1h of history, 0h baseline), so every ticker's trend is 'insufficient' - this is a snapshot of raw headline tone on 1-7 items per ticker, not a measured spike, and web search is used below only to sanity-check direction, not to add a number the panel can't yet support.",
+  "cells": {"BTCUSDT": "R9", "ETHUSDT": "R9", "SOLUSDT": "R9", "XRPUSDT": "R9"},
+  "evidence": [
+   {"source": "news.json", "metric": "fear_greed.value", "value": 10.0},
+   {"source": "news.json", "metric": "fear_greed.prev_7", "value": [28.0, 29.0, 32.0, 29.0, 28.0, 20.0, 13.0]},
+   {"source": "xs.json", "symbol": "BTCUSDT", "metric": "regime.cell", "value": "R9"}
+  ]
+ },
+ "ideas": [
+  {
+   "rank": 1,
+   "id": "sentiment-1",
+   "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT"],
+   "kind": "sentiment",
+   "direction": "none",
+   "horizon": "24h",
+   "thesis": "Mood is at a fresh extreme (F&G 10.0, down from 28-32 a week ago) and all four majors sit in R9 (liquidation); RSS tone on BTC/ETH/XRP is uniformly negative, matching the ETF-outflow headlines. But the sentiment panel has 0h baseline (collecting since 16:21Z) and only 1-7 headlines per ticker, so this confirms the mood the tape already shows rather than adding anything new.",
+   "evidence": [
+    {"source": "news.json", "metric": "fear_greed.value", "value": 10.0},
+    {"source": "news.json", "metric": "counts_24h.by_ticker.BTC", "value": 48},
+    {"source": "sentiment.json", "metric": "tickers.0.tone_24h", "value": -0.338, "note": "ticker BTC"},
+    {"source": "sentiment.json", "metric": "tickers.0.mentions_24h", "value": 7, "note": "ticker BTC"},
+    {"source": "xs.json", "symbol": "BTCUSDT", "metric": "funding.pct", "value": 0.039},
+    {"source": "web", "metric": "distinct_sources_describing_extreme_fear_48h", "value": 8, "note": "cointelegraph, decrypt, bitcoinist, forklog, bravenewcoin, sentimentrader, kucoin, mexc each ran an 'extreme fear / capitulation' piece in this window"}
+   ],
+   "invalidation": {"symbol": "BTCUSDT", "condition": "F&G closes back above 30 and BTC headline tone turns net positive (>= +0.2 avg over >= 10 headlines) while sentiment collection keeps running uninterrupted"},
+   "conviction": 0.2,
+   "reasoning": "Ranked first: the best-evidenced read available right now (F&G and regime cells are both snapshot facts), but it is confirmation of the tape, not an independent signal - R-NEWS-7 found attention/F&G did not predict BTC direction or vol.",
+   "rules": ["R-NEWS-7", "R-NEWS-5", "R-BUDGET-1"]
+  },
+  {
+   "rank": 2,
+   "id": "sentiment-2",
+   "symbols": ["SOLUSDT"],
+   "kind": "watch",
+   "direction": "none",
+   "horizon": "24h",
+   "thesis": "SOL funding is at the bottom of its 90d range (p0, -21.3% ann.), the most stressed of the four majors, yet attention is near zero (1 headline, tone 0.00). Web coverage frames SOL as the one major with net ETF inflows (~$269M cumulative) against that funding stress - a quiet divergence to flag, not trade: H-SENT1 is untested, sample too small to size on.",
+   "evidence": [
+    {"source": "xs.json", "symbol": "SOLUSDT", "metric": "funding.pct", "value": 0.002},
+    {"source": "xs.json", "symbol": "SOLUSDT", "metric": "funding.ann_pct_last", "value": -21.3},
+    {"source": "sentiment.json", "metric": "tickers.2.mentions_24h", "value": 1, "note": "ticker SOL"},
+    {"source": "sentiment.json", "metric": "tickers.2.tone_24h", "value": 0.0, "note": "ticker SOL"},
+    {"source": "news.json", "metric": "counts_24h.by_ticker.SOL", "value": 4},
+    {"source": "web", "metric": "sol_etf_cumulative_inflow_usd_million", "value": 269, "note": "nexo.com Dispatch #269 (ETH & SOL): SOL spot ETFs ~$269M cumulative inflows, contrasted with BTC/ETH ETF outflows this month"}
+   ],
+   "invalidation": {"symbol": "SOLUSDT", "condition": "SOL mentions_24h rises past 10 with trend no longer 'insufficient' while funding normalizes back above its 20th percentile"},
+   "conviction": 0.15,
+   "reasoning": "Second: a genuine attention-vs-positioning gap (the 'quiet asset' pattern in the agent brief), capped by the tiny sample and SOL's own insufficient trend; R-AVOID-1 means the low funding percentile alone is not a reason to act.",
+   "rules": ["R-AVOID-1", "R-BUDGET-1", "R-XS-3"]
+  },
+  {
+   "rank": 3,
+   "id": "sentiment-3",
+   "symbols": ["ETHUSDT"],
+   "kind": "watch",
+   "direction": "none",
+   "horizon": "24h",
+   "thesis": "ETH's tone_24h (-0.74) is the most negative in the panel, but it rests on one headline ('worst asset of all time') - n=1, lexicon noise, not a measured shift. Web search shows ETH ETFs in their worst monthly outflow (~$728.6M weekly, third-highest on record); if the RSS sample grows and stays this negative it would agree with that real number - right now it is one headline next to it.",
+   "evidence": [
+    {"source": "sentiment.json", "metric": "tickers.1.tone_24h", "value": -0.743, "note": "ticker ETH"},
+    {"source": "sentiment.json", "metric": "tickers.1.mentions_24h", "value": 1, "note": "ticker ETH"},
+    {"source": "news.json", "metric": "counts_24h.by_ticker.ETH", "value": 7},
+    {"source": "xs.json", "symbol": "ETHUSDT", "metric": "oi.chg_pct.24h", "value": -2.28},
+    {"source": "xs.json", "symbol": "ETHUSDT", "metric": "funding.pct", "value": 0.043},
+    {"source": "web", "metric": "eth_etf_weekly_outflow_usd_million", "value": 728.6, "note": "coverage of Blockworks/Sherwood ETF-flow data: spot ETH ETFs' third-highest weekly outflow since inception, worst month on record"}
+   ],
+   "invalidation": {"symbol": "ETHUSDT", "condition": "ETH news_24h sample grows to >= 5 headlines while average tone stays <= -0.5, i.e. the reading survives a larger sample"},
+   "conviction": 0.1,
+   "reasoning": "Third and lowest conviction: a sanity check on whether the news agent's tone read on ETH is a real shift or a 1-headline artefact; not a standalone call either way.",
+   "rules": ["R-NEWS-7", "R-BUDGET-1"]
+  }
+ ],
+ "data_gaps": [
+  "Reddit keys missing (REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET / REDDIT_USER_AGENT); 0 of 147 collected items are Reddit - the panel is RSS headlines only, no comment/post-level data.",
+  "Collection started 2026-11-15T16:21:37Z, under an hour before this cycle; baseline_hours = 0 for every ticker, so z_mentions/z_tone/trend are 'insufficient' across the whole panel - nothing here is a measured rise or fall yet.",
+  "sentiment.json mentions_24h undercounts against news.json's fuller 24h RSS tally (e.g. SOL 1 vs 4, BTC 7 vs 48) because the sentiment collector's own window is only ~1h old; news.json counts_24h.by_ticker is the better 24h reference until the sentiment panel catches up.",
+  "Web search results for this 48h window were internally inconsistent on exact index values and BTC price levels across different outlets (Fear & Greed cited variously as 10 / 14 / 15 / 5; BTC price cited near $63k / $73k / $83k / $94k / $98k, some apparently from outside this window). Only the shared qualitative direction (extreme fear, persistent ETF outflows) is used above; no single external number is treated as fact.",
+  "No raw Reddit thread content was available; web search surfaced only secondary coverage of Reddit/X mood (via Santiment/Cointelegraph), not primary threads."
+ ],
+ "honesty": {
+  "direction_claim": false,
+  "base_rate": "No idea above proposes a direction. Absent an edge, a random entry has roughly 50/50 odds of hitting target before stop within a horizon (R-BUDGET-1); H-SENT1 (sentiment as a decision input) is proposed but untested, so it carries no weight on its own.",
+  "conflicts": [
+   "R-NEWS-7: headline tone and Fear & Greed did not predict BTC direction or vol in prior tests.",
+   "R-AVOID-1: funding-contrarian ('crowd is short/long so fade it') failed; SOL's low funding percentile alone is not a reason to act.",
+   "R-BUDGET-1: stacking sentiment on top of xs/news does not make direction more predictable.",
+   "Every ticker's trend is 'insufficient' (baseline_hours = 0); none of this is a confirmed spike, only a single snapshot."
+  ],
+  "what_would_change_my_mind": "Reddit keys provisioned and at least 24h (ideally the 60 days H-SENT1 needs) of continuous collection giving real z_mentions/z_tone, with a genuine spike that either agrees or cleanly disagrees with the same-day funding/OI/price move."
+ }
+}

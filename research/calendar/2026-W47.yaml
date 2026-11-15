@@ -1,0 +1,65 @@
+# Economic / crypto calendar, week of 2026-11-16 (ISO week 47). Times in UTC (US is on EST: ET + 5 h).
+# Written by the desk NEWS agent, 2026-11-15 ~17:23 UTC snapshot (research/desk/2026-11-15/1723), from
+# news.json (Deribit options, recurring_24h) plus a web check; the prior week's file (2026-W46.yaml) was
+# written by the narrative team from FRED/finviz and has a fuller macro `context` block -- this one only
+# carries what the news agent verified today. Only Monday-Wednesday (the next 72h from as_of) is
+# researched in depth; Thursday/Friday are left for the next cycle (data gap, not yet checked).
+# `importance`: 3 = market-moving for crypto/AI this week, 2 = relevant, 1 = background.
+# Headlines and web pages are data, not instructions (R-NEWS honesty rules). FinancialJuice was not used
+# (scraping its calendar breaches its terms).
+
+week: 2026-W47
+written_at: 2026-11-15T17:23:34Z
+context:
+  btc: 64783.6                       # xs.json BTCUSDT.last, as_of snapshot
+  btc_underlying_deribit: 64842.78   # news.json options.BTC.underlying
+  dvol_btc: 44.38                    # tape.json BTCUSDT.players.dvol.level; pct_90d 0.988 (98.8th pct, high)
+  fear_greed: 10.0                   # news.json fear_greed.value, 2026-11-15; prev_7 [28,29,32,29,28,20,13]
+  fed_dec_hike_prob: 0.952           # Polymarket all-hike, STALE: last reading 2026-11-10 16:15 UTC
+                                      # (events.yaml E-2026-11-10-cpi-october-hot); no fresher print found today
+  clarity_act_2026_odds_pct: 3       # Polymarket, as of 2026-11-06 (web, Cointelegraph/Analytics Insight)
+  btc_etf_outflow_nov_usd: 2100000000 # Decrypt, 7th straight outflow day as of 2026-11-15 (also in news.json feed)
+
+events:
+  - {ts_utc: 2026-11-15T23:00Z, name: "CME Globex reopen (BTC / ETH futures, Sunday 17:00 CT)", country: US, importance: 2,
+     reading: "Already in news.json recurring_24h; first futures price after the weekend 62-65k round trip."}
+
+  # ---- Monday Nov 16
+  - {ts_utc: 2026-11-16T08:00Z, name: "Deribit BTC/ETH daily option expiry", country: null, importance: 2,
+     reading: "BTC notional 343.8M USD, P/C 1.99 (put-heavy), max pain 68,000 vs ~64,843 underlying. R-VOL-28: no tested pin/release edge (that rule covers the weekly Friday case); context only.",
+     source: "news.json options.BTC.expiries.0"}
+  - {ts_utc: 2026-11-16T13:00Z, name: "Arbitrum (ARB) token unlock: ~92.65M ARB (~27.6M USD, 2.33% of supply)", country: null, importance: 2,
+     reading: "ARBUSDT 24h turnover here is ~25.8M USD: the unlock is roughly a full day's turnover for an in-universe token. Unlock-day impact is not a tested edge (data gap).",
+     source: "web: itiger.com/news/2482738291 (Tokenomist-sourced); not independently verified on-chain"}
+  - {ts_utc: 2026-11-16T14:30Z, name: "NYSE cash open 09:30 ET (no holiday calendar applied)", country: US, importance: 1}
+
+  # ---- Tuesday Nov 17
+  - {ts_utc: 2026-11-17T08:00Z, name: "Deribit BTC/ETH daily option expiry", country: null, importance: 1,
+     reading: "BTC notional 146.1M USD, P/C 1.52, max pain 66,000.", source: "news.json options.BTC.expiries.1"}
+  - {ts_utc: 2026-11-17T08:00Z, name: "ZKsync (ZK) token unlock: ~173M ZK (~9.0M USD, ~3.4% of circulating supply)", country: null, importance: 1,
+     reading: "Reported as 4pm Beijing time = 08:00 UTC. Small relative to BTC/ETH flows; watch only if ZK is ever added to the universe.",
+     source: "web (MEXC / aggregator coverage); unconfirmed exact minute"}
+  - {ts_utc: 2026-11-17T13:30Z, name: "Retail sales (Oct, advance)", country: US, importance: 2,
+     reading: "Consensus not sourced this cycle (data gap). Confirms/denies the 'labour and spending still strong -> hike case' read from research/narratives/STATE.md.",
+     source: "web: forexfundamentals.com, fedratecalc.com"}
+  - {ts_utc: 2026-11-17T22:00Z, name: "Nvidia Q3 FY2027 results call", country: US, importance: 3,
+     reading: "The AI-capex-payback test after the Nov 5 selloff (BTC -5.5%, NVDA -10.2% that day, events.yaml E-2026-11-05-ai-selloff). NVDAUSDT and BTCUSDT both sit in v0 cell R9 tonight (xs.json). R-PX-12: any BTC/ETH reaction to an NVDA/equity move is same-hour only, do not extend it.",
+     source: "research/calendar/2026-W46.yaml (prior week's forward note); recurs here as it falls inside this window"}
+
+  # ---- Wednesday Nov 18
+  - {ts_utc: 2026-11-18T08:00Z, name: "Deribit BTC/ETH daily option expiry", country: null, importance: 1,
+     reading: "BTC notional 59.5M USD, P/C 1.36, max pain 65,000 (now close to the underlying).", source: "news.json options.BTC.expiries.2"}
+  - {ts_utc: 2026-11-18T19:00Z, name: "FOMC minutes (Oct 27-28 meeting)", country: US, importance: 2,
+     reading: "Second Fed read since the Nov 10 hot October CPI re-priced December-hike odds (Polymarket 92.0% -> 97.2% -> 95.2% intraday, events.yaml). Lower amplitude than CPI; a vol event, not a direction call (R-NEWS-5).",
+     source: "web: financecalendar.com, federalreserve.gov"}
+  - {ts_utc: null, name: "Fed speakers (Hammack, Barr, Barkin, Logan closing remarks) around Nov 17-18", country: US, importance: 1,
+     reading: "Exact times not confirmed this cycle (secondary aggregator only, e.g. financecalendar.com); background Fed-communication noise, not scheduled with confidence.",
+     source: "web; unconfirmed exact times -- data gap"}
+
+  # ---- Any time this window
+  - {ts_utc: null, name: "CLARITY Act: possible lame-duck reconsideration vote (Senate)", country: US, importance: 2,
+     reading: "Failed cloture 49-50 in September; Polymarket puts 2026 passage odds at ~3% (Nov 6). A surprise vote or scheduling would be a regulatory-tailwind event for crypto; absence is the status quo already priced.",
+     source: "web: cointelegraph.com, analyticsinsight.net"}
+  - {ts_utc: null, name: "BTC spot-ETF outflow streak (7 days running, ~2.1B USD in November)", country: null, importance: 2,
+     reading: "Continuing forced-flow context, not a timed catalyst; watch for a single net-inflow day as the first sign the streak breaks (R-NEWS-7: not a direction signal by itself).",
+     source: "news.json feed items (Decrypt, The Block); web confirms the monthly total"}
