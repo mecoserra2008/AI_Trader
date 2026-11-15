@@ -9,7 +9,10 @@
 environment: demo
 
 execution:
-  allow_mainnet: false           # 2026-11-12 11:15 UTC: OFF. User: stop market making NVDA; research only from now on
+  allow_mainnet: true            # 2026-11-15 ~17:30 UTC: ON for the live_small desk only (user authorised live trading of
+                                 # USDT perps under hard limits: $2/trade, 20/day, $10/day stop, 3 open; first 5 approved by
+                                 # the user). Writes still need AI_TRADER_ALLOW_MAINNET=1 in the live shell (two-key guard).
+                                 # History: 2026-11-12 11:15 UTC OFF (research only).
   stop_trigger_by: MarkPrice     # MarkPrice | LastPrice | IndexPrice. Mark avoids single-venue wick stop-outs
   tp_trigger_by: LastPrice
   default_leverage: 5            # margin setting only; position size comes from the risk engine

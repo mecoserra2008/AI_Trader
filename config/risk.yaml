@@ -68,7 +68,9 @@ live_small:
   min_net_expected_r: 0.10         # inclusive, live costs (maker + peg slip entry, taker + slippage exit)
   require_sigma: true              # placement check against the stop cap (placement / stop_cap.json), as in paper
   excluded_symbols: [SPYUSDT]      # never touched (SPYUSDT is also hard-coded in at-risk)
-  excluded_symbol_types: []        # Bybit symbolType values never traded, e.g. [innovation]; "" = crypto
+  # User decision 2026-11-15 ~17:15 UTC: no innovation-zone tokens. Crypto ("") and TradFi USDT perps stay allowed;
+  # SPYUSDT never (above, and hard-coded in at-risk).
+  excluded_symbol_types: [innovation]   # Bybit symbolType values never traded; "" = crypto
   # Notional tiers by liquidity, from Bybit mainnet 24h turnover rank among Trading USDT linear perps and the quoted
   # spread. First tier whose every condition holds. Notional = min(tier cap, depth.max_share x book depth, the size
   # whose risk to the stop is 1.70). stop_slip_bps: stop-exit slippage budgeted in the 2 USD worst case.
@@ -94,7 +96,10 @@ live_small:
     poll_ms: 1500
     slip_bps: 1.3                  # cost model of the peg (paper_entry.slip_bps, H-EXE1)
   stop_trigger_by: MarkPrice
-  leverage: 5                      # margin setting only (size comes from the limits above)
+  # User decision 2026-11-15 ~17:15 UTC: 10x (usable margin is small; the compiled ceiling is 10). Margin setting only:
+  # size, the 2 USD worst case and every other limit above are unchanged. Set per symbol before each entry
+  # (min(leverage, the symbol's max), idempotent: "leverage not modified" counts as success).
+  leverage: 10
   margin_buffer: 1.5               # free USDT >= notional / leverage x 1.5
   approval:
     manual_trades: 5               # the first 5 live trades need `atx live approve <id>` by the user; then auto

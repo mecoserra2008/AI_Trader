@@ -13,8 +13,11 @@ Modes (nothing else is accepted; nothing here talks to an exchange):
   paper   one decision pass at now: only events on the last complete bar of each strategy's frame. A file flag
           data/exec/KILL suppresses new entries (exits still go out; L flattens on it).
 
-Safety: refuses to run when the environment is mainnet, when execution.allow_mainnet is true, or when
-AI_TRADER_ALLOW_MAINNET=1 is set (research / paper only, user instruction 2026-11-12).
+Safety: refuses to run when THIS process is set up for mainnet: the environment resolves to mainnet
+(AI_TRADER_ENVIRONMENT or settings.environment) or AI_TRADER_ALLOW_MAINNET is set to anything but "" / "0" (research /
+paper only, user instruction 2026-11-12). The global execution.allow_mainnet flag alone does not stop it (2026-11-15:
+that flag belongs to the live desk, `atx live`, which also needs the env key); nothing here can send a venue order
+whatever the flag says, and `atx exec-intents` refuses a mainnet environment as well.
 
 Outputs (data/exec/):
   intents/<run_id>.jsonl      OrderIntents (contract docs/EXECUTION_PIPELINE.md)
@@ -56,13 +59,19 @@ class SafetyError(RuntimeError):
 
 
 def safety_check(mode: str) -> None:
+    """Refuse unless `mode` is paper / replay and this process is not set up for mainnet (environment or env key).
+
+    execution.allow_mainnet is deliberately not consulted: it is the live desk's config key, and the live desk also needs
+    AI_TRADER_ALLOW_MAINNET=1 in its own shell. A process with that key, or with a mainnet environment, is refused here.
+    """
     if mode not in MODES:
         raise SafetyError(f"mode {mode!r} refused: only {MODES} (research / paper only)")
     cfg = load()
-    allow = bool((cfg.settings.get("execution") or {}).get("allow_mainnet", False))
-    if cfg.environment == "mainnet" or allow or os.environ.get("AI_TRADER_ALLOW_MAINNET") == "1":
-        raise SafetyError(f"refused: environment={cfg.environment!r}, execution.allow_mainnet={allow}, "
-                          f"AI_TRADER_ALLOW_MAINNET={os.environ.get('AI_TRADER_ALLOW_MAINNET')!r}; the strategy runner is research / paper only")
+    env = str(cfg.environment).strip().lower()
+    key = os.environ.get("AI_TRADER_ALLOW_MAINNET", "").strip()
+    if env == "mainnet" or key not in ("", "0"):
+        raise SafetyError(f"refused: environment={env!r}, AI_TRADER_ALLOW_MAINNET={key!r}: this process is set up for mainnet; "
+                          "the strategy runner / paper harness is research / paper only (run it from a shell without those variables)")
 
 
 def make_run_id(mode: str, t: datetime, key: str) -> str:

@@ -286,3 +286,31 @@ guard. Nothing is live until the main session turns the guard on.
 - **Scorecard.** `python -m ai_trader.agent.live_scorecard [--env demo]` covers H-LT1 and H-LT2 (live fills vs the paper
   model, which always fills at 1.3 bp beyond the decision-time mid). Tracks are split by model, prompt, exec version and
   profile hash.
+
+### 2026-11-15 (GOLIVE): 10x leverage, no innovation zone, and the paper tools no longer key off the live flag
+
+User decisions ~17:15 UTC. Every other `live_small` limit is unchanged; the profile hash changed, so this is a new live
+track record.
+
+- **Leverage 10.** `live_small.leverage: 10`, the compiled ceiling. It is a margin setting only: size still comes from
+  the 1.70 / 2 USD budget and the tier caps, and the margin check is notional / 10 x 1.5. Before every entry `atx live`
+  sets min(10, the symbol's max) on the symbol (Bybit's "leverage not modified" counts as success) and reads it back
+  from `/v5/position/list?symbol=`. If the set fails, or the venue reports another value or none, no entry order is
+  sent (`entry_end_reason: leverage_not_set`, fail closed; before this change a failed set was only a note). Tested on
+  DEMO: ETHUSDT set to 10 and read back, then a pegged entry was placed and cancelled at the window with no fill.
+- **Universe.** `excluded_symbol_types: [innovation]`. Crypto (`""`) and TradFi types (stock, ETF, commodity, forex)
+  stay allowed. SPYUSDT stays excluded. Ranks are still taken over all Trading USDT linear perps, innovation
+  included. Mainnet `atx live tiers` on 2026-11-15 ~17:18 UTC, 821 perps: liquid 9 (none lost), mid 35 (3 innovation
+  tokens lost), illiquid 97 (13 lost), 680 not tradable. The 141 tradable perps are 109 crypto, 16 stock, 12 ETF and
+  4 commodity.
+- **Flag split.** `execution.allow_mainnet` is the live desk's config key. On its own it no longer stops the paper
+  and research tools (`execution.runner.safety_check`, used by the strategy runner and the decision harness). Those
+  tools refuse only when their own process is set up for mainnet: the environment resolves to mainnet, or
+  `AI_TRADER_ALLOW_MAINNET` is set to anything but empty or 0. They still cannot reach a venue whatever the flag says,
+  and `atx exec-intents` refuses a mainnet environment on its own. Tests:
+  - `tests/test_execution_gate.py`: flag on and off;
+  - `tests/test_decision_session.py`: a paper decision with the flag on lands in the paper book, and with either
+    variable set it refuses;
+  - `at-core` `mainnet_execution_needs_both_keys`: mainnet execution needs both keys.
+
+  The live shell exports the two variables, so run the paper tools from another shell.

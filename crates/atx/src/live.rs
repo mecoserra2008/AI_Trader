@@ -1279,14 +1279,19 @@ impl<'a> Desk<'a> {
         st.save(&self.paths.state())?;
         drop(lock);
 
-        // ---- leverage (the symbol has no foreign activity: decide_live checked)
+        // ---- leverage: set on the symbol before every entry (idempotent) and read back; no entry order unless the venue
+        // holds it (fail closed). The symbol has no foreign activity: decide_live checked.
         let lev = self.cfg.leverage.min(rule.max_leverage.max(1.0));
-        if let Err(e) = self.venue.set_leverage(&d.symbol, &format!("{lev}")).await {
-            tr.notes.push(format!("set_leverage {lev}: {e:#}"));
-        }
+        let lev_ok = match self.apply_leverage(&d.symbol, lev).await {
+            Ok(()) => true,
+            Err(e) => {
+                tr.notes.push(format!("leverage {lev}: {e:#}: entry not sent"));
+                false
+            }
+        };
 
         // ---- pegged entry
-        let out = self.peg_entry(&mut tr, &rule, &fees, window_ms, test).await;
+        let out = if lev_ok { self.peg_entry(&mut tr, &rule, &fees, window_ms, test).await } else { Ok(PegEnd { reason: "leverage_not_set".into() }) };
         let out = match out {
             Ok(o) => o,
             Err(e) => {
@@ -1372,6 +1377,13 @@ impl<'a> Desk<'a> {
 
     /// PostOnly limit at the touch, re-pegged every poll until filled, the window ends, the stop is breached, the chase
     /// would break the $2 cap, or KILL appears. The stop is attached to every entry order.
+    /// Set `lev` on the symbol (Bybit's "leverage not modified" counts as success), then read it back.
+    async fn apply_leverage(&self, symbol: &str, lev: f64) -> anyhow::Result<()> {
+        self.venue.set_leverage(symbol, &format!("{lev}")).await.context("set-leverage")?;
+        let got = self.venue.trading().leverage(symbol).await.context("leverage read-back")?;
+        leverage_matches(lev, got)
+    }
+
     async fn peg_entry(&self, tr: &mut TradeRec, rule: &InstrumentRules, fees: &FeeRates, window_ms: i64, test: &TestOpts) -> anyhow::Result<PegEnd> {
         let side = tr.side.context("side")?;
         let deadline = tr.submitted_ms + window_ms;
@@ -1745,6 +1757,15 @@ struct PegEnd {
     reason: String,
 }
 
+/// The venue's leverage on the symbol must equal the one the desk set (None: the venue reports none, refused).
+fn leverage_matches(want: f64, got: Option<f64>) -> anyhow::Result<()> {
+    match got {
+        Some(g) if (g - want).abs() < 1e-6 => Ok(()),
+        Some(g) => bail!("venue leverage {g} != {want}"),
+        None => bail!("venue reports no leverage for the symbol"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1760,6 +1781,14 @@ mod tests {
         assert_eq!(d.root, Path::new("data/live/demo"));
         assert_eq!(d.journal, Path::new("data/journal/live_demo"));
         assert_eq!(d.global_kill, m.global_kill, "data/live/KILL stops every environment");
+    }
+
+    #[test]
+    fn leverage_must_be_held_by_the_venue() {
+        assert!(leverage_matches(10.0, Some(10.0)).is_ok());
+        assert!(leverage_matches(10.0, Some(5.0)).is_err());
+        assert!(leverage_matches(10.0, Some(25.0)).is_err());
+        assert!(leverage_matches(10.0, None).is_err());
     }
 
     #[test]

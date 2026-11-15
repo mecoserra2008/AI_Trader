@@ -261,6 +261,32 @@ def test_paper_book_persists_across_sessions_and_size_comes_from_the_engine(env)
 
 
 @needs_atx
+def test_live_flag_alone_does_not_stop_the_paper_harness_but_a_mainnet_process_is_refused(env, monkeypatch):
+    """2026-11-15: execution.allow_mainnet belongs to the live desk. With it on and no mainnet variables in this process the
+    harness runs on the PAPER book; with AI_TRADER_ALLOW_MAINNET or a mainnet environment in this process it refuses."""
+    from ai_trader.core.config import load
+
+    p, _ = env
+    monkeypatch.delenv("AI_TRADER_ALLOW_MAINNET", raising=False)
+    monkeypatch.setenv("AI_TRADER_ENVIRONMENT", "demo")
+    monkeypatch.setitem(load().settings["execution"], "allow_mainnet", True)
+    out, book = prep(env)
+    sub = dm.decide(out.name, take_all(out.name, ["shk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
+    assert sub["accepted"] == ["shk-0"]
+    pend = book.positions()["pending_orders"]
+    assert len(pend) == 1 and pend[0]["qty"] > 0          # the order is in the paper book (atx exec-intents --mode paper)
+    for k, v in (("AI_TRADER_ALLOW_MAINNET", "1"), ("AI_TRADER_ENVIRONMENT", "mainnet")):
+        monkeypatch.setenv(k, v)
+        with pytest.raises(dm.RefusedError, match="mainnet"):
+            prep(env, as_of=T + timedelta(hours=4))
+        with pytest.raises(dm.RefusedError, match="mainnet"):
+            dm.decide(out.name, take_all(out.name, ["shk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
+        monkeypatch.delenv("AI_TRADER_ALLOW_MAINNET", raising=False)
+        monkeypatch.setenv("AI_TRADER_ENVIRONMENT", "demo")
+    assert len(book.positions()["pending_orders"]) == 1, "the refused calls changed nothing"
+
+
+@needs_atx
 def test_no_lookahead(env, tmp_path):
     p, bars = env
     # data newer than as_of in a state card is refused

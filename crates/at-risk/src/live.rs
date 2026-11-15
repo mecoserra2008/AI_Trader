@@ -863,6 +863,9 @@ mod tests {
         assert_eq!(c.tiers.first().map(|t| t.notional_cap_usd), Some(200.0));
         assert_eq!(c.tiers.last().map(|t| t.notional_cap_usd), Some(50.0));
         assert_eq!(c.profile_hash(), cfg().profile_hash(), "hash is stable");
+        // user decisions 2026-11-15 ~17:15 UTC: 10x margin setting, no innovation-zone tokens
+        assert_eq!(c.leverage, 10.0);
+        assert_eq!(c.excluded_symbol_types, vec!["innovation".to_string()]);
     }
 
     #[test]
@@ -880,6 +883,7 @@ mod tests {
             ("excluded_symbols: [SPYUSDT]", "excluded_symbols: []"),
             ("risk_to_stop_usd: 1.70", "risk_to_stop_usd: 2.10"),
             ("window_min: 15", "window_min: 30"),
+            ("leverage: 10", "leverage: 11"),
         ] {
             assert!(text.contains(from), "risk.yaml should contain {from:?}");
             assert!(LiveSmallCfg::from_risk_yaml(&text.replace(from, to)).is_err(), "{to} must be refused");
@@ -1023,10 +1027,12 @@ mod tests {
         fs.get_mut("SOLUSDT").unwrap().foreign_activity = true;
         fs.get_mut("XMRUSDT").unwrap().usdt_linear_perp = false;
         fs.get_mut("TAOUSDT").unwrap().symbol_type = "innovation".into();
-        let mut c = cfg();
-        c.excluded_symbol_types = vec!["innovation".into()];
-        let d = decide_live(&intent("TAOUSDT", "long", 400.0, 1.0), None, &acct(), &[], &fs, &fees(), &placement(), &c);
-        assert!(d.has(LiveRejection::ExcludedSymbol));
+        // the project profile excludes the innovation zone (user decision 2026-11-15); crypto ("") and TradFi types trade
+        let d = decide_live(&intent("TAOUSDT", "long", 400.0, 1.0), None, &acct(), &[], &fs, &fees(), &placement(), &cfg());
+        assert!(d.has(LiveRejection::ExcludedSymbol), "{:?}", d.details);
+        fs.get_mut("TAOUSDT").unwrap().symbol_type = "commodity".into();
+        let d = decide_live(&intent("TAOUSDT", "long", 400.0, 1.0), None, &acct(), &[], &fs, &fees(), &placement(), &cfg());
+        assert!(d.accepted(), "{:?}", d.details);
         let d = decide_live(&intent("SOLUSDT", "long", 150.0, 1.0), None, &acct(), &[], &fs, &fees(), &placement(), &cfg());
         assert!(d.has(LiveRejection::ForeignActivityOnSymbol));
         let d = decide_live(&intent("XMRUSDT", "long", 300.0, 1.0), None, &acct(), &[], &fs, &fees(), &placement(), &cfg());

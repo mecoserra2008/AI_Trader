@@ -215,15 +215,35 @@ def test_stop_distance_respects_min_max_sigma(full_run, monkeypatch, bars):
 # ---------------------------------------------------------------- safety
 
 def test_runner_refuses_live_modes_and_mainnet(monkeypatch):
-    for m in ("live", "mainnet", "demo", ""):
-        with pytest.raises(SafetyError):
-            safety_check(m)
-    safety_check("replay")
-    safety_check("paper")
-    monkeypatch.setenv("AI_TRADER_ENVIRONMENT", "mainnet")
-    with pytest.raises(SafetyError):
-        safety_check("paper")
+    monkeypatch.delenv("AI_TRADER_ALLOW_MAINNET", raising=False)
     monkeypatch.setenv("AI_TRADER_ENVIRONMENT", "demo")
-    monkeypatch.setenv("AI_TRADER_ALLOW_MAINNET", "1")
-    with pytest.raises(SafetyError):
+    ex = load().settings["execution"]
+    for flag in (False, True):
+        # execution.allow_mainnet is the live desk's key (2026-11-15): on its own it neither stops nor enables paper / replay
+        monkeypatch.setitem(ex, "allow_mainnet", flag)
+        for m in ("live", "mainnet", "demo", ""):
+            with pytest.raises(SafetyError):
+                safety_check(m)
         safety_check("replay")
+        safety_check("paper")
+        # this process set up for mainnet: refused whatever the flag says
+        monkeypatch.setenv("AI_TRADER_ENVIRONMENT", "mainnet")
+        for m in ("paper", "replay"):
+            with pytest.raises(SafetyError, match="mainnet"):
+                safety_check(m)
+        monkeypatch.setenv("AI_TRADER_ENVIRONMENT", "demo")
+        for v in ("1", "true", "yes"):
+            monkeypatch.setenv("AI_TRADER_ALLOW_MAINNET", v)
+            for m in ("paper", "replay"):
+                with pytest.raises(SafetyError, match="AI_TRADER_ALLOW_MAINNET"):
+                    safety_check(m)
+        monkeypatch.setenv("AI_TRADER_ALLOW_MAINNET", "0")
+        safety_check("paper")
+        monkeypatch.delenv("AI_TRADER_ALLOW_MAINNET")
+        # settings.environment mainnet with no override: refused
+        monkeypatch.delenv("AI_TRADER_ENVIRONMENT")
+        monkeypatch.setitem(load().settings, "environment", "mainnet")
+        with pytest.raises(SafetyError):
+            safety_check("paper")
+        monkeypatch.setitem(load().settings, "environment", "demo")
+        monkeypatch.setenv("AI_TRADER_ENVIRONMENT", "demo")

@@ -4,7 +4,7 @@
         [--strategies tsmom zscore_reversion shock_regime] [--symbols BTCUSDT ETHUSDT SOLUSDT] [--workers 3] [--no-jump] [--no-atx] [--equity 100 10000]
     PYTHONIOENCODING=utf-8 uv run --extra ml python scripts/strategy_runner.py --mode paper [--strategies ...] [--symbols ...]
 
-Research / paper only: any other mode, a mainnet environment or execution.allow_mainnet = true is refused.
+Research / paper only: any other mode, a mainnet environment or AI_TRADER_ALLOW_MAINNET set in this shell is refused.
 See src/ai_trader/execution/runner.py and docs/EXECUTION_PIPELINE.md.
 """
 

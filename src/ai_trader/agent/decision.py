@@ -13,8 +13,9 @@
     status   [--record]      book, scorecard (AI vs RULE vs RANDOM vs ALL; H-AI1 / H-AI2 running stats), stop posterior.
 
 Paper only. Nothing here talks to an exchange: the book is at-exec's PaperBook driven by `atx exec-intents --mode paper`
-(which refuses live mode and a mainnet environment). This module refuses to run when the environment is mainnet,
-execution.allow_mainnet is true or AI_TRADER_ALLOW_MAINNET=1 (execution.runner.safety_check).
+(which refuses live mode and a mainnet environment). This module refuses to run when its own process is set up for
+mainnet: the environment is mainnet or AI_TRADER_ALLOW_MAINNET is set (execution.runner.safety_check). The global
+execution.allow_mainnet flag alone does not stop it (it belongs to the live desk, `atx live`, since 2026-11-15).
 
 Persistent book: data/exec/paper_book/ (atx --out-dir): paper/<run>/{state,positions,summary}.json and
 {fills,trades,cancels,equity}.jsonl, decisions/<run>.jsonl, intents/<session>.jsonl, ids.jsonl (intent -> candidate).

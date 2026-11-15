@@ -149,6 +149,13 @@ impl<'a> Trading<'a> {
         }
     }
 
+    /// Leverage currently set on `symbol` (with a symbol given, Bybit lists the position row even at size 0).
+    /// None when the venue reports no leverage for it.
+    pub async fn leverage(&self, symbol: &str) -> anyhow::Result<Option<f64>> {
+        let r = self.rest.get_private("/v5/position/list", &[("category", self.category.clone()), ("symbol", symbol.to_string())]).await?;
+        Ok(r["list"].as_array().and_then(|l| l.first()).map(|x| f(&x["leverage"])).filter(|v| v.is_finite() && *v > 0.0))
+    }
+
     pub async fn create_order(&self, req: &OrderRequest) -> anyhow::Result<OrderAck> {
         let r = self.rest.post_private("/v5/order/create", &req.to_body(&self.category)).await?;
         Ok(OrderAck { order_id: r["orderId"].as_str().unwrap_or_default().to_string(), order_link_id: r["orderLinkId"].as_str().unwrap_or_default().to_string() })

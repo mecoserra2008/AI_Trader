@@ -165,16 +165,19 @@ impl Settings {
 
     /// Two-key guard for real money: config flag AND environment variable.
     pub fn ensure_execution_allowed(&self) -> Result<()> {
-        if self.environment == Environment::Mainnet {
-            let env_ok = std::env::var("AI_TRADER_ALLOW_MAINNET").map(|v| v == "1").unwrap_or(false);
-            if !(self.execution.allow_mainnet && env_ok) {
-                return Err(Error::Config(
-                    "mainnet execution blocked: needs execution.allow_mainnet=true AND AI_TRADER_ALLOW_MAINNET=1".into(),
-                ));
-            }
+        let env_key = std::env::var("AI_TRADER_ALLOW_MAINNET").is_ok_and(|v| v == "1");
+        if execution_allowed(self.environment, self.execution.allow_mainnet, env_key) {
+            Ok(())
+        } else {
+            Err(Error::Config("mainnet execution blocked: needs execution.allow_mainnet=true AND AI_TRADER_ALLOW_MAINNET=1".into()))
         }
-        Ok(())
     }
+}
+
+/// The two-key rule: demo / testnet always; mainnet only with BOTH the config flag (`execution.allow_mainnet`) and the
+/// process's own key (`AI_TRADER_ALLOW_MAINNET=1`). Neither key alone is enough.
+pub fn execution_allowed(env: Environment, config_flag: bool, env_key: bool) -> bool {
+    env != Environment::Mainnet || (config_flag && env_key)
 }
 
 /// Project root: `AI_TRADER_ROOT`, else the first ancestor of the cwd containing `config/settings.yaml`.
@@ -230,6 +233,23 @@ mod tests {
         let (s, r) = load(&root).expect("config loads");
         assert!(s.bybit_endpoints(Environment::Demo).is_ok());
         assert!(r.risk_per_trade_pct > 0.0 && r.risk_per_trade_pct <= 2.0);
-        assert!(!s.execution.allow_mainnet, "mainnet must be off by default");
+        // execution.allow_mainnet may be either value (live desk, user authorisation 2026-11-15): what keeps mainnet shut
+        // is the two-key rule, tested in mainnet_execution_needs_both_keys.
+    }
+
+    #[test]
+    fn mainnet_execution_needs_both_keys() {
+        for (flag, key, ok) in [(false, false, false), (true, false, false), (false, true, false), (true, true, true)] {
+            assert_eq!(execution_allowed(Environment::Mainnet, flag, key), ok, "flag={flag} key={key}");
+            assert!(execution_allowed(Environment::Demo, flag, key) && execution_allowed(Environment::Testnet, flag, key));
+        }
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let (mut s, _) = load(&root).expect("config loads");
+        s.environment = Environment::Mainnet;
+        let key = std::env::var("AI_TRADER_ALLOW_MAINNET").is_ok_and(|v| v == "1");
+        for flag in [false, true] {
+            s.execution.allow_mainnet = flag;
+            assert_eq!(s.ensure_execution_allowed().is_ok(), flag && key, "the guard follows execution_allowed");
+        }
     }
 }
