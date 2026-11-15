@@ -1,0 +1,628 @@
+{
+ "contract": "confluence_v1",
+ "cycle_id": "20261115T2056",
+ "as_of": "2026-11-15T20:56:10.847834+00:00",
+ "snapshot": "research/desk/2026-11-15/2056",
+ "model": "claude-opus-5-5",
+ "prompt_version": "desk-alts-v1",
+ "assets": [
+  {
+   "symbol": "ZECUSDT",
+   "readings": {
+    "levels": {
+     "value": 0.2,
+     "evidence": [
+      {
+       "source": "geometry.json",
+       "metric": "liq_map.total_est_usd.short_above",
+       "value": 37375034
+      }
+     ],
+     "note": "nearer unswept pool above (928.3/929.5 equal highs, 2%) and larger est. short-liq pool above; untouched 849.3 leg origin 7% below"
+    },
+    "flow": {
+     "value": -0.3,
+     "evidence": [
+      {
+       "source": "tape.json",
+       "metric": "flow.windows.15m.imbalance",
+       "value": -0.275
+      }
+     ],
+     "note": "5m -0.46 / 15m -0.28 selling vs 60m +0.26"
+    },
+    "book": {
+     "value": 0.05,
+     "evidence": [
+      {
+       "source": "tape.json",
+       "metric": "book.depth_usd.25bp.imbalance",
+       "value": 0.061
+      }
+     ]
+    },
+    "structure": {
+     "value": -0.3,
+     "evidence": [
+      {
+       "source": "geometry.json",
+       "metric": "swings.4h.highs.2.price",
+       "value": 991.81
+      }
+     ],
+     "note": "4h lower highs 1291 > 1199 > 992 > 929.5; 4h closes below EMA20; 1h range 876.7-929.5"
+    },
+    "momentum": {
+     "value": -0.2,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "rs_sigma.7d",
+       "value": -1.19
+      }
+     ],
+     "note": "24h +0.77 sigma bounce inside a -33% week"
+    },
+    "vol_liq": {
+     "value": -0.2,
+     "evidence": [
+      {
+       "source": "geometry.json",
+       "metric": "atr14.1h",
+       "value": 20.16
+      }
+     ],
+     "note": "high-vol R6 on 1h; deep book; bounce looks like exhaustion of covering"
+    },
+    "positioning": {
+     "value": -0.2,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "oi.chg_pct.24h",
+       "value": -10.02
+      }
+     ],
+     "note": "OI falling into the rise = short covering; funding p64 normal"
+    },
+    "narrative": {
+     "value": -0.2,
+     "evidence": [
+      {
+       "source": "theses.json",
+       "metric": "T-USER-20261115-a.net_support",
+       "value": 0.6
+      }
+     ],
+     "note": "user short-BTC/ETH thesis strengthening; risk-off spillover to alts only as context"
+    },
+    "onchain": {
+     "value": null,
+     "reason": "no source"
+    }
+   }
+  },
+  {
+   "symbol": "RAREUSDT",
+   "readings": {
+    "levels": {
+     "value": null,
+     "reason": "not in geometry.json"
+    },
+    "flow": {
+     "value": null,
+     "reason": "not in tape.json"
+    },
+    "book": {
+     "value": null,
+     "reason": "not in tape.json; post-as_of book ~$1k per side at 25 bp"
+    },
+    "structure": {
+     "value": null,
+     "reason": "not in geometry.json"
+    },
+    "momentum": {
+     "value": 0.8,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "rs_sigma.1h",
+       "value": 12.76
+      }
+     ],
+     "note": "+49.6 sigma 1h shock bar (public-kline scan)"
+    },
+    "vol_liq": {
+     "value": -0.5,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "turnover_24h_usd",
+       "value": 14422477.0
+      }
+     ],
+     "note": "thin book + extreme vol: exhaustion / give-back risk; shock_regime fades it (R9 high vol)"
+    },
+    "positioning": {
+     "value": 0.3,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "funding.ann_pct_last",
+       "value": -3985.7
+      }
+     ],
+     "note": "OI +115% in 1h with funding -1.8%/4h and basis -137 bp: crowded perp shorts paying (squeeze fuel); not a tested signal (R-AVOID-1)"
+    },
+    "narrative": {
+     "value": -0.1,
+     "evidence": [
+      {
+       "source": "theses.json",
+       "metric": "T-USER-20261115-a.net_support",
+       "value": 0.6
+      }
+     ],
+     "note": "user short-BTC/ETH thesis strengthening; risk-off spillover to alts only as context"
+    },
+    "onchain": {
+     "value": null,
+     "reason": "no source"
+    }
+   }
+  },
+  {
+   "symbol": "VVVUSDT",
+   "readings": {
+    "levels": {
+     "value": 0.2,
+     "evidence": [
+      {
+       "source": "geometry.json",
+       "metric": "legs.1h.levels.0.price",
+       "value": 21.471
+      }
+     ],
+     "note": "24h VAH 20.53 / 7d VAH 20.63 just above, untouched 21.47 down-leg origin above"
+    },
+    "flow": {
+     "value": null,
+     "reason": "not in tape.json"
+    },
+    "book": {
+     "value": null,
+     "reason": "not in tape.json; post-as_of book ~$8-15k at 25 bp"
+    },
+    "structure": {
+     "value": 0.4,
+     "evidence": [
+      {
+       "source": "geometry.json",
+       "metric": "swings.1h.lows.3.price",
+       "value": 19.243
+      }
+     ],
+     "note": "1h higher lows 16.73 -> 19.01 -> 19.24"
+    },
+    "momentum": {
+     "value": 0.6,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "rs_sigma.24h",
+       "value": 2.19
+      }
+     ]
+    },
+    "vol_liq": {
+     "value": 0.1,
+     "evidence": [
+      {
+       "source": "geometry.json",
+       "metric": "atr14.1h",
+       "value": 0.4969
+      }
+     ]
+    },
+    "positioning": {
+     "value": 0.2,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "oi.chg_pct.24h",
+       "value": 9.49
+      }
+     ],
+     "note": "OI up with price, funding p26: new longs, not crowded"
+    },
+    "narrative": {
+     "value": -0.1,
+     "evidence": [
+      {
+       "source": "theses.json",
+       "metric": "T-USER-20261115-a.net_support",
+       "value": 0.6
+      }
+     ],
+     "note": "user short-BTC/ETH thesis strengthening; risk-off spillover to alts only as context"
+    },
+    "onchain": {
+     "value": null,
+     "reason": "no source"
+    }
+   }
+  },
+  {
+   "symbol": "AAVEUSDT",
+   "readings": {
+    "levels": {
+     "value": null,
+     "reason": "not in geometry.json"
+    },
+    "flow": {
+     "value": null,
+     "reason": "not in tape.json"
+    },
+    "book": {
+     "value": null,
+     "reason": "not in tape.json"
+    },
+    "structure": {
+     "value": null,
+     "reason": "not in geometry.json"
+    },
+    "momentum": {
+     "value": 0.4,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "rs_sigma.24h",
+       "value": 1.42
+      }
+     ]
+    },
+    "vol_liq": {
+     "value": 0.0,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "regime.cell",
+       "value": "R6"
+      }
+     ],
+     "note": "whipsaw high vol: no continuation read"
+    },
+    "positioning": {
+     "value": 0.1,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "oi.chg_pct.24h",
+       "value": 5.53
+      }
+     ]
+    },
+    "narrative": {
+     "value": -0.1,
+     "evidence": [
+      {
+       "source": "theses.json",
+       "metric": "T-USER-20261115-a.net_support",
+       "value": 0.6
+      }
+     ],
+     "note": "user short-BTC/ETH thesis strengthening; risk-off spillover to alts only as context"
+    },
+    "onchain": {
+     "value": null,
+     "reason": "no source"
+    }
+   }
+  },
+  {
+   "symbol": "UNIUSDT",
+   "readings": {
+    "levels": {
+     "value": null,
+     "reason": "not in geometry.json"
+    },
+    "flow": {
+     "value": null,
+     "reason": "not in tape.json"
+    },
+    "book": {
+     "value": null,
+     "reason": "not in tape.json"
+    },
+    "structure": {
+     "value": null,
+     "reason": "not in geometry.json"
+    },
+    "momentum": {
+     "value": 0.1,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "rs_sigma.24h",
+       "value": 1.15
+      }
+     ],
+     "note": "24h bounce inside a -30% week (rs7d -1.55)"
+    },
+    "vol_liq": {
+     "value": -0.3,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "regime.cell",
+       "value": "R9"
+      }
+     ],
+     "note": "flush confirmed on 4h (public-kline scan); R-RB-2 low often still ahead"
+    },
+    "positioning": {
+     "value": -0.2,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "oi.chg_pct.24h",
+       "value": -9.15
+      }
+     ],
+     "note": "deleveraging, funding neutral"
+    },
+    "narrative": {
+     "value": -0.1,
+     "evidence": [
+      {
+       "source": "theses.json",
+       "metric": "T-USER-20261115-a.net_support",
+       "value": 0.6
+      }
+     ],
+     "note": "user short-BTC/ETH thesis strengthening; risk-off spillover to alts only as context"
+    },
+    "onchain": {
+     "value": null,
+     "reason": "no source"
+    }
+   }
+  },
+  {
+   "symbol": "SOPHUSDT",
+   "readings": {
+    "levels": {
+     "value": -0.3,
+     "evidence": [
+      {
+       "source": "geometry.json",
+       "metric": "nearest.below.0.price",
+       "value": 0.001177
+      }
+     ],
+     "note": "sitting on the 1d swing low / prior week low; stops just below"
+    },
+    "flow": {
+     "value": null,
+     "reason": "no flow_3s coverage in tape.json"
+    },
+    "book": {
+     "value": 0.2,
+     "evidence": [
+      {
+       "source": "tape.json",
+       "metric": "book.depth_usd.25bp.imbalance",
+       "value": 0.261
+      }
+     ],
+     "note": "bid-heavy but only ~$4k / $2k at 25 bp"
+    },
+    "structure": {
+     "value": -0.6,
+     "evidence": [
+      {
+       "source": "geometry.json",
+       "metric": "swings.1h.lows.2.price",
+       "value": 0.001168
+      }
+     ]
+    },
+    "momentum": {
+     "value": -0.8,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "ret_bp.24h",
+       "value": -5960.2
+      }
+     ],
+     "note": "mainnet shutdown Nov 30 (web)"
+    },
+    "vol_liq": {
+     "value": -0.5,
+     "evidence": [
+      {
+       "source": "tape.json",
+       "metric": "book.spread_bp",
+       "value": 8.44
+      }
+     ],
+     "note": "thin book, 18% 1h ATR: favours continuation of the slide"
+    },
+    "positioning": {
+     "value": 0.2,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "funding.ann_pct_last",
+       "value": -1314.1
+      }
+     ],
+     "note": "new shorts paying heavily"
+    },
+    "narrative": {
+     "value": -0.1,
+     "evidence": [
+      {
+       "source": "theses.json",
+       "metric": "T-USER-20261115-a.net_support",
+       "value": 0.6
+      }
+     ],
+     "note": "user short-BTC/ETH thesis strengthening; risk-off spillover to alts only as context"
+    },
+    "onchain": {
+     "value": null,
+     "reason": "no source"
+    }
+   }
+  },
+  {
+   "symbol": "KAVAUSDT",
+   "readings": {
+    "levels": {
+     "value": 0.0,
+     "evidence": [
+      {
+       "source": "geometry.json",
+       "metric": "profile.24h.poc",
+       "value": 0.029916
+      }
+     ],
+     "note": "between 24h POC above and 7d POC below"
+    },
+    "flow": {
+     "value": null,
+     "reason": "not in tape.json"
+    },
+    "book": {
+     "value": null,
+     "reason": "not in tape.json; post-as_of book ~$1-2k at 25 bp"
+    },
+    "structure": {
+     "value": -0.5,
+     "evidence": [
+      {
+       "source": "geometry.json",
+       "metric": "swings.1h.lows.2.price",
+       "value": 0.02504
+      }
+     ]
+    },
+    "momentum": {
+     "value": -0.6,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "ret_bp.7d",
+       "value": -8256.3
+      }
+     ]
+    },
+    "vol_liq": {
+     "value": -0.5,
+     "evidence": [
+      {
+       "source": "geometry.json",
+       "metric": "atr14.1h",
+       "value": 0.002493
+      }
+     ]
+    },
+    "positioning": {
+     "value": 0.2,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "funding.ann_pct_last",
+       "value": -658.4
+      }
+     ],
+     "note": "funding p0, basis -79 bp: shorts crowded"
+    },
+    "narrative": {
+     "value": -0.1,
+     "evidence": [
+      {
+       "source": "theses.json",
+       "metric": "T-USER-20261115-a.net_support",
+       "value": 0.6
+      }
+     ],
+     "note": "user short-BTC/ETH thesis strengthening; risk-off spillover to alts only as context"
+    },
+    "onchain": {
+     "value": null,
+     "reason": "no source"
+    }
+   }
+  },
+  {
+   "symbol": "BARDUSDT",
+   "readings": {
+    "levels": {
+     "value": null,
+     "reason": "not in geometry.json"
+    },
+    "flow": {
+     "value": null,
+     "reason": "not in tape.json"
+    },
+    "book": {
+     "value": null,
+     "reason": "not in tape.json; post-as_of book ~$3-7k at 25 bp"
+    },
+    "structure": {
+     "value": null,
+     "reason": "not in geometry.json"
+    },
+    "momentum": {
+     "value": -0.5,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "ret_bp.24h",
+       "value": -1863.4
+      }
+     ]
+    },
+    "vol_liq": {
+     "value": -0.3,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "turnover_24h_usd",
+       "value": 16009578.0
+      }
+     ]
+    },
+    "positioning": {
+     "value": -0.3,
+     "evidence": [
+      {
+       "source": "xs.json",
+       "metric": "oi.chg_pct.24h",
+       "value": -16.52
+      }
+     ],
+     "note": "longs unwinding"
+    },
+    "narrative": {
+     "value": -0.1,
+     "evidence": [
+      {
+       "source": "theses.json",
+       "metric": "T-USER-20261115-a.net_support",
+       "value": 0.6
+      }
+     ],
+     "note": "user short-BTC/ETH thesis strengthening; risk-off spillover to alts only as context"
+    },
+    "onchain": {
+     "value": null,
+     "reason": "no source"
+    }
+   }
+  }
+ ]
+}

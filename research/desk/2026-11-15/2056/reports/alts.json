@@ -1,0 +1,93 @@
+{
+ "contract": "desk_report_v1",
+ "agent": "xs",
+ "cycle_id": "20261115T2056",
+ "as_of": "2026-11-15T20:56:10.847834+00:00",
+ "snapshot": "research/desk/2026-11-15/2056",
+ "model": "claude-opus-5-5",
+ "prompt_version": "desk-alts-v1",
+ "regime": {
+  "summary": "Alts are in a post-crash weekend: the crypto EW basket is -15.3% over 7d. Majors are R9 (liquidation, high vol); the liquid movers ZEC / HYPE / NEAR / AAVE are R6 whipsaw on 1h, and every 1h vol state is high. No token is in a calm cell, so neither the shock_regime continuation leg nor R-BOS-4 applies. The basket's +136 bp 1h is mostly RARE (+5,682 bp, 1 of 46 names). Today's fast movers are idiosyncratic and mostly illiquid (RARE, SOPH, KAVA, BARD). ZEC is the only liquid one with defined structure.",
+  "cells": {"BTCUSDT": "R9", "ETHUSDT": "R9", "SOLUSDT": "R9", "UNIUSDT": "R9", "HYPEUSDT": "R6", "NEARUSDT": "R6", "AAVEUSDT": "R6"},
+  "evidence": [
+   {"source": "xs.json", "symbol": "RAREUSDT", "metric": "ret_bp.1h", "value": 5682.2},
+   {"source": "xs.json", "symbol": "HYPEUSDT", "metric": "regime.cell", "value": "R6"},
+   {"source": "xs.json", "symbol": "UNIUSDT", "metric": "regime.cell", "value": "R9"}
+  ]
+ },
+ "ideas": [
+  {"rank": 1, "id": "alts-1", "symbols": ["ZECUSDT"], "kind": "level", "direction": "short", "horizon": "24h",
+   "thesis": "Learning trade, pattern-only. ZEC's +5.6% bounce came from short covering (OI -10% over 24h) and stalled at the 928.3 / 929.5 equal highs and the 928.2 VAH, under a 4h down-trend (R8, closes below the 4h EMA20). The shock_regime sleeve is still short from 910.76 with target 849.3, but entering 18h late is not the tested trade (R-BUDGET-4). Short at the touch after 23:30 UTC; stop 935; target 857.",
+   "evidence": [
+    {"source": "xs.json", "symbol": "ZECUSDT", "metric": "oi.chg_pct.24h", "value": -10.02},
+    {"source": "geometry.json", "symbol": "ZECUSDT", "metric": "swings.1h.highs.2.price", "value": 929.51},
+    {"source": "geometry.json", "symbol": "ZECUSDT", "metric": "profile.24h.vah", "value": 928.24},
+    {"source": "geometry.json", "symbol": "ZECUSDT", "metric": "legs.1h.levels.2.price", "value": 849.3},
+    {"source": "tape.json", "symbol": "ZECUSDT", "metric": "flow.windows.15m.imbalance", "value": -0.275}
+   ],
+   "invalidation": {"symbol": "ZECUSDT", "price": 929.51, "condition": "1h close above 927.07 (sleeve invalidation) or a 15m close above 929.51 with OI rising"},
+   "conviction": 0.3,
+   "reasoning": "The only liquid fast mover (0.1 bp spread, ~$1M depth at 25 bp) with structure on both sides and a sleeve position at the same price. Conviction is the driftless P(target first), 0.30: we have no tested edge at this entry.",
+   "rules": ["R-PX-1", "R-PX-2", "R-BUDGET-4", "R-BOS-3", "R-RB-1", "R-MM-2", "R-PX-9", "R-EXE-1", "R-FLOW-2"]},
+  {"rank": 2, "id": "alts-2", "symbols": ["RAREUSDT"], "kind": "volatility", "direction": "none", "horizon": "24h",
+   "thesis": "The day's only fresh tested signal: a +49.6 sigma 1h shock (19:00 bar) in R9 high vol, so shock_regime fades it (target 0.008447 = shock open, invalidation 1h close > ~0.0169). It cannot be executed: the stop is ~17% away (1h sigma ~14%), $50 min notional x 17% > $2 cap, depth at 25 bp ~$1k, and shorts pay -1.8% per 4h. Log the outcome for H-S3; no trade.",
+   "evidence": [
+    {"source": "xs.json", "symbol": "RAREUSDT", "metric": "rs_sigma.1h", "value": 12.76},
+    {"source": "xs.json", "symbol": "RAREUSDT", "metric": "oi.chg_pct.1h", "value": 115.21},
+    {"source": "xs.json", "symbol": "RAREUSDT", "metric": "funding.ann_pct_last", "value": -3985.7},
+    {"source": "xs.json", "symbol": "RAREUSDT", "metric": "basis_bp.mark_index", "value": -136.8},
+    {"source": "xs.json", "symbol": "RAREUSDT", "metric": "turnover_24h_usd", "value": 14422477.0}
+   ],
+   "invalidation": {"symbol": "RAREUSDT", "price": 0.0169, "condition": "1h close above the shock high plus 0.5 sigma (sleeve invalidation)"},
+   "conviction": 0.3,
+   "reasoning": "Tested mechanism, but sizing within the hard limits is impossible, so it's a watch. Ranked below ZEC because it is not executable. The perp sits below the index (-137 bp) while OI doubled: shorts crowded in and are paying heavily, which is a squeeze risk for any fade.",
+   "rules": ["R-PX-1", "R-PX-2", "R-BUDGET-4", "R-AVOID-1", "R-FLOW-2"]},
+  {"rank": 3, "id": "alts-3", "symbols": ["UNIUSDT"], "kind": "watch", "direction": "short", "horizon": "3d",
+   "thesis": "UNI meets the R-RB flush definition (4h R9, 48h return below its 1y 5th pct on 11-14 20:00, OI -17% from its 72h high). The H-RB2 rebound is armed (+1.5 sigma off the 4.614 low), but price has stayed below the 4h EMA20 (~5.47), so there is no cross yet. The H-RB2 short (R-RB-5: about breakeven, better than a random short) fires only on a 4h close above the EMA20 and then back below.",
+   "evidence": [
+    {"source": "xs.json", "symbol": "UNIUSDT", "metric": "oi.chg_pct.24h", "value": -9.15},
+    {"source": "xs.json", "symbol": "UNIUSDT", "metric": "ret_bp.7d", "value": -3027.2},
+    {"source": "xs.json", "symbol": "UNIUSDT", "metric": "ret_bp.24h", "value": 533.1}
+   ],
+   "invalidation": {"symbol": "UNIUSDT", "condition": "the 42 x 4h window from 11-14 20:00 lapses without an EMA20 cross-back, or a 4h close above the rebound high after the cross"},
+   "conviction": 0.25,
+   "reasoning": "This is the closest thing to a tested setup in a liquid alt, but it hasn't triggered and it would be a third short. Do not buy the UNI bounce (R-RB-1).",
+   "rules": ["R-RB-1", "R-RB-2", "R-RB-5", "R-MM-2"]},
+  {"rank": 4, "id": "alts-4", "symbols": ["VVVUSDT"], "kind": "watch", "direction": "none", "horizon": "24h",
+   "thesis": "VVV leads the AI sector (+13.6% over 24h, rs +2.2 sigma, OI +9.5%, turnover about 2.5x its 7d hourly median). It is pressing the 20.53 24h VAH / 20.63 7d VAH. A break there is a swing BoS in an R6 / high-vol cell, which loses in our tests (R-BOS-2/3). Relative strength is not an entry (R-XS-3). No long. Alert only for a new |z| >= 4 1h shock, which would be a fade candidate in high vol.",
+   "evidence": [
+    {"source": "xs.json", "symbol": "VVVUSDT", "metric": "rs_sigma.24h", "value": 2.19},
+    {"source": "xs.json", "symbol": "VVVUSDT", "metric": "oi.chg_pct.24h", "value": 9.49},
+    {"source": "geometry.json", "symbol": "VVVUSDT", "metric": "profile.24h.vah", "value": 20.527},
+    {"source": "geometry.json", "symbol": "VVVUSDT", "metric": "atr14.1h", "value": 0.4969}
+   ],
+   "invalidation": {"symbol": "VVVUSDT", "price": 19.865, "condition": "loses the 19.87 15m swing low and the 20.07 week open: momentum gone"},
+   "conviction": 0.2,
+   "reasoning": "Pattern only, and the book is thin (~$8-15k at 25 bp after as_of). It's kept because it is the strongest liquid-ish momentum name and a shock candidate.",
+   "rules": ["R-BOS-2", "R-BOS-3", "R-XS-2", "R-XS-3", "R-PX-2"]},
+  {"rank": 5, "id": "alts-5", "symbols": ["SOPHUSDT", "KAVAUSDT", "BARDUSDT"], "kind": "no_trade", "direction": "none", "horizon": "24h",
+   "thesis": "The illiquid crashers carry event or delisting-type risk. SOPH is -59.6% over 24h (Sophon mainnet shutdown Nov 30, withdrawals by Nov 25; web). KAVA is -82% over 7d with funding -658% and a -79 bp basis. BARD is -18.6% over 24h with OI -16.5%. Depth at 25 bp is $1-7k with 4-17 bp spreads, so $50-200 tickets pay the spread twice and the stops sit inside the noise. No trade.",
+   "evidence": [
+    {"source": "xs.json", "symbol": "SOPHUSDT", "metric": "ret_bp.24h", "value": -5960.2},
+    {"source": "tape.json", "symbol": "SOPHUSDT", "metric": "book.spread_bp", "value": 8.44},
+    {"source": "xs.json", "symbol": "KAVAUSDT", "metric": "basis_bp.mark_index", "value": -79.1},
+    {"source": "xs.json", "symbol": "BARDUSDT", "metric": "oi.chg_pct.24h", "value": -16.52}
+   ],
+   "invalidation": {"condition": "depth at 25 bp above $50k and 1h ATR below 3% of price would make them tradeable"},
+   "conviction": 0.1,
+   "reasoning": "Listed so the user sees why the biggest movers are not trades: liquidity and the risk caps, not a lack of movement.",
+   "rules": ["R-AVOID-1", "R-FLOW-2", "R-RB-1"]}
+ ],
+ "data_gaps": [
+  "RARE, AAVE, UNI, BARD and VVV are not in tape.json; their books were fetched after as_of (21:05-21:08 UTC) and serve only as a liquidity check.",
+  "ZEC, VVV, RARE and the other new names are not in the lake: v0 cells, z-scores, shock_regime state, the 4h EMA20 and flush flags come from a deterministic scan of public Bybit klines closed <= as_of (scratchpad), not from the snapshot.",
+  "account.json is 'pending agent LIVE'. The orchestrator reports one BTC short open; this report assumes that is true.",
+  "Web news for RARE, KAVA, BARD and ZEC has no dated catalyst for today; several search hits are undated or old."
+ ],
+ "honesty": {
+  "direction_claim": false,
+  "base_rate": "A random 2.35 R:R short at no edge hits target first ~30% of the time and loses ~0.07 R net of costs.",
+  "conflicts": ["R-BUDGET-4: shock edge decays within 1-2h; ZEC is 18h late", "R-PX-1 / R-PX-2: the reversal leg is not forward-confirmed; do not fade 2 sigma moves", "R-MM-2 / R-PD-1: a ZEC short plus the open BTC short is one doubled crypto-beta bet", "PLAN_2026-11-15 section 2: no entries before 23:00 UTC Sunday or during 22:45-23:30", "R-RB-2: after a flush the low is often still ahead, which cuts against UNI or HYPE longs, not shorts"],
+  "what_would_change_my_mind": "A ZEC 1h close above 929.51 with OI rising (new longs, not covering) and taker flow positive over 15m / 60m: that is real demand, not covering."
+ }
+}

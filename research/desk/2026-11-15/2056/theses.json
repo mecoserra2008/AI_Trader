@@ -1,0 +1,690 @@
+{
+ "contract": "theses_check_v1",
+ "as_of": "2026-11-15T20:56:10.847834+00:00",
+ "ledger": "research\\desk\\theses.yaml",
+ "theses": [
+  {
+   "id": "T-USER-20261115-a",
+   "component": "a",
+   "author": "user",
+   "direction": "short",
+   "assets": [
+    "BTCUSDT",
+    "ETHUSDT"
+   ],
+   "prev_status": "active",
+   "as_of": "2026-11-15T20:56:10.847834+00:00",
+   "status": "strengthening",
+   "net_support": 0.6,
+   "triggered": true,
+   "start_ts": "2026-11-15T19:00:00+00:00",
+   "horizon_end": "2026-12-05T19:00:00+00:00",
+   "trigger_now": true,
+   "trigger_detail": [],
+   "invalidation_now": false,
+   "invalidation_detail": [
+    {
+     "cond": "chg_20(fred:DGS2) <= -0.3",
+     "value": 0.04,
+     "obs_date": "2026-11-12",
+     "met": false
+    },
+    {
+     "cond": "spread_chg_20(fred:DGS10 vs fred:DGS2) >= 0.25",
+     "value": -0.13,
+     "obs_date": "2026-11-12",
+     "met": false
+    },
+    {
+     "cond": "chg_20(fred:DGS2) < 0.0",
+     "value": 0.04,
+     "obs_date": "2026-11-12",
+     "met": false
+    }
+   ],
+   "proxies": [
+    {
+     "id": "curve_regime",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "regime(curve:regime) in ['bear_flattening']",
+       "value": "bear_flattening",
+       "obs_date": "2026-11-12",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "y2_up_5obs",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "chg_5(fred:DGS2) > 0.0",
+       "value": 0.28,
+       "obs_date": "2026-11-12",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "curve_flatter_20obs",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "spread_chg_20(fred:DGS10 vs fred:DGS2) < 0.0",
+       "value": -0.13,
+       "obs_date": "2026-11-12",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "dollar_up_20obs",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "chg_20(fred:DTWEXBGS) > 0.0",
+       "value": 0.4334,
+       "obs_date": "2026-11-06",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "hy_wider_20obs",
+     "supports": false,
+     "detail": [
+      {
+       "cond": "chg_20(fred:BAMLH0A0HYM2) > 0.0",
+       "value": -0.05,
+       "obs_date": "2026-11-12",
+       "met": false
+      }
+     ]
+    }
+   ],
+   "score": {
+    "start": "2026-11-15T19:00:00+00:00",
+    "end": "2026-12-05T19:00:00+00:00",
+    "final": false,
+    "assets": {
+     "BTCUSDT": {
+      "p0": 64708.8,
+      "p1": 64919.9,
+      "ret_pct": 0.326,
+      "signed_ret_pct": -0.326,
+      "hit": false
+     },
+     "ETHUSDT": {
+      "p0": 1814.92,
+      "p1": 1823.68,
+      "ret_pct": 0.482,
+      "signed_ret_pct": -0.482,
+      "hit": false
+     }
+    },
+    "hit_rate": 0.0
+   }
+  },
+  {
+   "id": "T-USER-20261115-b",
+   "component": "b",
+   "author": "user",
+   "direction": "short",
+   "assets": [
+    "BTCUSDT",
+    "ETHUSDT"
+   ],
+   "prev_status": "active",
+   "as_of": "2026-11-15T20:56:10.847834+00:00",
+   "status": "active",
+   "net_support": 0.3333333333333333,
+   "triggered": true,
+   "start_ts": "2026-11-15T19:00:00+00:00",
+   "horizon_end": "2026-12-15T19:00:00+00:00",
+   "trigger_now": true,
+   "trigger_detail": [],
+   "invalidation_now": false,
+   "invalidation_detail": [
+    {
+     "cond": "dd_from_high(fred:SP500) >= -0.5",
+     "value": -3.2902,
+     "obs_date": "2026-11-13",
+     "met": false
+    },
+    {
+     "cond": "rel_logret_20(fred:NASDAQ100 vs fred:SP500) > 0.0",
+     "value": -3.0702,
+     "obs_date": "2026-11-13",
+     "met": false
+    },
+    {
+     "cond": "level(fred:VIXCLS) < 14.0",
+     "value": 18.7,
+     "obs_date": "2026-11-12",
+     "met": false
+    }
+   ],
+   "proxies": [
+    {
+     "id": "spx_down_20obs",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "logret_20(fred:SP500) < 0.0",
+       "value": -1.2847,
+       "obs_date": "2026-11-13",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "spx_dd_gt_5pct",
+     "supports": false,
+     "detail": [
+      {
+       "cond": "dd_from_high(fred:SP500) <= -5.0",
+       "value": -3.2902,
+       "obs_date": "2026-11-13",
+       "met": false
+      }
+     ]
+    },
+    {
+     "id": "ndx_lags_spx_20obs",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "rel_logret_20(fred:NASDAQ100 vs fred:SP500) < 0.0",
+       "value": -3.0702,
+       "obs_date": "2026-11-13",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "nvda_lags_spx_20obs",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "rel_logret_20(lake:NVDAUSDT vs fred:SP500) < 0.0",
+       "value": -27.1075,
+       "obs_date": "2026-11-13",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "mu_lags_spx_20obs",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "rel_logret_20(lake:MUUSDT vs fred:SP500) < 0.0",
+       "value": -12.4481,
+       "obs_date": "2026-11-13",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "vix_above_20",
+     "supports": false,
+     "detail": [
+      {
+       "cond": "level(fred:VIXCLS) > 20.0",
+       "value": 18.7,
+       "obs_date": "2026-11-12",
+       "met": false
+      }
+     ]
+    }
+   ],
+   "score": {
+    "start": "2026-11-15T19:00:00+00:00",
+    "end": "2026-12-15T19:00:00+00:00",
+    "final": false,
+    "assets": {
+     "BTCUSDT": {
+      "p0": 64708.8,
+      "p1": 64919.9,
+      "ret_pct": 0.326,
+      "signed_ret_pct": -0.326,
+      "hit": false
+     },
+     "ETHUSDT": {
+      "p0": 1814.92,
+      "p1": 1823.68,
+      "ret_pct": 0.482,
+      "signed_ret_pct": -0.482,
+      "hit": false
+     }
+    },
+    "hit_rate": 0.0
+   }
+  },
+  {
+   "id": "T-USER-20261115-c",
+   "component": "c",
+   "author": "user",
+   "direction": "long",
+   "assets": [
+    "BTCUSDT",
+    "ETHUSDT"
+   ],
+   "prev_status": "active",
+   "as_of": "2026-11-15T20:56:10.847834+00:00",
+   "status": "weakening",
+   "net_support": -0.6,
+   "triggered": false,
+   "start_ts": null,
+   "horizon_end": null,
+   "trigger_now": false,
+   "trigger_detail": [
+    {
+     "cond": "regime(curve:regime) in ['bull_steepening']",
+     "value": "bear_flattening",
+     "obs_date": "2026-11-12",
+     "met": false
+    },
+    {
+     "cond": "chg_5(fred:BAMLH0A0HYM2) < 0.0",
+     "value": -0.12,
+     "obs_date": "2026-11-12",
+     "met": true
+    }
+   ],
+   "invalidation_now": false,
+   "invalidation_detail": [
+    {
+     "cond": "chg_20(fred:BAMLH0A0HYM2) >= 0.5",
+     "value": -0.05,
+     "obs_date": "2026-11-12",
+     "met": false
+    },
+    {
+     "cond": "level(fred:SAHMREALTIME) >= 0.5",
+     "value": 0.0,
+     "obs_date": "2026-10-01",
+     "met": false
+    }
+   ],
+   "proxies": [
+    {
+     "id": "curve_regime_bull_steep",
+     "supports": false,
+     "detail": [
+      {
+       "cond": "regime(curve:regime) in ['bull_steepening']",
+       "value": "bear_flattening",
+       "obs_date": "2026-11-12",
+       "met": false
+      }
+     ]
+    },
+    {
+     "id": "y2_down_20obs",
+     "supports": false,
+     "detail": [
+      {
+       "cond": "chg_20(fred:DGS2) < 0.0",
+       "value": 0.04,
+       "obs_date": "2026-11-12",
+       "met": false
+      }
+     ]
+    },
+    {
+     "id": "curve_steeper_20obs",
+     "supports": false,
+     "detail": [
+      {
+       "cond": "spread_chg_20(fred:DGS10 vs fred:DGS2) > 0.0",
+       "value": -0.13,
+       "obs_date": "2026-11-12",
+       "met": false
+      }
+     ]
+    },
+    {
+     "id": "hy_easing_5obs",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "chg_5(fred:BAMLH0A0HYM2) < 0.0",
+       "value": -0.12,
+       "obs_date": "2026-11-12",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "ig_easing_20obs",
+     "supports": false,
+     "detail": [
+      {
+       "cond": "chg_20(fred:BAMLC0A0CM) < 0.0",
+       "value": 0.05,
+       "obs_date": "2026-11-12",
+       "met": false
+      }
+     ]
+    }
+   ],
+   "score": null
+  },
+  {
+   "id": "T-USER-20261115-d",
+   "component": "d",
+   "author": "user",
+   "direction": "short",
+   "assets": [
+    "BTCUSDT",
+    "ETHUSDT"
+   ],
+   "prev_status": "active",
+   "as_of": "2026-11-15T20:56:10.847834+00:00",
+   "status": "strengthening",
+   "net_support": 0.5555555555555556,
+   "triggered": true,
+   "start_ts": "2026-11-15T19:15:00+00:00",
+   "horizon_end": "2026-12-15T19:15:00+00:00",
+   "trigger_now": true,
+   "trigger_detail": [],
+   "invalidation_now": false,
+   "invalidation_detail": [
+    {
+     "cond": "level(fred:SAHMREALTIME) >= 0.5",
+     "value": 0.0,
+     "obs_date": "2026-10-01",
+     "met": false
+    },
+    {
+     "cond": "yoy_falling_3m(fred:CPILFESL) == 1.0",
+     "value": 0.0,
+     "obs_date": "2026-09-01",
+     "met": false
+    },
+    {
+     "cond": "yoy_falling_3m(fred:PCEPILFE) == 1.0",
+     "value": 0.0,
+     "obs_date": "2026-09-01",
+     "met": false
+    },
+    {
+     "cond": "chg_21(fred:DGS2) < -0.5",
+     "value": 0.07,
+     "obs_date": "2026-11-12",
+     "met": false
+    },
+    {
+     "cond": "minus_median_1y(fred:BAMLC0A0CM) < 0.0",
+     "value": 0.095,
+     "obs_date": "2026-11-12",
+     "met": false
+    },
+    {
+     "cond": "chg_20(fred:DGS10) < 0.0",
+     "value": -0.09,
+     "obs_date": "2026-11-12",
+     "met": true
+    }
+   ],
+   "proxies": [
+    {
+     "id": "ig_oas_wider_20obs",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "chg_20(fred:BAMLC0A0CM) > 0.0",
+       "value": 0.05,
+       "obs_date": "2026-11-12",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "bbb_oas_wider_20obs",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "chg_20(fred:BAMLC0A4CBBB) > 0.0",
+       "value": 0.07,
+       "obs_date": "2026-11-12",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "hy_oas_wider_20obs",
+     "supports": false,
+     "detail": [
+      {
+       "cond": "chg_20(fred:BAMLH0A0HYM2) > 0.0",
+       "value": -0.05,
+       "obs_date": "2026-11-12",
+       "met": false
+      }
+     ]
+    },
+    {
+     "id": "term_premium_up_20obs",
+     "supports": false,
+     "detail": [
+      {
+       "cond": "chg_20(fred:THREEFYTP10) > 0.0",
+       "value": -0.1956,
+       "obs_date": "2026-11-06",
+       "met": false
+      }
+     ]
+    },
+    {
+     "id": "real_yield_up_20obs",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "chg_20(fred:DFII10) > 0.0",
+       "value": 0.02,
+       "obs_date": "2026-11-12",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "y2_high_1y",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "pct_1y(fred:DGS2) >= 0.75",
+       "value": 0.9841,
+       "obs_date": "2026-11-12",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "y2_rising_20obs",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "chg_20(fred:DGS2) > 0.0",
+       "value": 0.04,
+       "obs_date": "2026-11-12",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "sahm_below_half",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "level(fred:SAHMREALTIME) < 0.5",
+       "value": 0.0,
+       "obs_date": "2026-10-01",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "core_inflation_above_3",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "yoy_pct(fred:CPILFESL) > 3.0",
+       "value": 2.5658,
+       "obs_date": "2026-09-01",
+       "met": false
+      },
+      {
+       "cond": "yoy_pct(fred:PCEPILFE) > 3.0",
+       "value": 3.1212,
+       "obs_date": "2026-09-01",
+       "met": true
+      }
+     ]
+    }
+   ],
+   "score": {
+    "start": "2026-11-15T19:15:00+00:00",
+    "end": "2026-12-15T19:15:00+00:00",
+    "final": false,
+    "assets": {
+     "BTCUSDT": {
+      "p0": 64708.8,
+      "p1": 64919.9,
+      "ret_pct": 0.326,
+      "signed_ret_pct": -0.326,
+      "hit": false
+     },
+     "ETHUSDT": {
+      "p0": 1814.92,
+      "p1": 1823.68,
+      "ret_pct": 0.482,
+      "signed_ret_pct": -0.482,
+      "hit": false
+     }
+    },
+    "hit_rate": 0.0
+   }
+  },
+  {
+   "id": "T-CLAUDE-20261115-deep",
+   "component": "deep",
+   "author": "claude",
+   "direction": "short",
+   "assets": [
+    "BTCUSDT"
+   ],
+   "prev_status": "active",
+   "as_of": "2026-11-15T20:56:10.847834+00:00",
+   "status": "active",
+   "net_support": 0.0,
+   "triggered": true,
+   "start_ts": "2026-11-15T20:45:00+00:00",
+   "horizon_end": "2026-11-29T20:45:00+00:00",
+   "trigger_now": true,
+   "trigger_detail": [],
+   "invalidation_now": false,
+   "invalidation_detail": [
+    {
+     "cond": "level(lake:BTCUSDT) >= 72058",
+     "value": 64122.2,
+     "obs_date": "2026-11-14",
+     "met": false
+    }
+   ],
+   "proxies": [
+    {
+     "id": "btc_close_below_63k",
+     "supports": false,
+     "detail": [
+      {
+       "cond": "level(lake:BTCUSDT) < 63000",
+       "value": 64122.2,
+       "obs_date": "2026-11-14",
+       "met": false
+      }
+     ]
+    },
+    {
+     "id": "btc_3d_down",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "logret_3(lake:BTCUSDT) < 0.0",
+       "value": -14.3041,
+       "obs_date": "2026-11-14",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "eth_lags_btc_3d",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "rel_logret_3(lake:ETHUSDT vs lake:BTCUSDT) < 0.0",
+       "value": -0.7228,
+       "obs_date": "2026-11-14",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "y2_up_5obs",
+     "supports": true,
+     "detail": [
+      {
+       "cond": "chg_5(fred:DGS2) > 0.0",
+       "value": 0.28,
+       "obs_date": "2026-11-12",
+       "met": true
+      }
+     ]
+    },
+    {
+     "id": "hy_wider_5obs",
+     "supports": false,
+     "detail": [
+      {
+       "cond": "chg_5(fred:BAMLH0A0HYM2) > 0.0",
+       "value": -0.12,
+       "obs_date": "2026-11-12",
+       "met": false
+      }
+     ]
+    },
+    {
+     "id": "vix_above_20",
+     "supports": false,
+     "detail": [
+      {
+       "cond": "level(fred:VIXCLS) > 20.0",
+       "value": 18.7,
+       "obs_date": "2026-11-12",
+       "met": false
+      }
+     ]
+    }
+   ],
+   "score": {
+    "start": "2026-11-15T20:45:00+00:00",
+    "end": "2026-11-29T20:45:00+00:00",
+    "final": false,
+    "assets": {
+     "BTCUSDT": {
+      "p0": 64919.9,
+      "p1": 64919.9,
+      "ret_pct": 0.0,
+      "signed_ret_pct": -0.0,
+      "hit": false
+     }
+    },
+    "hit_rate": 0.0
+   }
+  }
+ ],
+ "snapshot": "research/desk/2026-11-15/2056"
+}

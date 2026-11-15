@@ -1,0 +1,3549 @@
+{
+ "schema": "tradfi_week_v1 (a level / alert file, not desk_report_v1 or a proposals file)",
+ "week": "2026-W47",
+ "built_ts": "2026-11-15T21:01:01.248623+00:00",
+ "snapshot": "research/desk/2026-11-15/2056",
+ "snapshot_as_of": "2026-11-15T20:56:10Z",
+ "model": "claude-opus-5-5",
+ "prompt_version": "desk-tradfi-week-v1",
+ "sources": {
+  "levels": "tradfi_week_inputs.json: repo ai_trader.desk.geometry.token_geometry + tape.book_stats on Bybit public REST at built_ts (same code as the snapshot)",
+  "cfd": "tfw_ctrader block in instruments[*].cfd_anchor and cfd_context: cTrader BlackBull CFDs via ai_trader.ctrader.mcp_ro (read-only); NYSE-close-aligned h1 bar (20:00 start) for equities, 21:00 for metals / oil",
+  "rr": "ai_trader.desk.contract.validate_proposals derived reward_risk / p_tp_driftless (scratch run, no proposal file written)",
+  "web": [
+   "sec.gov NVIDIA 8-K CEO transition",
+   "stocktitan.net earnings calendar W47",
+   "kiplinger.com week calendar",
+   "newsquawk.com week in focus",
+   "admiralmarkets.com Warsh preview",
+   "benzinga.com / earnings-watcher.com NVDA implied move",
+   "home.treasury.gov Q4 2026 auction schedule"
+  ]
+ },
+ "conventions": {
+  "dist_pct": "100 ln(level / price)",
+  "dist_atr": "(level - price) / Wilder ATR14 on 24/7 Bybit bars (weekend days shrink the 1d ATR)",
+  "tier": "risk.yaml live_small first-match tier on WEEKEND turnover; re-tiered at order time",
+  "never": "sizes; SPYUSDT"
+ },
+ "blackouts": [
+  {
+   "id": "BO-NVDA",
+   "start": "2026-11-17T20:20:00Z",
+   "end": "2026-11-17T23:00:00Z",
+   "why": "NVDA Q3 FY27 results ~21:20 UTC (1:20 pm PT per NVIDIA), call 22:00 UTC; no entry 1 h either side",
+   "scope": "all symbols"
+  },
+  {
+   "id": "BO-FOMC",
+   "start": "2026-11-18T18:00:00Z",
+   "end": "2026-11-18T20:00:00Z",
+   "why": "FOMC minutes 19:00 UTC",
+   "scope": "all symbols"
+  },
+  {
+   "id": "BO-CME",
+   "start": "2026-11-15T22:45:00Z",
+   "end": "2026-11-15T23:30:00Z",
+   "why": "CME reopen gap noise (plan section 2)",
+   "scope": "all symbols"
+  },
+  {
+   "id": "BO-RTF6",
+   "start": "2026-11-16T07:00:00Z",
+   "end": "2026-11-16T12:00:00Z",
+   "why": "R-TF-6: no continuation of the Sunday-night commodity move into Monday Europe",
+   "scope": "XAU XAG CL BZ"
+  },
+  {
+   "id": "BO-RTF1",
+   "rule": "first 2 NYSE hours each session (14:30-16:30 UTC): no opening fade / gap-fill after a > 1 overnight-sigma move (R-TF-1); no ORB (R-TF-3)",
+   "scope": "equity perps"
+  }
+ ],
+ "calendar_utc": [
+  [
+   "2026-11-15T23:00Z",
+   "CME Globex reopen (metals / oil reference, BTC futures)",
+   "snapshot news.json"
+  ],
+  [
+   "2026-11-16T13:30Z",
+   "US Empire State manufacturing (Nov)",
+   "web: kiplinger.com"
+  ],
+  [
+   "2026-11-16T14:30Z",
+   "NYSE cash open",
+   "calendar"
+  ],
+  [
+   "2026-11-16T17:00Z",
+   "Fed Chair Warsh, opening remarks, SF Fed Productivity and Jobs Task Force (no forward guidance expected)",
+   "web: admiralmarkets.com"
+  ],
+  [
+   "2026-11-16..20",
+   "Fed speakers Barr, Williams, Barkin, Musalem, Waller, Hammack (times unconfirmed)",
+   "web: kiplinger.com"
+  ],
+  [
+   "2026-11-16 BMO",
+   "PDD, BIDU, XPEV earnings",
+   "web: marketalleys.com"
+  ],
+  [
+   "2026-11-17T13:30Z",
+   "US retail sales Oct: cons +0.2% m/m (prior +0.8%), control +0.4% (prior +0.1%); import prices",
+   "web: newsquawk.com (kiplinger lists Monday: conflict)"
+  ],
+  [
+   "2026-11-17T14:15Z",
+   "US industrial production Oct",
+   "web: newsquawk.com (time = standard 09:15 ET)"
+  ],
+  [
+   "2026-11-17 BMO",
+   "Home Depot, Disney earnings",
+   "web: stocktitan.net"
+  ],
+  [
+   "2026-11-17T21:20Z",
+   "NVIDIA Q3 FY27 results (call 22:00 UTC); EPS cons ~2.49-2.52; first report after the CEO exit",
+   "web: sec.gov 8-K, stocktitan.net"
+  ],
+  [
+   "2026-11-18T13:30Z",
+   "US housing starts / permits Oct",
+   "web: newsquawk.com"
+  ],
+  [
+   "2026-11-18T15:30Z",
+   "EIA weekly petroleum status (standard time, not confirmed this week)",
+   "assumption"
+  ],
+  [
+   "2026-11-18T18:00Z",
+   "20-year bond auction, 16 bn USD (13:00 ET standard)",
+   "web: home.treasury.gov tentative schedule Q4 2026"
+  ],
+  [
+   "2026-11-18T19:00Z",
+   "FOMC minutes (Oct 27-28; funds 3.75-4.00%)",
+   "calendar W47, newsquawk"
+  ],
+  [
+   "2026-11-18 BMO/AMC",
+   "Target, Lowe's (BMO); Palo Alto Networks (AMC)",
+   "web: stocktitan.net"
+  ],
+  [
+   "2026-11-19T12:00Z",
+   "Walmart results (07:00 ET)",
+   "web: stocktitan.net"
+  ],
+  [
+   "2026-11-19T13:30Z",
+   "Initial jobless claims; Philly Fed (Nov)",
+   "web: kiplinger.com"
+  ],
+  [
+   "2026-11-20T15:00Z",
+   "UMich sentiment final (Nov)",
+   "web: kiplinger.com"
+  ]
+ ],
+ "nvda_event": {
+  "release_utc": "2026-11-17T21:20:00Z",
+  "call_utc": "2026-11-17T22:00:00Z",
+  "implied_move_pct_web": {
+   "benzinga_nov12_close": 9.6,
+   "earnings_watcher_nov12": 10.8,
+   "ten_year_avg": 7.8,
+   "aug_2026_realised": 8.7,
+   "aug_2026_implied": 5.9
+  },
+  "bands_from_friday_close": {
+   "pm7.8": [
+    150.39,
+    175.83
+   ],
+   "pm9.6": [
+    147.45,
+    178.77
+   ],
+   "pm10.8": [
+    145.49,
+    180.73
+   ]
+  },
+  "friday_close": 163.11,
+  "bands_from_cfd_cash_close": {
+   "pm7.8": [
+    150.0,
+    175.38
+   ],
+   "pm9.6": [
+    147.07,
+    178.31
+   ],
+   "pm10.8": [
+    145.12,
+    180.26
+   ]
+  },
+  "cfd_cash_close": 162.69,
+  "deribit": "no NVDA options on Deribit (data gap)"
+ },
+ "theses": {
+  "T-USER-20261115-a": "strengthening 4/5",
+  "T-USER-20261115-b": "active 4/6",
+  "T-USER-20261115-c": "weakening 1/5",
+  "T-USER-20261115-d": "strengthening 7/9",
+  "T-CLAUDE-20261115-deep": "active 3/6"
+ },
+ "cfd_context": {
+  "NAS100": {
+   "cfd": "NAS100",
+   "friday_close": 27944.35,
+   "friday_bar": "2026-11-13T20:00:00Z",
+   "last_bar": "2026-11-13T21:00:00Z",
+   "oct": {
+    "open": 30502.75,
+    "high": 31366.25,
+    "low": 28077.65,
+    "close": 28371.05
+   },
+   "nov_open": 28503.35,
+   "week_nov9_13": {
+    "open": 27970.6,
+    "high": 28597.35,
+    "low": 27415.15,
+    "close": 27841.25
+   }
+  },
+  "notes": {
+   "friday_close": "close of the h1 bar starting Fri 20:00 UTC (NYSE close) for stocks / ETFs / NAS100; 21:00 UTC for metals and oil (CME 17:00 ET); bar timestamps are bar starts",
+   "drift": "100 ln(Bybit perp last at 21:01 UTC / CFD Friday close)",
+   "GOOG": "CFD is class C (GOOG); the Bybit perp is class A (GOOGL): small share-class spread",
+   "WTI / BRENT": "CFD cash prices; the Bybit CL / BZ perps track a futures index, so a basis is expected"
+  },
+  "nas100_close_note": "27,944.35 = h1 bar ending 21:00 UTC (NYSE close); 27,841.25 = CFD daily-session close (later), the figure the coordinator quoted"
+ },
+ "instruments": {
+  "NVDAUSDT": {
+   "cluster": "ai_semis",
+   "type": "stock",
+   "last": 165.33,
+   "mark": 165.1,
+   "index": 164.31,
+   "basis_bp_mark_index": 48.0,
+   "tier_weekend": "mid",
+   "turnover_rank": 12,
+   "turnover_24h_usd": 83424468.9325,
+   "spread_bp": 0.6,
+   "oi_usd": 89707684.31,
+   "oi_chg_pct": {
+    "24h": 8.46,
+    "72h": -3.52
+   },
+   "funding": {
+    "last_settled": 0.0,
+    "ann_pct_last": 0.0,
+    "pct_90d": 0.665,
+    "interval_h": 8.0,
+    "ann_pct_predicted": 301.9,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 1.537629,
+    "4h": 4.172122,
+    "1d": 10.170025
+   },
+   "friday_close": 163.11,
+   "friday_close_ts": "2026-11-13T21:00:00+00:00",
+   "weekend_drift_pct": 1.35,
+   "weekend_drift_atr_1d": 0.22,
+   "ret_pct": {
+    "7d": -10.49,
+    "28d": -24.99
+   },
+   "week_nov9_15": {
+    "open": 179.89,
+    "high": 183.52,
+    "low": 149.39
+   },
+   "week_nov2_8": {
+    "open": 205.95,
+    "high": 211.32,
+    "low": 179.02,
+    "close": 179.89
+   },
+   "month_open_nov": 204.34,
+   "oct": {
+    "open": 229.93,
+    "high": 243.55,
+    "low": 201.36,
+    "close": 204.34
+   },
+   "profile_7d": {
+    "poc": 161.09264124290326,
+    "vah": 174.28814407790648,
+    "val": 157.94305344100673
+   },
+   "profile_24h": {
+    "poc": 161.09264124290326,
+    "vah": 164.05882457846448,
+    "val": 157.78522876593354
+   },
+   "levels_above": [
+    {
+     "price": 171.84,
+     "kind": "4h swing high (unswept)",
+     "dist_pct": 3.862,
+     "dist_atr_1h": 4.23,
+     "dist_atr_1d": 0.64
+    },
+    {
+     "price": 174.288144,
+     "kind": "7d VAH",
+     "dist_pct": 5.277,
+     "dist_atr_1h": 5.83,
+     "dist_atr_1d": 0.88
+    },
+    {
+     "price": 175.82,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 6.152,
+     "dist_atr_1h": 6.82,
+     "dist_atr_1d": 1.03
+    },
+    {
+     "price": 178.5,
+     "kind": "4h swing high (unswept)",
+     "dist_pct": 7.665,
+     "dist_atr_1h": 8.57,
+     "dist_atr_1d": 1.29
+    },
+    {
+     "price": 179.02,
+     "kind": "prior week (Nov 2-8) low",
+     "dist_pct": 7.955,
+     "dist_atr_1h": 8.9,
+     "dist_atr_1d": 1.35
+    },
+    {
+     "price": 179.08,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 7.989,
+     "dist_atr_1h": 8.94,
+     "dist_atr_1d": 1.35
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 163.11,
+     "kind": "Friday close",
+     "dist_pct": -1.352,
+     "dist_atr_1h": -1.44,
+     "dist_atr_1d": -0.22
+    },
+    {
+     "price": 161.092641,
+     "kind": "7d POC",
+     "dist_pct": -2.596,
+     "dist_atr_1h": -2.76,
+     "dist_atr_1d": -0.42
+    },
+    {
+     "price": 157.943053,
+     "kind": "7d VAL",
+     "dist_pct": -4.571,
+     "dist_atr_1h": -4.8,
+     "dist_atr_1d": -0.73
+    },
+    {
+     "price": 156.15,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -5.713,
+     "dist_atr_1h": -5.97,
+     "dist_atr_1d": -0.9
+    },
+    {
+     "price": 149.39,
+     "kind": "4h swing low (unswept) + 1d swing low (unswept) + week low Nov 9-15",
+     "dist_pct": -10.138,
+     "dist_atr_1h": -10.37,
+     "dist_atr_1d": -1.57
+    }
+   ],
+   "cfd_anchor": {
+    "cfd": "NVDA",
+    "friday_close": 162.69,
+    "friday_bar": "2026-11-13T20:00:00Z",
+    "bybit_fri_vs_cfd_fri_bp": 25.8,
+    "drift_vs_cfd_pct": 1.61,
+    "drift_vs_cfd_atr_1d": 0.26,
+    "nov_open": 207.61,
+    "oct": {
+     "open": 235.99,
+     "high": 243.35,
+     "low": 200.92,
+     "close": 204.86
+    },
+    "week_nov9_13": {
+     "open": 173.99,
+     "high": 177.52,
+     "low": 148.8,
+     "close": 162.69
+    }
+   }
+  },
+  "MUUSDT": {
+   "cluster": "ai_semis",
+   "type": "stock",
+   "last": 765.41,
+   "mark": 765.41,
+   "index": 765.39,
+   "basis_bp_mark_index": 0.3,
+   "tier_weekend": "mid",
+   "turnover_rank": 39,
+   "turnover_24h_usd": 24630464.1546,
+   "spread_bp": 0.13,
+   "oi_usd": 26877464.0,
+   "oi_chg_pct": {
+    "24h": -4.91,
+    "72h": -2.47
+   },
+   "funding": {
+    "last_settled": 0.0,
+    "ann_pct_last": 0.0,
+    "pct_90d": 0.62,
+    "interval_h": 8.0,
+    "ann_pct_predicted": 60.3,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 5.620416,
+    "4h": 17.056474,
+    "1d": 55.330496
+   },
+   "friday_close": 779.42,
+   "friday_close_ts": "2026-11-13T21:00:00+00:00",
+   "weekend_drift_pct": -1.81,
+   "weekend_drift_atr_1d": -0.25,
+   "ret_pct": {
+    "7d": 10.41,
+    "28d": -11.19
+   },
+   "week_nov9_15": {
+    "open": 676.03,
+    "high": 828.59,
+    "low": 662.64
+   },
+   "week_nov2_8": {
+    "open": 906.86,
+    "high": 915.98,
+    "low": 650.0,
+    "close": 676.03
+   },
+   "month_open_nov": 897.53,
+   "oct": {
+    "open": 1069.61,
+    "high": 1114.73,
+    "low": 818.96,
+    "close": 897.53
+   },
+   "profile_7d": {
+    "poc": 765.163943252459,
+    "vah": 807.8097378142701,
+    "val": 710.7768644390471
+   },
+   "profile_24h": {
+    "poc": 759.8278277553399,
+    "vah": 762.6818165569869,
+    "val": 749.0797300385219
+   },
+   "levels_above": [
+    {
+     "price": 779.42,
+     "kind": "Friday close",
+     "dist_pct": 1.814,
+     "dist_atr_1h": 2.49,
+     "dist_atr_1d": 0.25
+    },
+    {
+     "price": 807.809738,
+     "kind": "7d VAH",
+     "dist_pct": 5.391,
+     "dist_atr_1h": 7.54,
+     "dist_atr_1d": 0.77
+    },
+    {
+     "price": 815.39,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 6.325,
+     "dist_atr_1h": 8.89,
+     "dist_atr_1d": 0.9
+    },
+    {
+     "price": 818.96,
+     "kind": "Oct low",
+     "dist_pct": 6.762,
+     "dist_atr_1h": 9.53,
+     "dist_atr_1d": 0.97
+    },
+    {
+     "price": 822.46,
+     "kind": "4h swing high (unswept)",
+     "dist_pct": 7.189,
+     "dist_atr_1h": 10.15,
+     "dist_atr_1d": 1.03
+    },
+    {
+     "price": 828.59,
+     "kind": "4h swing high (unswept) + 1d swing high (unswept) + week high Nov 9-15",
+     "dist_pct": 7.931,
+     "dist_atr_1h": 11.24,
+     "dist_atr_1d": 1.14
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 765.163943,
+     "kind": "7d POC",
+     "dist_pct": -0.032,
+     "dist_atr_1h": -0.04,
+     "dist_atr_1d": -0.0
+    },
+    {
+     "price": 740.42,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -3.319,
+     "dist_atr_1h": -4.45,
+     "dist_atr_1d": -0.45
+    },
+    {
+     "price": 714.81,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": -6.839,
+     "dist_atr_1h": -9.0,
+     "dist_atr_1d": -0.91
+    },
+    {
+     "price": 710.776864,
+     "kind": "7d VAL",
+     "dist_pct": -7.405,
+     "dist_atr_1h": -9.72,
+     "dist_atr_1d": -0.99
+    },
+    {
+     "price": 700.86,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -8.81,
+     "dist_atr_1h": -11.48,
+     "dist_atr_1d": -1.17
+    },
+    {
+     "price": 676.03,
+     "kind": "prior week (Nov 2-8) close + week open Nov 9",
+     "dist_pct": -12.417,
+     "dist_atr_1h": -15.9,
+     "dist_atr_1d": -1.62
+    }
+   ],
+   "cfd_anchor": {
+    "cfd": "MU",
+    "friday_close": 778.11,
+    "friday_bar": "2026-11-13T20:00:00Z",
+    "bybit_fri_vs_cfd_fri_bp": 16.8,
+    "drift_vs_cfd_pct": -1.65,
+    "drift_vs_cfd_atr_1d": -0.23,
+    "nov_open": 890.04,
+    "oct": {
+     "open": 1107.91,
+     "high": 1107.91,
+     "low": 849.33,
+     "close": 885.1
+    },
+    "week_nov9_13": {
+     "open": 717.81,
+     "high": 827.43,
+     "low": 699.67,
+     "close": 778.11
+    }
+   }
+  },
+  "SNDKUSDT": {
+   "cluster": "ai_semis",
+   "type": "stock",
+   "last": 863.92,
+   "mark": 864.03,
+   "index": 864.03,
+   "basis_bp_mark_index": 0.0,
+   "tier_weekend": "mid",
+   "turnover_rank": 34,
+   "turnover_24h_usd": 27188739.94,
+   "spread_bp": 0.12,
+   "oi_usd": 40880214.28,
+   "oi_chg_pct": {
+    "24h": -1.82,
+    "72h": 20.79
+   },
+   "funding": {
+    "last_settled": 0.0,
+    "ann_pct_last": 0.0,
+    "pct_90d": 0.555,
+    "interval_h": 8.0,
+    "ann_pct_predicted": 53.4,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 7.25872,
+    "4h": 24.386633,
+    "1d": 95.938049
+   },
+   "friday_close": 885.89,
+   "friday_close_ts": "2026-11-13T21:00:00+00:00",
+   "weekend_drift_pct": -2.51,
+   "weekend_drift_atr_1d": -0.23,
+   "ret_pct": {
+    "7d": 3.36,
+    "28d": -37.94
+   },
+   "week_nov9_15": {
+    "open": 820.07,
+    "high": 1012.33,
+    "low": 791.38
+   },
+   "week_nov2_8": {
+    "open": 1173.0,
+    "high": 1199.02,
+    "low": 794.29,
+    "close": 820.07
+   },
+   "month_open_nov": 1153.0,
+   "oct": {
+    "open": 1737.48,
+    "high": 1806.75,
+    "low": 1117.54,
+    "close": 1153.0
+   },
+   "profile_7d": {
+    "poc": 861.8320168981238,
+    "vah": 943.2089335417693,
+    "val": 832.4049659221084
+   },
+   "profile_24h": {
+    "poc": 855.3940586406861,
+    "vah": 865.0691435671935,
+    "val": 845.8271815597958
+   },
+   "levels_above": [
+    {
+     "price": 885.89,
+     "kind": "Friday close",
+     "dist_pct": 2.511,
+     "dist_atr_1h": 3.03,
+     "dist_atr_1d": 0.23
+    },
+    {
+     "price": 943.208934,
+     "kind": "7d VAH",
+     "dist_pct": 8.781,
+     "dist_atr_1h": 10.92,
+     "dist_atr_1d": 0.83
+    },
+    {
+     "price": 943.85,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 8.849,
+     "dist_atr_1h": 11.01,
+     "dist_atr_1d": 0.83
+    },
+    {
+     "price": 967.95,
+     "kind": "4h swing high (unswept)",
+     "dist_pct": 11.37,
+     "dist_atr_1h": 14.33,
+     "dist_atr_1d": 1.08
+    },
+    {
+     "price": 1012.33,
+     "kind": "4h swing high (unswept) + 1d swing high (unswept) + week high Nov 9-15",
+     "dist_pct": 15.853,
+     "dist_atr_1h": 20.45,
+     "dist_atr_1d": 1.55
+    },
+    {
+     "price": 1030.56,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 17.638,
+     "dist_atr_1h": 22.96,
+     "dist_atr_1d": 1.74
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 861.832017,
+     "kind": "7d POC",
+     "dist_pct": -0.242,
+     "dist_atr_1h": -0.29,
+     "dist_atr_1d": -0.02
+    },
+    {
+     "price": 832.404966,
+     "kind": "7d VAL",
+     "dist_pct": -3.716,
+     "dist_atr_1h": -4.34,
+     "dist_atr_1d": -0.33
+    },
+    {
+     "price": 830.58,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -3.936,
+     "dist_atr_1h": -4.59,
+     "dist_atr_1d": -0.35
+    },
+    {
+     "price": 828.34,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -4.206,
+     "dist_atr_1h": -4.9,
+     "dist_atr_1d": -0.37
+    },
+    {
+     "price": 820.07,
+     "kind": "prior week (Nov 2-8) close + week open Nov 9",
+     "dist_pct": -5.209,
+     "dist_atr_1h": -6.04,
+     "dist_atr_1d": -0.46
+    },
+    {
+     "price": 802.27,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": -7.403,
+     "dist_atr_1h": -8.49,
+     "dist_atr_1d": -0.64
+    }
+   ]
+  },
+  "SKHYNIXUSDT": {
+   "cluster": "ai_semis",
+   "type": "stock",
+   "last": 887.32,
+   "mark": 887.32,
+   "index": 886.93,
+   "basis_bp_mark_index": 4.4,
+   "tier_weekend": "illiquid",
+   "turnover_rank": 60,
+   "turnover_24h_usd": 14336489.3616,
+   "spread_bp": 0.11,
+   "oi_usd": 29309097.98,
+   "oi_chg_pct": {
+    "24h": 4.05,
+    "72h": 15.49
+   },
+   "funding": {
+    "last_settled": 6.452e-05,
+    "ann_pct_last": 7.1,
+    "pct_90d": 0.705,
+    "interval_h": 8.0,
+    "ann_pct_predicted": 80.7,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 6.683598,
+    "4h": 20.669987,
+    "1d": 75.289894
+   },
+   "friday_close": 897.68,
+   "friday_close_ts": "2026-11-13T21:00:00+00:00",
+   "weekend_drift_pct": -1.16,
+   "weekend_drift_atr_1d": -0.14,
+   "ret_pct": {
+    "7d": 2.44,
+    "28d": -0.39
+   },
+   "week_nov9_15": {
+    "open": 838.87,
+    "high": 999.83,
+    "low": 822.82
+   },
+   "week_nov2_8": {
+    "open": 1054.68,
+    "high": 1115.3,
+    "low": 809.31,
+    "close": 838.87
+   },
+   "month_open_nov": 1042.89,
+   "oct": {
+    "open": 1302.51,
+    "high": 1386.93,
+    "low": 853.73,
+    "close": 1042.89
+   },
+   "profile_7d": {
+    "poc": 896.0987589411183,
+    "vah": 924.5367664406878,
+    "val": 840.3484994376656
+   },
+   "profile_24h": {
+    "poc": 878.7983845900776,
+    "vah": 886.962931510074,
+    "val": 865.5016781389771
+   },
+   "levels_above": [
+    {
+     "price": 896.098759,
+     "kind": "7d POC",
+     "dist_pct": 0.984,
+     "dist_atr_1h": 1.31,
+     "dist_atr_1d": 0.12
+    },
+    {
+     "price": 897.68,
+     "kind": "Friday close",
+     "dist_pct": 1.161,
+     "dist_atr_1h": 1.55,
+     "dist_atr_1d": 0.14
+    },
+    {
+     "price": 924.536766,
+     "kind": "7d VAH",
+     "dist_pct": 4.109,
+     "dist_atr_1h": 5.57,
+     "dist_atr_1d": 0.49
+    },
+    {
+     "price": 987.61,
+     "kind": "4h swing high (unswept)",
+     "dist_pct": 10.708,
+     "dist_atr_1h": 15.01,
+     "dist_atr_1d": 1.33
+    },
+    {
+     "price": 999.83,
+     "kind": "4h swing high (unswept) + 1d swing high (unswept) + week high Nov 9-15",
+     "dist_pct": 11.938,
+     "dist_atr_1h": 16.83,
+     "dist_atr_1d": 1.49
+    },
+    {
+     "price": 1042.89,
+     "kind": "month open + Oct close",
+     "dist_pct": 16.155,
+     "dist_atr_1h": 23.28,
+     "dist_atr_1d": 2.07
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 853.73,
+     "kind": "Oct low",
+     "dist_pct": -3.859,
+     "dist_atr_1h": -5.03,
+     "dist_atr_1d": -0.45
+    },
+    {
+     "price": 853.53,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -3.882,
+     "dist_atr_1h": -5.06,
+     "dist_atr_1d": -0.45
+    },
+    {
+     "price": 840.348499,
+     "kind": "7d VAL",
+     "dist_pct": -5.439,
+     "dist_atr_1h": -7.03,
+     "dist_atr_1d": -0.62
+    },
+    {
+     "price": 838.87,
+     "kind": "prior week (Nov 2-8) close + week open Nov 9",
+     "dist_pct": -5.615,
+     "dist_atr_1h": -7.25,
+     "dist_atr_1d": -0.64
+    },
+    {
+     "price": 825.28,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": -7.248,
+     "dist_atr_1h": -9.28,
+     "dist_atr_1d": -0.82
+    },
+    {
+     "price": 822.82,
+     "kind": "4h swing low (unswept) + 1d swing low (unswept) + week low Nov 9-15",
+     "dist_pct": -7.547,
+     "dist_atr_1h": -9.65,
+     "dist_atr_1d": -0.86
+    }
+   ]
+  },
+  "SOXLUSDT": {
+   "cluster": "ai_semis",
+   "type": "ETF",
+   "last": 56.48,
+   "mark": 56.48,
+   "index": 56.49,
+   "basis_bp_mark_index": -1.8,
+   "tier_weekend": "liquid",
+   "turnover_rank": 8,
+   "turnover_24h_usd": 161031650.3823,
+   "spread_bp": 1.77,
+   "oi_usd": 48498660.4,
+   "oi_chg_pct": {
+    "24h": -5.75,
+    "72h": -17.29
+   },
+   "funding": {
+    "last_settled": -0.00059439,
+    "ann_pct_last": -65.1,
+    "pct_90d": 0.03,
+    "interval_h": 8.0,
+    "ann_pct_predicted": 288.5,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 0.933057,
+    "4h": 3.041802,
+    "1d": 11.140224
+   },
+   "friday_close": 58.4,
+   "friday_close_ts": "2026-11-13T21:00:00+00:00",
+   "weekend_drift_pct": -3.34,
+   "weekend_drift_atr_1d": -0.17,
+   "ret_pct": {
+    "7d": 22.08,
+    "28d": -45.55
+   },
+   "week_nov9_15": {
+    "open": 44.06,
+    "high": 69.77,
+    "low": 41.35
+   },
+   "week_nov2_8": {
+    "open": 79.61,
+    "high": 82.92,
+    "low": 38.83,
+    "close": 44.06
+   },
+   "month_open_nov": 77.38,
+   "oct": {
+    "open": 149.13,
+    "high": 169.98,
+    "low": 70.41,
+    "close": 77.38
+   },
+   "profile_7d": {
+    "poc": 55.99395692703876,
+    "vah": 64.61573599171723,
+    "val": 52.06599009583171
+   },
+   "profile_24h": {
+    "poc": 54.85804760453276,
+    "vah": 55.81231729738898,
+    "val": 53.7854955857812
+   },
+   "levels_above": [
+    {
+     "price": 58.4,
+     "kind": "Friday close",
+     "dist_pct": 3.343,
+     "dist_atr_1h": 2.06,
+     "dist_atr_1d": 0.17
+    },
+    {
+     "price": 64.615736,
+     "kind": "7d VAH",
+     "dist_pct": 13.457,
+     "dist_atr_1h": 8.72,
+     "dist_atr_1d": 0.73
+    },
+    {
+     "price": 67.93,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 18.459,
+     "dist_atr_1h": 12.27,
+     "dist_atr_1d": 1.03
+    },
+    {
+     "price": 69.01,
+     "kind": "4h swing high (unswept)",
+     "dist_pct": 20.036,
+     "dist_atr_1h": 13.43,
+     "dist_atr_1d": 1.12
+    },
+    {
+     "price": 69.77,
+     "kind": "4h swing high (unswept) + 1d swing high (unswept) + week high Nov 9-15",
+     "dist_pct": 21.132,
+     "dist_atr_1h": 14.24,
+     "dist_atr_1d": 1.19
+    },
+    {
+     "price": 70.41,
+     "kind": "Oct low",
+     "dist_pct": 22.045,
+     "dist_atr_1h": 14.93,
+     "dist_atr_1d": 1.25
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 55.993957,
+     "kind": "7d POC",
+     "dist_pct": -0.864,
+     "dist_atr_1h": -0.52,
+     "dist_atr_1d": -0.04
+    },
+    {
+     "price": 52.67,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -6.984,
+     "dist_atr_1h": -4.08,
+     "dist_atr_1d": -0.34
+    },
+    {
+     "price": 52.44,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -7.422,
+     "dist_atr_1h": -4.33,
+     "dist_atr_1d": -0.36
+    },
+    {
+     "price": 52.06599,
+     "kind": "7d VAL",
+     "dist_pct": -8.137,
+     "dist_atr_1h": -4.73,
+     "dist_atr_1d": -0.4
+    },
+    {
+     "price": 51.04,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -10.128,
+     "dist_atr_1h": -5.83,
+     "dist_atr_1d": -0.49
+    },
+    {
+     "price": 44.06,
+     "kind": "prior week (Nov 2-8) close + week open Nov 9",
+     "dist_pct": -24.833,
+     "dist_atr_1h": -13.31,
+     "dist_atr_1d": -1.11
+    }
+   ]
+  },
+  "SOXSUSDT": {
+   "cluster": "ai_semis (inverse)",
+   "type": "ETF",
+   "last": 52.53,
+   "mark": 52.51,
+   "index": 52.5,
+   "basis_bp_mark_index": 1.9,
+   "tier_weekend": "mid",
+   "turnover_rank": 50,
+   "turnover_24h_usd": 20281887.0382,
+   "spread_bp": 1.9,
+   "oi_usd": 8098728.62,
+   "oi_chg_pct": {
+    "24h": 12.23,
+    "72h": 28.99
+   },
+   "funding": {
+    "last_settled": 0.00053639,
+    "ann_pct_last": 58.7,
+    "pct_90d": 0.97,
+    "interval_h": 8.0,
+    "ann_pct_predicted": -220.2,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 0.791148,
+    "4h": 2.593174,
+    "1d": 8.667052
+   },
+   "friday_close": 50.83,
+   "friday_close_ts": "2026-11-13T21:00:00+00:00",
+   "weekend_drift_pct": 3.29,
+   "weekend_drift_atr_1d": 0.2,
+   "ret_pct": {
+    "7d": -31.78,
+    "28d": 1.05
+   },
+   "week_nov9_15": {
+    "open": 74.15,
+    "high": 78.42,
+    "low": 41.84
+   },
+   "week_nov2_8": {
+    "open": 50.47,
+    "high": 85.38,
+    "low": 48.24,
+    "close": 74.15
+   },
+   "month_open_nov": 51.87,
+   "oct": {
+    "open": 32.87,
+    "high": 56.06,
+    "low": 28.51,
+    "close": 51.87
+   },
+   "profile_7d": {
+    "poc": 47.884070172576784,
+    "vah": 55.506268463684954,
+    "val": 43.73092705844238
+   },
+   "profile_24h": {
+    "poc": 53.82583974944064,
+    "vah": 54.65276638483574,
+    "val": 53.09098187484556
+   },
+   "levels_above": [
+    {
+     "price": 55.506268,
+     "kind": "7d VAH",
+     "dist_pct": 5.511,
+     "dist_atr_1h": 3.76,
+     "dist_atr_1d": 0.34
+    },
+    {
+     "price": 56.02,
+     "kind": "4h swing high (unswept)",
+     "dist_pct": 6.432,
+     "dist_atr_1h": 4.41,
+     "dist_atr_1d": 0.4
+    },
+    {
+     "price": 56.06,
+     "kind": "Oct high",
+     "dist_pct": 6.504,
+     "dist_atr_1h": 4.46,
+     "dist_atr_1d": 0.41
+    },
+    {
+     "price": 60.38,
+     "kind": "4h swing high (unswept)",
+     "dist_pct": 13.927,
+     "dist_atr_1h": 9.92,
+     "dist_atr_1d": 0.91
+    },
+    {
+     "price": 74.15,
+     "kind": "prior week (Nov 2-8) close + week open Nov 9",
+     "dist_pct": 34.471,
+     "dist_atr_1h": 27.33,
+     "dist_atr_1d": 2.49
+    },
+    {
+     "price": 77.48,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 38.864,
+     "dist_atr_1h": 31.54,
+     "dist_atr_1d": 2.88
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 51.87,
+     "kind": "month open + Oct close",
+     "dist_pct": -1.264,
+     "dist_atr_1h": -0.83,
+     "dist_atr_1d": -0.08
+    },
+    {
+     "price": 50.83,
+     "kind": "Friday close",
+     "dist_pct": -3.29,
+     "dist_atr_1h": -2.15,
+     "dist_atr_1d": -0.2
+    },
+    {
+     "price": 48.24,
+     "kind": "prior week (Nov 2-8) low",
+     "dist_pct": -8.52,
+     "dist_atr_1h": -5.42,
+     "dist_atr_1d": -0.49
+    },
+    {
+     "price": 47.88407,
+     "kind": "7d POC",
+     "dist_pct": -9.26,
+     "dist_atr_1h": -5.87,
+     "dist_atr_1d": -0.54
+    },
+    {
+     "price": 44.2,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": -17.266,
+     "dist_atr_1h": -10.53,
+     "dist_atr_1d": -0.96
+    },
+    {
+     "price": 43.730927,
+     "kind": "7d VAL",
+     "dist_pct": -18.333,
+     "dist_atr_1h": -11.12,
+     "dist_atr_1d": -1.02
+    }
+   ]
+  },
+  "QQQUSDT": {
+   "cluster": "ai_semis",
+   "type": "ETF",
+   "last": 675.73,
+   "mark": 675.73,
+   "index": 675.29,
+   "basis_bp_mark_index": 6.5,
+   "tier_weekend": "illiquid",
+   "turnover_rank": 58,
+   "turnover_24h_usd": 14678645.2049,
+   "spread_bp": 0.15,
+   "oi_usd": 23824874.83,
+   "oi_chg_pct": {
+    "24h": -0.23,
+    "72h": -18.4
+   },
+   "funding": {
+    "last_settled": 0.0,
+    "ann_pct_last": 0.0,
+    "pct_90d": 0.745,
+    "interval_h": 8.0,
+    "ann_pct_predicted": 0.0,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 1.911133,
+    "4h": 5.292106,
+    "1d": 15.897204
+   },
+   "friday_close": 680.43,
+   "friday_close_ts": "2026-11-13T21:00:00+00:00",
+   "weekend_drift_pct": -0.69,
+   "weekend_drift_atr_1d": -0.3,
+   "ret_pct": {
+    "7d": 3.08,
+    "28d": -4.39
+   },
+   "week_nov9_15": {
+    "open": 654.8,
+    "high": 695.72,
+    "low": 649.32
+   },
+   "week_nov2_8": {
+    "open": 698.01,
+    "high": 702.57,
+    "low": 639.9,
+    "close": 654.8
+   },
+   "month_open_nov": 695.11,
+   "oct": {
+    "open": 743.59,
+    "high": 763.31,
+    "low": 685.51,
+    "close": 695.11
+   },
+   "profile_7d": {
+    "poc": 674.9384356829084,
+    "vah": 687.0225010430016,
+    "val": 668.72558694879
+   },
+   "profile_24h": {
+    "poc": 672.9171590833877,
+    "vah": 673.7586209884446,
+    "val": 669.0599497422645
+   },
+   "levels_above": [
+    {
+     "price": 680.43,
+     "kind": "Friday close",
+     "dist_pct": 0.693,
+     "dist_atr_1h": 2.46,
+     "dist_atr_1d": 0.3
+    },
+    {
+     "price": 685.51,
+     "kind": "Oct low",
+     "dist_pct": 1.437,
+     "dist_atr_1h": 5.12,
+     "dist_atr_1d": 0.62
+    },
+    {
+     "price": 687.022501,
+     "kind": "7d VAH",
+     "dist_pct": 1.657,
+     "dist_atr_1h": 5.91,
+     "dist_atr_1d": 0.71
+    },
+    {
+     "price": 690.13,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 2.109,
+     "dist_atr_1h": 7.53,
+     "dist_atr_1d": 0.91
+    },
+    {
+     "price": 695.11,
+     "kind": "month open + Oct close",
+     "dist_pct": 2.828,
+     "dist_atr_1h": 10.14,
+     "dist_atr_1d": 1.22
+    },
+    {
+     "price": 695.24,
+     "kind": "4h swing high (unswept)",
+     "dist_pct": 2.846,
+     "dist_atr_1h": 10.21,
+     "dist_atr_1d": 1.23
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 674.938436,
+     "kind": "7d POC",
+     "dist_pct": -0.117,
+     "dist_atr_1h": -0.41,
+     "dist_atr_1d": -0.05
+    },
+    {
+     "price": 668.725587,
+     "kind": "7d VAL",
+     "dist_pct": -1.042,
+     "dist_atr_1h": -3.67,
+     "dist_atr_1d": -0.44
+    },
+    {
+     "price": 667.08,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -1.288,
+     "dist_atr_1h": -4.53,
+     "dist_atr_1d": -0.54
+    },
+    {
+     "price": 654.8,
+     "kind": "prior week (Nov 2-8) close + week open Nov 9",
+     "dist_pct": -3.146,
+     "dist_atr_1h": -10.95,
+     "dist_atr_1d": -1.32
+    },
+    {
+     "price": 651.02,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": -3.725,
+     "dist_atr_1h": -12.93,
+     "dist_atr_1d": -1.55
+    },
+    {
+     "price": 649.32,
+     "kind": "4h swing low (unswept) + 1d swing low (unswept) + week low Nov 9-15",
+     "dist_pct": -3.987,
+     "dist_atr_1h": -13.82,
+     "dist_atr_1d": -1.66
+    }
+   ],
+   "cfd_anchor": {
+    "cfd": "QQQ",
+    "friday_close": 679.66,
+    "friday_bar": "2026-11-13T20:00:00Z",
+    "bybit_fri_vs_cfd_fri_bp": 11.3,
+    "drift_vs_cfd_pct": -0.58,
+    "drift_vs_cfd_atr_1d": -0.25,
+    "nov_open": 695.36,
+    "oct": {
+     "open": 751.32,
+     "high": 762.84,
+     "low": 683.45,
+     "close": 690.64
+    },
+    "week_nov9_13": {
+     "open": 672.81,
+     "high": 695.55,
+     "low": 667.06,
+     "close": 679.66
+    }
+   }
+  },
+  "MSTRUSDT": {
+   "cluster": "crypto_beta",
+   "type": "stock",
+   "last": 100.65,
+   "mark": 100.65,
+   "index": 100.5,
+   "basis_bp_mark_index": 14.9,
+   "tier_weekend": "mid",
+   "turnover_rank": 24,
+   "turnover_24h_usd": 40090939.6263,
+   "spread_bp": 0.99,
+   "oi_usd": 16863212.01,
+   "oi_chg_pct": {
+    "24h": 0.34,
+    "72h": -13.07
+   },
+   "funding": {
+    "last_settled": -0.00082035,
+    "ann_pct_last": -89.8,
+    "pct_90d": 0.025,
+    "interval_h": 8.0,
+    "ann_pct_predicted": 83.2,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 1.421241,
+    "4h": 3.591192,
+    "1d": 8.748779
+   },
+   "friday_close": 111.77,
+   "friday_close_ts": "2026-11-13T21:00:00+00:00",
+   "weekend_drift_pct": -10.48,
+   "weekend_drift_atr_1d": -1.27,
+   "ret_pct": {
+    "7d": -23.65,
+    "28d": -29.23
+   },
+   "week_nov9_15": {
+    "open": 124.68,
+    "high": 129.55,
+    "low": 95.53
+   },
+   "week_nov2_8": {
+    "open": 135.66,
+    "high": 146.31,
+    "low": 122.16,
+    "close": 124.68
+   },
+   "month_open_nov": 133.38,
+   "oct": {
+    "open": 153.46,
+    "high": 170.22,
+    "low": 124.63,
+    "close": 133.38
+   },
+   "profile_7d": {
+    "poc": 122.73745824370322,
+    "vah": 129.38395838544378,
+    "val": 107.85954700095955
+   },
+   "profile_24h": {
+    "poc": 99.14673708037544,
+    "vah": 101.1238506469612,
+    "val": 97.59779312021563
+   },
+   "levels_above": [
+    {
+     "price": 107.52,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 6.603,
+     "dist_atr_1h": 4.83,
+     "dist_atr_1d": 0.79
+    },
+    {
+     "price": 107.859547,
+     "kind": "7d VAL",
+     "dist_pct": 6.918,
+     "dist_atr_1h": 5.07,
+     "dist_atr_1d": 0.82
+    },
+    {
+     "price": 111.77,
+     "kind": "Friday close",
+     "dist_pct": 10.479,
+     "dist_atr_1h": 7.82,
+     "dist_atr_1d": 1.27
+    },
+    {
+     "price": 114.76,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 13.119,
+     "dist_atr_1h": 9.93,
+     "dist_atr_1d": 1.61
+    },
+    {
+     "price": 119.81,
+     "kind": "4h swing high (unswept)",
+     "dist_pct": 17.426,
+     "dist_atr_1h": 13.48,
+     "dist_atr_1d": 2.19
+    },
+    {
+     "price": 122.16,
+     "kind": "prior week (Nov 2-8) low",
+     "dist_pct": 19.368,
+     "dist_atr_1h": 15.13,
+     "dist_atr_1d": 2.46
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 95.53,
+     "kind": "4h swing low (unswept) + week low Nov 9-15",
+     "dist_pct": -5.221,
+     "dist_atr_1h": -3.6,
+     "dist_atr_1d": -0.59
+    },
+    {
+     "price": 92.24,
+     "kind": "1d swing low (unswept)",
+     "dist_pct": -8.726,
+     "dist_atr_1h": -5.92,
+     "dist_atr_1d": -0.96
+    },
+    {
+     "price": 91.86,
+     "kind": "1d swing low (unswept)",
+     "dist_pct": -9.138,
+     "dist_atr_1h": -6.18,
+     "dist_atr_1d": -1.0
+    },
+    {
+     "price": 91.14,
+     "kind": "1d swing low (unswept)",
+     "dist_pct": -9.925,
+     "dist_atr_1h": -6.69,
+     "dist_atr_1d": -1.09
+    },
+    {
+     "price": 89.4,
+     "kind": "1d swing low (unswept)",
+     "dist_pct": -11.853,
+     "dist_atr_1h": -7.92,
+     "dist_atr_1d": -1.29
+    }
+   ],
+   "cfd_anchor": {
+    "cfd": "MSTR",
+    "friday_close": 111.55,
+    "friday_bar": "2026-11-13T20:00:00Z",
+    "bybit_fri_vs_cfd_fri_bp": 19.7,
+    "drift_vs_cfd_pct": -10.28,
+    "drift_vs_cfd_atr_1d": -1.25,
+    "nov_open": 131.89,
+    "oct": {
+     "open": 165.67,
+     "high": 170.01,
+     "low": 124.27,
+     "close": 130.47
+    },
+    "week_nov9_13": {
+     "open": 121.86,
+     "high": 126.26,
+     "low": 108.25,
+     "close": 111.55
+    }
+   }
+  },
+  "COINUSDT": {
+   "cluster": "crypto_beta",
+   "type": "stock",
+   "last": 119.87,
+   "mark": 119.79,
+   "index": 119.69,
+   "basis_bp_mark_index": 8.4,
+   "tier_weekend": "illiquid",
+   "turnover_rank": 95,
+   "turnover_24h_usd": 6178779.2619,
+   "spread_bp": 4.18,
+   "oi_usd": 4406884.83,
+   "oi_chg_pct": {
+    "24h": 7.29,
+    "72h": 0.5
+   },
+   "funding": {
+    "last_settled": -0.00024131,
+    "ann_pct_last": -26.4,
+    "pct_90d": 0.02,
+    "interval_h": 8.0,
+    "ann_pct_predicted": 28.5,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 1.105257,
+    "4h": 2.875457,
+    "1d": 8.490744
+   },
+   "friday_close": 127.79,
+   "friday_close_ts": "2026-11-13T21:00:00+00:00",
+   "weekend_drift_pct": -6.4,
+   "weekend_drift_atr_1d": -0.93,
+   "ret_pct": {
+    "7d": -10.85,
+    "28d": -35.43
+   },
+   "week_nov9_15": {
+    "open": 131.39,
+    "high": 139.87,
+    "low": 113.81
+   },
+   "week_nov2_8": {
+    "open": 147.01,
+    "high": 153.49,
+    "low": 129.25,
+    "close": 131.39
+   },
+   "month_open_nov": 146.02,
+   "oct": {
+    "open": 186.8,
+    "high": 200.54,
+    "low": 137.35,
+    "close": 146.02
+   },
+   "profile_7d": {
+    "poc": 131.30603174559815,
+    "vah": 139.8772023557688,
+    "val": 120.75958272600246
+   },
+   "profile_24h": {
+    "poc": 118.51699113140018,
+    "vah": 119.97738586430232,
+    "val": 116.72376339205131
+   },
+   "levels_above": [
+    {
+     "price": 120.759583,
+     "kind": "7d VAL",
+     "dist_pct": 0.739,
+     "dist_atr_1h": 0.8,
+     "dist_atr_1d": 0.1
+    },
+    {
+     "price": 124.09,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 3.46,
+     "dist_atr_1h": 3.82,
+     "dist_atr_1d": 0.5
+    },
+    {
+     "price": 127.79,
+     "kind": "Friday close",
+     "dist_pct": 6.398,
+     "dist_atr_1h": 7.17,
+     "dist_atr_1d": 0.93
+    },
+    {
+     "price": 129.25,
+     "kind": "prior week (Nov 2-8) low",
+     "dist_pct": 7.534,
+     "dist_atr_1h": 8.49,
+     "dist_atr_1d": 1.1
+    },
+    {
+     "price": 131.306032,
+     "kind": "7d POC",
+     "dist_pct": 9.112,
+     "dist_atr_1h": 10.35,
+     "dist_atr_1d": 1.35
+    },
+    {
+     "price": 131.39,
+     "kind": "prior week (Nov 2-8) close + week open Nov 9",
+     "dist_pct": 9.176,
+     "dist_atr_1h": 10.42,
+     "dist_atr_1d": 1.36
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 113.81,
+     "kind": "4h swing low (unswept) + week low Nov 9-15",
+     "dist_pct": -5.188,
+     "dist_atr_1h": -5.48,
+     "dist_atr_1d": -0.71
+    }
+   ],
+   "cfd_anchor": {
+    "cfd": "COIN",
+    "friday_close": 127.55,
+    "friday_bar": "2026-11-13T20:00:00Z",
+    "bybit_fri_vs_cfd_fri_bp": 18.8,
+    "drift_vs_cfd_pct": -6.21,
+    "drift_vs_cfd_atr_1d": -0.9,
+    "nov_open": 140.26,
+    "oct": {
+     "open": 194.39,
+     "high": 200.22,
+     "low": 136.88,
+     "close": 143.02
+    },
+    "week_nov9_13": {
+     "open": 132.31,
+     "high": 138.84,
+     "low": 125.37,
+     "close": 127.55
+    }
+   }
+  },
+  "CRWVUSDT": {
+   "cluster": "ai_semis",
+   "type": "stock",
+   "last": 52.12,
+   "mark": 52.12,
+   "index": 52.0,
+   "basis_bp_mark_index": 23.1,
+   "tier_weekend": "none (below illiquid floor)",
+   "turnover_rank": 158,
+   "turnover_24h_usd": 2646888.8712,
+   "spread_bp": 5.76,
+   "oi_usd": 3130232.34,
+   "oi_chg_pct": {
+    "24h": -0.47,
+    "72h": -1.68
+   },
+   "funding": {
+    "last_settled": 0.0,
+    "ann_pct_last": 0.0,
+    "pct_90d": 0.67,
+    "interval_h": 8.0,
+    "ann_pct_predicted": 254.8,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 0.483913,
+    "4h": 1.988425,
+    "1d": 5.773382
+   },
+   "friday_close": 53.17,
+   "friday_close_ts": "2026-11-13T21:00:00+00:00",
+   "weekend_drift_pct": -1.99,
+   "weekend_drift_atr_1d": -0.18,
+   "ret_pct": {
+    "7d": 12.71,
+    "28d": -14.31
+   },
+   "week_nov9_15": {
+    "open": 45.62,
+    "high": 62.12,
+    "low": 44.13
+   },
+   "week_nov2_8": {
+    "open": 55.7,
+    "high": 58.01,
+    "low": 40.68,
+    "close": 45.62
+   },
+   "month_open_nov": 55.04,
+   "oct": {
+    "open": 87.33,
+    "high": 93.24,
+    "low": 51.33,
+    "close": 55.04
+   },
+   "profile_7d": {
+    "poc": 56.783186754299344,
+    "vah": 58.23484946912864,
+    "val": 49.90007849460924
+   },
+   "profile_24h": {
+    "poc": 50.69202698775313,
+    "vah": 51.18856682543776,
+    "val": 49.97496604364753
+   },
+   "levels_above": [
+    {
+     "price": 52.35,
+     "kind": "4h swing high (unswept)",
+     "dist_pct": 0.44,
+     "dist_atr_1h": 0.48,
+     "dist_atr_1d": 0.04
+    },
+    {
+     "price": 53.17,
+     "kind": "Friday close",
+     "dist_pct": 1.995,
+     "dist_atr_1h": 2.17,
+     "dist_atr_1d": 0.18
+    },
+    {
+     "price": 55.04,
+     "kind": "month open + Oct close",
+     "dist_pct": 5.451,
+     "dist_atr_1h": 6.03,
+     "dist_atr_1d": 0.51
+    },
+    {
+     "price": 56.73,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 8.475,
+     "dist_atr_1h": 9.53,
+     "dist_atr_1d": 0.8
+    },
+    {
+     "price": 56.783187,
+     "kind": "7d POC",
+     "dist_pct": 8.569,
+     "dist_atr_1h": 9.64,
+     "dist_atr_1d": 0.81
+    },
+    {
+     "price": 58.01,
+     "kind": "prior week (Nov 2-8) high",
+     "dist_pct": 10.707,
+     "dist_atr_1h": 12.17,
+     "dist_atr_1d": 1.02
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 51.33,
+     "kind": "Oct low",
+     "dist_pct": -1.527,
+     "dist_atr_1h": -1.63,
+     "dist_atr_1d": -0.14
+    },
+    {
+     "price": 49.900078,
+     "kind": "7d VAL",
+     "dist_pct": -4.353,
+     "dist_atr_1h": -4.59,
+     "dist_atr_1d": -0.38
+    },
+    {
+     "price": 49.34,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -5.481,
+     "dist_atr_1h": -5.74,
+     "dist_atr_1d": -0.48
+    },
+    {
+     "price": 49.31,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -5.542,
+     "dist_atr_1h": -5.81,
+     "dist_atr_1d": -0.49
+    },
+    {
+     "price": 47.38,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": -9.535,
+     "dist_atr_1h": -9.8,
+     "dist_atr_1d": -0.82
+    },
+    {
+     "price": 46.54,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -11.324,
+     "dist_atr_1h": -11.53,
+     "dist_atr_1d": -0.97
+    }
+   ]
+  },
+  "TSLAUSDT": {
+   "cluster": "us_equity",
+   "type": "stock",
+   "last": 389.6,
+   "mark": 389.6,
+   "index": 389.34,
+   "basis_bp_mark_index": 6.7,
+   "tier_weekend": "illiquid",
+   "turnover_rank": 125,
+   "turnover_24h_usd": 3661097.3745,
+   "spread_bp": 0.26,
+   "oi_usd": 11607750.19,
+   "oi_chg_pct": {
+    "24h": -2.1,
+    "72h": -9.27
+   },
+   "funding": {
+    "last_settled": 0.0,
+    "ann_pct_last": 0.0,
+    "pct_90d": 0.865,
+    "interval_h": 8.0,
+    "ann_pct_predicted": 6.7,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 1.310931,
+    "4h": 4.410953,
+    "1d": 15.089132
+   },
+   "friday_close": 390.65,
+   "friday_close_ts": "2026-11-13T21:00:00+00:00",
+   "weekend_drift_pct": -0.27,
+   "weekend_drift_atr_1d": -0.07,
+   "ret_pct": {
+    "7d": 8.54,
+    "28d": 11.23
+   },
+   "week_nov9_15": {
+    "open": 355.52,
+    "high": 404.68,
+    "low": 353.99
+   },
+   "week_nov2_8": {
+    "open": 400.78,
+    "high": 414.59,
+    "low": 335.91,
+    "close": 355.52
+   },
+   "month_open_nov": 399.6,
+   "oct": {
+    "open": 355.52,
+    "high": 412.97,
+    "low": 347.51,
+    "close": 399.6
+   },
+   "profile_7d": {
+    "poc": 389.264499344175,
+    "vah": 404.43842508239686,
+    "val": 377.8572559287011
+   },
+   "profile_24h": {
+    "poc": 387.32351854691746,
+    "vah": 388.9727333310213,
+    "val": 384.7185376863955
+   },
+   "levels_above": [
+    {
+     "price": 390.65,
+     "kind": "Friday close",
+     "dist_pct": 0.269,
+     "dist_atr_1h": 0.8,
+     "dist_atr_1d": 0.07
+    },
+    {
+     "price": 399.6,
+     "kind": "month open + Oct close",
+     "dist_pct": 2.534,
+     "dist_atr_1h": 7.63,
+     "dist_atr_1d": 0.66
+    },
+    {
+     "price": 400.54,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 2.769,
+     "dist_atr_1h": 8.35,
+     "dist_atr_1d": 0.73
+    },
+    {
+     "price": 404.438425,
+     "kind": "7d VAH",
+     "dist_pct": 3.738,
+     "dist_atr_1h": 11.32,
+     "dist_atr_1d": 0.98
+    },
+    {
+     "price": 404.68,
+     "kind": "4h swing high (unswept) + week high Nov 9-15",
+     "dist_pct": 3.798,
+     "dist_atr_1h": 11.5,
+     "dist_atr_1d": 1.0
+    },
+    {
+     "price": 409.19,
+     "kind": "4h swing high (unswept)",
+     "dist_pct": 4.906,
+     "dist_atr_1h": 14.94,
+     "dist_atr_1d": 1.3
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 389.264499,
+     "kind": "7d POC",
+     "dist_pct": -0.086,
+     "dist_atr_1h": -0.26,
+     "dist_atr_1d": -0.02
+    },
+    {
+     "price": 382.2,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -1.918,
+     "dist_atr_1h": -5.64,
+     "dist_atr_1d": -0.49
+    },
+    {
+     "price": 381.44,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": -2.117,
+     "dist_atr_1h": -6.22,
+     "dist_atr_1d": -0.54
+    },
+    {
+     "price": 377.857256,
+     "kind": "7d VAL",
+     "dist_pct": -3.06,
+     "dist_atr_1h": -8.96,
+     "dist_atr_1d": -0.78
+    },
+    {
+     "price": 370.78,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -4.951,
+     "dist_atr_1h": -14.36,
+     "dist_atr_1d": -1.25
+    },
+    {
+     "price": 355.52,
+     "kind": "4h leg origin (untouched) + prior week (Nov 2-8) close + week open Nov 9",
+     "dist_pct": -9.154,
+     "dist_atr_1h": -26.0,
+     "dist_atr_1d": -2.26
+    }
+   ],
+   "cfd_anchor": {
+    "cfd": "TSLA",
+    "friday_close": 390.11,
+    "friday_bar": "2026-11-13T20:00:00Z",
+    "bybit_fri_vs_cfd_fri_bp": 13.8,
+    "drift_vs_cfd_pct": -0.13,
+    "drift_vs_cfd_atr_1d": -0.03,
+    "nov_open": 404.05,
+    "oct": {
+     "open": 360.18,
+     "high": 410.52,
+     "low": 349.33,
+     "close": 399.77
+    },
+    "week_nov9_13": {
+     "open": 370.93,
+     "high": 404.25,
+     "low": 370.93,
+     "close": 390.11
+    }
+   }
+  },
+  "KORUUSDT": {
+   "cluster": "ai_semis",
+   "type": "ETF",
+   "last": 7.43,
+   "mark": 7.43,
+   "index": 7.37,
+   "basis_bp_mark_index": 81.1,
+   "tier_weekend": "illiquid",
+   "turnover_rank": 41,
+   "turnover_24h_usd": 24115910.2682,
+   "spread_bp": 13.47,
+   "oi_usd": 18030992.64,
+   "oi_chg_pct": {
+    "24h": 24.2,
+    "72h": 24.71
+   },
+   "funding": {
+    "last_settled": 0.0,
+    "ann_pct_last": 0.0,
+    "pct_90d": 0.82,
+    "interval_h": 8.0,
+    "ann_pct_predicted": 261.2,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 0.125421,
+    "4h": 0.32815,
+    "1d": 1.377124
+   },
+   "friday_close": 7.67,
+   "friday_close_ts": "2026-11-13T21:00:00+00:00",
+   "weekend_drift_pct": -3.18,
+   "weekend_drift_atr_1d": -0.17,
+   "ret_pct": {
+    "7d": 6.53,
+    "28d": -31.39
+   },
+   "week_nov9_15": {
+    "open": 6.65,
+    "high": 8.96,
+    "low": 6.22
+   },
+   "week_nov2_8": {
+    "open": 10.87,
+    "high": 12.16,
+    "low": 6.09,
+    "close": 6.65
+   },
+   "month_open_nov": 10.55,
+   "oct": {
+    "open": 20.29,
+    "high": 23.25,
+    "low": 9.6,
+    "close": 10.55
+   },
+   "profile_7d": {
+    "poc": 7.457705028208853,
+    "vah": 8.227425736990481,
+    "val": 6.821095128437666
+   },
+   "profile_24h": {
+    "poc": 7.108275906820638,
+    "vah": 7.250024078714752,
+    "val": 6.924156822878923
+   },
+   "levels_above": [
+    {
+     "price": 7.457705,
+     "kind": "7d POC",
+     "dist_pct": 0.372,
+     "dist_atr_1h": 0.22,
+     "dist_atr_1d": 0.02
+    },
+    {
+     "price": 7.67,
+     "kind": "Friday close",
+     "dist_pct": 3.179,
+     "dist_atr_1h": 1.91,
+     "dist_atr_1d": 0.17
+    },
+    {
+     "price": 8.227426,
+     "kind": "7d VAH",
+     "dist_pct": 10.195,
+     "dist_atr_1h": 6.36,
+     "dist_atr_1d": 0.58
+    },
+    {
+     "price": 8.73,
+     "kind": "4h swing high (unswept)",
+     "dist_pct": 16.124,
+     "dist_atr_1h": 10.37,
+     "dist_atr_1d": 0.94
+    },
+    {
+     "price": 8.96,
+     "kind": "4h swing high (unswept) + 1d swing high (unswept) + week high Nov 9-15",
+     "dist_pct": 18.724,
+     "dist_atr_1h": 12.2,
+     "dist_atr_1d": 1.11
+    },
+    {
+     "price": 9.57,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 25.311,
+     "dist_atr_1h": 17.06,
+     "dist_atr_1d": 1.55
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 6.821095,
+     "kind": "7d VAL",
+     "dist_pct": -8.551,
+     "dist_atr_1h": -4.85,
+     "dist_atr_1d": -0.44
+    },
+    {
+     "price": 6.8,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -8.86,
+     "dist_atr_1h": -5.02,
+     "dist_atr_1d": -0.46
+    },
+    {
+     "price": 6.65,
+     "kind": "prior week (Nov 2-8) close + week open Nov 9",
+     "dist_pct": -11.091,
+     "dist_atr_1h": -6.22,
+     "dist_atr_1d": -0.57
+    },
+    {
+     "price": 6.27,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": -16.975,
+     "dist_atr_1h": -9.25,
+     "dist_atr_1d": -0.84
+    },
+    {
+     "price": 6.22,
+     "kind": "4h swing low (unswept) + 1d swing low (unswept) + week low Nov 9-15",
+     "dist_pct": -17.776,
+     "dist_atr_1h": -9.65,
+     "dist_atr_1d": -0.88
+    },
+    {
+     "price": 6.09,
+     "kind": "4h swing low (unswept) + 1d swing low (unswept) + prior week (Nov 2-8) low",
+     "dist_pct": -19.888,
+     "dist_atr_1h": -10.68,
+     "dist_atr_1d": -0.97
+    }
+   ]
+  },
+  "CRCLUSDT": {
+   "cluster": "crypto_beta",
+   "type": "stock",
+   "last": 58.32,
+   "mark": 58.33,
+   "index": 58.51,
+   "basis_bp_mark_index": -30.8,
+   "tier_weekend": "mid",
+   "turnover_rank": 48,
+   "turnover_24h_usd": 21063292.0626,
+   "spread_bp": 3.43,
+   "oi_usd": 13244015.49,
+   "oi_chg_pct": {
+    "24h": 2.53,
+    "72h": 11.51
+   },
+   "funding": {
+    "last_settled": 0.0,
+    "ann_pct_last": 0.0,
+    "pct_90d": 0.51,
+    "interval_h": 8.0,
+    "ann_pct_predicted": 28.3,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 0.702345,
+    "4h": 1.693206,
+    "1d": 4.627134
+   },
+   "friday_close": 62.29,
+   "friday_close_ts": "2026-11-13T21:00:00+00:00",
+   "weekend_drift_pct": -6.59,
+   "weekend_drift_atr_1d": -0.86,
+   "ret_pct": {
+    "7d": -14.11,
+    "28d": -33.2
+   },
+   "week_nov9_15": {
+    "open": 66.24,
+    "high": 69.9,
+    "low": 54.89
+   },
+   "week_nov2_8": {
+    "open": 73.59,
+    "high": 78.19,
+    "low": 64.7,
+    "close": 66.24
+   },
+   "month_open_nov": 72.78,
+   "oct": {
+    "open": 81.88,
+    "high": 92.2,
+    "low": 71.24,
+    "close": 72.78
+   },
+   "profile_7d": {
+    "poc": 65.97017767868024,
+    "vah": 69.75149496771662,
+    "val": 60.15808464019215
+   },
+   "profile_24h": {
+    "poc": 55.65908252468091,
+    "vah": 57.65554712597814,
+    "val": 55.09163193082385
+   },
+   "levels_above": [
+    {
+     "price": 60.158085,
+     "kind": "7d VAL",
+     "dist_pct": 3.103,
+     "dist_atr_1h": 2.62,
+     "dist_atr_1d": 0.4
+    },
+    {
+     "price": 60.6,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 3.835,
+     "dist_atr_1h": 3.25,
+     "dist_atr_1d": 0.49
+    },
+    {
+     "price": 62.29,
+     "kind": "Friday close",
+     "dist_pct": 6.586,
+     "dist_atr_1h": 5.65,
+     "dist_atr_1d": 0.86
+    },
+    {
+     "price": 64.37,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 9.87,
+     "dist_atr_1h": 8.61,
+     "dist_atr_1d": 1.31
+    },
+    {
+     "price": 64.7,
+     "kind": "prior week (Nov 2-8) low",
+     "dist_pct": 10.382,
+     "dist_atr_1h": 9.08,
+     "dist_atr_1d": 1.38
+    },
+    {
+     "price": 65.970178,
+     "kind": "7d POC",
+     "dist_pct": 12.326,
+     "dist_atr_1h": 10.89,
+     "dist_atr_1d": 1.65
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 54.89,
+     "kind": "4h swing low (unswept) + week low Nov 9-15",
+     "dist_pct": -6.061,
+     "dist_atr_1h": -4.88,
+     "dist_atr_1d": -0.74
+    }
+   ]
+  },
+  "GOOGLUSDT": {
+   "cluster": "ai_semis",
+   "type": "stock",
+   "last": 293.12,
+   "mark": 293.12,
+   "index": 293.02,
+   "basis_bp_mark_index": 3.4,
+   "tier_weekend": "illiquid",
+   "turnover_rank": 85,
+   "turnover_24h_usd": 7498753.6863,
+   "spread_bp": 0.34,
+   "oi_usd": 31308909.31,
+   "oi_chg_pct": {
+    "24h": -2.41,
+    "72h": -11.98
+   },
+   "funding": {
+    "last_settled": -2.504e-05,
+    "ann_pct_last": -2.7,
+    "pct_90d": 0.015,
+    "interval_h": 8.0,
+    "ann_pct_predicted": 0.0,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 1.232612,
+    "4h": 3.401966,
+    "1d": 10.085224
+   },
+   "friday_close": 296.21,
+   "friday_close_ts": "2026-11-13T21:00:00+00:00",
+   "weekend_drift_pct": -1.05,
+   "weekend_drift_atr_1d": -0.31,
+   "ret_pct": {
+    "7d": 2.62,
+    "28d": -14.62
+   },
+   "week_nov9_15": {
+    "open": 283.28,
+    "high": 305.34,
+    "low": 282.78
+   },
+   "week_nov2_8": {
+    "open": 283.99,
+    "high": 296.98,
+    "low": 273.26,
+    "close": 283.28
+   },
+   "month_open_nov": 283.3,
+   "oct": {
+    "open": 349.72,
+    "high": 359.92,
+    "low": 274.0,
+    "close": 283.3
+   },
+   "profile_7d": {
+    "poc": 291.1479800016374,
+    "vah": 296.21257317591056,
+    "val": 287.60405400736386
+   },
+   "profile_24h": {
+    "poc": 290.130997054255,
+    "vah": 293.7060606456004,
+    "val": 289.7686504008806
+   },
+   "levels_above": [
+    {
+     "price": 296.21,
+     "kind": "Friday close + 7d VAH",
+     "dist_pct": 1.049,
+     "dist_atr_1h": 2.51,
+     "dist_atr_1d": 0.31
+    },
+    {
+     "price": 296.98,
+     "kind": "prior week (Nov 2-8) high",
+     "dist_pct": 1.308,
+     "dist_atr_1h": 3.13,
+     "dist_atr_1d": 0.38
+    },
+    {
+     "price": 302.74,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 3.229,
+     "dist_atr_1h": 7.8,
+     "dist_atr_1d": 0.95
+    },
+    {
+     "price": 305.34,
+     "kind": "4h swing high (unswept) + week high Nov 9-15",
+     "dist_pct": 4.084,
+     "dist_atr_1h": 9.91,
+     "dist_atr_1d": 1.21
+    },
+    {
+     "price": 324.05,
+     "kind": "1d leg origin (untouched)",
+     "dist_pct": 10.032,
+     "dist_atr_1h": 25.09,
+     "dist_atr_1d": 3.07
+    },
+    {
+     "price": 328.03,
+     "kind": "4h swing high (unswept) + 1d swing high (unswept)",
+     "dist_pct": 11.252,
+     "dist_atr_1h": 28.32,
+     "dist_atr_1d": 3.46
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 291.14798,
+     "kind": "7d POC",
+     "dist_pct": -0.675,
+     "dist_atr_1h": -1.6,
+     "dist_atr_1d": -0.2
+    },
+    {
+     "price": 287.604054,
+     "kind": "7d VAL",
+     "dist_pct": -1.9,
+     "dist_atr_1h": -4.48,
+     "dist_atr_1d": -0.55
+    },
+    {
+     "price": 285.15,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -2.757,
+     "dist_atr_1h": -6.47,
+     "dist_atr_1d": -0.79
+    },
+    {
+     "price": 283.3,
+     "kind": "month open + Oct close",
+     "dist_pct": -3.408,
+     "dist_atr_1h": -7.97,
+     "dist_atr_1d": -0.97
+    },
+    {
+     "price": 283.28,
+     "kind": "4h leg origin (untouched) + prior week (Nov 2-8) close + week open Nov 9",
+     "dist_pct": -3.415,
+     "dist_atr_1h": -7.98,
+     "dist_atr_1d": -0.98
+    },
+    {
+     "price": 282.78,
+     "kind": "week low Nov 9-15",
+     "dist_pct": -3.591,
+     "dist_atr_1h": -8.39,
+     "dist_atr_1d": -1.03
+    }
+   ],
+   "cfd_anchor": {
+    "cfd": "GOOG",
+    "friday_close": 292.4,
+    "friday_bar": "2026-11-13T20:00:00Z",
+    "bybit_fri_vs_cfd_fri_bp": 129.5,
+    "drift_vs_cfd_pct": 0.25,
+    "drift_vs_cfd_atr_1d": 0.07,
+    "nov_open": 280.55,
+    "oct": {
+     "open": 338.17,
+     "high": 355.16,
+     "low": 275.35,
+     "close": 278.38
+    },
+    "week_nov9_13": {
+     "open": 286.77,
+     "high": 301.51,
+     "low": 283.34,
+     "close": 292.4
+    }
+   }
+  },
+  "XAUUSDT": {
+   "cluster": "metals",
+   "type": "commodity",
+   "last": 3859.05,
+   "mark": 3859.27,
+   "index": 3858.89,
+   "basis_bp_mark_index": 1.0,
+   "tier_weekend": "mid",
+   "turnover_rank": 11,
+   "turnover_24h_usd": 101803169.8614,
+   "spread_bp": 0.03,
+   "oi_usd": 117518499.55,
+   "oi_chg_pct": {
+    "24h": -1.17,
+    "72h": -8.26
+   },
+   "funding": {
+    "last_settled": 0.00012985,
+    "ann_pct_last": 28.4,
+    "pct_90d": 0.88,
+    "interval_h": 4.0,
+    "ann_pct_predicted": 66.0,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 12.520553,
+    "4h": 29.722653,
+    "1d": 77.017627
+   },
+   "friday_close": 3892.42,
+   "friday_close_ts": "2026-11-13T22:00:00+00:00",
+   "weekend_drift_pct": -0.86,
+   "weekend_drift_atr_1d": -0.43,
+   "ret_pct": {
+    "7d": -5.25,
+    "28d": -7.45
+   },
+   "week_nov9_15": {
+    "open": 4063.04,
+    "high": 4156.58,
+    "low": 3777.66
+   },
+   "week_nov2_8": {
+    "open": 3907.46,
+    "high": 4152.09,
+    "low": 3899.53,
+    "close": 4063.04
+   },
+   "month_open_nov": 3888.75,
+   "oct": {
+    "open": 4162.02,
+    "high": 4229.99,
+    "low": 3881.0,
+    "close": 3888.75
+   },
+   "profile_7d": {
+    "poc": 3884.2453667353197,
+    "vah": 4053.85401884576,
+    "val": 3777.9655760201636
+   },
+   "profile_24h": {
+    "poc": 3843.6842482529,
+    "vah": 3852.340108218445,
+    "val": 3798.7964117134584
+   },
+   "levels_above": [
+    {
+     "price": 3881.0,
+     "kind": "Oct low",
+     "dist_pct": 0.567,
+     "dist_atr_1h": 1.75,
+     "dist_atr_1d": 0.28
+    },
+    {
+     "price": 3884.245367,
+     "kind": "7d POC",
+     "dist_pct": 0.651,
+     "dist_atr_1h": 2.01,
+     "dist_atr_1d": 0.33
+    },
+    {
+     "price": 3888.34,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 0.756,
+     "dist_atr_1h": 2.34,
+     "dist_atr_1d": 0.38
+    },
+    {
+     "price": 3888.75,
+     "kind": "month open + Oct close",
+     "dist_pct": 0.767,
+     "dist_atr_1h": 2.37,
+     "dist_atr_1d": 0.39
+    },
+    {
+     "price": 3892.42,
+     "kind": "Friday close",
+     "dist_pct": 0.861,
+     "dist_atr_1h": 2.67,
+     "dist_atr_1d": 0.43
+    },
+    {
+     "price": 3899.53,
+     "kind": "prior week (Nov 2-8) low",
+     "dist_pct": 1.043,
+     "dist_atr_1h": 3.23,
+     "dist_atr_1d": 0.53
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 3777.965576,
+     "kind": "7d VAL",
+     "dist_pct": -2.124,
+     "dist_atr_1h": -6.48,
+     "dist_atr_1d": -1.05
+    },
+    {
+     "price": 3777.66,
+     "kind": "4h swing low (unswept) + week low Nov 9-15",
+     "dist_pct": -2.132,
+     "dist_atr_1h": -6.5,
+     "dist_atr_1d": -1.06
+    }
+   ],
+   "cfd_anchor": {
+    "cfd": "XAUUSD",
+    "friday_close": 3880.28,
+    "friday_bar": "2026-11-13T21:00:00Z",
+    "bybit_fri_vs_cfd_fri_bp": 31.2,
+    "drift_vs_cfd_pct": -0.55,
+    "drift_vs_cfd_atr_1d": -0.28,
+    "nov_open": 3882.57,
+    "oct": {
+     "open": 4174.05,
+     "high": 4226.21,
+     "low": 3870.08,
+     "close": 3876.46
+    },
+    "week_nov9_13": {
+     "open": 4138.14,
+     "high": 4146.51,
+     "low": 3852.41,
+     "close": 3880.28
+    }
+   }
+  },
+  "XAGUSDT": {
+   "cluster": "metals",
+   "type": "commodity",
+   "last": 48.05,
+   "mark": 48.05,
+   "index": 48.04,
+   "basis_bp_mark_index": 2.1,
+   "tier_weekend": "mid",
+   "turnover_rank": 18,
+   "turnover_24h_usd": 61579625.1281,
+   "spread_bp": 2.08,
+   "oi_usd": 49712750.12,
+   "oi_chg_pct": {
+    "24h": 10.6,
+    "72h": 15.44
+   },
+   "funding": {
+    "last_settled": 0.0,
+    "ann_pct_last": 0.0,
+    "pct_90d": 0.585,
+    "interval_h": 4.0,
+    "ann_pct_predicted": 0.0,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 0.256906,
+    "4h": 0.657072,
+    "1d": 1.821705
+   },
+   "friday_close": 48.84,
+   "friday_close_ts": "2026-11-13T22:00:00+00:00",
+   "weekend_drift_pct": -1.63,
+   "weekend_drift_atr_1d": -0.43,
+   "ret_pct": {
+    "7d": -7.9,
+    "28d": -16.73
+   },
+   "week_nov9_15": {
+    "open": 51.73,
+    "high": 53.83,
+    "low": 46.15
+   },
+   "week_nov2_8": {
+    "open": 49.91,
+    "high": 53.56,
+    "low": 48.74,
+    "close": 51.73
+   },
+   "month_open_nov": 49.46,
+   "oct": {
+    "open": 60.5,
+    "high": 62.16,
+    "low": 48.98,
+    "close": 49.46
+   },
+   "profile_7d": {
+    "poc": 50.16267698057465,
+    "vah": 53.73175040244117,
+    "val": 49.30500389561677
+   },
+   "profile_24h": {
+    "poc": 47.78842162280154,
+    "vah": 47.91998771396376,
+    "val": 46.87751778468838
+   },
+   "levels_above": [
+    {
+     "price": 48.74,
+     "kind": "prior week (Nov 2-8) low",
+     "dist_pct": 1.426,
+     "dist_atr_1h": 2.69,
+     "dist_atr_1d": 0.38
+    },
+    {
+     "price": 48.84,
+     "kind": "Friday close",
+     "dist_pct": 1.631,
+     "dist_atr_1h": 3.08,
+     "dist_atr_1d": 0.43
+    },
+    {
+     "price": 48.93,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 1.815,
+     "dist_atr_1h": 3.43,
+     "dist_atr_1d": 0.48
+    },
+    {
+     "price": 48.98,
+     "kind": "Oct low",
+     "dist_pct": 1.917,
+     "dist_atr_1h": 3.62,
+     "dist_atr_1d": 0.51
+    },
+    {
+     "price": 49.305004,
+     "kind": "7d VAL",
+     "dist_pct": 2.578,
+     "dist_atr_1h": 4.89,
+     "dist_atr_1d": 0.69
+    },
+    {
+     "price": 49.46,
+     "kind": "month open + Oct close",
+     "dist_pct": 2.892,
+     "dist_atr_1h": 5.49,
+     "dist_atr_1d": 0.77
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 46.15,
+     "kind": "4h swing low (unswept) + week low Nov 9-15",
+     "dist_pct": -4.035,
+     "dist_atr_1h": -7.4,
+     "dist_atr_1d": -1.04
+    }
+   ],
+   "cfd_anchor": {
+    "cfd": "XAGUSD",
+    "friday_close": 48.7,
+    "friday_bar": "2026-11-13T21:00:00Z",
+    "bybit_fri_vs_cfd_fri_bp": 28.7,
+    "drift_vs_cfd_pct": -1.34,
+    "drift_vs_cfd_atr_1d": -0.36,
+    "nov_open": 49.331,
+    "oct": {
+     "open": 60.972,
+     "high": 62.071,
+     "low": 48.848,
+     "close": 49.099
+    },
+    "week_nov9_13": {
+     "open": 53.386,
+     "high": 53.709,
+     "low": 48.478,
+     "close": 48.7
+    }
+   }
+  },
+  "CLUSDT": {
+   "cluster": "oil",
+   "type": "commodity",
+   "last": 87.7,
+   "mark": 87.713,
+   "index": 87.767,
+   "basis_bp_mark_index": -6.2,
+   "tier_weekend": "mid",
+   "turnover_rank": 36,
+   "turnover_24h_usd": 26806776.0955,
+   "spread_bp": 1.14,
+   "oi_usd": 32279406.73,
+   "oi_chg_pct": {
+    "24h": 13.76,
+    "72h": 0.83
+   },
+   "funding": {
+    "last_settled": 0.0,
+    "ann_pct_last": 0.0,
+    "pct_90d": 0.99,
+    "interval_h": 8.0,
+    "ann_pct_predicted": 0.0,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 0.26451,
+    "4h": 0.87702,
+    "1d": 3.426183
+   },
+   "friday_close": 87.66,
+   "friday_close_ts": "2026-11-13T22:00:00+00:00",
+   "weekend_drift_pct": 0.05,
+   "weekend_drift_atr_1d": 0.01,
+   "ret_pct": {
+    "7d": -2.82,
+    "28d": -12.31
+   },
+   "week_nov9_15": {
+    "open": 90.23,
+    "high": 91.23,
+    "low": 83.48
+   },
+   "week_nov2_8": {
+    "open": 102.31,
+    "high": 102.62,
+    "low": 86.71,
+    "close": 90.23
+   },
+   "month_open_nov": 102.74,
+   "oct": {
+    "open": 90.05,
+    "high": 105.05,
+    "low": 86.91,
+    "close": 102.74
+   },
+   "profile_7d": {
+    "poc": 87.32464146436638,
+    "vah": 88.22409602616864,
+    "val": 84.89283913577422
+   },
+   "profile_24h": {
+    "poc": 87.76224838492114,
+    "vah": 87.9159283335529,
+    "val": 87.43383820303339
+   },
+   "levels_above": [
+    {
+     "price": 88.19,
+     "kind": "4h swing high (unswept)",
+     "dist_pct": 0.557,
+     "dist_atr_1h": 1.85,
+     "dist_atr_1d": 0.14
+    },
+    {
+     "price": 88.224096,
+     "kind": "7d VAH",
+     "dist_pct": 0.596,
+     "dist_atr_1h": 1.98,
+     "dist_atr_1d": 0.15
+    },
+    {
+     "price": 88.56,
+     "kind": "4h swing high (unswept)",
+     "dist_pct": 0.976,
+     "dist_atr_1h": 3.25,
+     "dist_atr_1d": 0.25
+    },
+    {
+     "price": 90.23,
+     "kind": "prior week (Nov 2-8) close + week open Nov 9",
+     "dist_pct": 2.844,
+     "dist_atr_1h": 9.56,
+     "dist_atr_1d": 0.74
+    },
+    {
+     "price": 91.0,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 3.694,
+     "dist_atr_1h": 12.48,
+     "dist_atr_1d": 0.96
+    },
+    {
+     "price": 91.23,
+     "kind": "week high Nov 9-15",
+     "dist_pct": 3.946,
+     "dist_atr_1h": 13.35,
+     "dist_atr_1d": 1.03
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 87.66,
+     "kind": "Friday close",
+     "dist_pct": -0.046,
+     "dist_atr_1h": -0.15,
+     "dist_atr_1d": -0.01
+    },
+    {
+     "price": 87.324641,
+     "kind": "7d POC",
+     "dist_pct": -0.429,
+     "dist_atr_1h": -1.42,
+     "dist_atr_1d": -0.11
+    },
+    {
+     "price": 86.91,
+     "kind": "Oct low",
+     "dist_pct": -0.905,
+     "dist_atr_1h": -2.99,
+     "dist_atr_1d": -0.23
+    },
+    {
+     "price": 86.74,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -1.101,
+     "dist_atr_1h": -3.63,
+     "dist_atr_1d": -0.28
+    },
+    {
+     "price": 86.71,
+     "kind": "prior week (Nov 2-8) low",
+     "dist_pct": -1.135,
+     "dist_atr_1h": -3.74,
+     "dist_atr_1d": -0.29
+    },
+    {
+     "price": 84.892839,
+     "kind": "7d VAL",
+     "dist_pct": -3.253,
+     "dist_atr_1h": -10.61,
+     "dist_atr_1d": -0.82
+    }
+   ],
+   "cfd_anchor": {
+    "cfd": "WTI",
+    "friday_close": 89.261,
+    "friday_bar": "2026-11-13T21:00:00Z",
+    "bybit_fri_vs_cfd_fri_bp": -181.0,
+    "drift_vs_cfd_pct": -1.76,
+    "drift_vs_cfd_atr_1d": -0.46,
+    "nov_open": 103.551,
+    "oct": {
+     "open": 96.013,
+     "high": 106.255,
+     "low": 88.749,
+     "close": 104.089
+    },
+    "week_nov9_13": {
+     "open": 86.862,
+     "high": 90.014,
+     "low": 84.372,
+     "close": 89.261
+    }
+   }
+  },
+  "BZUSDT": {
+   "cluster": "oil",
+   "type": "commodity",
+   "last": 93.61,
+   "mark": 93.62,
+   "index": 93.68,
+   "basis_bp_mark_index": -6.4,
+   "tier_weekend": "illiquid",
+   "turnover_rank": 68,
+   "turnover_24h_usd": 11149959.7755,
+   "spread_bp": 1.07,
+   "oi_usd": 18352439.07,
+   "oi_chg_pct": {
+    "24h": 9.0,
+    "72h": 6.05
+   },
+   "funding": {
+    "last_settled": 0.0,
+    "ann_pct_last": 0.0,
+    "pct_90d": 1.0,
+    "interval_h": 8.0,
+    "ann_pct_predicted": 0.0,
+    "next_ts": "2026-11-16T00:00:00+00:00"
+   },
+   "atr14": {
+    "1h": 0.262076,
+    "4h": 0.898487,
+    "1d": 3.722288
+   },
+   "friday_close": 93.38,
+   "friday_close_ts": "2026-11-13T22:00:00+00:00",
+   "weekend_drift_pct": 0.25,
+   "weekend_drift_atr_1d": 0.06,
+   "ret_pct": {
+    "7d": -3.66,
+    "28d": -13.54
+   },
+   "week_nov9_15": {
+    "open": 97.08,
+    "high": 97.85,
+    "low": 88.28
+   },
+   "week_nov2_8": {
+    "open": 111.59,
+    "high": 111.93,
+    "low": 93.45,
+    "close": 97.08
+   },
+   "month_open_nov": 112.42,
+   "oct": {
+    "open": 97.61,
+    "high": 114.3,
+    "low": 96.56,
+    "close": 112.42
+   },
+   "profile_7d": {
+    "poc": 93.37428073991707,
+    "vah": 94.52486097722594,
+    "val": 90.63798408060298
+   },
+   "profile_24h": {
+    "poc": 93.37428073991707,
+    "vah": 93.72500381409141,
+    "val": 93.25766494056825
+   },
+   "levels_above": [
+    {
+     "price": 94.524861,
+     "kind": "7d VAH",
+     "dist_pct": 0.973,
+     "dist_atr_1h": 3.49,
+     "dist_atr_1d": 0.25
+    },
+    {
+     "price": 94.61,
+     "kind": "4h swing high (unswept)",
+     "dist_pct": 1.063,
+     "dist_atr_1h": 3.82,
+     "dist_atr_1d": 0.27
+    },
+    {
+     "price": 96.56,
+     "kind": "Oct low",
+     "dist_pct": 3.103,
+     "dist_atr_1h": 11.26,
+     "dist_atr_1d": 0.79
+    },
+    {
+     "price": 97.08,
+     "kind": "prior week (Nov 2-8) close + week open Nov 9",
+     "dist_pct": 3.64,
+     "dist_atr_1h": 13.24,
+     "dist_atr_1d": 0.93
+    },
+    {
+     "price": 97.59,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": 4.164,
+     "dist_atr_1h": 15.19,
+     "dist_atr_1d": 1.07
+    },
+    {
+     "price": 97.85,
+     "kind": "week high Nov 9-15",
+     "dist_pct": 4.43,
+     "dist_atr_1h": 16.18,
+     "dist_atr_1d": 1.14
+    }
+   ],
+   "levels_below": [
+    {
+     "price": 93.45,
+     "kind": "prior week (Nov 2-8) low",
+     "dist_pct": -0.171,
+     "dist_atr_1h": -0.61,
+     "dist_atr_1d": -0.04
+    },
+    {
+     "price": 93.38,
+     "kind": "Friday close",
+     "dist_pct": -0.246,
+     "dist_atr_1h": -0.88,
+     "dist_atr_1d": -0.06
+    },
+    {
+     "price": 93.374281,
+     "kind": "7d POC",
+     "dist_pct": -0.252,
+     "dist_atr_1h": -0.9,
+     "dist_atr_1d": -0.06
+    },
+    {
+     "price": 92.58,
+     "kind": "4h swing low (unswept)",
+     "dist_pct": -1.106,
+     "dist_atr_1h": -3.93,
+     "dist_atr_1d": -0.28
+    },
+    {
+     "price": 90.637984,
+     "kind": "7d VAL",
+     "dist_pct": -3.226,
+     "dist_atr_1h": -11.34,
+     "dist_atr_1d": -0.8
+    },
+    {
+     "price": 90.45,
+     "kind": "4h leg origin (untouched)",
+     "dist_pct": -3.434,
+     "dist_atr_1h": -12.06,
+     "dist_atr_1d": -0.85
+    }
+   ],
+   "cfd_anchor": {
+    "cfd": "BRENT",
+    "friday_close": 98.421,
+    "friday_bar": "2026-11-13T21:00:00Z",
+    "bybit_fri_vs_cfd_fri_bp": -525.8,
+    "drift_vs_cfd_pct": -5.01,
+    "drift_vs_cfd_atr_1d": -1.29,
+    "nov_open": 116.162,
+    "oct": {
+     "open": 106.844,
+     "high": 119.223,
+     "low": 100.131,
+     "close": 117.089
+    },
+    "week_nov9_13": {
+     "open": 94.793,
+     "high": 99.457,
+     "low": 91.663,
+     "close": 98.421
+    }
+   }
+  }
+ },
+ "candidates": [
+  {
+   "id": "TF-1",
+   "rank": 1,
+   "symbol": "QQQUSDT",
+   "side": "short",
+   "cluster": "ai_semis",
+   "kind": "breakdown-retest (pre-print)",
+   "window": "Mon 2026-11-16 16:30 UTC to Tue 2026-11-17 20:15 UTC (time stop: flat before the NVDA blackout)",
+   "trigger": "1h close below 667.08 (unswept 4h swing low, under the 7d VAL 668.73): out of the R5 balance; then a retest of 667.08-668.73 from below within 60 min",
+   "entry": {
+    "type": "pegged_limit",
+    "peg": "touch",
+    "zone": [
+     667.08,
+     668.73
+    ]
+   },
+   "stop": 674.94,
+   "stop_ref": "above the 7d POC 674.94",
+   "target": 654.8,
+   "target_ref": "Nov 9 week open, ahead of the 651.02 untouched 4h leg and the 649.32 week low",
+   "validator": {
+    "reward_risk": [
+     1.586,
+     2.277
+    ],
+    "p_tp_driftless": [
+     0.3867,
+     0.3051
+    ],
+    "at_entry": [
+     667.08,
+     668.73
+    ]
+   },
+   "thesis_link": [
+    "T-USER-20261115-b",
+    "T-USER-20261115-d"
+   ],
+   "rules": [
+    "R-TF-1",
+    "R-TF-3",
+    "R-PX-4",
+    "R-PX-9",
+    "R-PX-12",
+    "R-MAC-3",
+    "R-BUDGET-1"
+   ],
+   "evidence_status": "pattern-only (breakdown-retest untested; R-TF-3 ORB failed, so the trigger is a 4h structure break, not the opening range)"
+  },
+  {
+   "id": "TF-2",
+   "rank": 2,
+   "symbol": "NVDAUSDT",
+   "side": "short",
+   "cluster": "ai_semis",
+   "kind": "post-print continuation",
+   "window": "Wed 2026-11-18 16:30-18:00 UTC, then Wed 20:00 to Fri 20:00 UTC; never before the print or inside BO-NVDA / BO-FOMC; only if TF-1 is flat",
+   "trigger": "after the print, a 1h close below 156.15 (unswept 4h swing low) after the first two cash hours (R-TF-1), with NVDA not already below 149.39 (no chase)",
+   "entry": {
+    "type": "pegged_limit",
+    "peg": "touch",
+    "zone": [
+     156.15,
+     157.94
+    ]
+   },
+   "stop": 161.09,
+   "stop_ref": "just above the 24h + 7d POC 161.09",
+   "target": 150.0,
+   "target_ref": "round number, ahead of the 149.39 stop pool (cash-week low = unswept 1d + 4h swing low)",
+   "validator": {
+    "reward_risk": [
+     1.29,
+     2.612
+    ],
+    "p_tp_driftless": [
+     0.4367,
+     0.2769
+    ],
+    "at_entry": [
+     156.15,
+     157.94
+    ],
+    "gate": "take only if validator RR >= 1.5 at the fill (upper part of the zone)"
+   },
+   "thesis_link": [
+    "T-USER-20261115-b",
+    "T-USER-20261115-d"
+   ],
+   "rules": [
+    "R-TF-1",
+    "R-TF-2",
+    "R-PX-4",
+    "R-SIG-2",
+    "R-VOL-3",
+    "R-EXE-1",
+    "R-EXEC-1",
+    "R-MAC-3"
+   ],
+   "evidence_status": "pattern-only (H-TP1b continuation is forward-only; R-SIG-2: big-surprise days do not continue on average)",
+   "note": "re-derive levels from the post-print snapshot; the stop must stay >= 0.5 x the new 1h ATR"
+  },
+  {
+   "id": "TF-3",
+   "rank": 3,
+   "symbol": "XAUUSDT",
+   "side": "short",
+   "cluster": "metals",
+   "kind": "failed reclaim of a confluence",
+   "window": "Mon 2026-11-16 12:00 UTC to Fri 2026-11-20 20:00 UTC, outside BO-NVDA / BO-FOMC",
+   "trigger": "price trades into 3881.00-3899.53 (Oct low, 7d POC 3884.25, untouched 4h leg 3888.34, Nov open 3888.75, Fri close 3892.42, Nov 2-8 low 3899.53), then a 15m close back below 3881.00",
+   "entry": {
+    "type": "pegged_limit",
+    "peg": "touch",
+    "zone": [
+     3881.0,
+     3888.34
+    ]
+   },
+   "stop": 3951.03,
+   "stop_ref": "above the untouched 4h leg origin 3951.03",
+   "target": 3777.97,
+   "target_ref": "7d VAL, ahead of the 3777.66 weekend low (unswept 4h swing low)",
+   "validator": {
+    "reward_risk": [
+     1.505,
+     1.8
+    ],
+    "p_tp_driftless": [
+     0.3993,
+     0.3571
+    ],
+    "at_entry": [
+     3881.0,
+     3888.34
+    ]
+   },
+   "thesis_link": [
+    "T-USER-20261115-a",
+    "T-USER-20261115-d"
+   ],
+   "rules": [
+    "R-TF-6",
+    "R-PX-4",
+    "R-PX-9",
+    "R-VOL-9",
+    "R-MAC-1",
+    "R-MAC-3",
+    "R-AVOID-1"
+   ],
+   "evidence_status": "pattern-only",
+   "invalidation": "a 4h close above 3899.53"
+  },
+  {
+   "id": "TF-4",
+   "rank": 4,
+   "symbol": "MSTRUSDT",
+   "side": "short",
+   "cluster": "crypto_beta",
+   "kind": "breakdown-retest with BTC confirmation",
+   "window": "NYSE hours Mon 16:30 UTC to Fri 20:00 UTC, outside blackouts; ONLY instead of BTC Plan A (same bet), never with it",
+   "trigger": "BTC 15m close below 63,000 (Plan A trigger) AND MSTR 1h close below 95.53 (weekend low, unswept 4h swing low)",
+   "entry": {
+    "type": "pegged_limit",
+    "peg": "touch",
+    "zone": [
+     95.53,
+     97.6
+    ]
+   },
+   "stop": 98.56,
+   "stop_ref": "above the 1h swing low 98.56 (resistance after the break)",
+   "target": 92.24,
+   "target_ref": "ahead of the 89.40-92.24 cluster of four unswept 1d swing lows",
+   "validator": {
+    "reward_risk": [
+     1.122,
+     5.771
+    ],
+    "p_tp_driftless": [
+     0.4712,
+     0.1477
+    ],
+    "at_entry": [
+     95.53,
+     97.6
+    ],
+    "gate": "RR >= 1.5 only in the upper part of the zone; at the 95.53 touch it is 1.12: skip"
+   },
+   "thesis_link": [
+    "T-CLAUDE-20261115-deep",
+    "T-USER-20261115-a"
+   ],
+   "rules": [
+    "R-TF-1",
+    "R-TF-2",
+    "R-RB-5",
+    "R-PX-4",
+    "R-MM-2",
+    "R-PD-1",
+    "R-AVOID-1"
+   ],
+   "evidence_status": "pattern-only (post-flush continuation shorts ~breakeven, R-RB-5); funding last -89.8% ann (p2.5): shorts already pay"
+  }
+ ],
+ "alerts": [
+  {
+   "id": "W-QQQ-1",
+   "symbol": "QQQUSDT",
+   "type": "close_below",
+   "level": 667.08,
+   "tf": "1h",
+   "note": "TF-1 trigger",
+   "links": "TF-1"
+  },
+  {
+   "id": "W-QQQ-2",
+   "symbol": "QQQUSDT",
+   "type": "cross_above",
+   "level": 685.51,
+   "note": "Oct low reclaimed: TF-1 void; AI relief"
+  },
+  {
+   "id": "W-QQQ-3",
+   "symbol": "QQQUSDT",
+   "type": "cross_below",
+   "level": 649.32,
+   "note": "week low lost: index leg of thesis b"
+  },
+  {
+   "id": "W-NVDA-1",
+   "symbol": "NVDAUSDT",
+   "type": "close_below",
+   "level": 156.15,
+   "tf": "1h",
+   "note": "TF-2 trigger (post-print only)",
+   "links": "TF-2"
+  },
+  {
+   "id": "W-NVDA-2",
+   "symbol": "NVDAUSDT",
+   "type": "cross_below",
+   "level": 149.39,
+   "note": "cash-week low swept; TF-2 void if hit before entry (no chase)",
+   "links": "TF-2"
+  },
+  {
+   "id": "W-NVDA-3",
+   "symbol": "NVDAUSDT",
+   "type": "close_above",
+   "level": 171.84,
+   "tf": "1h",
+   "note": "4h swing-high confluence reclaimed: bull scenario, TF-2 void"
+  },
+  {
+   "id": "W-NVDA-4",
+   "symbol": "NVDAUSDT",
+   "type": "cross_above",
+   "level": 179.02,
+   "note": "Nov 2-8 low / 4h leg 179.08 / Nov 9 open 179.89 zone"
+  },
+  {
+   "id": "W-NVDA-5",
+   "symbol": "NVDAUSDT",
+   "type": "band_exit",
+   "level": [
+    147.45,
+    178.77
+   ],
+   "note": "outside the options-implied +-9.6% band from Fri close (web, Nov 12)"
+  },
+  {
+   "id": "W-XAU-1",
+   "symbol": "XAUUSDT",
+   "type": "enter_zone",
+   "level": [
+    3881.0,
+    3899.53
+   ],
+   "note": "TF-3 zone entered: arm the 15m close check",
+   "links": "TF-3"
+  },
+  {
+   "id": "W-XAU-2",
+   "symbol": "XAUUSDT",
+   "type": "close_below",
+   "level": 3881.0,
+   "tf": "15m",
+   "note": "TF-3 trigger after a zone touch",
+   "links": "TF-3"
+  },
+  {
+   "id": "W-XAU-3",
+   "symbol": "XAUUSDT",
+   "type": "close_above",
+   "level": 3899.53,
+   "tf": "4h",
+   "note": "TF-3 invalidation",
+   "links": "TF-3"
+  },
+  {
+   "id": "W-XAU-4",
+   "symbol": "XAUUSDT",
+   "type": "cross_below",
+   "level": 3777.66,
+   "note": "weekend low swept"
+  },
+  {
+   "id": "W-MSTR-1",
+   "symbol": "MSTRUSDT",
+   "type": "close_below",
+   "level": 95.53,
+   "tf": "1h",
+   "note": "TF-4 trigger (needs W-BTC-1 too)",
+   "links": "TF-4"
+  },
+  {
+   "id": "W-BTC-1",
+   "symbol": "BTCUSDT",
+   "type": "close_below",
+   "level": 63000,
+   "tf": "15m",
+   "note": "Plan A trigger; TF-4 confirmation",
+   "links": "TF-4"
+  },
+  {
+   "id": "W-MSTR-2",
+   "symbol": "MSTRUSDT",
+   "type": "cross_above",
+   "level": 111.77,
+   "note": "Friday close revisited (R-TF-2 base rate, no gap-fill trade)"
+  },
+  {
+   "id": "W-COIN-1",
+   "symbol": "COINUSDT",
+   "type": "cross_above",
+   "level": 127.79,
+   "note": "Friday close revisited (R-TF-2)"
+  },
+  {
+   "id": "W-CRCL-1",
+   "symbol": "CRCLUSDT",
+   "type": "cross_above",
+   "level": 62.29,
+   "note": "Friday close revisited (R-TF-2)"
+  },
+  {
+   "id": "W-SOXL-1",
+   "symbol": "SOXLUSDT",
+   "type": "close_below",
+   "level": 51.04,
+   "tf": "1h",
+   "note": "unswept 4h swing low below the 52.44-52.67 pair"
+  },
+  {
+   "id": "W-SOXL-2",
+   "symbol": "SOXLUSDT",
+   "type": "close_above",
+   "level": 64.62,
+   "tf": "1h",
+   "note": "7d VAH"
+  },
+  {
+   "id": "W-MU-1",
+   "symbol": "MUUSDT",
+   "type": "close_below",
+   "level": 740.42,
+   "tf": "1h",
+   "note": "unswept 4h swing low"
+  },
+  {
+   "id": "W-MU-2",
+   "symbol": "MUUSDT",
+   "type": "close_above",
+   "level": 828.59,
+   "tf": "1h",
+   "note": "week high (unswept 1d + 4h swing high)"
+  },
+  {
+   "id": "W-SNDK-1",
+   "symbol": "SNDKUSDT",
+   "type": "close_below",
+   "level": 828.34,
+   "tf": "1h",
+   "note": "4h swing lows 828.34-830.58 under the 7d VAL 832.40"
+  },
+  {
+   "id": "W-CL-1",
+   "symbol": "CLUSDT",
+   "type": "close_above",
+   "level": 88.56,
+   "tf": "1h",
+   "note": "unswept 4h swing high: out of the R4 compression"
+  },
+  {
+   "id": "W-CL-2",
+   "symbol": "CLUSDT",
+   "type": "close_below",
+   "level": 86.71,
+   "tf": "1h",
+   "note": "Nov 2-8 low / Oct low 86.91 band lost"
+  },
+  {
+   "id": "W-XAG-1",
+   "symbol": "XAGUSDT",
+   "type": "cross_below",
+   "level": 46.15,
+   "note": "weekend low swept"
+  },
+  {
+   "id": "W-FUND-1",
+   "symbol": "*TRADFI",
+   "type": "funding_ann_abs_gt",
+   "level": 100,
+   "note": "settled funding beyond +-100% ann (NVDA SOXL KORU CRWV predicted +255..+302% on the weekend premium)"
+  },
+  {
+   "id": "W-FUND-2",
+   "symbol": "MSTRUSDT",
+   "type": "funding_pct_le",
+   "level": 0.05,
+   "note": "shorts paying (p2.5 now): a cost for TF-4",
+   "links": "TF-4"
+  },
+  {
+   "id": "W-BASIS-1",
+   "symbol": "*TRADFI",
+   "type": "basis_bp_abs_gt",
+   "level": 25,
+   "note": "mark vs index beyond 25 bp after the NYSE open (weekend premium not unwound)"
+  },
+  {
+   "id": "W-TIME-1",
+   "symbol": "*",
+   "type": "time",
+   "level": "2026-11-17T20:15:00Z",
+   "note": "TF-1 time stop; 20:20 BO-NVDA: cancel resting entries",
+   "links": "TF-1"
+  },
+  {
+   "id": "W-TIME-2",
+   "symbol": "*",
+   "type": "time",
+   "level": "2026-11-18T18:00:00Z",
+   "note": "BO-FOMC: cancel resting entries"
+  }
+ ],
+ "constraints": [
+  "one position per symbol",
+  "ai_semis cluster = one bet (NVDA SOXL SOXS MU SNDK SKHYNIX QQQ KORU CRWV GOOGL)",
+  "crypto_beta (MSTR COIN CRCL) = one bet with BTC / ETH and the alt desk's ZEC proposal",
+  "no entries inside blackouts",
+  "no trade in chop (R4 / R5 balance) without a structure break",
+  "all four candidates are shorts: risk engine max 2 same side",
+  "PLAN_2026-11-15 scope is BTC / ETH: TradFi entries need the user's plan extension (new plan version)"
+ ]
+}

@@ -1,0 +1,64 @@
+{
+ "session_id": "desk-20261115T2056-alts",
+ "proposals": [
+  {
+   "id": "zec-s1",
+   "symbol": "ZECUSDT",
+   "side": "short",
+   "entry_type": "limit",
+   "entry_mode": "pegged_limit",
+   "peg": "touch",
+   "entry": 910.97,
+   "stop": 935.0,
+   "targets": [857.0],
+   "take_profit": 857.0,
+   "p_tp": 0.299,
+   "cluster": "crypto_beta",
+   "channel": "desk",
+   "horizon": "24h",
+   "thesis": "LEARNING TRADE, PATTERN-ONLY (no tested edge at this entry). ZEC is -33% over 7d; it is in a 4h down-trend (v0 4h cell R8, every 4h close since 11-14 below the 4h EMA20 ~928, public-kline computation) and 1h whipsaw (R6, high vol). Today's +5.6% bounce came from short covering: OI is -10.0% over 24h while price rose. It stalled at the 928.34 / 929.51 equal highs and the 928.24 24h VAH. Our shock_regime sleeve faded the +4.96 sigma 02:00 UTC shock (R9, high vol) and is STILL short at 910.76, the same price as now (target 849.3 = shock open, invalidation = 1h close > 927.07). But R-BUDGET-4 says most of a shock edge is gone 1-2h after the bar close, and R-PX-1 gives R-PX-2 precedence until H-S3 is recorded, so a late copy of the sleeve is not the tested trade. The stop sits above the equal-high buy-stop pool. The target sits just before the 855.6 24h VAL / 852.6 7d VAL / untouched 849.3 leg origin, so it fills ahead of the crowd's bids. Driftless E[R] -0.07 after costs, which passes the >= -0.15 learning gate. Agrees with the user theses a / d (strengthening, risk-off) as beta context only. SUBMIT ONLY 23:30-00:30 UTC: the user's plan has no entries before the Sunday CME reopen and none 22:45-23:30 (R-PX-9). Void at submission if the touch is outside 905-925 (R:R < 1.5 or stop < 0.5 ATR).",
+   "invalidation": "Any of: a 1h close above 927.07 (shock_regime invalidation, which closes the sleeve) before submission; a 15m close above 929.51 with OI rising (new longs rather than covering); a liquidation cluster on ZEC within the last 60 min at submission (R-FLOW-2); the BTC short still open AND the orchestrator scoring ZEC as the same crypto-beta bet (R-MM-2), in which case skip.",
+   "equilibrium": {
+    "positioning": "Funding +0.01%/8h (90d p64): longs pay a little, which is normal. OI is -10.0% over 24h and -1.35% over 4h while price is +5.6% over 24h (players: 'OI falling into the rise (short covering)'). The bounce is shorts leaving, not new longs. 24h liquidations are two-sided (590k long / 525k short); the last 4h is mostly shorts (43k vs 0.5k). Taker flow has turned: 5m -0.46, 15m -0.28, against 60m +0.26. The estimated liquidation map has longs at 814.9 and shorts at 1,040-1,080 (a model).",
+    "trapped": "Buyers of the 03:00 and 11:00 spikes at 925-929 sit ~0.9 x 1h ATR offside. Today's average entry is the 24h POC 909.6 (flat). The week's buyers above the 7d POC 984.9 are deeply offside after -33% in 7d, so supply is likely on rallies toward 956-985.",
+    "stops": "Buy stops just above the unswept equal highs 928.34 / 929.51 (with the 24h VAH 928.24): our stop is 935, beyond them. Sell stops below the 891.2 / 892.1 15m lows, then 876.71 (1h low), then the 855.6 VAL / 852.6 7d VAL / 849.3 untouched leg origin. The target of 857 is just ahead of that pool.",
+    "forced_flows": "CME reopen 23:00 UTC (BTC-beta gap noise, hence the 23:30 start). Funding at 00:00 UTC (ZEC +0.01%, shorts receive a little; R-CARRY-2: not a timing signal). The 4h close is at 00:00. No liquidation cluster fired on ZEC (cluster_60m false). The orchestrator reports a BTC short already open: a second short doubles crypto beta (R-MM-2).",
+    "payoff_asymmetry": "Reward:risk 2.35 in log distance (stop 2.60%, 1.19 x 1h ATR; target 6.11%). Driftless P(target first) 0.30; net E[R] -0.07 at no edge. Arguments for doing better than that: the bounce was covering-led, the 4h trend is down, and flow is selling now. None of them is tested.",
+    "next_moves": {
+     "longs": "Need a 1h close above 929.51 to run the equal-high stops toward the untouched 956.35 (1h) / 962.88 (4h) leg origins; failing that, they defend 892 then 876.7.",
+     "shorts": "Need a loss of 892 then 876.71 to open 849-856 (VAL + untouched leg origin + the sleeve's target); they cover above 929.5."
+    },
+    "pain_thresholds": {
+     "longs": 876.71,
+     "shorts": 929.51
+    }
+   },
+   "supports": [
+    {"agent": "xs", "idea": "alts-1"}
+   ],
+   "rules": ["R-PX-1", "R-PX-2", "R-BUDGET-4", "R-EXE-1", "R-EXE-2", "R-EXEC-1", "R-BOS-3", "R-RB-1", "R-RB-5", "R-PX-4", "R-PX-9", "R-MM-2", "R-PD-1", "R-XS-3", "R-AVOID-1", "R-FLOW-1", "R-FLOW-2", "R-CARRY-2", "R-OPX-4", "R-EXIT-2", "R-BUDGET-1"],
+   "evidence": [
+    {"source": "tape.json", "symbol": "ZECUSDT", "metric": "book.ask", "value": 910.97},
+    {"source": "geometry.json", "symbol": "ZECUSDT", "metric": "swings.1h.highs.2.price", "value": 929.51},
+    {"source": "geometry.json", "symbol": "ZECUSDT", "metric": "swings.1h.highs.3.price", "value": 928.34},
+    {"source": "geometry.json", "symbol": "ZECUSDT", "metric": "profile.24h.vah", "value": 928.24},
+    {"source": "geometry.json", "symbol": "ZECUSDT", "metric": "profile.24h.val", "value": 855.61},
+    {"source": "geometry.json", "symbol": "ZECUSDT", "metric": "legs.1h.levels.2.price", "value": 849.3},
+    {"source": "geometry.json", "symbol": "ZECUSDT", "metric": "atr14.1h", "value": 20.16},
+    {"source": "xs.json", "symbol": "ZECUSDT", "metric": "oi.chg_pct.24h", "value": -10.02},
+    {"source": "xs.json", "symbol": "ZECUSDT", "metric": "ret_bp.7d", "value": -3344.8},
+    {"source": "tape.json", "symbol": "ZECUSDT", "metric": "flow.windows.15m.imbalance", "value": -0.275},
+    {"source": "tape.json", "symbol": "ZECUSDT", "metric": "flow.windows.5m.imbalance", "value": -0.457}
+   ]
+  }
+ ],
+ "clusters": {"ZECUSDT": "crypto_beta"},
+ "meta": {
+  "model": "claude-opus-5-5",
+  "prompt_version": "desk-alts-v1",
+  "as_of": "2026-11-15T20:56:10.847834+00:00",
+  "snapshot": "research/desk/2026-11-15/2056",
+  "cycle_id": "20261115T2056",
+  "note": "alt desk (agent id 'xs' in the contract: no 'alts' agent exists yet). The shock_regime state, 4h EMA20, v0 cells for non-lake tokens and the volume surges come from a deterministic scan of public Bybit klines closed <= as_of (scratch script, not in the snapshot); they are context only and are not used as evidence values."
+ }
+}
