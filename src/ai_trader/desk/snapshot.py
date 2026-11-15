@@ -21,15 +21,15 @@ from pathlib import Path
 os.environ.setdefault("POLARS_MAX_THREADS", "2")
 os.environ.setdefault("OMP_NUM_THREADS", "2")
 
-import polars as pl  # noqa: E402
+import polars as pl
 
-from ai_trader.desk import DESK_VERSION  # noqa: E402
-from ai_trader.desk import geometry as G  # noqa: E402
-from ai_trader.desk import news as N  # noqa: E402
-from ai_trader.desk import sentiment as S  # noqa: E402
-from ai_trader.desk import tape as T  # noqa: E402
-from ai_trader.desk import xs as X  # noqa: E402
-from ai_trader.desk.public import Bybit, Deribit, Http, pmap, resample  # noqa: E402
+from ai_trader.desk import DESK_VERSION
+from ai_trader.desk import geometry as G
+from ai_trader.desk import news as N
+from ai_trader.desk import sentiment as S
+from ai_trader.desk import tape as T
+from ai_trader.desk import xs as X
+from ai_trader.desk.public import Bybit, Deribit, Http, pmap, resample
 
 N_XS, N_GEO, N_TAPE, MAX_GEO, MAX_TAPE = 60, 20, 10, 30, 25
 DIGEST_MAX = 60
@@ -171,7 +171,7 @@ def digest_xs(x: dict) -> list[str]:
         tf.sort(key=lambda t: -t["rs_bp"]["24h"])
         L.append("TradFi rs24h vs TradFi basket: " + ", ".join(f"{t['symbol'][:-4]} {_p(t['rs_bp']['24h'], 0)}" for t in tf[:10]))
     fu = [t for t in toks if t["funding"].get("pct") is not None]
-    fu.sort(key=lambda t: t["funding"]["last"])
+    fu.sort(key=lambda t: t["funding"].get("ann_pct_last") or 0.0)
     L.append("## Funding (last settled, ann %; pct of 90d window)")
     L.append("Most negative: " + ", ".join(f"{t['symbol'][:-4]} {_p(t['funding']['ann_pct_last'])}% (p{100 * t['funding']['pct']:.0f})" for t in fu[:6]))
     L.append("Most positive: " + ", ".join(f"{t['symbol'][:-4]} {_p(t['funding']['ann_pct_last'])}% (p{100 * t['funding']['pct']:.0f})" for t in fu[::-1][:6]))
@@ -205,9 +205,16 @@ def _lvl(r: dict) -> str:
 
 def digest_geometry(g: dict) -> list[str]:
     L = [f"# Geometry {g['as_of'][:16]}Z - {g['note']}",
-         "Per token: price | ATR14 1h (and % of price) | 24h POC [VAL-VAH] | 7d POC | est liq clusters (model) ; then nearest levels above / below "
-         "(dist log %, A = 1h ATRs)"]
-    for t in g["tokens"]:
+         ("Per token: price | ATR14 1h (% of price) | 24h POC [VAL-VAH] | 7d POC | largest est. liq cluster below (L) / above (S) (a model); then the "
+          "nearest live levels (unswept swings, untouched leg origins, periods, profile, round) above / below: dist log %, A = 1h ATRs")]
+    f = g.get("btc_field")
+    if f:
+        h1, h4 = f["horizons"].get("1h", {}), f["horizons"].get("4h", {})
+        L.append(f"BTC field ({f['line']}, cell {f['cell']}): touch 1h +-1% {h1.get('p_touch', {}).get('+1%', 0):.0%}/{h1.get('p_touch', {}).get('-1%', 0):.0%}, "
+                 f"4h +-1% {h4.get('p_touch', {}).get('+1%', 0):.0%}/{h4.get('p_touch', {}).get('-1%', 0):.0%}, +-2% {h4.get('p_touch', {}).get('+2%', 0):.0%}/"
+                 f"{h4.get('p_touch', {}).get('-2%', 0):.0%} (R-FLD-3: not direction)")
+    room = (DIGEST_MAX - len(L) - 1) // 2
+    for t in g["tokens"][:room]:
         if "error" in t:
             L.append(f"- {t['symbol']}: error {t['error'][:80]}")
             continue
@@ -223,18 +230,14 @@ def digest_geometry(g: dict) -> list[str]:
                  f"24h POC {_px(p24.get('poc'))} [{_px(p24.get('val'))}-{_px(p24.get('vah'))}] | 7d POC {_px(p7.get('poc'))}{lq}{why}")
         n = t["nearest"]
         L.append("  up: " + "; ".join(_lvl(r) for r in n["above"][:3]) + " || dn: " + "; ".join(_lvl(r) for r in n["below"][:3]))
-    f = g.get("btc_field")
-    if f:
-        h1, h4 = f["horizons"].get("1h", {}), f["horizons"].get("4h", {})
-        L.append(f"BTC field ({f['line']}, cell {f['cell']}): touch 1h +-1% {h1.get('p_touch', {}).get('+1%', 0):.0%}/{h1.get('p_touch', {}).get('-1%', 0):.0%}, "
-                 f"4h +-1% {h4.get('p_touch', {}).get('+1%', 0):.0%}/{h4.get('p_touch', {}).get('-1%', 0):.0%}, +-2% {h4.get('p_touch', {}).get('+2%', 0):.0%}/"
-                 f"{h4.get('p_touch', {}).get('-2%', 0):.0%} (R-FLD-3: not direction)")
+    if len(g["tokens"]) > room:
+        L.append(f"(+{len(g['tokens']) - room} more tokens in geometry.json: " + ", ".join(t["symbol"] for t in g["tokens"][room:]) + ")")
     return L[:DIGEST_MAX]
 
 
 def digest_tape(t: dict) -> list[str]:
     L = [f"# Tape {t['as_of'][:16]}Z - {t['note']}",
-         "| sym | last | 1m | 5m | 15m | 1h | sprd bp | depth25 bid/ask | liq 1h L/S | liq 24h L/S | flow 15m imb (cov) | players |",
+         "| sym | last | 1m | 5m | 15m | 1h | sprd bp | depth25 bid/ask | liq 1h L/S | liq 24h L/S | flow 15m imb (cov, lag s) | players |",
          "|" + "---|" * 12]
     for r in t["tokens"]:
         m = r["moves"].get("pct", {})
@@ -245,9 +248,9 @@ def digest_tape(t: dict) -> list[str]:
         cl = " CLUSTER" if (lq.get("cluster_60m") or {}).get("fired") else ""
         pl_ = (r.get("players") or {}).get("pattern", "-")
         L.append(f"| {r['symbol'][:-4]} | {_px(r['price']['last'])} | {_p(m.get('1m'), 2)} | {_p(m.get('5m'), 2)} | {_p(m.get('15m'), 2)} | {_p(m.get('60m'), 2)} | "
-                 f"{_p(b.get('spread_bp'), 1, False)} | {_usd(d25.get('bid'))}/{_usd(d25.get('ask'))}{'*' if d25.get('truncated') else ''} | "
+                 f"{_p(b.get('spread_bp'), 2, False)} | {_usd(d25.get('bid'))}/{_usd(d25.get('ask'))}{'*' if d25.get('truncated') else ''} | "
                  f"{_usd(lq.get('1h', {}).get('long_usd'))}/{_usd(lq.get('1h', {}).get('short_usd'))}{cl} | {_usd(lq.get('24h', {}).get('long_usd'))}/{_usd(lq.get('24h', {}).get('short_usd'))} | "
-                 f"{_p(fw.get('imbalance'), 2)} ({_p(fw.get('coverage'), 2, False)}) | {pl_[:70]} |")
+                 f"{_p(fw.get('imbalance'), 2)} ({_p(fw.get('coverage'), 2, False)}, {r['flow'].get('lag_s', '-')}) | {pl_[:90]} |")
     L.append("moves = 100 ln(last / close m minutes ago); * = book received did not reach 25 bp; imb = (buy - sell)/(buy + sell) taker notional (flow_3s);"
              " liq L/S = liquidated longs / shorts USD; R-FLOW-2: never fade a CLUSTER within 60 min")
     return L[:DIGEST_MAX]
@@ -256,16 +259,20 @@ def digest_tape(t: dict) -> list[str]:
 def digest_news(n: dict) -> list[str]:
     c = n["collector"]
     L = [f"# News {n['as_of'][:16]}Z - {n['note']}",
-         f"Collector: last item seen {c['last_item_seen'] or 'never'}{' (STALE: start scripts/desk_collect.py)' if c['stale'] else ''}; "
-         f"24h items {n['counts_24h']['items']} by feed {n['counts_24h']['by_feed']}",
+         (f"Collector: last item seen {c['last_item_seen'] or 'never'}{' (STALE: start scripts/desk_collect.py)' if c['stale'] else ''}; "
+          f"24h items {n['counts_24h']['items']} by feed {n['counts_24h']['by_feed']}"),
          "Tickers in 24h headlines: " + ", ".join(f"{k} {v}" for k, v in list(n["counts_24h"]["by_ticker"].items())[:12])]
-    L.append("## Latest headlines (seen UTC, feed, tone, tickers)")
+    L.append("## Latest headlines (published MM-DD HH:MM UTC, feed, tone, tickers; all first seen <= as_of)")
     for r in n["items"][:15]:
-        L.append(f"- {_hm(r['seen_ts'])} {r['feed']} {_p(r.get('tone'), 2)} {','.join(r.get('tickers') or []) or '-'}: {(r.get('title') or '')[:110]}")
+        pt = r.get("pub_ts") or r["seen_ts"]
+        L.append(f"- {pt[5:16]} {r['feed']} {_p(r.get('tone'), 2)} {','.join(r.get('tickers') or []) or '-'}: {(r.get('title') or '')[:110]}")
     L.append("## Scheduled next 24h (calendar / events table)")
     L += [f"- {e['ts'][5:16]} [{e.get('importance', e.get('kind', ''))}] {e['name']}" for e in n["scheduled_24h"][:8]] or ["- none known (calendar files: " + ", ".join(n["calendar_coverage"]) + ")"]
     L.append("## Recurring next 24h")
-    L += [f"- {e['ts'][5:16]} {e['name']}" for e in n["recurring_24h"][:9]]
+    fu = [e for e in n["recurring_24h"] if e.get("kind") == "funding"]
+    if fu:
+        L.append("- funding settlements (UTC, n perps): " + ", ".join(f"{e['ts'][11:16]} ({e['name'].split('(')[1].split()[0]})" for e in fu))
+    L += [f"- {e['ts'][5:16]} {e['name']}" for e in n["recurring_24h"] if e.get("kind") != "funding"][:8]
     o = n.get("options", {})
     L.append("## Deribit options (OI by expiry; max pain; put/call OI)")
     for cur, v in (o.items() if isinstance(o, dict) and o.get("status") is None else []):
@@ -438,7 +445,7 @@ def run(root: Path | None = None, *, out_root: Path | None = None, watch: list[s
     for t in xs["tokens"]:
         if t.get("next_funding_ts") and t["funding"].get("interval_h"):
             nx = datetime.fromisoformat(t["next_funding_ts"])
-            for k in range(0, 25):
+            for k in range(25):
                 tt = nx + timedelta(hours=k * t["funding"]["interval_h"])
                 if tt > as_of + timedelta(hours=24):
                     break
@@ -465,7 +472,7 @@ def run(root: Path | None = None, *, out_root: Path | None = None, watch: list[s
     if write:
         snap_dir.mkdir(parents=True, exist_ok=True)
         for k, v in domains.items():
-            (snap_dir / f"{k}.json").write_text(json.dumps(v, default=str, indent=1), encoding="utf-8")
+            (snap_dir / f"{k}.json").write_text(json.dumps(v, default=str, separators=(",", ":")), encoding="utf-8")
             (snap_dir / f"{k}.md").write_text("\n".join(digests[k]) + "\n", encoding="utf-8")
         index["runtime_s"] = round(time.monotonic() - t0, 1)
         (snap_dir / "index.json").write_text(json.dumps(index, indent=1), encoding="utf-8")

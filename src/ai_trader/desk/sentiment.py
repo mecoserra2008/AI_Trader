@@ -298,5 +298,15 @@ def build_sentiment(as_of: datetime, store: Path, universe_bases: dict[str, str]
     }
 
 
-__all__ = ["Reddit", "SUBS_COIN", "SUBS_GENERAL", "build_sentiment", "collect_reddit", "hourly_panel", "key_status", "parse_listing",
-           "prune", "trend"]
+__all__ = [
+    "SUBS_COIN",
+    "SUBS_GENERAL",
+    "Reddit",
+    "build_sentiment",
+    "collect_reddit",
+    "hourly_panel",
+    "key_status",
+    "parse_listing",
+    "prune",
+    "trend",
+]

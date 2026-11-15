@@ -25,12 +25,12 @@ os.environ.setdefault("POLARS_MAX_THREADS", "2")
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from ai_trader.core.config import load  # noqa: E402
-from ai_trader.desk import news as N  # noqa: E402
-from ai_trader.desk import sentiment as S  # noqa: E402
-from ai_trader.desk.public import Bybit  # noqa: E402
-from ai_trader.desk.text import ALIASES, TickerIndex  # noqa: E402
-from ai_trader.desk.xs import base_of, select_universe  # noqa: E402
+from ai_trader.core.config import load
+from ai_trader.desk import news as N
+from ai_trader.desk import sentiment as S
+from ai_trader.desk.public import Bybit
+from ai_trader.desk.text import ALIASES, TickerIndex
+from ai_trader.desk.xs import base_of, select_universe
 
 BASES_FILE = "universe_bases.json"
 

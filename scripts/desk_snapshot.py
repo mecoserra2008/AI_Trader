@@ -21,7 +21,7 @@ os.environ.setdefault("OMP_NUM_THREADS", "2")
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from ai_trader.desk import snapshot  # noqa: E402
+from ai_trader.desk import snapshot
 
 
 def main() -> None:

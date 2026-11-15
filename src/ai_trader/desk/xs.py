@@ -72,7 +72,7 @@ def asset_class(inst: dict | None) -> str:
 
 
 def base_of(sym: str) -> str:
-    b = sym[:-4] if sym.endswith("USDT") else sym
+    b = sym.removesuffix("USDT")
     for p in ("1000000", "10000", "1000"):
         if b.startswith(p) and len(b) > len(p):
             return b[len(p):]
@@ -425,5 +425,20 @@ def sector_aggregates(toks: list[dict]) -> list[dict]:
     return out
 
 
-__all__ = ["FLAG_RULES", "HORIZONS", "annualise", "base_of", "basis_bp", "build_xs", "close_grid", "funding_stats", "oi_change",
-           "ranks", "regime_cells", "relative_strength", "select_universe", "sector_aggregates", "v3_context"]
+__all__ = [
+    "FLAG_RULES",
+    "HORIZONS",
+    "annualise",
+    "base_of",
+    "basis_bp",
+    "build_xs",
+    "close_grid",
+    "funding_stats",
+    "oi_change",
+    "ranks",
+    "regime_cells",
+    "relative_strength",
+    "sector_aggregates",
+    "select_universe",
+    "v3_context",
+]

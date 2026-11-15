@@ -64,7 +64,7 @@ COMMON = frozenset({
     "COMP", "TRUMP", "PUMP", "INIT", "ACT", "ZERO", "ONDO", "HIGH", "LOW", "BIG", "TOP", "WIN", "BEST", "REAL", "MEME", "AI",
     "GOOD", "JUST", "LIKE", "WILL", "WITH", "THIS", "THAT", "FROM", "HAVE", "BEEN", "THEY", "WHAT", "WHEN", "YOUR", "ETF", "SEC",
     "USA", "USD", "CEO", "IPO", "API", "NFT", "DAO", "FED", "CPI", "GDP", "ATH", "FUD", "OTC", "DEX", "CEX", "TVL", "APY",
-    "KAVA", "STRK", "AUCTION", "HOME", "OPEN", "TRUE", "FUN", "SUN", "BOT", "SAFE", "PEOPLE", "EDGE", "ERA", "LIT", "AKE", "AT",
+    "KAVA", "STRK", "AUCTION", "HOME", "OPEN", "TRUE", "FUN", "SUN", "BOT", "SAFE", "EDGE", "ERA", "LIT", "AKE", "AT",
 })
 _TOK = re.compile(r"[a-z0-9$']+")
 

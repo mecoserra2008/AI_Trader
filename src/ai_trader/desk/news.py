@@ -256,7 +256,7 @@ def option_expiries(book: list[dict], as_of: datetime, known_ts: datetime | None
         strikes = sorted({k for k, _t, _oi in xs})
         pain = None
         if strikes:
-            def payout(s):
+            def payout(s, xs=xs):
                 return sum(oi * (max(0.0, s - k) if t == "C" else max(0.0, k - s)) for k, t, oi in xs)
             pain = min(strikes, key=payout)
         top_c = sorted(((oi, k) for k, t, oi in xs if t == "C"), reverse=True)[:3]
@@ -298,7 +298,7 @@ def alt_row(as_of: datetime) -> dict:
 def build_news(as_of: datetime, store: Path, *, root: Path, lake=None, funding_times=None, options: dict | None = None,
                max_items: int = 30) -> dict:
     items = news_items(store, as_of, 24)
-    items.sort(key=lambda r: r["seen_ts"], reverse=True)
+    items.sort(key=lambda r: min(r.get("pub_ts") or r["seen_ts"], r["seen_ts"]), reverse=True)   # newest published first
     by_feed: dict[str, int] = {}
     by_tick: dict[str, int] = {}
     hours: dict[str, int] = {}

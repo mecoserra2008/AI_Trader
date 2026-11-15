@@ -335,11 +335,14 @@ def token_geometry(sym: str, price: float, bars: dict[str, pl.DataFrame], as_of:
     return out
 
 
-def flat_levels(g: dict) -> list[dict]:
+def flat_levels(g: dict, live_only: bool = True) -> list[dict]:
+    """All levels as {kind, price}; live_only drops swept swings and touched leg origins (their resting orders are gone)."""
     rows = []
     for tf, s in g.get("swings", {}).items():
         for side, kind in (("highs", "swing high"), ("lows", "swing low")):
             for p in s.get(side, []):
+                if p["swept"] and live_only:
+                    continue
                 rows.append({"kind": f"{tf} {kind}" + (" (swept)" if p["swept"] else ""), "price": p["price"]})
     for name, v in g.get("periods", {}).items():
         if v.get("open"):
@@ -348,6 +351,8 @@ def flat_levels(g: dict) -> list[dict]:
             rows += [{"kind": f"prior {name} high", "price": v["prior"]["high"]}, {"kind": f"prior {name} low", "price": v["prior"]["low"]}]
     for tf, lg in g.get("legs", {}).items():
         for x in lg.get("levels", []):
+            if live_only and not x["untouched"]:
+                continue
             rows.append({"kind": f"{tf} leg origin" + ("" if x["untouched"] else " (touched)"), "price": x["price"]})
     for w, p in g.get("profile", {}).items():
         if isinstance(p, dict) and "poc" in p:
@@ -358,8 +363,19 @@ def flat_levels(g: dict) -> list[dict]:
 
 
 def nearest_levels(g: dict, price: float, n: int = 4) -> dict:
+    """Nearest live levels above / below (swept swings and touched leg origins excluded; equal prices merged)."""
     a1h, a1d = g["atr14"]["1h"], g["atr14"]["1d"]
-    rows = [{**r, **dist(r["price"], price, a1h, a1d)} for r in flat_levels(g) if r["price"]]
+    merged: dict[float, dict] = {}
+    for r in flat_levels(g):
+        if not r["price"]:
+            continue
+        k = float(f"{r['price']:.6g}")
+        if k in merged:
+            if r["kind"] not in merged[k]["kind"]:
+                merged[k]["kind"] += " + " + r["kind"]
+        else:
+            merged[k] = dict(r)
+    rows = [{**r, **dist(r["price"], price, a1h, a1d)} for r in merged.values()]
     above = sorted((r for r in rows if r["price"] > price), key=lambda r: r["price"])[:n]
     below = sorted((r for r in rows if r["price"] < price), key=lambda r: -r["price"])[:n]
     return {"above": above, "below": below}

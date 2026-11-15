@@ -109,6 +109,13 @@ def resolve(snap: dict, source: str, symbol: str | None, path: str):
     return node
 
 
+def matches(actual: float, reported) -> bool:
+    """Within 1% or within the rounding of the reported value's printed precision (0.0 matches 0.002; -2.3 matches -2.31)."""
+    txt = repr(float(reported)) if not isinstance(reported, int) else str(reported)
+    dec = len(txt.split(".")[1]) if "." in txt and "e" not in txt else 0
+    return math.isclose(actual, float(reported), rel_tol=0.01, abs_tol=1e-9) or abs(actual - float(reported)) <= 0.5 * 10 ** (-dec) + 1e-12
+
+
 def check_evidence(ev: list, snap: dict, where: str, errors: list, warnings: list) -> None:
     if not isinstance(ev, list) or not ev:
         errors.append(f"{where}: evidence must be a non-empty list")
@@ -124,7 +131,7 @@ def check_evidence(ev: list, snap: dict, where: str, errors: list, warnings: lis
             if snap and e["source"].replace(".json", "") in snap:
                 got = resolve(snap, e["source"], e.get("symbol"), e["metric"])
                 if isinstance(got, (int, float)) and not isinstance(got, bool):
-                    if not math.isclose(float(got), float(v), rel_tol=0.01, abs_tol=1e-9):
+                    if not matches(float(got), v):
                         errors.append(f"{where}.evidence[{i}]: {e['source']} {e.get('symbol')} {e['metric']} = {got}, report says {v}")
                 elif got is None:
                     warnings.append(f"{where}.evidence[{i}]: could not resolve {e['source']}:{e.get('symbol')}:{e['metric']} in the snapshot")

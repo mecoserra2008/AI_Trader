@@ -188,6 +188,9 @@ pub struct TradeRec {
     pub risk_to_stop_usd: f64,
     pub max_loss_usd: f64,
     pub stop_slip_bps: f64,
+    /// Most notional a chasing peg may reach: min(tier / depth cap, decided notional + gross headroom).
+    #[serde(default)]
+    pub notional_usd: f64,
     pub order_ids: Vec<String>,
     pub link_ids: Vec<String>,
     pub repegs: u32,
@@ -372,9 +375,9 @@ impl Venue {
         self.w()?;
         Ok(self.trading().create_order(req).await?.order_id)
     }
-    async fn amend_price(&self, symbol: &str, order_id: &str, price: &str) -> anyhow::Result<()> {
+    async fn amend(&self, symbol: &str, order_id: &str, price: &str, qty: Option<&str>) -> anyhow::Result<()> {
         self.w()?;
-        self.trading().amend_order(symbol, order_id, Some(price), None).await
+        self.trading().amend_order(symbol, order_id, Some(price), qty).await
     }
     async fn cancel(&self, symbol: &str, order_id: &str) -> anyhow::Result<()> {
         self.w()?;
@@ -411,7 +414,8 @@ impl Snapshot {
 
     /// An order the bot did not place: neither bot-tagged nor the TP/SL of a bot position.
     fn foreign_order(o: &Value, tag: &str, bot_syms: &HashSet<&str>) -> bool {
-        !Self::bot_order(o, tag) && !(Self::position_tpsl(o) && o["symbol"].as_str().is_some_and(|s| bot_syms.contains(s)))
+        let bot_tpsl = Self::position_tpsl(o) && o["symbol"].as_str().is_some_and(|s| bot_syms.contains(s));
+        !(Self::bot_order(o, tag) || bot_tpsl)
     }
 }
 
@@ -586,7 +590,16 @@ impl<'a> Desk<'a> {
                 continue;
             }
             let pos = self.bot_position(snap, &tr).cloned();
-            let live_orders: Vec<&Value> = snap.orders.iter().filter(|o| o["symbol"] == tr.symbol.as_str() && tr.order_ids.iter().any(|id| o["orderId"] == id.as_str())).collect();
+            // by order id, or by the trade's deterministic link prefix (a submit that crashed before saving its order ids)
+            let own = format!("{tag}{}-", tr.id);
+            let live_orders: Vec<&Value> = snap
+                .orders
+                .iter()
+                .filter(|o| {
+                    o["symbol"] == tr.symbol.as_str()
+                        && (tr.order_ids.iter().any(|id| o["orderId"] == id.as_str()) || o["orderLinkId"].as_str().is_some_and(|l| l.starts_with(&own)))
+                })
+                .collect();
             match pos {
                 Some(p) => {
                     let x = &mut st.trades[i];
@@ -708,10 +721,12 @@ impl<'a> Desk<'a> {
         }
         // bot-tagged orders that belong to no active trade (a crashed submit): ours, so cancelled when writing
         let known: HashSet<String> = st.trades.iter().filter(|t| t.active()).flat_map(|t| t.order_ids.clone()).collect();
+        let own_prefixes: Vec<String> = st.trades.iter().filter(|t| t.active()).map(|t| format!("{tag}{}-", t.id)).collect();
         for o in snap.orders.iter().filter(|o| Snapshot::bot_order(o, &tag)) {
             let id = o["orderId"].as_str().unwrap_or_default();
             let leased = st.trades.iter().any(|t| t.status == "submitting" && t.lease_until_ms > now && t.symbol == o["symbol"].as_str().unwrap_or_default());
-            if !known.contains(id) && !leased {
+            let owned = o["orderLinkId"].as_str().is_some_and(|l| own_prefixes.iter().any(|p| l.starts_with(p.as_str())));
+            if !known.contains(id) && !owned && !leased {
                 notes.push(format!("orphan bot order {} {} {}", o["symbol"], o["orderLinkId"], id));
                 if write {
                     let r = self.venue.cancel(o["symbol"].as_str().unwrap_or_default(), id).await;
@@ -931,14 +946,16 @@ impl<'a> Desk<'a> {
     // ------------------------------------------------------------ status / tiers / reconcile
 
     pub async fn status(&self) -> anyhow::Result<()> {
+        // load -> reconcile -> save under one lock: a concurrent submit's reservation must never be overwritten
+        let lock = if self.venue.writable { Some(StateLock::acquire(&self.paths.root).await?) } else { None };
         let mut st = LiveState::load(&self.paths.state())?;
         let snap = self.snapshot().await?;
         let notes = self.reconcile(&mut st, &snap, false).await?;
-        if self.venue.writable {
+        if lock.is_some() {
             // bookkeeping only (fills, closes); a read-only run (mainnet without the guard) writes no local state
-            let _l = StateLock::acquire(&self.paths.root).await?;
             st.save(&self.paths.state())?;
         }
+        drop(lock);
         self.print_status(&st, &snap, &notes).await;
         let (fp, fo) = self.foreign(&snap, &st);
         self.jw("snapshot", json!({"source": "atx live status", "equity": snap.equity, "available": snap.available, "usdt": snap.coin, "bot_trades": st.trades.iter().filter(|t| t.active()).collect::<Vec<_>>(), "foreign_positions": fp, "foreign_orders": fo, "notes": notes}), &self.versions(None))?;
@@ -1249,6 +1266,8 @@ impl<'a> Desk<'a> {
             risk_to_stop_usd: d.risk_to_stop_usd,
             max_loss_usd: d.max_loss_usd,
             stop_slip_bps: d.stop_slip_bps,
+            // the chase may grow the notional only up to the tier / depth cap and the gross headroom left at the decision
+            notional_usd: d.notional_cap_usd.min(d.notional_usd + (self.cfg.max_gross_notional_usd - d.gross_after_usd).max(0.0)),
             submitted_ms: now,
             lease_until_ms: now + window_ms + 120_000,
             approved_by: approved_by.into(),
@@ -1302,8 +1321,9 @@ impl<'a> Desk<'a> {
             st.confirmed_trades += 1;
         }
         tr.lease_until_ms = 0;
-        if let Some(x) = st.trades.iter_mut().find(|x| x.id == tr.id) {
-            *x = tr.clone();
+        match st.trades.iter_mut().find(|x| x.id == tr.id) {
+            Some(x) => *x = tr.clone(),
+            None => st.trades.push(tr.clone()),
         }
         st.save(&self.paths.state())?;
         drop(lock);
@@ -1320,8 +1340,16 @@ impl<'a> Desk<'a> {
         )?;
         finish(&tr.status, json!({"trade": tr}))?;
         println!(
-            "\nentry {}: {} {} filled {} of {} @ {:.6} (mid at submit {mid:.6}, {slip_mid:+.2} bp) | {} re-pegs | stop {} on the exchange | reason {}",
-            tr.id, tr.symbol, tr.status, tr.filled_qty, tr.qty, tr.avg_entry, tr.repegs, tr.stop, out.reason
+            "\nentry {}: {} {} filled {} of {} @ {:.6} (mid at submit {mid:.6}, {slip_mid:+.2} bp) | {} re-pegs | {} | reason {}",
+            tr.id,
+            tr.symbol,
+            tr.status,
+            tr.filled_qty,
+            tr.qty,
+            tr.avg_entry,
+            tr.repegs,
+            if tr.filled_qty > 0.0 { format!("exchange stop {}", tr.stop) } else { "no position".to_string() },
+            out.reason
         );
         if approved_by != "auto" && tr.filled_qty > 0.0 {
             println!("confirmed trades: {} of {} (gate {})", st.confirmed_trades, self.cfg.approval.manual_trades, if st.gate_manual(&self.cfg) { "manual" } else { "now AUTO" });
@@ -1350,6 +1378,7 @@ impl<'a> Desk<'a> {
         let t = self.venue.trading();
         let mut done_qty = 0.0; // filled on finished orders
         let mut cur: Option<(String, f64)> = None; // (order id, price)
+        let mut cur_qty = 0.0; // quantity of the resting order
         let mut n = 0u32;
         let reason;
         loop {
@@ -1376,9 +1405,17 @@ impl<'a> Desk<'a> {
             }
             match cur.clone() {
                 None => {
-                    let remaining = round_to_step(tr.qty - done_qty, rule.qty_step, Round::Down);
+                    let allowed = lv::chase_qty(side, tr.qty, tr.notional_usd, px, tr.stop, fees, &self.cfg, rule.qty_step);
+                    let remaining = round_to_step(allowed - done_qty, rule.qty_step, Round::Down);
                     if remaining < rule.min_qty || remaining * px < rule.min_notional {
-                        reason = "filled".to_string();
+                        reason = if done_qty > 0.0 && allowed >= tr.qty {
+                            "filled"
+                        } else if done_qty > 0.0 {
+                            "partial_chase_limit"
+                        } else {
+                            "chase_limit"
+                        }
+                        .to_string();
                         break;
                     }
                     n += 1;
@@ -1406,6 +1443,7 @@ impl<'a> Desk<'a> {
                             tr.link_ids.push(link.clone());
                             self.jw("order", json!({"action": "place", "trade_id": tr.id, "symbol": tr.symbol, "side": side, "order_id": oid, "link": link, "price": px, "qty": remaining, "stop": tr.stop, "target": tr.target, "tif": req.time_in_force, "bid": book.best_bid(), "ask": book.best_ask()}), &tr.versions)?;
                             cur = Some((oid, px));
+                            cur_qty = remaining;
                         }
                         Err(e) => {
                             self.jw(
@@ -1436,20 +1474,37 @@ impl<'a> Desk<'a> {
                             self.jw("order", json!({"action": "venue_cancelled", "trade_id": tr.id, "symbol": tr.symbol, "order_id": oid, "status": status, "cum_exec_qty": cum, "reject_reason": o.as_ref().map(|o| o["rejectReason"].clone()), "cancel_type": o.as_ref().map(|o| o["cancelType"].clone())}), &tr.versions)?;
                             cur = None; // PostOnly would have crossed: re-place at the new touch
                         }
-                        _ if (px - opx).abs() > rule.tick_size * 0.5 => match self.venue.amend_price(&tr.symbol, &oid, &format_step(px, rule.tick_size)).await {
-                            Ok(()) => {
-                                tr.repegs += 1;
-                                self.jw("order", json!({"action": "repeg", "trade_id": tr.id, "symbol": tr.symbol, "order_id": oid, "from": opx, "to": px, "cum_exec_qty": cum, "bid": book.best_bid(), "ask": book.best_ask()}), &tr.versions)?;
-                                cur = Some((oid, px));
+                        _ if (px - opx).abs() > rule.tick_size * 0.5 => {
+                            // the chase may only shrink the order: risk to the stop <= 1.70, notional <= the decided one
+                            let allowed = lv::chase_qty(side, tr.qty, tr.notional_usd, px, tr.stop, fees, &self.cfg, rule.qty_step);
+                            let order_qty = round_to_step(allowed - done_qty, rule.qty_step, Round::Down);
+                            if order_qty <= cum + 1e-12 || order_qty - cum < rule.min_qty {
+                                reason = if cum + done_qty > 0.0 { "partial_chase_limit" } else { "chase_limit" }.to_string();
+                                break;
                             }
-                            Err(e) => {
-                                self.jw(
-                                    "order",
-                                    json!({"action": "repeg_error", "trade_id": tr.id, "symbol": tr.symbol, "order_id": oid, "to": px, "error": format!("{e:#}")}),
-                                    &tr.versions,
-                                )?;
+                            let new_qty = (order_qty + 1e-12 < cur_qty).then(|| format_step(order_qty, rule.qty_step));
+                            match self.venue.amend(&tr.symbol, &oid, &format_step(px, rule.tick_size), new_qty.as_deref()).await {
+                                Ok(()) => {
+                                    tr.repegs += 1;
+                                    if new_qty.is_some() {
+                                        cur_qty = order_qty;
+                                    }
+                                    self.jw(
+                                        "order",
+                                        json!({"action": "repeg", "trade_id": tr.id, "symbol": tr.symbol, "order_id": oid, "from": opx, "to": px, "qty": cur_qty, "cum_exec_qty": cum, "bid": book.best_bid(), "ask": book.best_ask()}),
+                                        &tr.versions,
+                                    )?;
+                                    cur = Some((oid, px));
+                                }
+                                Err(e) => {
+                                    self.jw(
+                                        "order",
+                                        json!({"action": "repeg_error", "trade_id": tr.id, "symbol": tr.symbol, "order_id": oid, "to": px, "error": format!("{e:#}")}),
+                                        &tr.versions,
+                                    )?;
+                                }
                             }
-                        },
+                        }
                         _ => {}
                     }
                 }

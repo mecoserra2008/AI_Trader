@@ -225,3 +225,64 @@ had 0 trades, so no record was lost.
   - `agent.session.entry_cost_bps` / `net_er` cost `pegged_limit` entries the same way.
   - `agent.scorecard` shadow R now uses each candidate's entry-type round trip. The old fixed market round trip remains
     for unknown types.
+
+### 2026-11-15 (LIVE): the small live desk, `atx live` (user authorisation ~16:10 UTC)
+
+Additive: the paper / replay path above is unchanged and still refuses live mode. Live orders go only through
+`atx live`, on USDT linear perpetuals, under the `live_small` profile in `config/risk.yaml`. Mainnet needs the two-key
+guard. Nothing is live until the main session turns the guard on.
+
+- **Intent.** The same OrderIntent with `mode: "live"`, `entry: {type: limit, peg: touch, price: <decision-time ref>}`,
+  a `stop`, an optional `targets[0]` (resting TP), `sigma.per_bar`, `p_tp` and/or `net_er_r`, and `context.model_id` +
+  `context.prompt_version` (required, principle 8). One intent per file. There is still no size field.
+- **Engine.** `at_risk::live::decide_live` is pure and runs before every venue write: at propose, and again at submit
+  against fresh state and the current touch. Every violated rule is reported. The rejection names are `kill_switch`,
+  `not_live_mode`, `missing_versions`, `invalid_intent`, `not_pegged_entry`, `excluded_symbol`, `not_usdt_linear_perp`,
+  `foreign_activity_on_symbol`, `unknown_instrument`, `no_book`, `too_illiquid`, `duplicate_symbol`, `max_entries_per_day`,
+  `daily_loss_stop`, `daily_loss_budget`, `max_open_positions`, `max_same_direction`, `max_gross_notional`,
+  `correlated_hedge`, `stop_too_far`, `stop_inside_min_sigma`, `stop_beyond_max_sigma`, `missing_sigma`, `net_er_below_min`,
+  `net_er_missing`, `min_lot_over_max_loss`, `max_loss_per_trade` and `insufficient_margin`.
+- **Ceilings.** `at_risk::live::LIVE_CEILINGS` compiles in the user's numbers: 2 USD per trade, 20 entries a day, a 10 USD
+  day stop, 3 open, 2 in one direction, 400 USD gross, a 200 USD tier cap, a 15 min window and 5 manual trades. A yaml that
+  is looser than these fails to load. SPYUSDT is hard-coded as excluded.
+- **Sizing.** qty = floor(min(1.70 / per-unit loss, notional cap / price)). The per-unit loss is |e - s| + e (maker + 1.3 bp
+  peg) + s (taker + 2 bp). The notional cap is min(tier cap, 10% of the book depth within 50 bp). The 2 USD check uses the
+  tier's `stop_slip_bps` instead of the 2 bp slippage. The minimum lot is used only if it fits 2 USD and the tier cap. Fee
+  rates are max(config/fees.yaml, the account's /v5/account/fee-rate).
+- **Tiers.** Rank by Bybit mainnet 24h turnover among Trading USDT linear perps, then turnover and spread floors (first
+  tier that matches):
+  - liquid: top 10, >= 100M, <= 3 bp, 200 USD;
+  - mid: top 50, >= 20M, <= 10 bp, 100 USD;
+  - illiquid: >= 3M, <= 30 bp, 50 USD;
+  - otherwise not tradable.
+- **Correlation.** Two symbols are the same bet when they share a `config/sectors.yaml` sector (overrides > sectors,
+  `other` ignored) or both are `btc_beta`. `btc_beta` means a 30-day correlation of 1h log returns to BTC above 0.7, or BTC
+  itself, or an unknown correlation (fail closed). `correlated_hedge` refuses an opposite-direction entry in a
+  correlated token while a losing bot position is open. `max_same_direction` counts every bot position, which is
+  stricter than counting per cluster.
+- **Entry.** PostOnly at the touch, with `stopLoss` (MarkPrice, tpslMode Full) on every entry order. It is re-pegged
+  every 1.5 s for 15 min, then cancelled. A chase may only shrink the order: risk to the stop stays <= 1.70 and the notional
+  <= min(cap, decided + gross headroom). Touching the stop, KILL or the 2 USD check cancels it. After a fill the position's
+  exchange stop is verified. If it is missing it is re-attached, and if that fails the bot quantity is closed reduce-only.
+- **Ownership.** Bot orders carry `orderLinkId` `lsb-<proposal>-<n>`, and closes carry `lsb-x-...`. Bot positions are
+  the ones in `data/live[/<env>]/state.json`. Position TP/SL orders on bot symbols are the bot's. Everything else is
+  foreign. It is listed, never touched, and its symbols are never traded.
+- **Gate.** The first 5 filled, user-approved trades need `atx live approve <id>` (stdin/stdout must be a TTY and the
+  user types the code) or a user-created `approvals/<id>.ok` that contains the proposal's `confirm_code`. After that the
+  gate is auto. The count is kept per environment in the state file.
+- **Exits.** The exchange SL / TP, `atx live close --id <trade>` (reduce-only market) or `atx live flatten-bot --yes`.
+  `atx live kill` writes `data/live/KILL`, which stops every environment, and cancels bot orders. Positions keep their
+  stops.
+- **Journal.** `data/journal/live` (mainnet) or `data/journal/live_<env>`. Every event carries `versions` (env,
+  atx_version, `exec_version: live-pegged-v1`, `live_profile_hash`, model_id, prompt_version, packet_version,
+  session_id). The events are:
+  - `risk_decision`;
+  - `decision` (proposal / expired);
+  - `order` (place / repeg / venue_cancelled / cancel / entry_done / reduce_only_close / cancel_stale / cancel_orphan);
+  - `fill` (leg entry / exit, slip vs mid and vs stop);
+  - `position_update` (stop_verified / stop_attach / reattach_stop / revived / closed with closedPnl and R);
+  - `snapshot`;
+  - `manual_action`.
+- **Scorecard.** `python -m ai_trader.agent.live_scorecard [--env demo]` covers H-LT1 and H-LT2 (live fills vs the paper
+  model, which always fills at 1.3 bp beyond the decision-time mid). Tracks are split by model, prompt, exec version and
+  profile hash.

@@ -11,8 +11,9 @@ Per token, everything known at as_of:
   liq        lake `liquidations` (allLiquidation stream): USD of liquidated longs / shorts over 15m / 1h / 4h / 24h, the
              largest print, and the R-FLOW-2 cluster test on the last 60 minutes (a minute above the trailing-24h 99th
              percentile of 1m liquidation notional with >= 3 prints)
-  flow       lake `flow_3s` (atx collect): taker buy / sell notional and imbalance (b - s) / (b + s) over 5 / 15 / 60 min, the
-             share of 3 s candles present (coverage), mean spread and 25 bp depth over the last 5 minutes
+  flow       lake `flow_3s` (atx collect): taker buy / sell notional and imbalance (b - s) / (b + s) over the 5 / 15 / 60 min
+             ending at the last flushed candle (flushes every 5 min; `lag_s` = as_of minus that end), the share of 3 s
+             candles present (coverage), mean spread and 25 bp depth over its last 5 minutes
   players    the live.players read: players.pattern (unchanged) on the same inputs loaded in bulk (lake funding 90d,
              OI at 4h boundaries of the 1h REST series, lake liquidations 4h / 24h, DVOL via players.dvol) and the v0 cell
              of desk.xs.regime_cells
@@ -114,13 +115,15 @@ def flow_summary(f3: pl.DataFrame | None, as_of: datetime, windows=FLOW_WIN_MIN)
     d = f3.filter((pl.col("known_ts") <= as_of) & (pl.col("event_ts") + pl.duration(seconds=3) <= as_of))
     if d.height == 0:
         return {"status": "not collected"}
-    out: dict = {"status": "ok", "last_candle": d["event_ts"].max().isoformat(), "windows": {}}
+    last = d["event_ts"].max()
+    end = last + timedelta(seconds=3)            # flow_3s is flushed every 5 min: windows end at the last flushed candle
+    out: dict = {"status": "ok", "last_candle": last.isoformat(), "lag_s": round((as_of - end).total_seconds()), "windows": {}}
     for m in windows:
-        x = d.filter(pl.col("event_ts") >= as_of - timedelta(minutes=m))
+        x = d.filter(pl.col("event_ts") >= end - timedelta(minutes=m))
         b, s = float(x["buy_notional"].sum()), float(x["sell_notional"].sum())
         out["windows"][f"{m}m"] = {"buy_usd": round(b), "sell_usd": round(s), "imbalance": _r((b - s) / (b + s), 3) if b + s > 0 else None,
                                    "prints": int(x["n_buy"].sum() + x["n_sell"].sum()), "coverage": _r(x.height / (m * 20), 2)}
-    x = d.filter(pl.col("event_ts") >= as_of - timedelta(minutes=5))
+    x = d.filter(pl.col("event_ts") >= end - timedelta(minutes=5))
     if x.height:
         def mean(c):
             v = x[c].drop_nulls() if c in x.columns else None

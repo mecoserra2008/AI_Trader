@@ -740,6 +740,19 @@ pub fn peg_price_ok(side: Side, qty: f64, price: f64, stop: f64, fees: &FeeRates
     (price - stop) * side.sign() > 0.0 && max_loss_usd(qty, price, stop, fees, cfg, stop_slip_bps) <= cfg.max_loss_per_trade_usd + 1e-9
 }
 
+/// Quantity allowed when a pegged entry chases to `price`: never more than the decided quantity, never a risk to the
+/// stop above `risk_to_stop_usd`, never a notional above `notional0` (the caller passes min(tier / depth cap, decided
+/// notional + gross headroom), so the tier and gross caps keep holding while the peg moves).
+/// Rounded down to the lot step; 0 when the stop is no longer on the losing side.
+#[allow(clippy::too_many_arguments)]
+pub fn chase_qty(side: Side, qty0: f64, notional0: f64, price: f64, stop: f64, fees: &FeeRates, cfg: &LiveSmallCfg, qty_step: f64) -> f64 {
+    if (price - stop) * side.sign() <= 0.0 || price <= 0.0 {
+        return 0.0;
+    }
+    let unit = unit_loss(price, stop, entry_bps(fees, cfg), fees.taker_bps + fees.slippage_bps);
+    round_to_step(qty0.min(cfg.risk_to_stop_usd / unit).min(notional0 / price), qty_step, Round::Down)
+}
+
 /// Intent side as a venue side (None for flat).
 pub fn intent_side(s: IntentSide) -> Option<Side> {
     s.side()
@@ -1080,6 +1093,21 @@ mod tests {
         assert!(!peg_price_ok(Side::Long, 0.002, 63300.0, 63360.0, &fees(), &c, 10.0));
         assert!(!peg_price_ok(Side::Long, 0.002, 64300.0, 63360.0, &fees(), &c, 10.0));
         assert!(peg_price_ok(Side::Short, 0.002, 64000.0, 64640.0, &fees(), &c, 10.0));
+    }
+
+    #[test]
+    fn chasing_shrinks_the_order_instead_of_the_caps() {
+        let c = cfg();
+        // risk-limited BTC long: 0.002 at 64000, stop 63360 (risk ~1.42); chasing up keeps qty until a cap binds
+        assert_eq!(chase_qty(Side::Long, 0.002, 128.0, 64000.0, 63360.0, &fees(), &c, 0.001), 0.002);
+        assert_eq!(chase_qty(Side::Long, 0.002, 128.0, 64100.0, 63360.0, &fees(), &c, 0.001), 0.001, "notional cap: 0.002 x 64100 > 128");
+        // a 100 USD token, stop 99.85: chasing up raises the risk per unit -> fewer units, risk to the stop stays <= 1.70
+        let q = chase_qty(Side::Long, 10.0, 1000.0, 100.0, 99.85, &fees(), &c, 0.1);
+        let q2 = chase_qty(Side::Long, 10.0, 1000.0, 100.06, 99.85, &fees(), &c, 0.1);
+        assert!(q2 < q, "{q} -> {q2}");
+        let unit = unit_loss(100.06, 99.85, entry_bps(&fees(), &c), 7.5);
+        assert!(q2 * unit <= 1.70 + 1e-9);
+        assert_eq!(chase_qty(Side::Short, 1.0, 100.0, 99.0, 98.0, &fees(), &c, 0.1), 0.0, "stop on the wrong side");
     }
 
     #[test]
