@@ -34,6 +34,7 @@ mod live;
 mod match_sim;
 mod mm;
 mod mm_replay;
+mod scalp;
 mod updater;
 
 use clap::{Parser, Subcommand};
@@ -232,6 +233,8 @@ enum Command {
     /// Mainnet writes need the two-key guard; without it status / tiers / reconcile are read-only.
     #[command(subcommand)]
     Live(live::LiveCmd),
+    /// Deterministic order-flow scalper (config/scalp_kava.yaml, H-SCALP1): --mode shadow (no orders, simulated fills) | live (refused in this build).
+    Scalp(scalp::ScalpArgs),
     /// cTrader Open API (BlackBull), read-only market data: check | symbols | ticks | trendbars | stream | ping. Never sends orders.
     #[command(subcommand)]
     Ctrader(ctrader::CtraderCmd),
@@ -356,5 +359,6 @@ async fn main() -> anyhow::Result<()> {
         Command::ExecReplay(a) => exec_replay::run(&ctx, a),
         Command::Ctrader(c) => ctrader::run(&ctx, c).await,
         Command::Live(c) => live::run(&ctx, c).await,
+        Command::Scalp(a) => scalp::run(&ctx, a).await,
     }
 }

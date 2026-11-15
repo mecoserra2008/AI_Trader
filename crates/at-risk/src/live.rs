@@ -6,7 +6,7 @@
 //! looser than them is refused at load (fail closed). The LLM never sets any of it; an intent carries no size.
 //!
 //! Sizing (USD, fees and slippage included):
-//!     risk_to_stop(q) = q * (|e - s| + e * entry_bps + s * (taker + slippage)) <= risk_to_stop_usd   (1.70)
+//!     risk_to_stop(q) = q * (|e - s| + e * entry_bps + s * (taker + slippage)) <= risk_to_stop_usd   (1.30 in the project profile)
 //!     max_loss(q)     = q * (|e - s| + e * entry_bps + s * (taker + tier.stop_slip_bps)) <= max_loss_per_trade_usd (2.00)
 //!     q = floor_step(min(risk_to_stop_usd / per-unit risk, notional_cap / e, max_qty))
 //! with entry_bps = maker + peg slip (PostOnly at the touch) and notional_cap = min(tier cap, depth share of the book).
@@ -861,7 +861,8 @@ mod tests {
     fn project_profile_matches_the_users_limits() {
         let c = cfg();
         assert_eq!(c.max_loss_per_trade_usd, 2.0);
-        assert_eq!(c.risk_to_stop_usd, 1.7);
+        // user 2026-11-15 ~20:20 UTC: "1 usd risk", then accepted ~1.25 on the BTC minimum lot -> 1.30
+        assert_eq!(c.risk_to_stop_usd, 1.3);
         assert_eq!((c.max_entries_per_day, c.max_open_positions, c.max_same_direction), (20, 3, 2));
         assert_eq!((c.daily_loss_stop_usd, c.max_gross_notional_usd), (10.0, 400.0));
         assert!(c.is_excluded("SPYUSDT"));
@@ -888,7 +889,7 @@ mod tests {
             ("notional_cap_usd: 200", "notional_cap_usd: 250"),
             ("manual_trades: 5", "manual_trades: 4"),
             ("excluded_symbols: [SPYUSDT]", "excluded_symbols: []"),
-            ("risk_to_stop_usd: 1.70", "risk_to_stop_usd: 2.10"),
+            ("risk_to_stop_usd: 1.30", "risk_to_stop_usd: 2.10"),
             ("window_min: 15", "window_min: 30"),
             ("leverage: 10", "leverage: 11"),
         ] {
@@ -899,13 +900,13 @@ mod tests {
 
     #[test]
     fn sizing_keeps_risk_to_stop_and_worst_case_under_the_caps() {
-        // BTC long 64000, stop 1% -> risk-limited (1.70 / ~650 per BTC = 0.0026 -> 0.002)
+        // BTC long 64000, stop 1% -> risk-limited (1.30 / ~650 per BTC incl. fees + slip = 0.0019 -> 0.001)
         let d = run(&intent("BTCUSDT", "long", 64000.0, 1.0), &acct(), &[]);
         assert!(d.accepted(), "{:?}", d.details);
         assert_eq!(d.tier.as_deref(), Some("liquid"));
-        assert!(d.risk_to_stop_usd <= 1.70 + 1e-9, "{}", d.risk_to_stop_usd);
+        assert!(d.risk_to_stop_usd <= 1.30 + 1e-9, "{}", d.risk_to_stop_usd);
         assert!(d.max_loss_usd <= 2.0, "{}", d.max_loss_usd);
-        assert_eq!(d.qty, 0.002);
+        assert_eq!(d.qty, 0.001);
         // ETH long, stop 0.3%: notional-limited at the liquid cap 200
         let d = run(&intent("ETHUSDT", "long", 3000.0, 0.3), &acct(), &[]);
         assert!(d.accepted(), "{:?}", d.details);
@@ -934,7 +935,7 @@ mod tests {
         // BTC min lot 0.001 = 64 USD; stop 4% -> ~2.6 USD + costs > 2
         let d = run(&intent("BTCUSDT", "long", 64000.0, 4.0), &acct(), &[]);
         assert!(d.has(LiveRejection::MinLotOverMaxLoss), "{:?}", d.details);
-        // stop 2.8%: 1.70 budget rounds to 0 lots but the min lot loses ~1.92 <= 2 -> taken at the min lot
+        // stop 2.8%: 1.30 budget rounds to 0 lots but the min lot loses ~1.92 <= 2 -> taken at the min lot
         let d = run(&intent("BTCUSDT", "long", 64000.0, 2.8), &acct(), &[]);
         assert!(d.accepted(), "{:?}", d.details);
         assert!(d.min_lot_used && d.qty == 0.001 && d.max_loss_usd <= 2.0, "{d:?}");
@@ -1111,15 +1112,15 @@ mod tests {
     #[test]
     fn chasing_shrinks_the_order_instead_of_the_caps() {
         let c = cfg();
-        // risk-limited BTC long: 0.002 at 64000, stop 63360 (risk ~1.42); chasing up keeps qty until a cap binds
-        assert_eq!(chase_qty(Side::Long, 0.002, 128.0, 64000.0, 63360.0, &fees(), &c, 0.001), 0.002);
-        assert_eq!(chase_qty(Side::Long, 0.002, 128.0, 64100.0, 63360.0, &fees(), &c, 0.001), 0.001, "notional cap: 0.002 x 64100 > 128");
-        // a 100 USD token, stop 99.85: chasing up raises the risk per unit -> fewer units, risk to the stop stays <= 1.70
+        // BTC long: 0.002 at 64000, stop 63600 (risk ~1.0 incl. fees + slip, under 1.30); chasing up keeps qty until a cap binds
+        assert_eq!(chase_qty(Side::Long, 0.002, 128.0, 64000.0, 63600.0, &fees(), &c, 0.001), 0.002);
+        assert_eq!(chase_qty(Side::Long, 0.002, 128.0, 64100.0, 63600.0, &fees(), &c, 0.001), 0.001, "notional cap: 0.002 x 64100 > 128");
+        // a 100 USD token, stop 99.85: chasing up raises the risk per unit -> fewer units, risk to the stop stays <= 1.30
         let q = chase_qty(Side::Long, 10.0, 1000.0, 100.0, 99.85, &fees(), &c, 0.1);
         let q2 = chase_qty(Side::Long, 10.0, 1000.0, 100.06, 99.85, &fees(), &c, 0.1);
         assert!(q2 < q, "{q} -> {q2}");
         let unit = unit_loss(100.06, 99.85, entry_bps(&fees(), &c), 7.5);
-        assert!(q2 * unit <= 1.70 + 1e-9);
+        assert!(q2 * unit <= 1.30 + 1e-9);
         assert_eq!(chase_qty(Side::Short, 1.0, 100.0, 99.0, 98.0, &fees(), &c, 0.1), 0.0, "stop on the wrong side");
     }
 

@@ -2730,3 +2730,45 @@ hypotheses:
     prior: 0.25
     family: confluence
     status: proposed
+
+  # ---- KAVAUSDT order-flow scalper (block SCALP; registered 2026-11-15 ~22:05 UTC, BEFORE any shadow trade or evaluation) ----
+  # Engine: `atx scalp` (crates/atx/src/scalp.rs), config/scalp_kava.yaml as registered (any parameter change = a new id).
+  H-SCALP1:
+    title: "A deterministic order-flow scalper on KAVAUSDT (passive entry at the touch, fixed 2R bracket) has positive net R per trade after fees and a conservative fill model"
+    statement: >-
+      Features on Bybit public WS orderbook.50 + publicTrade, evaluated once per second. OFI_w = sum over the last w s of the
+      L1 Cont-Kukanov-Stoikov order-flow imbalance (contracts) of every book update; z(OFI_30) = (OFI_30 - mean) / sd over the
+      last 1800 one-second samples (>= 300 samples, else no signal). delta_30 = buy-aggressor minus sell-aggressor volume over 30 s.
+      microprice = (bid*ask_qty + ask*bid_qty)/(bid_qty + ask_qty). A sweep = trades of one aggressor side with the same exchange
+      timestamp printing at >= 2 distinct prices. ENTRY LONG when, flat and outside the cooldown: spread <= 2 ticks AND
+      z(OFI_30) >= 1.5 AND delta_30 > 0 AND microprice > mid AND no sell sweep in the last 10 s; SHORT symmetric (z <= -1.5,
+      delta_30 < 0, microprice < mid, no buy sweep). Order: PostOnly limit joining the touch on our side (bid for a long, ask for a
+      short) for 0.1-step qty = floor(20 USD / price); cancelled after 20 s unfilled or when z(OFI_30) crosses 0 against the
+      trade or the opposite signal fires. STOP (frozen at the signal): long = min(entry - 4 ticks, lowest trade price of the last
+      60 s - 1 tick), short symmetric; signals whose stop is > 12 ticks away are skipped. TAKE PROFIT: reduce-only PostOnly at
+      exactly entry +/- 2 x stop distance (integer ticks). TIME STOP 5 min: passive exit at the far touch for 30 s, then market.
+      FUNDING (8 h, KAVA funding about -1.17 %/8h, shorts pay): no short entry within 11 min of a funding time and any short is
+      closed at market at T-5 min; a long is closed at market at T-5 min unless its mid-marked open P&L is >= +1 R (then held
+      across and logged; the funding received is booked). Cooldown 30 s after every exit; one position at a time.
+    rationale: >-
+      User request (2026-11-15): tiny-notional KAVA scalper reading flow and book. OFI (Cont, Kukanov & Stoikov 2014) and taker
+      imbalance carry short-horizon price information; the open question is whether it survives a 3.5 bp tick, 2 bp maker /
+      5.5 bp taker fees and the adverse selection of passive fills (R-MMR-1). Prior is low for that reason.
+    test: >-
+      Forward SHADOW run of `atx scalp --mode shadow` (no orders) on live mainnet public data, journal data/journal/scalp/<date>.jsonl.
+      Fill model (conservative, pre-declared): a passive order fills only when a trade prints THROUGH its price, or when trades AT
+      its price exceed the displayed queue ahead at placement plus our qty (queue ahead only depleted by trades); stop trigger =
+      LastPrice (trade print at/through the stop), filled at min(stop - 1 tick, the triggering print) for a long (symmetric short),
+      taker fee; TP fills only on a trade-through, maker fee; time-stop passive exit by the same queue rule, else market at the
+      touch (taker). Costs: maker 2 bp, taker 5.5 bp, stop slip 1 tick, funding booked at the venue rate. R unit (USD) =
+      qty x (|entry - stop| + 1 tick + entry x 2 bp + stop x 5.5 bp), i.e. a plain stop-out is -1 R. Metric: mean net R per FILLED
+      trade, 95 % circular block-bootstrap CI (block 5 trades, 10 000 resamples, seed 0). Secondary: fill rate per signal, mean net
+      R per signal with unfilled = 0 R, TP-hit rate, exits by kind.
+    success: >-
+      On the first 30 filled shadow trades (fixed N, evaluated once; confirmatory read on trades 31-100): mean net R > 0 AND the
+      95 % block-bootstrap CI lower bound > -0.05 AND the TP-hit rate > the bracket's ex-ante break-even p* = 1 / (1 + W), where W
+      is the mean net R of the TP exits (fees included). Anything else = rejected (or inconclusive if < 30 fills).
+    segment: "forward_shadow (clean_holdout: data after research.knowledge_cutoff, collected live from 2026-11-15)"
+    prior: 0.15
+    family: scalp_flow
+    status: proposed

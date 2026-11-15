@@ -1,0 +1,57 @@
+# `atx scalp` (crates/atx/src/scalp.rs): deterministic KAVAUSDT order-flow scalper. Pre-registered as H-SCALP1
+# (research/hypotheses.yaml, 2026-11-15 ~22:15 UTC). Any change to a value below is a NEW hypothesis id and a new track
+# record (the config hash is logged with every journal line). The LLM tunes nothing between ticks; the orchestrator may
+# register a variant between runs.
+symbol: KAVAUSDT
+hypothesis: H-SCALP1
+depth: 50                        # orderbook.50 (Bybit linear: 20 ms pushes)
+eval_interval_ms: 1000           # features and the entry rule are evaluated once per second
+
+# ---- features (all on the local receive clock; nothing after the evaluation instant is used)
+ofi_windows_s: [10, 30, 60]      # OFI (Cont-Kukanov-Stoikov, L1) and signed taker delta summed over these windows
+z_window_s: 1800                 # z(OFI_w) = (OFI_w - mean) / sd over the last 1800 one-second samples
+z_min_obs: 300                   # fewer samples: no z, no signal (warm-up 5 min)
+imbalance_ticks: 5               # book imbalance (bid - ask) / (bid + ask) of the sizes within 5 ticks of each touch
+sweep_min_levels: 2              # sweep = same-side trades with one exchange timestamp at >= 2 distinct prices
+absorption_window_s: 10          # absorption: aggressive volume at an unchanged touch over 10 s ...
+absorption_mult: 2.0             # ... >= 2 x the displayed touch size (logged feature, not in the entry rule)
+
+# ---- entry rule (H-SCALP1)
+signal_window_s: 30              # must be one of ofi_windows_s
+ofi_z_entry: 1.5
+max_spread_ticks: 2
+sweep_lookback_s: 10             # no opposite-side sweep in the last 10 s
+entry_timeout_s: 20              # PostOnly at the touch, cancelled after 20 s unfilled (or z crosses 0 against / opposite signal)
+
+# ---- bracket
+reward_r: 2                      # take profit at exactly reward_r x stop distance (2 or 3)
+min_stop_ticks: 4
+swing_lookback_s: 60             # structural stop: 1 tick beyond the 60 s trade low (long) / high (short), at least min_stop_ticks
+max_stop_ticks: 12               # farther structural stop: the signal is skipped
+# LastPrice: with a 0.00001 tick (~3.5 bp) and a 4-12 tick stop, a stop must reference the book we trade. KAVA's perp
+# trades at a deep discount to the spot index (funding -1.17 %/8h), and the mark is a smoothed index + basis, so its lag
+# against last is a material fraction of the stop. The cost of LastPrice (single-print wicks) is priced in by the shadow
+# fill model (fills at min(stop - 1 tick, the print)). The mark is logged at every exit to revisit this choice.
+stop_trigger_by: LastPrice
+stop_slip_ticks: 1
+time_stop_min: 5
+passive_exit_s: 30               # time stop: passive at the far touch for 30 s, then market
+cooldown_s: 30
+
+# ---- funding (8 h; shorts pay longs while the rate is negative)
+funding_flat_min: 5              # flat by T-5 min (shorts always; longs unless >= long_hold_min_r in profit)
+short_entry_block_min: 11        # no new short within 11 min of a funding time (time stop 5 + flat 5 + 1)
+long_hold_min_r: 1.0
+
+# ---- costs (Bybit VIP0 linear)
+maker_bps: 2.0
+taker_bps: 5.5
+
+# ---- size and live sub-limits: these can only be TIGHTER than config/risk.yaml live_small (enforced in code)
+limits:
+  notional_cap_usd: 20           # compiled ceiling 20
+  day_loss_stop_usd: 3.0         # scalper's own UTC-day stop (live_small daily stop is 10)
+  max_entries_per_run: 12        # leaves the rest of the 20/day for the desk
+  max_consecutive_losses: 4
+
+status_every_s: 60

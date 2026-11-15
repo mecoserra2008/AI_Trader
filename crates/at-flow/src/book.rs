@@ -109,6 +109,22 @@ impl Book {
         Some(L1 { bid: b.0, bid_qty: *bq, ask: a.0, ask_qty: *aq })
     }
 
+    /// Bid levels (price, size), best (highest) first.
+    pub fn bids_desc(&self) -> impl Iterator<Item = (f64, f64)> + '_ {
+        self.bids.iter().rev().map(|(p, q)| (p.0, *q))
+    }
+
+    /// Ask levels (price, size), best (lowest) first.
+    pub fn asks_asc(&self) -> impl Iterator<Item = (f64, f64)> + '_ {
+        self.asks.iter().map(|(p, q)| (p.0, *q))
+    }
+
+    /// Displayed size at `price` on the bid (`bid = true`) or ask side; 0 when the level is empty.
+    pub fn qty_at(&self, bid: bool, price: f64) -> f64 {
+        let m = if bid { &self.bids } else { &self.asks };
+        m.get(&Px(price)).copied().unwrap_or(0.0)
+    }
+
     pub fn features(&self) -> Option<BookFeat> {
         if !self.valid {
             return None;
