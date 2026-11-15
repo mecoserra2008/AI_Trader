@@ -137,6 +137,10 @@ pub struct LiveSmallCfg {
     pub max_stop_distance_pct: f64,
     /// Inclusive EV gate (reject net E[R] < min), live costs.
     pub min_net_expected_r: f64,
+    /// User-approved learning trades (2026-11-15): while the approval gate is MANUAL (first trades, each approved by the
+    /// user), the EV gate may use this lower minimum instead. In [-0.15, min_net_expected_r]; None = no learning trades.
+    #[serde(default)]
+    pub learning_min_net_expected_r: Option<f64>,
     pub require_sigma: bool,
     pub excluded_symbols: Vec<String>,
     /// Bybit symbolType values never traded (e.g. "innovation"); "" is crypto.
@@ -186,6 +190,9 @@ impl LiveSmallCfg {
         ensure!(pos(self.max_gross_notional_usd) && self.max_gross_notional_usd <= k.max_gross_notional_usd, "max_gross_notional_usd must be in (0, {}]", k.max_gross_notional_usd);
         ensure!(pos(self.max_stop_distance_pct) && self.max_stop_distance_pct <= 15.0, "max_stop_distance_pct must be in (0, 15]");
         ensure!(self.min_net_expected_r.is_finite() && self.min_net_expected_r >= 0.0, "min_net_expected_r must be >= 0");
+        if let Some(l) = self.learning_min_net_expected_r {
+            ensure!(l.is_finite() && (-0.15..=self.min_net_expected_r).contains(&l), "learning_min_net_expected_r must be in [-0.15, min_net_expected_r]");
+        }
         ensure!(!self.tiers.is_empty(), "tiers must not be empty");
         for t in &self.tiers {
             ensure!(pos(t.notional_cap_usd) && t.notional_cap_usd <= k.max_tier_notional_usd, "tier {}: notional_cap_usd must be in (0, {}]", t.name, k.max_tier_notional_usd);

@@ -913,7 +913,17 @@ impl<'a> Desk<'a> {
         let placement = DecideConfig::load(&self.ctx.s.root, self.ctx.risk.clone())?.placement;
         let account =
             LiveAccount { available_usd: snap.available, entries_today: st.entries_today, realised_today_usd: st.realised_today(now_ms()), kill: self.paths.kill_active() };
-        let d = lv::decide_live(intent, touch, &account, &positions, &facts, &fees, &placement, &self.cfg);
+        // Learning trades: only while the approval gate is manual (each entry approved by the user) may the EV gate use the
+        // lower learning minimum; once the gate is auto the configured min_net_expected_r applies again.
+        let cfg = match self.cfg.learning_min_net_expected_r {
+            Some(l) if st.gate_manual(&self.cfg) => {
+                let mut c = self.cfg.clone();
+                c.min_net_expected_r = l;
+                c
+            }
+            _ => self.cfg.clone(),
+        };
+        let d = lv::decide_live(intent, touch, &account, &positions, &facts, &fees, &placement, &cfg);
         Ok((d, facts, fees))
     }
 

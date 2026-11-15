@@ -57,7 +57,7 @@ slot_replacement_hurdle_r: 0.15
 # hash is logged with every live journal event).
 live_small:
   max_loss_per_trade_usd: 2.00     # worst case at the stop, fees + the tier's stop slip included
-  risk_to_stop_usd: 1.70           # sizing budget: qty * (|entry - stop| + entry fee + exit fee + 2 bp slippage)
+  risk_to_stop_usd: 1.00           # user 2026-11-15 ~20:10 UTC: "1 usd risk" for the first trades (cap stays 2.00). sizing budget: qty * (|entry - stop| + entry fee + exit fee + 2 bp slippage)
   max_entries_per_day: 20          # bot entry orders submitted per UTC day (filled or not)
   daily_loss_stop_usd: 10.0        # realised (bot trades closed today) + open losses <= -10 -> no new entries today
   daily_loss_budget: true          # also refuse an entry if realised - every open worst case - this worst case < -10
@@ -66,6 +66,7 @@ live_small:
   max_gross_notional_usd: 400.0    # bot positions at mark + resting entries + the new order
   max_stop_distance_pct: 10.0
   min_net_expected_r: 0.10         # inclusive, live costs (maker + peg slip entry, taker + slippage exit)
+  learning_min_net_expected_r: -0.15  # user 2026-11-15 ~20:20 UTC: "allow first 5 as learning"; applies ONLY while the approval gate is manual (each entry approved by the user), then the 0.10 gate returns
   require_sigma: true              # placement check against the stop cap (placement / stop_cap.json), as in paper
   excluded_symbols: [SPYUSDT]      # never touched (SPYUSDT is also hard-coded in at-risk)
   # User decision 2026-11-15 ~17:15 UTC: no innovation-zone tokens. Crypto ("") and TradFi USDT perps stay allowed;

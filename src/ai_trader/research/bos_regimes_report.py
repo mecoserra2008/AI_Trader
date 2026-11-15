@@ -322,10 +322,15 @@ def verdicts(res: dict) -> dict:
                                "best_cell_dsr": h1["step1_best_cell"]["dsr"]["dsr"], "cells_pbo": h1["step1_best_cell"]["pbo"]["pbo"],
                                "negative_survivors_holdout_neg_share": h1["negative_survivors_holdout_neg_share"]})
     h2 = res["h2"]
-    loose_in = any(h2[c]["m"]["loose_in_sample"] for c in h2)
-    strict = any(h2[c]["m"]["strict"] for c in h2)
-    any_ho = any(h2[c]["m"]["explosive"]["clean_holdout"] or h2[c]["m"]["detrimental_t2"]["clean_holdout"] for c in h2)
-    v["H-BOS2"] = ("supports" if loose_in else "contradicts", "supports" if strict else ("inconclusive" if any_ho else "contradicts"),
+    # cells of both classes form one family (design: per-class pools; A and B need not be in the same class)
+    a_in = any(h2[c]["m"]["explosive"]["llm_in_sample"] for c in h2)
+    b_in = any(h2[c]["m"]["detrimental_t2"]["llm_in_sample"] for c in h2)
+    a_both = any(h2[c]["m"]["strict_explosive_both"] for c in h2)
+    b_both = any(h2[c]["m"]["strict_detrimental_both"] for c in h2)
+    a_ho = any(h2[c]["m"]["explosive"]["clean_holdout"] for c in h2)
+    b_ho = any(h2[c]["m"]["detrimental_t2"]["clean_holdout"] for c in h2)
+    ho2 = "supports" if a_both and b_both else ("contradicts" if not (a_ho or b_ho) else "inconclusive")
+    v["H-BOS2"] = ("supports" if a_in and b_in else "contradicts", ho2,
                    {c: {k: h2[c]["m"][k] for k in ("strict_explosive_both", "strict_detrimental_both", "loose_in_sample", "loose_holdout")}
                     | {"detrimental_in_sample": h2[c]["m"]["detrimental_t2"]["llm_in_sample"], "detrimental_holdout": h2[c]["m"]["detrimental_t2"]["clean_holdout"],
                        "best_minus_worst": h2[c]["m"]["best_minus_worst"]} for c in h2})

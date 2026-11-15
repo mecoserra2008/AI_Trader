@@ -1,0 +1,99 @@
+{
+  "contract": "desk_report_v1",
+  "agent": "geometry",
+  "cycle_id": "20261115T1954",
+  "as_of": "2026-11-15T19:54:30.915867+00:00",
+  "snapshot": "research/desk/2026-11-15/1954",
+  "model": "claude-sonnet-5",
+  "prompt_version": "desk-geometry-v1",
+  "regime": {
+    "summary": "BTC (64,975.4, R9 liquidation per xs.json regime.cell) is coiling under the user's 65,270/65,300 reference, which maps to the unswept 24h VAH 65,298.77 (+0.44A), with round 65,000 (+0.03A) immediately below it. The user's 67,376.52 matches an untouched 1h leg-origin open at 67,376.8 almost to the dollar; their flush base (62,068) sits between an untouched 1h leg-origin open at 62,596.3 and the unswept 24h low 61,899.2. 1h ATR is 727.68 (1.12% of price) while DVOL sits at its 90d p98.5 (44.28) - realised range compressing without implied vol following, which is the 'boiling' the user describes.",
+    "cells": {"BTCUSDT": "R9"},
+    "evidence": [
+      {"source": "geometry.json", "symbol": "BTCUSDT", "metric": "price", "value": 64975.4},
+      {"source": "geometry.json", "symbol": "BTCUSDT", "metric": "profile.24h.vah", "value": 65298.77},
+      {"source": "geometry.json", "symbol": "BTCUSDT", "metric": "atr14.1h", "value": 727.68},
+      {"source": "tape.json", "symbol": "BTCUSDT", "metric": "players.dvol.pct_90d", "value": 0.985},
+      {"source": "xs.json", "symbol": "BTCUSDT", "metric": "regime.ret_24h_pct", "value": -1.264}
+    ]
+  },
+  "ideas": [
+    {
+      "rank": 1,
+      "id": "geometry-1",
+      "symbols": ["BTCUSDT"],
+      "kind": "level",
+      "direction": "none",
+      "horizon": "4h",
+      "thesis": "BTC (64,975.4) sits under the user's two overhead references: round 65,000 (+0.03A, unswept) and the 24h VAH 65,298.77 (+0.44A, the user's ~65,270/65,300 'cleared' area) - both still unswept/live. 1h ATR is 727.68 (1.12%) while DVOL sits at its 90d p98.5; realised range narrowing without implied vol following is the compression the user is watching.",
+      "evidence": [
+        {"source": "geometry.json", "symbol": "BTCUSDT", "metric": "nearest.above.0.price", "value": 65000.0},
+        {"source": "geometry.json", "symbol": "BTCUSDT", "metric": "nearest.above.1.price", "value": 65298.77},
+        {"source": "geometry.json", "symbol": "BTCUSDT", "metric": "atr14.1h", "value": 727.68},
+        {"source": "tape.json", "symbol": "BTCUSDT", "metric": "players.dvol.pct_90d", "value": 0.985}
+      ],
+      "invalidation": {"symbol": "BTCUSDT", "price": 65298.77, "condition": "1h close above the 24h VAH (65,298.77) with positive 15m/60m flow imbalance, clearing the round 65,000 + VAH stack"},
+      "conviction": 0.5,
+      "reasoning": "Ranked 1: this is the exact pivot the user asked about ('did 65,300 clear') and the structural read behind the compression question. Round and VAH are both still unswept, so this is the nearest two-sided decision point, not a directional call (R-PX-4).",
+      "rules": ["R-PX-4", "R-PX-10", "R-VOL-3", "R-FLD-5"]
+    },
+    {
+      "rank": 2,
+      "id": "geometry-2",
+      "symbols": ["BTCUSDT"],
+      "kind": "level",
+      "direction": "none",
+      "horizon": "24h",
+      "thesis": "Below the user's 63,836 (next to the unswept 15m/1h swing low 63,733.8, -1.71A, near the ~14:00Z trendline break) sits the 24h VAL 63,337.71 (-2.25A) then a modeled long-liq cluster at 63,136 ($23.0M). The 24h low/unswept swing 61,899.2 (-4.23A, the user's 'flush base') has further modeled clusters at 61,579 and 57,853 ($22.6M each), the latter near the user's cited 1y low 57,756.",
+      "evidence": [
+        {"source": "geometry.json", "symbol": "BTCUSDT", "metric": "swings.15m.lows.1.price", "value": 63733.8},
+        {"source": "geometry.json", "symbol": "BTCUSDT", "metric": "profile.24h.val", "value": 63337.71},
+        {"source": "geometry.json", "symbol": "BTCUSDT", "metric": "liq_map.long_liq_below.0.price", "value": 63136.22},
+        {"source": "geometry.json", "symbol": "BTCUSDT", "metric": "swings.15m.lows.0.price", "value": 61899.2},
+        {"source": "geometry.json", "symbol": "BTCUSDT", "metric": "liq_map.long_liq_below.1.price", "value": 57852.91},
+        {"source": "geometry.json", "metric": "btc_field.horizons.4h.p_touch.-2%", "value": 0.3584}
+      ],
+      "invalidation": {"symbol": "BTCUSDT", "price": 63733.8, "condition": "1h close below the unswept 15m/1h swing low 63,733.8 (below the user's 63,836 trendline-break candle) with negative delta releases stops toward the 24h VAL and the modeled long-liq clusters"},
+      "conviction": 0.5,
+      "reasoning": "Ranked 2 (tied with idea 1 as the mirror scenario, same base rate): this is the exact chain the user named (63,836/63k -> 62,068/61,899 -> 57,756). Every price is a snapshot level, a labeled swing, or liq_map's stated model, none computed. R-RB-2: after a flush the 7d low is usually still ahead, so this chain isn't assumed exhausted near 62,068.",
+      "rules": ["R-PX-4", "R-RB-2", "R-EXEC-1", "R-AVOID-1"]
+    },
+    {
+      "rank": 3,
+      "id": "geometry-3",
+      "symbols": ["BTCUSDT"],
+      "kind": "level",
+      "direction": "none",
+      "horizon": "24h",
+      "thesis": "Above the unswept swing high 65,777.6 (+1.1A) and the 09:00Z high 66,132.7 (+1.59A, the user's '24h high'; 65,904.12 is not a separate map level) sits the untouched 1h leg-origin open 67,376.8 (+3.3A), matching the user's 67,376.52 near-exactly. Beyond it, modeled short clusters run 69,942 then 74,076; modeled short exposure above ($820.7M) dwarfs long exposure below ($191.1M).",
+      "evidence": [
+        {"source": "geometry.json", "symbol": "BTCUSDT", "metric": "legs.1h.levels.1.price", "value": 67376.8},
+        {"source": "geometry.json", "symbol": "BTCUSDT", "metric": "nearest.above.3.price", "value": 66132.7},
+        {"source": "geometry.json", "symbol": "BTCUSDT", "metric": "liq_map.short_liq_above.2.price", "value": 69942.03},
+        {"source": "geometry.json", "symbol": "BTCUSDT", "metric": "liq_map.total_est_usd.short_above", "value": 820707884},
+        {"source": "geometry.json", "symbol": "BTCUSDT", "metric": "liq_map.total_est_usd.long_below", "value": 191051976},
+        {"source": "geometry.json", "metric": "btc_field.horizons.4h.p_touch.+2%", "value": 0.4035}
+      ],
+      "invalidation": {"symbol": "BTCUSDT", "price": 67376.8, "condition": "1h close above the untouched 1h leg-origin open 67,376.8 with positive delta, confirming continuation into the modeled short-liq cluster near 69,942"},
+      "conviction": 0.48,
+      "reasoning": "Ranked 3: the leg-origin coincidence is the cleanest single level match of the whole set, but it is also the farthest level (3.3A) and the liq_map skew is a stated 50/50-sides, fixed-leverage model, not observed positioning.",
+      "rules": ["R-PX-4", "R-EXEC-1", "R-VOL-3", "R-FLD-3"]
+    }
+  ],
+  "data_gaps": [
+    "Order-book history isn't in the snapshot: we can't confirm from the map whether the book was literally 'cleared' at 65,300 earlier in the session, only that current depth there is thin (tape.json book.depth_usd is truncated at 10bp, span_bp 4.8) and that 65,298.77 (24h VAH) remains the nearest unswept overhead level.",
+    "No spot-only flow series in the snapshot; the user's 'spot buyers may step in at long-term values' can't be checked against spot-specific order flow here (tape.json flow mixes venues/instrument types).",
+    "The user's 64,494.49 and 63,836.28 don't match any discrete level in geometry.json (legs/swings/profile/round); the ideas above cite the nearest mapped neighbors instead.",
+    "research/live/LATEST.md's vol trend (ATR/DVOL/v3 HAR-t context) is read as narrative only; it is not one of the validator's snapshot sources, so nothing from it is cited as evidence."
+  ],
+  "honesty": {
+    "direction_claim": false,
+    "base_rate": "R-PX-4: an approached structural level breaks slightly more often than it holds (52-55%); R-PX-10: floor pivots are not support/resistance by themselves.",
+    "conflicts": [
+      "R-RB-2: after a flush the 7d low is usually still ahead, cutting against reading the downside chain as exhausted near 62,068/61,899.",
+      "R-AVOID-1/R-MAP-6: trendline-break and swing-structure-trend reads (the user's broken rising trendline) have failed historically here; it is a descriptive marker, not a signal.",
+      "liq_map is a 50/50-sides, fixed-leverage model, not observed positioning - the short-liq skew above 67,376.8 could be an artifact of the model's assumptions rather than real crowding."
+    ],
+    "what_would_change_my_mind": "The next snapshot showing 63,733.8 or 67,376.8 flip to swept=true, the 24h VAH/VAL printing a tighter pair (continued compression) vs widening back out, or a liq_map cluster actually firing (R-FLOW-2) near one of these prices."
+  }
+}
