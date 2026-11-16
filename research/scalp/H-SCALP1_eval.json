@@ -1,0 +1,40 @@
+{
+  "hypothesis": "H-SCALP1",
+  "cfg_hash": "17416371082833e8",
+  "segment": "forward_shadow (clean_holdout)",
+  "written_utc": "2026-11-16T08:14:08+00:00",
+  "bootstrap": {
+    "block": 5,
+    "n_boot": 10000,
+    "seed": 0
+  },
+  "orders": 50,
+  "fills": 33,
+  "trades": 32,
+  "fill_rate": 0.66,
+  "exits_by_kind": {
+    "tp": 8,
+    "stop": 21,
+    "time_passive": 2,
+    "time_market": 1
+  },
+  "all_mean_net_r": -0.3018426937985429,
+  "all_net_usd": -0.5432748480500018,
+  "mean_net_r_per_order": -0.19317932403106744,
+  "n": 30,
+  "mean_net_r": -0.2552985586155622,
+  "ci95": [
+    -0.6128678989184901,
+    0.09468874668071098
+  ],
+  "tp_hit_rate": 0.26666666666666666,
+  "tp_hit_ci95": [
+    0.1,
+    0.43333333333333335
+  ],
+  "tp_mean_net_r": 1.3802701104715225,
+  "break_even_p": 0.4201203870101548,
+  "first_ms": 1794781885504,
+  "last_ms": 1794815550406,
+  "verdict": "rejected"
+}
