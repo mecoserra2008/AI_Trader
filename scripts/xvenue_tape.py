@@ -48,7 +48,7 @@ JDIR = ROOT / "data" / "journal" / "xvenue"
 DEFAULT = ["BTC", "ETH", "SOL", "XRP", "DOGE", "SUI", "ZEC", "HYPE"]
 UA = "Mozilla/5.0 (AI_Trader research; public market data)"
 CTX = ssl.create_default_context()
-POLL_S = 10
+POLL_S = 10                       # target; measured 15-17 s per cycle from this host (~0.4 s RTT x ~55 requests / 2 threads)
 BUF_MS = 60 * 60 * 1000          # keep 60 min of prints
 WINDOWS = {"1m": 60_000, "5m": 300_000, "15m": 900_000}
 VENUES = ["by", "bn", "bs", "ok", "cb", "hl", "db", "up"]
@@ -171,6 +171,7 @@ class Venues:
                 self.buf[("db", s)].err = "not listed"
         self.okx_ctval: dict[str, float] = {}
         self.usdtkrw: float | None = None
+        self.perf: dict[str, float] = {}       # seconds spent per venue in the current cycle
 
     # each fetcher appends trades to its buffer; raise BadSymbol when not listed
     def bybit(self, h: Http, s: str, b: Buf) -> None:
@@ -341,6 +342,7 @@ class Venues:
             return
         f = {"by": self.bybit, "bn": self.binance_perp, "bs": self.binance_spot, "ok": self.okx, "cb": self.coinbase,
              "hl": self.hyperliquid, "db": self.deribit, "up": self.upbit}[v]
+        t0 = time.time()
         try:
             f(h, s, b)
             b.polls += 1
@@ -352,6 +354,7 @@ class Venues:
             b.err = f"429 {e}"
         except Exception as e:  # noqa: BLE001 - one venue failing must not stop the tracker
             b.err = f"{type(e).__name__}: {str(e)[:80]}"
+        self.perf[v] = self.perf.get(v, 0.0) + time.time() - t0
         time.sleep(0.04)
 
 
@@ -413,16 +416,14 @@ def quotes(h: Http, which: str, syms: list[str], V: Venues) -> dict:
             sw = {x["instId"]: x for x in h.req("https://www.okx.com/api/v5/market/tickers?instType=SWAP")["data"]}
             sp = {x["instId"]: x for x in h.req("https://www.okx.com/api/v5/market/tickers?instType=SPOT")["data"]}
             oi = {x["instId"]: x for x in h.req("https://www.okx.com/api/v5/public/open-interest?instType=SWAP")["data"]}
-            mk = {x["instId"]: x for x in h.req("https://www.okx.com/api/v5/public/mark-price?instType=SWAP")["data"]}
-            ix = {x["instId"]: x for x in h.req("https://www.okx.com/api/v5/market/index-tickers?quoteCcy=USDT")["data"]}
             for s in syms:
                 k = f"{s}-USDT-SWAP"
                 if k in sw:
                     d = {"mid": mid(sw[k]["bidPx"], sw[k]["askPx"])}
                     if k in oi and oi[k].get("oiUsd"):
                         d["oi_usd"] = float(oi[k]["oiUsd"])
-                    if k in mk and f"{s}-USDT" in ix:
-                        d["mark"], d["index"] = float(mk[k]["markPx"]), float(ix[f"{s}-USDT"]["idxPx"])
+                    if f"{s}-USDT" in sp:            # OKX index-tickers lag (ts ~20 s): basis = swap mid vs spot mid
+                        d["mark"], d["index"] = d["mid"], mid(sp[f"{s}-USDT"]["bidPx"], sp[f"{s}-USDT"]["askPx"])
                     out[("ok", s)] = d
                 if f"{s}-USDT" in sp:
                     x = sp[f"{s}-USDT"]
@@ -558,7 +559,9 @@ class Tracker:
 
     def poll(self) -> None:
         """Shared job list consumed by the main thread and one worker (2 threads in total)."""
-        jobs = [(v, s) for s in self.syms for v in VENUES if self.V.buf[(v, s)].ok]
+        self.n_poll = getattr(self, "n_poll", 0) + 1
+        # Hyperliquid returns only ~10 trades per call (sampled anyway): poll it every 3rd cycle to keep the others fast
+        jobs = [(v, s) for s in self.syms for v in VENUES if self.V.buf[(v, s)].ok and (v != "hl" or self.n_poll % 3 == 1)]
         jobs.sort(key=lambda j: j[0] != "by")          # slowest venue first
         lock = threading.Lock()
 
@@ -782,8 +785,10 @@ def main() -> None:
                 T.write(f"{datetime.now(UTC):%Y-%m-%dT%H:%M:%SZ} report-error {type(e).__name__}: {e}")
             next_rep = (int(time.time()) // 60 + 1) * 60
         dt = time.time() - t0
-        if dt > POLL_S * 1.5:
-            T.write(f"{datetime.now(UTC):%Y-%m-%dT%H:%M:%SZ} slow-cycle {dt:.1f}s")
+        if dt > POLL_S * 2.5:
+            perf = ' '.join(f'{k}:{x:.1f}' for k, x in sorted(T.V.perf.items(), key=lambda kv: -kv[1]))
+            T.write(f"{datetime.now(UTC):%Y-%m-%dT%H:%M:%SZ} slow-cycle {dt:.1f}s (2 threads; venue seconds {perf})")
+        T.V.perf.clear()
         time.sleep(max(0.5, POLL_S - dt))
 
 

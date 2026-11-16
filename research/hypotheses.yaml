@@ -2926,3 +2926,35 @@ hypotheses:
     prior: 0.20
     family: xs_network
     status: proposed
+
+  # ---- Cross-venue flow divergence (block XV; forward only on data/journal/xvenue; registered 2026-11-16 ~00:45 UTC by the orchestrator
+  # BEFORE any evaluation; from HC-OC-4 / HC-OC-5 in research/reports/onchain_72h_2026-11-16.md). ----
+  H-XV1:
+    title: "Forward: when Binance-perp large takers push one way while OKX + Coinbase large takers push the other, the Bybit perp follows Binance over the next 15 min"
+    statement: >-
+      At each minute close of scripts/xvenue_tape.py (BTC, ETH, SOL, XRP, DOGE, SUI, ZEC, HYPE): trigger SELL when the Binance USD-M perp
+      large-taker (> venue p95 notional) 5-min delta < -3 x its trailing 1h median |5-min delta| and < -3 M USD (BTC) / -1 M USD (others),
+      while the sum of the OKX swap and Coinbase spot large-taker 5-min deltas is > 0; BUY is the mirror. One trigger per symbol per 15 min
+      (first minute only). Outcome: Bybit perp mid 15-min forward log return, signed by the trigger side.
+    rationale: "User request to look across venues; tonight Binance-led selling met OKX/Coinbase buying several times (ETH 00:17-00:36, BTC 23:58). Which side is informed is unknown; prior near even."
+    test: "Mean signed 15-min forward log return per trigger vs 0, block bootstrap by day (2000 resamples, seed 0); in units of the symbol's 15-min sigma; after the first 60 triggers (pooled symbols), evaluated once."
+    success: >-
+      Supports iff the mean signed return > 0 with the 95% CI above 0 (Binance is the informed side); contradicts iff the mean < 0 with the CI
+      below 0 (OKX/Coinbase informed: also a usable sign, recorded as such); else inconclusive. Descriptive context only until recorded.
+    segment: "forward_shadow (clean_holdout)"
+    prior: 0.35
+    family: cross_venue_flow
+    status: proposed
+  H-XV2:
+    title: "Forward: a USDT-adjusted Coinbase premium above +5 bp for 30 minutes precedes a positive BTC 1h return"
+    statement: >-
+      Premium_t = 1e4 x ln(Coinbase BTC-USD 1-min VWAP / (Binance spot BTCUSDT 1-min VWAP x Coinbase USDT-USD mid)). Trigger when it is > +5 bp
+      for 30 consecutive minutes (and the mirror < -5 bp); one trigger per 2 h. Outcome: Bybit BTCUSDT perp 1h forward log return signed by the
+      premium sign.
+    rationale: "The raw Coinbase premium tonight was a USDT/USD effect (adjusted ~0); the adjusted premium is the cleaner US-spot demand gauge."
+    test: "Mean signed 1h return in sigma units vs 0, day-block bootstrap, after 40 triggers; evaluated once."
+    success: "Supports iff mean > 0 with the 95% CI above 0; contradicts iff mean <= 0 with >= 40 triggers; else inconclusive."
+    segment: "forward_shadow (clean_holdout)"
+    prior: 0.30
+    family: cross_venue_flow
+    status: proposed

@@ -1,0 +1,22 @@
+# Shadow xs.v4 (block XS4, H-XS4; research agent 2026-11-16). SHADOW ONLY: context, never a signal (R-XS-2 / R-XS-3); no orders.
+# xs.v1, v2.1 and xs.v3 are pinned track records and are not touched by this file. Changing any value here starts a new v4 record.
+model_id: xs.v4
+version: live_xs_v4.0
+universe:
+  min_turnover_usd: 20000000        # trailing 24h turnover floor (training: point in time from 1h klines; live: ticker turnover24h)
+  max_spread_bp: 5.0                # live only (no spread history)
+  symbol_type: ""                   # crypto only: excludes innovation zone, stock, ETF, commodity, forex
+candidate_turnover_usd: 10000000    # candidate set for the history download (2026-11-16 snapshot) plus universe L
+max_spread_bp: 5.0
+exclude: [SPYUSDT]
+history_start: "2024-07-01"
+data: bybit public REST (1h klines, funding history, 4h open interest) cached in data/research/xs_v4/raw
+model:
+  arch: kan_mix                     # ml.xs_net, same as xs.v3
+  lr: 0.001
+  wd: 0.0001
+  seeds: 3
+  sectors: [btc, l1, payments, meme, oracle, exchange, infra, defi, ai, gaming, l2, rwa, privacy, other]
+journal: data/journal/live_xs_v4
+latest: research/live/xs_v4_LATEST.md
+torch_threads: 2

@@ -3606,4 +3606,22 @@ rules:
   - H-KFD3
   review: rerun H-KFD3 once flow_3s holds 60+ days
   status: provisional
+# 2026-11-16 00:50 UTC: merged xs.v4 candidate (research/reports/xs_v4_2026-11-16.md; walk-forward secondary, inconclusive; H-XS4 forward pending).
+- id: R-XS-5
+  kind: expect
+  rule: WHEN reading the cross-sectional network over every liquid Bybit crypto perp (xs.v4 shadow) THEN expect its relative-return ranking to be no better than ranking by low volatility, while its 1h volatility
+    bands beat panel log-HAR-t
+  when: a relative-strength or 'which perp outperforms' view across the 20-40 liquid perps at 4h-24h, or 1h vol bands for them
+  then: read the ranking as a calm-beats-noisy prior (context, R-XS-3 still applies); take the 1h vol quantiles as the band source and log-HAR-t at 4h-24h
+  scope:
+    assets: liquid Bybit crypto perps (24h turnover >= 20 M USD, spread <= 5 bp)
+    horizon: 1h-24h
+    sides: both
+  effect: walk-forward IC v4 - low-vol +0.008 (t 1.85) / +0.005 (t 0.9) at 4h, -0.013 / -0.014 at 24h; 1h vol pinball -0.0019 (t -6.9) / -0.0018 (t -4.1)
+  confidence: C
+  evidence:
+  - H-XS4
+  - H-XS1
+  review: the H-XS4 forward evaluation at 60 daily origins
+  status: provisional
 
