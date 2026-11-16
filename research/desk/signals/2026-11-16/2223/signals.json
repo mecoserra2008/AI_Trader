@@ -1,0 +1,4202 @@
+{
+ "contract": "signals_v0 (desk SIGNALS, no sizes)",
+ "cycle_id": "20261116T2223",
+ "as_of": "2026-11-16T22:22:53Z",
+ "model": "claude-opus-5-5",
+ "prompt_version": "desk-signals-v1",
+ "inputs": {
+  "scan": "public Bybit, closed bars to 22:00 (1h) / 20:00 (4h), 103 perps",
+  "catchup": "replay of 1h bars 04:00-21:00 and 4h closes 04:00-20:00 for 66 crypto perps >= 5M turnover (closed bars, public klines; book liquidity = current, not historical)",
+  "shock_scan": "--top 200, bar 21:00Z: 1 shock TEMUSDT z +5.36 (TradFi, 19 bp spread): not tradable",
+  "logs": "tape 22:22, xvenue 22:22 (Binance BTC/ETH legs read +0: feed gap), level_watch 22:21 (outages 10:26-15:13, 17:51-22:06 gaps)"
+ },
+ "catchup": {
+  "btc": {
+   "range_04_22": [
+    63871,
+    65683
+   ],
+   "closes": "64,787 (04) -> 64,141 (12) -> 65,142 (14 bar, +1.5%) -> 64,440 (15) -> 65,268 (21) -> 65,404 now",
+   "events": [
+    "15m closes below 64,494 at 06:00, 07:15, 15:15 (each reclaimed); low 63,871 never closed below 63,836 -> Plan A never triggered",
+    "15m close above 65,271 at 22:15; Plan B (65,904) not triggered",
+    "liq clusters (R-FLOW-2): BTC shorts 07:41, 16:57; SOL longs 05:47-06:15"
+   ]
+  },
+  "regime_drift": {
+   "crypto_4h": {
+    "23:36": {
+     "R9": 35,
+     "R8": 18
+    },
+    "04:00": {
+     "R9": 30,
+     "R8": 15
+    },
+    "now": {
+     "R9": 27,
+     "R8": 23,
+     "R6": 6,
+     "R5": 4,
+     "R3": 3,
+     "R7": 2
+    }
+   },
+   "note": "R9 is handing over mostly to R8 (trend down) not R6; R-RB-3 base rate R8 18%"
+  },
+  "players": {
+   "BTC": {
+    "funding": "-0.0047% (04:00) -> +0.0081% now (p49)",
+    "oi_24h": "+1.1%",
+    "dvol": "44.2 -> 43.2 (p96)"
+   },
+   "ETH": {
+    "funding": "-0.0012%",
+    "oi_24h": "+4.4%",
+    "dvol": "57.3 -> 58.0 (p96)"
+   }
+  },
+  "missed_tested_triggers": {
+   "shock_fades": [
+    {
+     "symbol": "HUMAUSDT",
+     "bar": "2026-11-16T14:00:00+00:00",
+     "z": 5.15,
+     "r_pct": 9.19,
+     "vol": "normal",
+     "cell1h": "R9",
+     "atr1h_pct": 2.6,
+     "sleeve": "short",
+     "outcome_24h": "stop@15",
+     "fwd4h_pct": 9.53
+    },
+    {
+     "symbol": "HUMAUSDT",
+     "bar": "2026-11-16T16:00:00+00:00",
+     "z": 5.59,
+     "r_pct": 11.2,
+     "vol": "normal",
+     "cell1h": "R6",
+     "atr1h_pct": 3.83,
+     "sleeve": "short",
+     "outcome_24h": "stop@20",
+     "fwd4h_pct": 10.88
+    },
+    {
+     "symbol": "HUMAUSDT",
+     "bar": "2026-11-16T19:00:00+00:00",
+     "z": 4.12,
+     "r_pct": 9.26,
+     "vol": "normal",
+     "cell1h": "R6",
+     "atr1h_pct": 5.3,
+     "sleeve": "short",
+     "outcome_24h": "stop@20",
+     "fwd4h_pct": 10.31
+    },
+    {
+     "symbol": "HUMAUSDT",
+     "bar": "2026-11-16T20:00:00+00:00",
+     "z": 4.33,
+     "r_pct": 10.21,
+     "vol": "normal",
+     "cell1h": "R6",
+     "atr1h_pct": 5.6,
+     "sleeve": "short",
+     "outcome_24h": "stop@21",
+     "fwd4h_pct": 0.1
+    },
+    {
+     "symbol": "ICPUSDT",
+     "bar": "2026-11-16T14:00:00+00:00",
+     "z": 5.16,
+     "r_pct": 5.43,
+     "vol": "high",
+     "cell1h": "R9",
+     "atr1h_pct": 1.69,
+     "sleeve": "short",
+     "outcome_24h": "stop@15",
+     "fwd4h_pct": 4.17
+    }
+   ],
+   "verdict": "5 shocks, all illiquid (HUMA depth < k, ICP depth ~4k / 7.9 bp): none tradable; all 5 sleeve fades stopped within 1-4 h (log for H-S3)",
+   "h_rb2": "no liquid crypto short trigger at 08/12/16/20. HYPE: first 4h close >= EMA20 at 20:00 (68.395 vs ~68.04) -> short now armed for the first 4h close below EMA20. Illiquid only: ICP, HUMA above EMA (no trigger); AKE triggered 04:00 (depth k).",
+   "r_bos_4": "calm 4h cells only in illiquid names (LIT, AERO, FARTCOIN, PONS, USELESS; depth -34k): none tradable"
+  },
+  "watch_list_outcomes": {
+   "zec-s1 short (closed by user ~23:42)": "target 857 hit (low 846, 12:00 bar); stop 935 never touched (max 916.67): would have been about +1.7 R gross",
+   "ZEC sleeve": "target 849.3 hit -> win (H-S3 log)",
+   "ETH sleeve": "killed: 14:00 bar closed 1845.40 > 1836.7 (stop, H-S3 log)",
+   "BNB sleeve": "alive (max close 594.47 < 598.2), target 571.16 not hit; 44 h old, no longer actionable",
+   "HYPE/XRP/TAO/SUI/LINK H-RB2": "only HYPE armed (20:00)"
+  }
+ },
+ "regime": {
+  "summary": "BTC R9/R9 at 65,404, just above the 65,270 box top (15m close above at 22:15), below Plan B 65,904; 1h vol compressing (PNN sigma 0.39%, 80% +-0.5%) while DVOL stays p96. Crypto 4h R9 27 / R8 23.",
+  "btc": {
+   "funding_pct_8h": 0.0081,
+   "oi_24h_pct": 1.1,
+   "dvol": 43.2,
+   "cb_premium_bp": -11.4,
+   "tape": "whale -1.19M (22:22), PUSH UP 2/3 target 65,604",
+   "xvenue_5m": {
+    "bybit": -1600000.0,
+    "okx": -1600000.0,
+    "coinbase": -127000.0
+   },
+   "xvenue_15m": {
+    "bybit": -1800000.0,
+    "okx": 7200000.0,
+    "coinbase": 1300000.0
+   }
+  }
+ },
+ "candidates": [
+  {
+   "rank": 1,
+   "symbol": "HYPEUSDT",
+   "mechanism": "H-RB2 failed-rebound short (R-RB-5)",
+   "label": "TESTED-inconclusive",
+   "state": "armed + closed >= EMA20 at 20:00; triggers at the first 4h close < EMA20 (00:00 Tue: close < ~68.04, -3.5% from 70.49)",
+   "side": "short (conditional)",
+   "stop": "rebound high (>= 71.00) + 0.5 sigma_4h (2.11%) ~ 71.75",
+   "target": "2R ~ 61.1 from 68.0",
+   "rr": 2.0,
+   "p_driftless": 0.333,
+   "net_er": "-0.02 driftless; recorded IS -0.00 [-0.15,+0.15], HO +0.42",
+   "gate": "fails TESTED >= 0.10 on driftless; orchestrator call (learning)",
+   "liquidity": "0.14 bp, depth25 $985k",
+   "flow": "Bybit 5m -346k, Binance -1.1M, tape PUSH DOWN; would confirm",
+   "cluster": "crypto_beta"
+  },
+  {
+   "rank": 2,
+   "symbol": "HUMAUSDT",
+   "mechanism": "squeeze / shock fade",
+   "label": "not executable",
+   "state": "+42.9% 24h, 4 fresh |z|>=4 shocks today, every fade stopped; funding -0.921%/4h (shorts pay), OI +17.7% 24h; depth25 $577, spread 10.1 bp",
+   "side": "none"
+  }
+ ],
+ "proposals": null,
+ "no_proposal_reason": "No live tested trigger (21:00 bar: only TradFi TEMUSDT shock); HYPE H-RB2 needs the 00:00 close below EMA20; no pattern-only setup with non-contradicting BTC + token cross-venue flow (BTC 5m Bybit/OKX selling, CB premium -11 to -17 bp).",
+ "tokens": {
+  "BTCUSDT": {
+   "asset": "crypto",
+   "sector": "btc",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.84,
+   "ret_pct": {
+    "1h": 0.36,
+    "4h": 0.6,
+    "24h": 0.44,
+    "7d": -13.88
+   },
+   "rel_btc_pct": {
+    "1h": 0.0,
+    "4h": 0.0,
+    "24h": 0.0,
+    "7d": 0.0
+   },
+   "z1h": 0.59,
+   "atr1h_pct": 0.91,
+   "funding_pct_pred": 0.0081,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 1.1,
+   "spread_bp": 0.02,
+   "depth25_min_usd": 8265344,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 65038.5,
+    "ema20_4h": 66186.609001,
+    "gap_sigma": -1.56,
+    "flush_ts": "2026-11-13T16:00:00+00:00",
+    "flush_bars_ago": 18,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 66132.7
+   }
+  },
+  "ETHUSDT": {
+   "asset": "crypto",
+   "sector": "l1",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.87,
+   "ret_pct": {
+    "1h": 0.46,
+    "4h": 0.44,
+    "24h": 0.55,
+    "7d": -15.2
+   },
+   "rel_btc_pct": {
+    "1h": 0.1,
+    "4h": -0.15,
+    "24h": 0.11,
+    "7d": -1.32
+   },
+   "z1h": 0.57,
+   "atr1h_pct": 1.15,
+   "funding_pct_pred": -0.0012,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 4.4,
+   "spread_bp": 0.05,
+   "depth25_min_usd": 11229177,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 1823.12,
+    "ema20_4h": 1857.665161,
+    "gap_sigma": -1.21,
+    "flush_ts": "2026-11-09T04:00:00+00:00",
+    "flush_bars_ago": 45,
+    "expired": true,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "SOXLUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_ETF",
+   "cell_1h": "R9",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.82,
+   "ret_pct": {
+    "1h": 0.02,
+    "4h": -3.03,
+    "24h": -15.17,
+    "7d": -15.63
+   },
+   "rel_btc_pct": {
+    "1h": -0.34,
+    "4h": -3.62,
+    "24h": -15.61,
+    "7d": -1.74
+   },
+   "z1h": 0.01,
+   "atr1h_pct": 3.61,
+   "funding_pct_pred": 0.0076,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 44.1,
+   "spread_bp": 2.05,
+   "depth25_min_usd": 108610,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 50.76,
+    "ema20_4h": 55.145658,
+    "gap_sigma": -1.85,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "SOLUSDT": {
+   "asset": "crypto",
+   "sector": "l1",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.87,
+   "ret_pct": {
+    "1h": 0.7,
+    "4h": 0.94,
+    "24h": -0.03,
+    "7d": -18.45
+   },
+   "rel_btc_pct": {
+    "1h": 0.34,
+    "4h": 0.34,
+    "24h": -0.47,
+    "7d": -4.56
+   },
+   "z1h": 0.82,
+   "atr1h_pct": 1.33,
+   "funding_pct_pred": -0.0054,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -0.1,
+   "spread_bp": 1.39,
+   "depth25_min_usd": 4953191,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 71.49,
+    "ema20_4h": 73.667406,
+    "gap_sigma": -1.81,
+    "flush_ts": "2026-11-14T00:00:00+00:00",
+    "flush_bars_ago": 16,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 73.23
+   }
+  },
+  "ZECUSDT": {
+   "asset": "crypto",
+   "sector": "privacy",
+   "cell_1h": "R9",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.52,
+   "ret_pct": {
+    "1h": 1.21,
+    "4h": 2.25,
+    "24h": 0.21,
+    "7d": -26.0
+   },
+   "rel_btc_pct": {
+    "1h": 0.85,
+    "4h": 1.65,
+    "24h": -0.23,
+    "7d": -12.11
+   },
+   "z1h": 0.75,
+   "atr1h_pct": 2.26,
+   "funding_pct_pred": 0.01,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 5.5,
+   "spread_bp": 0.11,
+   "depth25_min_usd": 895615,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 903.83,
+    "ema20_4h": 913.233278,
+    "gap_sigma": -0.45,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "XRPUSDT": {
+   "asset": "crypto",
+   "sector": "l1",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.89,
+   "ret_pct": {
+    "1h": 0.26,
+    "4h": 0.17,
+    "24h": -0.55,
+    "7d": -13.44
+   },
+   "rel_btc_pct": {
+    "1h": -0.1,
+    "4h": -0.43,
+    "24h": -0.99,
+    "7d": 0.45
+   },
+   "z1h": 0.32,
+   "atr1h_pct": 1.25,
+   "funding_pct_pred": -0.0096,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -1.9,
+   "spread_bp": 1.04,
+   "depth25_min_usd": 2364707,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.9598,
+    "ema20_4h": 0.975412,
+    "gap_sigma": -0.91,
+    "flush_ts": "2026-11-10T12:00:00+00:00",
+    "flush_bars_ago": 37,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 1.0855
+   }
+  },
+  "NVDAUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R9",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.96,
+   "ret_pct": {
+    "1h": 0.06,
+    "4h": -0.18,
+    "24h": -5.29,
+    "7d": -13.89
+   },
+   "rel_btc_pct": {
+    "1h": -0.29,
+    "4h": -0.78,
+    "24h": -5.73,
+    "7d": -0.0
+   },
+   "z1h": 0.06,
+   "atr1h_pct": 1.35,
+   "funding_pct_pred": 0.0317,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 15.1,
+   "spread_bp": 0.64,
+   "depth25_min_usd": 685138,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 156.63,
+    "ema20_4h": 162.052448,
+    "gap_sigma": -1.77,
+    "flush_ts": "2026-11-14T20:00:00+00:00",
+    "flush_bars_ago": 11,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": true,
+    "triggered_bars_ago": 4,
+    "rebound_high": 167.09
+   }
+  },
+  "HYPEUSDT": {
+   "asset": "crypto",
+   "sector": "exchange",
+   "cell_1h": "R6",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.77,
+   "ret_pct": {
+    "1h": 2.47,
+    "4h": 5.05,
+    "24h": 3.52,
+    "7d": -7.24
+   },
+   "rel_btc_pct": {
+    "1h": 2.12,
+    "4h": 4.45,
+    "24h": 3.08,
+    "7d": 6.64
+   },
+   "z1h": 2.4,
+   "atr1h_pct": 1.78,
+   "funding_pct_pred": 0.01,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 5.5,
+   "spread_bp": 0.14,
+   "depth25_min_usd": 985281,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 68.563,
+    "ema20_4h": 68.038346,
+    "gap_sigma": 0.36,
+    "flush_ts": "2026-11-15T04:00:00+00:00",
+    "flush_bars_ago": 9,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": true,
+    "triggered_bars_ago": null,
+    "rebound_high": 68.986
+   }
+  },
+  "XAUUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_commodity",
+   "cell_1h": "R6",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.74,
+   "ret_pct": {
+    "1h": 0.11,
+    "4h": -0.02,
+    "24h": 0.1,
+    "7d": -7.15
+   },
+   "rel_btc_pct": {
+    "1h": -0.25,
+    "4h": -0.61,
+    "24h": -0.34,
+    "7d": 6.74
+   },
+   "z1h": 0.41,
+   "atr1h_pct": 0.42,
+   "funding_pct_pred": 0.0032,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": -5.4,
+   "spread_bp": 0.03,
+   "depth25_min_usd": 2036069,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 3870.14,
+    "ema20_4h": 3879.451812,
+    "gap_sigma": -0.44,
+    "flush_ts": "2026-11-13T08:00:00+00:00",
+    "flush_bars_ago": 20,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": true,
+    "triggered_bars_ago": 4,
+    "rebound_high": 3904.94
+   }
+  },
+  "NEARUSDT": {
+   "asset": "crypto",
+   "sector": "ai",
+   "cell_1h": "R8",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.58,
+   "ret_pct": {
+    "1h": 0.41,
+    "4h": 1.17,
+    "24h": 0.22,
+    "7d": -13.76
+   },
+   "rel_btc_pct": {
+    "1h": 0.05,
+    "4h": 0.57,
+    "24h": -0.22,
+    "7d": 0.12
+   },
+   "z1h": 0.32,
+   "atr1h_pct": 1.85,
+   "funding_pct_pred": 0.0089,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 12.4,
+   "spread_bp": 3.14,
+   "depth25_min_usd": 498791,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 3.181,
+    "ema20_4h": 3.241512,
+    "gap_sigma": -0.98,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "SNDKUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R8",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.67,
+   "ret_pct": {
+    "1h": 0.53,
+    "4h": -0.96,
+    "24h": -5.99,
+    "7d": -10.0
+   },
+   "rel_btc_pct": {
+    "1h": 0.18,
+    "4h": -1.56,
+    "24h": -6.43,
+    "7d": 3.89
+   },
+   "z1h": 0.43,
+   "atr1h_pct": 1.77,
+   "funding_pct_pred": 0.0046,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 0.5,
+   "spread_bp": 0.12,
+   "depth25_min_usd": 197522,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 823.28,
+    "ema20_4h": 859.324044,
+    "gap_sigma": -1.86,
+    "flush_ts": "2026-11-07T00:00:00+00:00",
+    "flush_bars_ago": 58,
+    "expired": true,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "XAGUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_commodity",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.79,
+   "ret_pct": {
+    "1h": 0.04,
+    "4h": -0.21,
+    "24h": -2.18,
+    "7d": -12.84
+   },
+   "rel_btc_pct": {
+    "1h": -0.32,
+    "4h": -0.81,
+    "24h": -2.62,
+    "7d": 1.05
+   },
+   "z1h": 0.08,
+   "atr1h_pct": 0.79,
+   "funding_pct_pred": 0.0204,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": -12.3,
+   "spread_bp": 2.12,
+   "depth25_min_usd": 1842656,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 47.21,
+    "ema20_4h": 48.298063,
+    "gap_sigma": -1.92,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "LITUSDT": {
+   "asset": "crypto",
+   "sector": "other",
+   "cell_1h": "R9",
+   "cell_4h": "R7",
+   "vol4h_pct_1y": 0.27,
+   "ret_pct": {
+    "1h": 2.54,
+    "4h": 4.97,
+    "24h": -1.65,
+    "7d": -15.25
+   },
+   "rel_btc_pct": {
+    "1h": 2.19,
+    "4h": 4.38,
+    "24h": -2.09,
+    "7d": -1.36
+   },
+   "z1h": 1.67,
+   "atr1h_pct": 3.2,
+   "funding_pct_pred": -0.0538,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": -4.3,
+   "spread_bp": 0.36,
+   "depth25_min_usd": 12442,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 2.6808,
+    "ema20_4h": 2.893841,
+    "gap_sigma": -3.4,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "RAREUSDT": {
+   "asset": "crypto",
+   "sector": "unmapped",
+   "cell_1h": "R6",
+   "cell_4h": "R3",
+   "vol4h_pct_1y": 1.0,
+   "ret_pct": {
+    "1h": 2.01,
+    "4h": -4.64,
+    "24h": 0.78,
+    "7d": 24.56
+   },
+   "rel_btc_pct": {
+    "1h": 1.65,
+    "4h": -5.23,
+    "24h": 0.34,
+    "7d": 38.45
+   },
+   "z1h": 0.41,
+   "atr1h_pct": 9.98,
+   "funding_pct_pred": -0.7838,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 110.2,
+   "spread_bp": 8.78,
+   "depth25_min_usd": 2337,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.013856,
+    "ema20_4h": 0.011692,
+    "gap_sigma": 1.29,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "SPCXUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R5",
+   "cell_4h": "R5",
+   "vol4h_pct_1y": 0.5,
+   "ret_pct": {
+    "1h": 0.32,
+    "4h": 0.87,
+    "24h": -1.03,
+    "7d": -3.23
+   },
+   "rel_btc_pct": {
+    "1h": -0.04,
+    "4h": 0.28,
+    "24h": -1.47,
+    "7d": 10.65
+   },
+   "z1h": 0.43,
+   "atr1h_pct": 0.99,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 0.2,
+   "spread_bp": 0.73,
+   "depth25_min_usd": 472594,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 139.35,
+    "ema20_4h": 138.778424,
+    "gap_sigma": 0.32,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "AKEUSDT": {
+   "asset": "crypto",
+   "sector": "ai",
+   "cell_1h": "R6",
+   "cell_4h": "R3",
+   "vol4h_pct_1y": 0.97,
+   "ret_pct": {
+    "1h": -1.53,
+    "4h": -3.39,
+    "24h": -11.9,
+    "7d": 71.34
+   },
+   "rel_btc_pct": {
+    "1h": -1.88,
+    "4h": -3.98,
+    "24h": -12.33,
+    "7d": 85.22
+   },
+   "z1h": -0.18,
+   "atr1h_pct": 7.02,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": -10.0,
+   "spread_bp": 0.99,
+   "depth25_min_usd": 3031,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.010214,
+    "ema20_4h": 0.010052,
+    "gap_sigma": 0.1,
+    "flush_ts": "2026-11-10T04:00:00+00:00",
+    "flush_bars_ago": 39,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": true,
+    "triggered_bars_ago": 4,
+    "rebound_high": 0.018282
+   }
+  },
+  "DOGEUSDT": {
+   "asset": "crypto",
+   "sector": "meme",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.84,
+   "ret_pct": {
+    "1h": 0.1,
+    "4h": 0.34,
+    "24h": 0.71,
+    "7d": -16.32
+   },
+   "rel_btc_pct": {
+    "1h": -0.26,
+    "4h": -0.26,
+    "24h": 0.27,
+    "7d": -2.44
+   },
+   "z1h": 0.12,
+   "atr1h_pct": 1.25,
+   "funding_pct_pred": -0.0011,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -2.6,
+   "spread_bp": 1.68,
+   "depth25_min_usd": 767358,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.05955,
+    "ema20_4h": 0.060598,
+    "gap_sigma": -1.03,
+    "flush_ts": "2026-11-14T00:00:00+00:00",
+    "flush_bars_ago": 16,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 0.06008
+   }
+  },
+  "KORUUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_ETF",
+   "cell_1h": "R5",
+   "cell_4h": "R5",
+   "vol4h_pct_1y": 0.62,
+   "ret_pct": {
+    "1h": 2.22,
+    "4h": -1.6,
+    "24h": -7.76,
+    "7d": -15.21
+   },
+   "rel_btc_pct": {
+    "1h": 1.87,
+    "4h": -2.2,
+    "24h": -8.19,
+    "7d": -1.32
+   },
+   "z1h": 1.25,
+   "atr1h_pct": 2.83,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -15.5,
+   "spread_bp": 14.7,
+   "depth25_min_usd": 53917,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 6.89,
+    "ema20_4h": 7.292284,
+    "gap_sigma": -1.6,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "1000PEPEUSDT": {
+   "asset": "crypto",
+   "sector": "meme",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.77,
+   "ret_pct": {
+    "1h": 0.15,
+    "4h": 1.11,
+    "24h": 0.93,
+    "7d": -27.32
+   },
+   "rel_btc_pct": {
+    "1h": -0.2,
+    "4h": 0.51,
+    "24h": 0.49,
+    "7d": -13.43
+   },
+   "z1h": 0.12,
+   "atr1h_pct": 1.79,
+   "funding_pct_pred": -0.0075,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -2.5,
+   "spread_bp": 2.56,
+   "depth25_min_usd": 490170,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.003933,
+    "ema20_4h": 0.00404,
+    "gap_sigma": -1.24,
+    "flush_ts": "2026-11-12T00:00:00+00:00",
+    "flush_bars_ago": 28,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 0.004678
+   }
+  },
+  "SOXSUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_ETF",
+   "cell_1h": "R6",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.81,
+   "ret_pct": {
+    "1h": 0.02,
+    "4h": 2.29,
+    "24h": 12.59,
+    "7d": 8.44
+   },
+   "rel_btc_pct": {
+    "1h": -0.34,
+    "4h": 1.69,
+    "24h": 12.15,
+    "7d": 22.32
+   },
+   "z1h": 0.01,
+   "atr1h_pct": 2.65,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 3.4,
+   "spread_bp": 1.69,
+   "depth25_min_usd": 48437,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 57.5,
+    "ema20_4h": 53.953219,
+    "gap_sigma": 1.52,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "QQQUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_ETF",
+   "cell_1h": "R9",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.89,
+   "ret_pct": {
+    "1h": -0.02,
+    "4h": -0.46,
+    "24h": -1.95,
+    "7d": -2.78
+   },
+   "rel_btc_pct": {
+    "1h": -0.38,
+    "4h": -1.06,
+    "24h": -2.39,
+    "7d": 11.11
+   },
+   "z1h": -0.06,
+   "atr1h_pct": 0.49,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 21.3,
+   "spread_bp": 0.15,
+   "depth25_min_usd": 970137,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 664.5,
+    "ema20_4h": 674.491074,
+    "gap_sigma": -2.17,
+    "flush_ts": "2026-11-14T20:00:00+00:00",
+    "flush_bars_ago": 11,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": true,
+    "triggered_bars_ago": 4,
+    "rebound_high": 684.57
+   }
+  },
+  "MUUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R8",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.62,
+   "ret_pct": {
+    "1h": 0.26,
+    "4h": -0.97,
+    "24h": -6.0,
+    "7d": -2.11
+   },
+   "rel_btc_pct": {
+    "1h": -0.1,
+    "4h": -1.57,
+    "24h": -6.44,
+    "7d": 11.77
+   },
+   "z1h": 0.27,
+   "atr1h_pct": 1.43,
+   "funding_pct_pred": 0.0123,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 8.8,
+   "spread_bp": 0.69,
+   "depth25_min_usd": 321009,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 729.66,
+    "ema20_4h": 756.487886,
+    "gap_sigma": -1.96,
+    "flush_ts": "2026-11-06T20:00:00+00:00",
+    "flush_bars_ago": 59,
+    "expired": true,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "ENAUSDT": {
+   "asset": "crypto",
+   "sector": "other",
+   "cell_1h": "R8",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.46,
+   "ret_pct": {
+    "1h": 0.45,
+    "4h": -0.15,
+    "24h": -3.39,
+    "7d": -28.51
+   },
+   "rel_btc_pct": {
+    "1h": 0.09,
+    "4h": -0.74,
+    "24h": -3.83,
+    "7d": -14.62
+   },
+   "z1h": 0.4,
+   "atr1h_pct": 1.8,
+   "funding_pct_pred": 0.0048,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 4.8,
+   "spread_bp": 1.72,
+   "depth25_min_usd": 216300,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.11687,
+    "ema20_4h": 0.123404,
+    "gap_sigma": -2.83,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "SKHYNIXUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R8",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.59,
+   "ret_pct": {
+    "1h": 0.72,
+    "4h": -1.04,
+    "24h": -7.43,
+    "7d": -10.41
+   },
+   "rel_btc_pct": {
+    "1h": 0.36,
+    "4h": -1.64,
+    "24h": -7.87,
+    "7d": 3.48
+   },
+   "z1h": 0.78,
+   "atr1h_pct": 1.35,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 3.0,
+   "spread_bp": 0.12,
+   "depth25_min_usd": 186036,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 833.9,
+    "ema20_4h": 873.584766,
+    "gap_sigma": -2.25,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "CLUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_commodity",
+   "cell_1h": "R7",
+   "cell_4h": "R7",
+   "vol4h_pct_1y": 0.16,
+   "ret_pct": {
+    "1h": -0.59,
+    "4h": -1.29,
+    "24h": -4.29,
+    "7d": -2.58
+   },
+   "rel_btc_pct": {
+    "1h": -0.95,
+    "4h": -1.89,
+    "24h": -4.73,
+    "7d": 11.31
+   },
+   "z1h": -1.52,
+   "atr1h_pct": 0.64,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -8.0,
+   "spread_bp": 1.19,
+   "depth25_min_usd": 1019932,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 84.4,
+    "ema20_4h": 86.893394,
+    "gap_sigma": -3.63,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "SNXXUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_ETF",
+   "cell_1h": "R8",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.7,
+   "ret_pct": {
+    "1h": 1.01,
+    "4h": -1.98,
+    "24h": -12.81,
+    "7d": -23.11
+   },
+   "rel_btc_pct": {
+    "1h": 0.65,
+    "4h": -2.58,
+    "24h": -13.25,
+    "7d": -9.23
+   },
+   "z1h": 0.4,
+   "atr1h_pct": 3.79,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 12.8,
+   "spread_bp": 33.28,
+   "depth25_min_usd": 876,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 3.07,
+    "ema20_4h": 3.375243,
+    "gap_sigma": -2.04,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "AAVEUSDT": {
+   "asset": "crypto",
+   "sector": "other",
+   "cell_1h": "R9",
+   "cell_4h": "R5",
+   "vol4h_pct_1y": 0.43,
+   "ret_pct": {
+    "1h": 0.6,
+    "4h": 0.6,
+    "24h": -1.27,
+    "7d": -20.08
+   },
+   "rel_btc_pct": {
+    "1h": 0.24,
+    "4h": -0.0,
+    "24h": -1.71,
+    "7d": -6.2
+   },
+   "z1h": 0.66,
+   "atr1h_pct": 1.42,
+   "funding_pct_pred": 0.01,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -1.6,
+   "spread_bp": 0.92,
+   "depth25_min_usd": 719389,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 107.87,
+    "ema20_4h": 109.024835,
+    "gap_sigma": -0.73,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "ASTERUSDT": {
+   "asset": "crypto",
+   "sector": "exchange",
+   "cell_1h": "R6",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.99,
+   "ret_pct": {
+    "1h": 0.26,
+    "4h": 0.12,
+    "24h": 9.24,
+    "7d": -13.14
+   },
+   "rel_btc_pct": {
+    "1h": -0.09,
+    "4h": -0.47,
+    "24h": 8.8,
+    "7d": 0.75
+   },
+   "z1h": 0.11,
+   "atr1h_pct": 2.67,
+   "funding_pct_pred": -0.0002,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": -1.4,
+   "spread_bp": 1.76,
+   "depth25_min_usd": 28365,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.5658,
+    "ema20_4h": 0.570836,
+    "gap_sigma": -0.23,
+    "flush_ts": "2026-11-14T16:00:00+00:00",
+    "flush_bars_ago": 12,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 0.7117
+   }
+  },
+  "SUIUSDT": {
+   "asset": "crypto",
+   "sector": "l1",
+   "cell_1h": "R9",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.6,
+   "ret_pct": {
+    "1h": 0.47,
+    "4h": 0.58,
+    "24h": -0.69,
+    "7d": -15.58
+   },
+   "rel_btc_pct": {
+    "1h": 0.11,
+    "4h": -0.01,
+    "24h": -1.13,
+    "7d": -1.7
+   },
+   "z1h": 0.51,
+   "atr1h_pct": 1.42,
+   "funding_pct_pred": -0.0068,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 2.2,
+   "spread_bp": 1.38,
+   "depth25_min_usd": 498581,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.724,
+    "ema20_4h": 0.742486,
+    "gap_sigma": -1.47,
+    "flush_ts": "2026-11-15T04:00:00+00:00",
+    "flush_bars_ago": 9,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 0.7394
+   }
+  },
+  "SKHYUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R8",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.61,
+   "ret_pct": {
+    "1h": 0.67,
+    "4h": -1.18,
+    "24h": -6.07,
+    "7d": -9.96
+   },
+   "rel_btc_pct": {
+    "1h": 0.31,
+    "4h": -1.78,
+    "24h": -6.5,
+    "7d": 3.93
+   },
+   "z1h": 0.74,
+   "atr1h_pct": 1.27,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 25.9,
+   "spread_bp": 1.62,
+   "depth25_min_usd": 255804,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 124.58,
+    "ema20_4h": 129.157307,
+    "gap_sigma": -1.99,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "MSTRUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R9",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.56,
+   "ret_pct": {
+    "1h": 0.66,
+    "4h": 0.62,
+    "24h": 3.19,
+    "7d": -19.45
+   },
+   "rel_btc_pct": {
+    "1h": 0.3,
+    "4h": 0.02,
+    "24h": 2.75,
+    "7d": -5.57
+   },
+   "z1h": 0.66,
+   "atr1h_pct": 1.44,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -7.1,
+   "spread_bp": 1.92,
+   "depth25_min_usd": 114487,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 104.2,
+    "ema20_4h": 105.257858,
+    "gap_sigma": -0.6,
+    "flush_ts": "2026-11-15T04:00:00+00:00",
+    "flush_bars_ago": 9,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 105.92
+   }
+  },
+  "SKRUSDT": {
+   "asset": "crypto",
+   "sector": "unmapped",
+   "cell_1h": "R6",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.93,
+   "ret_pct": {
+    "1h": -0.58,
+    "4h": -1.24,
+    "24h": 12.79,
+    "7d": -13.16
+   },
+   "rel_btc_pct": {
+    "1h": -0.94,
+    "4h": -1.84,
+    "24h": 12.35,
+    "7d": 0.73
+   },
+   "z1h": -0.33,
+   "atr1h_pct": 3.94,
+   "funding_pct_pred": -0.3159,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 52.7,
+   "spread_bp": 4.95,
+   "depth25_min_usd": 3099,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.01016,
+    "ema20_4h": 0.009978,
+    "gap_sigma": 0.27,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "XMRUSDT": {
+   "asset": "crypto",
+   "sector": "privacy",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.77,
+   "ret_pct": {
+    "1h": 0.93,
+    "4h": -0.45,
+    "24h": 0.33,
+    "7d": -18.1
+   },
+   "rel_btc_pct": {
+    "1h": 0.57,
+    "4h": -1.05,
+    "24h": -0.11,
+    "7d": -4.21
+   },
+   "z1h": 0.89,
+   "atr1h_pct": 1.66,
+   "funding_pct_pred": 0.01,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -7.6,
+   "spread_bp": 0.2,
+   "depth25_min_usd": 99031,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 498.07,
+    "ema20_4h": 508.547533,
+    "gap_sigma": -1.03,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "ADAUSDT": {
+   "asset": "crypto",
+   "sector": "l1",
+   "cell_1h": "R9",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.68,
+   "ret_pct": {
+    "1h": 0.07,
+    "4h": 0.59,
+    "24h": -0.2,
+    "7d": -14.77
+   },
+   "rel_btc_pct": {
+    "1h": -0.29,
+    "4h": -0.01,
+    "24h": -0.63,
+    "7d": -0.89
+   },
+   "z1h": 0.08,
+   "atr1h_pct": 1.32,
+   "funding_pct_pred": -0.0103,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -1.9,
+   "spread_bp": 6.51,
+   "depth25_min_usd": 449000,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.1538,
+    "ema20_4h": 0.157394,
+    "gap_sigma": -1.38,
+    "flush_ts": "2026-11-15T04:00:00+00:00",
+    "flush_bars_ago": 9,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 0.1566
+   }
+  },
+  "NBISUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R8",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.87,
+   "ret_pct": {
+    "1h": 1.24,
+    "4h": 0.38,
+    "24h": -4.9,
+    "7d": -28.33
+   },
+   "rel_btc_pct": {
+    "1h": 0.88,
+    "4h": -0.22,
+    "24h": -5.34,
+    "7d": -14.44
+   },
+   "z1h": 0.66,
+   "atr1h_pct": 2.06,
+   "funding_pct_pred": 0.0106,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -1.0,
+   "spread_bp": 0.92,
+   "depth25_min_usd": 8965,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 107.5,
+    "ema20_4h": 114.593238,
+    "gap_sigma": -1.84,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "UNIUSDT": {
+   "asset": "crypto",
+   "sector": "exchange",
+   "cell_1h": "R8",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.73,
+   "ret_pct": {
+    "1h": 0.58,
+    "4h": 1.27,
+    "24h": 0.23,
+    "7d": -31.4
+   },
+   "rel_btc_pct": {
+    "1h": 0.23,
+    "4h": 0.67,
+    "24h": -0.2,
+    "7d": -17.52
+   },
+   "z1h": 0.5,
+   "atr1h_pct": 1.56,
+   "funding_pct_pred": -0.0109,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -0.1,
+   "spread_bp": 1.93,
+   "depth25_min_usd": 230221,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 5.145,
+    "ema20_4h": 5.331182,
+    "gap_sigma": -1.69,
+    "flush_ts": "2026-11-14T20:00:00+00:00",
+    "flush_bars_ago": 11,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 5.255
+   }
+  },
+  "XAUTUSDT": {
+   "asset": "crypto",
+   "sector": "rwa",
+   "cell_1h": "R6",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.69,
+   "ret_pct": {
+    "1h": 0.12,
+    "4h": 0.02,
+    "24h": 0.1,
+    "7d": -7.07
+   },
+   "rel_btc_pct": {
+    "1h": -0.24,
+    "4h": -0.58,
+    "24h": -0.34,
+    "7d": 6.82
+   },
+   "z1h": 0.46,
+   "atr1h_pct": 0.39,
+   "funding_pct_pred": -0.0047,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 1.0,
+   "spread_bp": 0.03,
+   "depth25_min_usd": 930129,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 3849.53,
+    "ema20_4h": 3859.941427,
+    "gap_sigma": -0.51,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "INITUSDT": {
+   "asset": "crypto",
+   "sector": "l1",
+   "cell_1h": "R9",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.98,
+   "ret_pct": {
+    "1h": 1.24,
+    "4h": 1.92,
+    "24h": -1.68,
+    "7d": -63.91
+   },
+   "rel_btc_pct": {
+    "1h": 0.89,
+    "4h": 1.33,
+    "24h": -2.12,
+    "7d": -50.02
+   },
+   "z1h": 0.19,
+   "atr1h_pct": 3.86,
+   "funding_pct_pred": -0.444,
+   "funding_interval_h": 1.0,
+   "oi_chg_24h_pct": -9.5,
+   "spread_bp": 1.98,
+   "depth25_min_usd": 2094,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.10022,
+    "ema20_4h": 0.108772,
+    "gap_sigma": -0.85,
+    "flush_ts": "2026-11-13T20:00:00+00:00",
+    "flush_bars_ago": 17,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": true,
+    "triggered_bars_ago": 7,
+    "rebound_high": 0.1428
+   }
+  },
+  "INJUSDT": {
+   "asset": "crypto",
+   "sector": "rwa",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.78,
+   "ret_pct": {
+    "1h": 0.7,
+    "4h": 2.08,
+    "24h": -0.94,
+    "7d": -16.55
+   },
+   "rel_btc_pct": {
+    "1h": 0.34,
+    "4h": 1.48,
+    "24h": -1.37,
+    "7d": -2.67
+   },
+   "z1h": 0.51,
+   "atr1h_pct": 2.13,
+   "funding_pct_pred": 0.003,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -10.3,
+   "spread_bp": 1.45,
+   "depth25_min_usd": 65089,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 6.941,
+    "ema20_4h": 7.131512,
+    "gap_sigma": -1.08,
+    "flush_ts": "2026-11-15T12:00:00+00:00",
+    "flush_bars_ago": 7,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 7.244
+   }
+  },
+  "INTCUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R8",
+   "cell_4h": "R5",
+   "vol4h_pct_1y": 0.53,
+   "ret_pct": {
+    "1h": -2.0,
+    "4h": -2.54,
+    "24h": -6.9,
+    "7d": -9.43
+   },
+   "rel_btc_pct": {
+    "1h": -2.36,
+    "4h": -3.14,
+    "24h": -7.34,
+    "7d": 4.46
+   },
+   "z1h": -2.12,
+   "atr1h_pct": 1.36,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 2.5,
+   "spread_bp": 1.86,
+   "depth25_min_usd": 75867,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 55.89,
+    "ema20_4h": 57.92273,
+    "gap_sigma": -2.14,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "AVAXUSDT": {
+   "asset": "crypto",
+   "sector": "l1",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.81,
+   "ret_pct": {
+    "1h": 0.2,
+    "4h": 0.1,
+    "24h": -1.54,
+    "7d": -18.9
+   },
+   "rel_btc_pct": {
+    "1h": -0.16,
+    "4h": -0.5,
+    "24h": -1.98,
+    "7d": -5.01
+   },
+   "z1h": 0.21,
+   "atr1h_pct": 1.4,
+   "funding_pct_pred": -0.0151,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -0.8,
+   "spread_bp": 1.39,
+   "depth25_min_usd": 381176,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 7.184,
+    "ema20_4h": 7.467913,
+    "gap_sigma": -2.12,
+    "flush_ts": "2026-11-14T16:00:00+00:00",
+    "flush_bars_ago": 12,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 7.337
+   }
+  },
+  "WLDUSDT": {
+   "asset": "crypto",
+   "sector": "l1",
+   "cell_1h": "R8",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.48,
+   "ret_pct": {
+    "1h": 0.3,
+    "4h": 0.08,
+    "24h": -1.17,
+    "7d": -18.74
+   },
+   "rel_btc_pct": {
+    "1h": -0.05,
+    "4h": -0.52,
+    "24h": -1.61,
+    "7d": -4.85
+   },
+   "z1h": 0.29,
+   "atr1h_pct": 1.49,
+   "funding_pct_pred": -0.0174,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 4.0,
+   "spread_bp": 3.79,
+   "depth25_min_usd": 358077,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.264,
+    "ema20_4h": 0.272698,
+    "gap_sigma": -1.69,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "LINKUSDT": {
+   "asset": "crypto",
+   "sector": "rwa",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.73,
+   "ret_pct": {
+    "1h": 0.3,
+    "4h": 0.09,
+    "24h": -0.98,
+    "7d": -15.28
+   },
+   "rel_btc_pct": {
+    "1h": -0.06,
+    "4h": -0.51,
+    "24h": -1.42,
+    "7d": -1.39
+   },
+   "z1h": 0.35,
+   "atr1h_pct": 1.28,
+   "funding_pct_pred": 0.0071,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -2.6,
+   "spread_bp": 1.09,
+   "depth25_min_usd": 506613,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 9.198,
+    "ema20_4h": 9.364275,
+    "gap_sigma": -1.21,
+    "flush_ts": "2026-11-14T20:00:00+00:00",
+    "flush_bars_ago": 11,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 9.362
+   }
+  },
+  "SOPHUSDT": {
+   "asset": "crypto",
+   "sector": "gaming",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.99,
+   "ret_pct": {
+    "1h": 0.52,
+    "4h": -3.48,
+    "24h": -20.44,
+    "7d": -23.95
+   },
+   "rel_btc_pct": {
+    "1h": 0.16,
+    "4h": -4.07,
+    "24h": -20.88,
+    "7d": -10.06
+   },
+   "z1h": 0.1,
+   "atr1h_pct": 8.7,
+   "funding_pct_pred": -0.0095,
+   "funding_interval_h": 1.0,
+   "oi_chg_24h_pct": 7.4,
+   "spread_bp": 10.38,
+   "depth25_min_usd": 1493,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.000977,
+    "ema20_4h": 0.001317,
+    "gap_sigma": -2.81,
+    "flush_ts": "2026-11-16T00:00:00+00:00",
+    "flush_bars_ago": 4,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "BZUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_commodity",
+   "cell_1h": "R7",
+   "cell_4h": "R7",
+   "vol4h_pct_1y": 0.35,
+   "ret_pct": {
+    "1h": -0.58,
+    "4h": -1.18,
+    "24h": -4.35,
+    "7d": -2.22
+   },
+   "rel_btc_pct": {
+    "1h": -0.94,
+    "4h": -1.77,
+    "24h": -4.79,
+    "7d": 11.66
+   },
+   "z1h": -1.44,
+   "atr1h_pct": 0.62,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -17.2,
+   "spread_bp": 1.12,
+   "depth25_min_usd": 512314,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 90.02,
+    "ema20_4h": 92.597641,
+    "gap_sigma": -3.38,
+    "flush_ts": "2026-11-10T00:00:00+00:00",
+    "flush_bars_ago": 40,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": true,
+    "triggered_bars_ago": 12,
+    "rebound_high": 94.61
+   }
+  },
+  "VVVUSDT": {
+   "asset": "crypto",
+   "sector": "ai",
+   "cell_1h": "R5",
+   "cell_4h": "R5",
+   "vol4h_pct_1y": 0.46,
+   "ret_pct": {
+    "1h": 2.04,
+    "4h": 4.54,
+    "24h": 2.46,
+    "7d": -5.64
+   },
+   "rel_btc_pct": {
+    "1h": 1.68,
+    "4h": 3.95,
+    "24h": 2.02,
+    "7d": 8.24
+   },
+   "z1h": 1.34,
+   "atr1h_pct": 2.06,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 15.1,
+   "spread_bp": 0.49,
+   "depth25_min_usd": 13148,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 20.183,
+    "ema20_4h": 19.556512,
+    "gap_sigma": 1.13,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "TAOUSDT": {
+   "asset": "crypto",
+   "sector": "ai",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.68,
+   "ret_pct": {
+    "1h": 0.37,
+    "4h": 1.41,
+    "24h": -0.52,
+    "7d": -15.24
+   },
+   "rel_btc_pct": {
+    "1h": 0.01,
+    "4h": 0.81,
+    "24h": -0.96,
+    "7d": -1.36
+   },
+   "z1h": 0.36,
+   "atr1h_pct": 1.48,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 0.9,
+   "spread_bp": 0.52,
+   "depth25_min_usd": 170003,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 191.23,
+    "ema20_4h": 196.197451,
+    "gap_sigma": -1.27,
+    "flush_ts": "2026-11-14T20:00:00+00:00",
+    "flush_bars_ago": 11,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 196.11
+   }
+  },
+  "DRAMUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_ETF",
+   "cell_1h": "R8",
+   "cell_4h": "R5",
+   "vol4h_pct_1y": 0.6,
+   "ret_pct": {
+    "1h": 0.51,
+    "4h": -0.83,
+    "24h": -5.51,
+    "7d": -6.32
+   },
+   "rel_btc_pct": {
+    "1h": 0.15,
+    "4h": -1.43,
+    "24h": -5.94,
+    "7d": 7.57
+   },
+   "z1h": 0.58,
+   "atr1h_pct": 1.23,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 4.2,
+   "spread_bp": 2.53,
+   "depth25_min_usd": 267936,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 39.94,
+    "ema20_4h": 41.347309,
+    "gap_sigma": -1.9,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "PUMPFUNUSDT": {
+   "asset": "crypto",
+   "sector": "other",
+   "cell_1h": "R8",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.49,
+   "ret_pct": {
+    "1h": 0.49,
+    "4h": 0.81,
+    "24h": -1.7,
+    "7d": -23.6
+   },
+   "rel_btc_pct": {
+    "1h": 0.13,
+    "4h": 0.21,
+    "24h": -2.13,
+    "7d": -9.72
+   },
+   "z1h": 0.4,
+   "atr1h_pct": 2.0,
+   "funding_pct_pred": -0.0014,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": -1.9,
+   "spread_bp": 3.48,
+   "depth25_min_usd": 176768,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.002884,
+    "ema20_4h": 0.003037,
+    "gap_sigma": -2.2,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "HUMAUSDT": {
+   "asset": "crypto",
+   "sector": "other",
+   "cell_1h": "R6",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.99,
+   "ret_pct": {
+    "1h": 0.1,
+    "4h": 17.75,
+    "24h": 42.85,
+    "7d": -4.25
+   },
+   "rel_btc_pct": {
+    "1h": -0.26,
+    "4h": 17.15,
+    "24h": 42.41,
+    "7d": 9.63
+   },
+   "z1h": 0.04,
+   "atr1h_pct": 4.91,
+   "funding_pct_pred": -0.9211,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 17.7,
+   "spread_bp": 10.14,
+   "depth25_min_usd": 577,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.00893,
+    "ema20_4h": 0.007317,
+    "gap_sigma": 3.27,
+    "flush_ts": "2026-11-15T12:00:00+00:00",
+    "flush_bars_ago": 7,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": true,
+    "triggered_bars_ago": null,
+    "rebound_high": 0.00925
+   }
+  },
+  "GOOGLUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R9",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.83,
+   "ret_pct": {
+    "1h": 0.23,
+    "4h": -0.87,
+    "24h": -2.82,
+    "7d": -2.17
+   },
+   "rel_btc_pct": {
+    "1h": -0.13,
+    "4h": -1.46,
+    "24h": -3.26,
+    "7d": 11.71
+   },
+   "z1h": 0.54,
+   "atr1h_pct": 0.75,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 1.5,
+   "spread_bp": 0.35,
+   "depth25_min_usd": 199896,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 285.28,
+    "ema20_4h": 292.697271,
+    "gap_sigma": -2.68,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "ZROUSDT": {
+   "asset": "crypto",
+   "sector": "l1",
+   "cell_1h": "R6",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.62,
+   "ret_pct": {
+    "1h": 2.22,
+    "4h": 1.45,
+    "24h": 5.35,
+    "7d": -2.95
+   },
+   "rel_btc_pct": {
+    "1h": 1.86,
+    "4h": 0.85,
+    "24h": 4.91,
+    "7d": 10.94
+   },
+   "z1h": 1.44,
+   "atr1h_pct": 2.52,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 3.5,
+   "spread_bp": 1.38,
+   "depth25_min_usd": 32000,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 1.4341,
+    "ema20_4h": 1.461932,
+    "gap_sigma": -0.77,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "ONDOUSDT": {
+   "asset": "crypto",
+   "sector": "rwa",
+   "cell_1h": "R8",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.55,
+   "ret_pct": {
+    "1h": 0.33,
+    "4h": 0.36,
+    "24h": -0.75,
+    "7d": -19.39
+   },
+   "rel_btc_pct": {
+    "1h": -0.03,
+    "4h": -0.24,
+    "24h": -1.18,
+    "7d": -5.51
+   },
+   "z1h": 0.33,
+   "atr1h_pct": 1.41,
+   "funding_pct_pred": -0.0052,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": -0.8,
+   "spread_bp": 3.25,
+   "depth25_min_usd": 456394,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.3092,
+    "ema20_4h": 0.315982,
+    "gap_sigma": -1.2,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "XLMUSDT": {
+   "asset": "crypto",
+   "sector": "rwa",
+   "cell_1h": "R8",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.57,
+   "ret_pct": {
+    "1h": 0.22,
+    "4h": 0.22,
+    "24h": -1.73,
+    "7d": -7.03
+   },
+   "rel_btc_pct": {
+    "1h": -0.14,
+    "4h": -0.38,
+    "24h": -2.17,
+    "7d": 6.86
+   },
+   "z1h": 0.26,
+   "atr1h_pct": 1.21,
+   "funding_pct_pred": -0.0064,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -1.6,
+   "spread_bp": 7.25,
+   "depth25_min_usd": 175431,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.1376,
+    "ema20_4h": 0.140247,
+    "gap_sigma": -1.36,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "ICPUSDT": {
+   "asset": "crypto",
+   "sector": "ai",
+   "cell_1h": "R3",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.96,
+   "ret_pct": {
+    "1h": 0.16,
+    "4h": 0.04,
+    "24h": 13.42,
+    "7d": 5.81
+   },
+   "rel_btc_pct": {
+    "1h": -0.2,
+    "4h": -0.56,
+    "24h": 12.98,
+    "7d": 19.7
+   },
+   "z1h": 0.14,
+   "atr1h_pct": 2.03,
+   "funding_pct_pred": 0.01,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 6.3,
+   "spread_bp": 7.86,
+   "depth25_min_usd": 34010,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 2.524,
+    "ema20_4h": 2.34282,
+    "gap_sigma": 2.41,
+    "flush_ts": "2026-11-15T00:00:00+00:00",
+    "flush_bars_ago": 10,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": true,
+    "triggered_bars_ago": null,
+    "rebound_high": 2.556
+   }
+  },
+  "BTWUSDT": {
+   "asset": "crypto",
+   "sector": "unmapped",
+   "cell_1h": "R9",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.59,
+   "ret_pct": {
+    "1h": -0.18,
+    "4h": -5.12,
+    "24h": -35.71,
+    "7d": -100.77
+   },
+   "rel_btc_pct": {
+    "1h": -0.54,
+    "4h": -5.71,
+    "24h": -36.14,
+    "7d": -86.88
+   },
+   "z1h": -0.04,
+   "atr1h_pct": 7.54,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 23.0,
+   "spread_bp": 11.29,
+   "depth25_min_usd": 542,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.37467,
+    "ema20_4h": 0.615807,
+    "gap_sigma": -7.04,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "BNBUSDT": {
+   "asset": "crypto",
+   "sector": "exchange",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.87,
+   "ret_pct": {
+    "1h": 0.29,
+    "4h": 0.65,
+    "24h": 0.05,
+    "7d": -15.12
+   },
+   "rel_btc_pct": {
+    "1h": -0.07,
+    "4h": 0.05,
+    "24h": -0.39,
+    "7d": -1.23
+   },
+   "z1h": 0.46,
+   "atr1h_pct": 0.81,
+   "funding_pct_pred": 0.0096,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -1.8,
+   "spread_bp": 0.17,
+   "depth25_min_usd": 914817,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 592.0,
+    "ema20_4h": 604.635519,
+    "gap_sigma": -1.78,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "PIEVERSEUSDT": {
+   "asset": "crypto",
+   "sector": "ai",
+   "cell_1h": "R3",
+   "cell_4h": "R3",
+   "vol4h_pct_1y": 0.74,
+   "ret_pct": {
+    "1h": -0.28,
+    "4h": -3.98,
+    "24h": 4.93,
+    "7d": 0.67
+   },
+   "rel_btc_pct": {
+    "1h": -0.64,
+    "4h": -4.57,
+    "24h": 4.5,
+    "7d": 14.55
+   },
+   "z1h": -0.13,
+   "atr1h_pct": 3.53,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 3.0,
+   "spread_bp": 5.06,
+   "depth25_min_usd": 4850,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 2.0089,
+    "ema20_4h": 1.841823,
+    "gap_sigma": 2.52,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "TSLAUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R6",
+   "cell_4h": "R5",
+   "vol4h_pct_1y": 0.64,
+   "ret_pct": {
+    "1h": -0.18,
+    "4h": -0.06,
+    "24h": -2.69,
+    "7d": -0.05
+   },
+   "rel_btc_pct": {
+    "1h": -0.53,
+    "4h": -0.66,
+    "24h": -3.13,
+    "7d": 13.83
+   },
+   "z1h": -0.36,
+   "atr1h_pct": 0.78,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -4.3,
+   "spread_bp": 0.26,
+   "depth25_min_usd": 393585,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 377.74,
+    "ema20_4h": 386.275394,
+    "gap_sigma": -2.21,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "FARTCOINUSDT": {
+   "asset": "crypto",
+   "sector": "meme",
+   "cell_1h": "R8",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.32,
+   "ret_pct": {
+    "1h": 0.95,
+    "4h": 0.48,
+    "24h": -1.8,
+    "7d": -24.05
+   },
+   "rel_btc_pct": {
+    "1h": 0.59,
+    "4h": -0.11,
+    "24h": -2.23,
+    "7d": -10.17
+   },
+   "z1h": 0.87,
+   "atr1h_pct": 1.79,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": -10.6,
+   "spread_bp": 1.07,
+   "depth25_min_usd": 8997,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.09245,
+    "ema20_4h": 0.097552,
+    "gap_sigma": -2.64,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "AAPLUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R6",
+   "cell_4h": "R5",
+   "vol4h_pct_1y": 0.51,
+   "ret_pct": {
+    "1h": -0.03,
+    "4h": -0.2,
+    "24h": -1.2,
+    "7d": 0.53
+   },
+   "rel_btc_pct": {
+    "1h": -0.38,
+    "4h": -0.8,
+    "24h": -1.64,
+    "7d": 14.41
+   },
+   "z1h": -0.1,
+   "atr1h_pct": 0.37,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -0.3,
+   "spread_bp": 0.28,
+   "depth25_min_usd": 323599,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 352.72,
+    "ema20_4h": 356.126474,
+    "gap_sigma": -1.88,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "TRUMPUSDT": {
+   "asset": "crypto",
+   "sector": "meme",
+   "cell_1h": "R8",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.73,
+   "ret_pct": {
+    "1h": 0.11,
+    "4h": 0.85,
+    "24h": -0.21,
+    "7d": -17.52
+   },
+   "rel_btc_pct": {
+    "1h": -0.25,
+    "4h": 0.25,
+    "24h": -0.65,
+    "7d": -3.64
+   },
+   "z1h": 0.11,
+   "atr1h_pct": 1.55,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 3.8,
+   "spread_bp": 10.57,
+   "depth25_min_usd": 80424,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.946,
+    "ema20_4h": 0.984015,
+    "gap_sigma": -2.13,
+    "flush_ts": "2026-11-15T08:00:00+00:00",
+    "flush_bars_ago": 8,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 0.978
+   }
+  },
+  "LTCUSDT": {
+   "asset": "crypto",
+   "sector": "l1",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.86,
+   "ret_pct": {
+    "1h": -0.25,
+    "4h": 0.43,
+    "24h": -1.15,
+    "7d": -13.87
+   },
+   "rel_btc_pct": {
+    "1h": -0.6,
+    "4h": -0.17,
+    "24h": -1.59,
+    "7d": 0.02
+   },
+   "z1h": -0.32,
+   "atr1h_pct": 1.13,
+   "funding_pct_pred": -0.0012,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 0.7,
+   "spread_bp": 2.23,
+   "depth25_min_usd": 265945,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 45.09,
+    "ema20_4h": 46.063012,
+    "gap_sigma": -1.43,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "CRCLUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R9",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.34,
+   "ret_pct": {
+    "1h": 0.17,
+    "4h": 0.36,
+    "24h": -0.67,
+    "7d": -16.31
+   },
+   "rel_btc_pct": {
+    "1h": -0.18,
+    "4h": -0.23,
+    "24h": -1.11,
+    "7d": -2.43
+   },
+   "z1h": 0.2,
+   "atr1h_pct": 1.36,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 8.3,
+   "spread_bp": 1.73,
+   "depth25_min_usd": 66068,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 58.13,
+    "ema20_4h": 59.389872,
+    "gap_sigma": -1.36,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "MUUUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_ETF",
+   "cell_1h": "R9",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.75,
+   "ret_pct": {
+    "1h": 0.62,
+    "4h": -2.02,
+    "24h": -12.48,
+    "7d": -6.47
+   },
+   "rel_btc_pct": {
+    "1h": 0.26,
+    "4h": -2.62,
+    "24h": -12.92,
+    "7d": 7.42
+   },
+   "z1h": 0.32,
+   "atr1h_pct": 3.01,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 28.8,
+   "spread_bp": 13.66,
+   "depth25_min_usd": 11341,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 15.0,
+    "ema20_4h": 16.200654,
+    "gap_sigma": -2.1,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "TQQQUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_ETF",
+   "cell_1h": "R9",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.91,
+   "ret_pct": {
+    "1h": 0.02,
+    "4h": -1.4,
+    "24h": -5.99,
+    "7d": -8.89
+   },
+   "rel_btc_pct": {
+    "1h": -0.34,
+    "4h": -2.0,
+    "24h": -6.43,
+    "7d": 4.99
+   },
+   "z1h": 0.02,
+   "atr1h_pct": 1.55,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 6.9,
+   "spread_bp": 1.88,
+   "depth25_min_usd": 45011,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 53.68,
+    "ema20_4h": 56.24822,
+    "gap_sigma": -2.18,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "MSFTUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R6",
+   "cell_4h": "R5",
+   "vol4h_pct_1y": 0.58,
+   "ret_pct": {
+    "1h": -0.05,
+    "4h": -0.77,
+    "24h": -0.78,
+    "7d": -5.21
+   },
+   "rel_btc_pct": {
+    "1h": -0.41,
+    "4h": -1.37,
+    "24h": -1.22,
+    "7d": 8.67
+   },
+   "z1h": -0.13,
+   "atr1h_pct": 0.56,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 0.1,
+   "spread_bp": 0.19,
+   "depth25_min_usd": 110373,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 519.17,
+    "ema20_4h": 523.014319,
+    "gap_sigma": -1.11,
+    "flush_ts": "2026-11-12T00:00:00+00:00",
+    "flush_bars_ago": 28,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": true,
+    "triggered_bars_ago": 0,
+    "rebound_high": 530.22
+   }
+  },
+  "CBRSUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R6",
+   "cell_4h": "R5",
+   "vol4h_pct_1y": 0.65,
+   "ret_pct": {
+    "1h": -0.72,
+    "4h": -2.99,
+    "24h": -5.75,
+    "7d": 3.09
+   },
+   "rel_btc_pct": {
+    "1h": -1.07,
+    "4h": -3.58,
+    "24h": -6.19,
+    "7d": 16.97
+   },
+   "z1h": -0.42,
+   "atr1h_pct": 1.79,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -0.2,
+   "spread_bp": 3.0,
+   "depth25_min_usd": 6109,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 102.82,
+    "ema20_4h": 104.849509,
+    "gap_sigma": -0.76,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "MXLUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": null,
+   "cell_4h": null,
+   "vol4h_pct_1y": 0.09,
+   "ret_pct": {
+    "1h": -0.39,
+    "4h": -1.3,
+    "24h": -4.46,
+    "7d": -8.61
+   },
+   "rel_btc_pct": {
+    "1h": -0.75,
+    "4h": -1.89,
+    "24h": -4.89,
+    "7d": 5.27
+   },
+   "z1h": -0.29,
+   "atr1h_pct": 2.13,
+   "funding_pct_pred": -0.0048,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 187.2,
+   "spread_bp": 5.84,
+   "depth25_min_usd": 6036,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 52.19,
+    "ema20_4h": 53.666509,
+    "gap_sigma": -1.2,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "AMDSTOCKUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R6",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.8,
+   "ret_pct": {
+    "1h": 0.12,
+    "4h": -0.76,
+    "24h": -3.97,
+    "7d": -1.26
+   },
+   "rel_btc_pct": {
+    "1h": -0.24,
+    "4h": -1.36,
+    "24h": -4.41,
+    "7d": 12.63
+   },
+   "z1h": 0.11,
+   "atr1h_pct": 1.39,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -21.1,
+   "spread_bp": 3.17,
+   "depth25_min_usd": 26736,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 509.23,
+    "ema20_4h": 523.079221,
+    "gap_sigma": -1.43,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "XLFUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_ETF",
+   "cell_1h": "R6",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.99,
+   "ret_pct": {
+    "1h": 0.09,
+    "4h": -1.17,
+    "24h": -2.24,
+    "7d": -0.1
+   },
+   "rel_btc_pct": {
+    "1h": -0.27,
+    "4h": -1.77,
+    "24h": -2.68,
+    "7d": 13.78
+   },
+   "z1h": 0.16,
+   "atr1h_pct": 0.75,
+   "funding_pct_pred": -0.2029,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 21.9,
+   "spread_bp": 5.19,
+   "depth25_min_usd": 3337,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 57.57,
+    "ema20_4h": 58.572378,
+    "gap_sigma": -1.54,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "ARBUSDT": {
+   "asset": "crypto",
+   "sector": "l2",
+   "cell_1h": "R8",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.56,
+   "ret_pct": {
+    "1h": 0.16,
+    "4h": 0.03,
+    "24h": -1.92,
+    "7d": -28.15
+   },
+   "rel_btc_pct": {
+    "1h": -0.2,
+    "4h": -0.57,
+    "24h": -2.36,
+    "7d": -14.27
+   },
+   "z1h": 0.16,
+   "atr1h_pct": 1.45,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -3.5,
+   "spread_bp": 0.76,
+   "depth25_min_usd": 250283,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.13246,
+    "ema20_4h": 0.137133,
+    "gap_sigma": -1.87,
+    "flush_ts": "2026-11-12T12:00:00+00:00",
+    "flush_bars_ago": 25,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 0.15194
+   }
+  },
+  "MNTUSDT": {
+   "asset": "crypto",
+   "sector": "l2",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.68,
+   "ret_pct": {
+    "1h": 0.65,
+    "4h": 2.2,
+    "24h": -0.11,
+    "7d": -18.97
+   },
+   "rel_btc_pct": {
+    "1h": 0.29,
+    "4h": 1.6,
+    "24h": -0.55,
+    "7d": -5.09
+   },
+   "z1h": 0.96,
+   "atr1h_pct": 1.19,
+   "funding_pct_pred": 0.01,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 3.9,
+   "spread_bp": 2.69,
+   "depth25_min_usd": 399233,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.3676,
+    "ema20_4h": 0.382189,
+    "gap_sigma": -2.83,
+    "flush_ts": "2026-11-15T08:00:00+00:00",
+    "flush_bars_ago": 8,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 0.3804
+   }
+  },
+  "QNTUSDT": {
+   "asset": "crypto",
+   "sector": "rwa",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.82,
+   "ret_pct": {
+    "1h": 0.21,
+    "4h": -2.1,
+    "24h": -0.06,
+    "7d": -23.39
+   },
+   "rel_btc_pct": {
+    "1h": -0.15,
+    "4h": -2.7,
+    "24h": -0.5,
+    "7d": -9.51
+   },
+   "z1h": 0.18,
+   "atr1h_pct": 1.71,
+   "funding_pct_pred": 0.0021,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -6.8,
+   "spread_bp": 0.65,
+   "depth25_min_usd": 23430,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 155.46,
+    "ema20_4h": 156.633108,
+    "gap_sigma": -0.36,
+    "flush_ts": "2026-11-10T16:00:00+00:00",
+    "flush_bars_ago": 36,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 188.32
+   }
+  },
+  "HBARUSDT": {
+   "asset": "crypto",
+   "sector": "l1",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.74,
+   "ret_pct": {
+    "1h": 0.14,
+    "4h": 0.1,
+    "24h": -2.27,
+    "7d": -15.11
+   },
+   "rel_btc_pct": {
+    "1h": -0.22,
+    "4h": -0.49,
+    "24h": -2.7,
+    "7d": -1.23
+   },
+   "z1h": 0.19,
+   "atr1h_pct": 1.17,
+   "funding_pct_pred": 0.0018,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -2.1,
+   "spread_bp": 1.74,
+   "depth25_min_usd": 163698,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.05776,
+    "ema20_4h": 0.059307,
+    "gap_sigma": -1.72,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "XPLUSDT": {
+   "asset": "crypto",
+   "sector": "l1",
+   "cell_1h": "R9",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.47,
+   "ret_pct": {
+    "1h": 0.82,
+    "4h": 2.14,
+    "24h": 2.47,
+    "7d": -13.99
+   },
+   "rel_btc_pct": {
+    "1h": 0.46,
+    "4h": 1.54,
+    "24h": 2.04,
+    "7d": -0.1
+   },
+   "z1h": 0.65,
+   "atr1h_pct": 2.05,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": -0.1,
+   "spread_bp": 4.41,
+   "depth25_min_usd": 9158,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.045,
+    "ema20_4h": 0.045533,
+    "gap_sigma": -0.52,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "AEROUSDT": {
+   "asset": "crypto",
+   "sector": "exchange",
+   "cell_1h": "R9",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.46,
+   "ret_pct": {
+    "1h": 0.69,
+    "4h": 1.7,
+    "24h": 0.87,
+    "7d": -26.26
+   },
+   "rel_btc_pct": {
+    "1h": 0.33,
+    "4h": 1.11,
+    "24h": 0.43,
+    "7d": -12.38
+   },
+   "z1h": 0.62,
+   "atr1h_pct": 1.55,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 3.2,
+   "spread_bp": 4.57,
+   "depth25_min_usd": 33889,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.434,
+    "ema20_4h": 0.446703,
+    "gap_sigma": -1.5,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "BEAMUSDT": {
+   "asset": "crypto",
+   "sector": "gaming",
+   "cell_1h": "R6",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.9,
+   "ret_pct": {
+    "1h": -0.79,
+    "4h": -1.67,
+    "24h": -3.81,
+    "7d": -8.01
+   },
+   "rel_btc_pct": {
+    "1h": -1.15,
+    "4h": -2.26,
+    "24h": -4.25,
+    "7d": 5.87
+   },
+   "z1h": -0.71,
+   "atr1h_pct": 2.21,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 7.5,
+   "spread_bp": 2.04,
+   "depth25_min_usd": 14019,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.0039674,
+    "ema20_4h": 0.004148,
+    "gap_sigma": -1.54,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "APTUSDT": {
+   "asset": "crypto",
+   "sector": "l1",
+   "cell_1h": "R8",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.66,
+   "ret_pct": {
+    "1h": -0.07,
+    "4h": -0.31,
+    "24h": 0.72,
+    "7d": -24.2
+   },
+   "rel_btc_pct": {
+    "1h": -0.42,
+    "4h": -0.9,
+    "24h": 0.29,
+    "7d": -10.32
+   },
+   "z1h": -0.06,
+   "atr1h_pct": 1.44,
+   "funding_pct_pred": 0.0085,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -4.4,
+   "spread_bp": 4.38,
+   "depth25_min_usd": 89993,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.4601,
+    "ema20_4h": 0.479617,
+    "gap_sigma": -2.22,
+    "flush_ts": "2026-11-15T00:00:00+00:00",
+    "flush_bars_ago": 10,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 0.4703
+   }
+  },
+  "STRKUSDT": {
+   "asset": "crypto",
+   "sector": "l2",
+   "cell_1h": "R8",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.63,
+   "ret_pct": {
+    "1h": -0.26,
+    "4h": 0.74,
+    "24h": -0.41,
+    "7d": -12.64
+   },
+   "rel_btc_pct": {
+    "1h": -0.62,
+    "4h": 0.14,
+    "24h": -0.85,
+    "7d": 1.25
+   },
+   "z1h": -0.23,
+   "atr1h_pct": 1.54,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 3.4,
+   "spread_bp": 2.95,
+   "depth25_min_usd": 65324,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.03406,
+    "ema20_4h": 0.034953,
+    "gap_sigma": -1.29,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "SAMSUNGUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R5",
+   "cell_4h": "R5",
+   "vol4h_pct_1y": 0.47,
+   "ret_pct": {
+    "1h": 0.79,
+    "4h": -0.54,
+    "24h": -3.08,
+    "7d": -4.25
+   },
+   "rel_btc_pct": {
+    "1h": 0.43,
+    "4h": -1.14,
+    "24h": -3.52,
+    "7d": 9.64
+   },
+   "z1h": 0.96,
+   "atr1h_pct": 1.15,
+   "funding_pct_pred": -0.0112,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -2.7,
+   "spread_bp": 0.69,
+   "depth25_min_usd": 216814,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 146.47,
+    "ema20_4h": 149.424626,
+    "gap_sigma": -1.17,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "BCHUSDT": {
+   "asset": "crypto",
+   "sector": "l1",
+   "cell_1h": "R8",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.73,
+   "ret_pct": {
+    "1h": 0.93,
+    "4h": 1.17,
+    "24h": 0.6,
+    "7d": -13.0
+   },
+   "rel_btc_pct": {
+    "1h": 0.57,
+    "4h": 0.57,
+    "24h": 0.16,
+    "7d": 0.89
+   },
+   "z1h": 1.18,
+   "atr1h_pct": 1.21,
+   "funding_pct_pred": -0.0094,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -3.8,
+   "spread_bp": 0.48,
+   "depth25_min_usd": 145261,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 208.34,
+    "ema20_4h": 211.677046,
+    "gap_sigma": -1.0,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "KAVAUSDT": {
+   "asset": "crypto",
+   "sector": "unmapped",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.99,
+   "ret_pct": {
+    "1h": 0.45,
+    "4h": -2.06,
+    "24h": -6.19,
+    "7d": -93.28
+   },
+   "rel_btc_pct": {
+    "1h": 0.09,
+    "4h": -2.66,
+    "24h": -6.63,
+    "7d": -79.39
+   },
+   "z1h": 0.1,
+   "atr1h_pct": 4.65,
+   "funding_pct_pred": -0.7808,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 15.2,
+   "spread_bp": 3.72,
+   "depth25_min_usd": 1606,
+   "abnormal_market": true,
+   "h_rb2": {
+    "close_4h_2000": 0.02714,
+    "ema20_4h": 0.038115,
+    "gap_sigma": -3.09,
+    "flush_ts": "2026-11-15T08:00:00+00:00",
+    "flush_bars_ago": 8,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 0.03867
+   }
+  },
+  "JUPUSDT": {
+   "asset": "crypto",
+   "sector": "exchange",
+   "cell_1h": "R9",
+   "cell_4h": "R5",
+   "vol4h_pct_1y": 0.65,
+   "ret_pct": {
+    "1h": -0.81,
+    "4h": -0.97,
+    "24h": -8.14,
+    "7d": -3.56
+   },
+   "rel_btc_pct": {
+    "1h": -1.17,
+    "4h": -1.57,
+    "24h": -8.58,
+    "7d": 10.32
+   },
+   "z1h": -0.69,
+   "atr1h_pct": 1.99,
+   "funding_pct_pred": -0.0142,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 4.8,
+   "spread_bp": 4.08,
+   "depth25_min_usd": 15033,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.2474,
+    "ema20_4h": 0.257904,
+    "gap_sigma": -1.9,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "USELESSUSDT": {
+   "asset": "crypto",
+   "sector": "meme",
+   "cell_1h": "R7",
+   "cell_4h": "R7",
+   "vol4h_pct_1y": 0.28,
+   "ret_pct": {
+    "1h": -0.79,
+    "4h": -0.91,
+    "24h": -5.35,
+    "7d": -37.01
+   },
+   "rel_btc_pct": {
+    "1h": -1.15,
+    "4h": -1.51,
+    "24h": -5.79,
+    "7d": -23.13
+   },
+   "z1h": -0.43,
+   "atr1h_pct": 2.56,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 7.8,
+   "spread_bp": 3.16,
+   "depth25_min_usd": 13918,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.09672,
+    "ema20_4h": 0.106423,
+    "gap_sigma": -3.41,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "DOTUSDT": {
+   "asset": "crypto",
+   "sector": "ai",
+   "cell_1h": "R9",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.66,
+   "ret_pct": {
+    "1h": 0.4,
+    "4h": 0.92,
+    "24h": 0.19,
+    "7d": -16.17
+   },
+   "rel_btc_pct": {
+    "1h": 0.04,
+    "4h": 0.32,
+    "24h": -0.25,
+    "7d": -2.28
+   },
+   "z1h": 0.45,
+   "atr1h_pct": 1.28,
+   "funding_pct_pred": -0.0021,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -2.4,
+   "spread_bp": 1.37,
+   "depth25_min_usd": 167775,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.7289,
+    "ema20_4h": 0.752887,
+    "gap_sigma": -1.92,
+    "flush_ts": "2026-11-15T00:00:00+00:00",
+    "flush_bars_ago": 10,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 0.7456
+   }
+  },
+  "EWYUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_ETF",
+   "cell_1h": "R5",
+   "cell_4h": "R5",
+   "vol4h_pct_1y": 0.47,
+   "ret_pct": {
+    "1h": 0.76,
+    "4h": -0.41,
+    "24h": -2.49,
+    "7d": -4.18
+   },
+   "rel_btc_pct": {
+    "1h": 0.4,
+    "4h": -1.0,
+    "24h": -2.92,
+    "7d": 9.71
+   },
+   "z1h": 1.29,
+   "atr1h_pct": 0.87,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 12.6,
+   "spread_bp": 0.73,
+   "depth25_min_usd": 148016,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 138.16,
+    "ema20_4h": 140.59256,
+    "gap_sigma": -1.49,
+    "flush_ts": "2026-11-06T20:00:00+00:00",
+    "flush_bars_ago": 59,
+    "expired": true,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "MRVLUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R8",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.67,
+   "ret_pct": {
+    "1h": 0.38,
+    "4h": -0.72,
+    "24h": -5.52,
+    "7d": -7.45
+   },
+   "rel_btc_pct": {
+    "1h": 0.03,
+    "4h": -1.31,
+    "24h": -5.95,
+    "7d": 6.43
+   },
+   "z1h": 0.32,
+   "atr1h_pct": 1.38,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 4.8,
+   "spread_bp": 0.69,
+   "depth25_min_usd": 68168,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 147.69,
+    "ema20_4h": 152.907219,
+    "gap_sigma": -1.62,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "TIAUSDT": {
+   "asset": "crypto",
+   "sector": "l1",
+   "cell_1h": "R8",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.57,
+   "ret_pct": {
+    "1h": 0.25,
+    "4h": 0.51,
+    "24h": -0.56,
+    "7d": -18.75
+   },
+   "rel_btc_pct": {
+    "1h": -0.1,
+    "4h": -0.09,
+    "24h": -1.0,
+    "7d": -4.86
+   },
+   "z1h": 0.23,
+   "atr1h_pct": 1.53,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 10.4,
+   "spread_bp": 2.82,
+   "depth25_min_usd": 41924,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.3584,
+    "ema20_4h": 0.365387,
+    "gap_sigma": -0.96,
+    "flush_ts": "2026-11-14T20:00:00+00:00",
+    "flush_bars_ago": 11,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 0.364
+   }
+  },
+  "GRAMUSDT": {
+   "asset": "crypto",
+   "sector": "unmapped",
+   "cell_1h": "R9",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.95,
+   "ret_pct": {
+    "1h": 0.95,
+    "4h": 0.67,
+    "24h": 0.19,
+    "7d": 2.5
+   },
+   "rel_btc_pct": {
+    "1h": 0.6,
+    "4h": 0.07,
+    "24h": -0.25,
+    "7d": 16.39
+   },
+   "z1h": 0.78,
+   "atr1h_pct": 1.24,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": -0.4,
+   "spread_bp": 9.5,
+   "depth25_min_usd": 23292,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 1.045,
+    "ema20_4h": 1.069027,
+    "gap_sigma": -1.17,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "TEMUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": null,
+   "cell_4h": null,
+   "vol4h_pct_1y": 0.53,
+   "ret_pct": {
+    "1h": 4.84,
+    "4h": 2.71,
+    "24h": -3.11,
+    "7d": -21.24
+   },
+   "rel_btc_pct": {
+    "1h": 4.48,
+    "4h": 2.12,
+    "24h": -3.55,
+    "7d": -7.36
+   },
+   "z1h": 5.36,
+   "atr1h_pct": 1.65,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 46.3,
+   "spread_bp": 11.82,
+   "depth25_min_usd": 17938,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 66.57,
+    "ema20_4h": 70.591449,
+    "gap_sigma": -3.19,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "GRASSUSDT": {
+   "asset": "crypto",
+   "sector": "ai",
+   "cell_1h": "R8",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.47,
+   "ret_pct": {
+    "1h": -0.94,
+    "4h": -0.44,
+    "24h": -1.58,
+    "7d": -24.24
+   },
+   "rel_btc_pct": {
+    "1h": -1.3,
+    "4h": -1.03,
+    "24h": -2.02,
+    "7d": -10.35
+   },
+   "z1h": -0.69,
+   "atr1h_pct": 1.74,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": -1.6,
+   "spread_bp": 2.59,
+   "depth25_min_usd": 9340,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.3939,
+    "ema20_4h": 0.406848,
+    "gap_sigma": -1.26,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "HOODUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": "R9",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.45,
+   "ret_pct": {
+    "1h": 0.1,
+    "4h": -0.04,
+    "24h": -3.87,
+    "7d": -14.81
+   },
+   "rel_btc_pct": {
+    "1h": -0.26,
+    "4h": -0.64,
+    "24h": -4.31,
+    "7d": -0.92
+   },
+   "z1h": 0.14,
+   "atr1h_pct": 1.28,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 1.8,
+   "spread_bp": 2.77,
+   "depth25_min_usd": 37496,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 72.29,
+    "ema20_4h": 75.663965,
+    "gap_sigma": -3.32,
+    "flush_ts": "2026-11-13T12:00:00+00:00",
+    "flush_bars_ago": 19,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 77.02
+   }
+  },
+  "GALAUSDT": {
+   "asset": "crypto",
+   "sector": "gaming",
+   "cell_1h": "R6",
+   "cell_4h": "R5",
+   "vol4h_pct_1y": 0.45,
+   "ret_pct": {
+    "1h": -0.07,
+    "4h": -0.43,
+    "24h": 1.76,
+    "7d": -10.59
+   },
+   "rel_btc_pct": {
+    "1h": -0.43,
+    "4h": -1.03,
+    "24h": 1.32,
+    "7d": 3.3
+   },
+   "z1h": -0.08,
+   "atr1h_pct": 1.73,
+   "funding_pct_pred": 0.01,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 10.0,
+   "spread_bp": 7.25,
+   "depth25_min_usd": 10839,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.001399,
+    "ema20_4h": 0.001396,
+    "gap_sigma": 0.16,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "AXPUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": null,
+   "cell_4h": null,
+   "vol4h_pct_1y": 0.62,
+   "ret_pct": {
+    "1h": -0.19,
+    "4h": -0.18,
+    "24h": -0.39,
+    "7d": -1.24
+   },
+   "rel_btc_pct": {
+    "1h": -0.55,
+    "4h": -0.78,
+    "24h": -0.83,
+    "7d": 12.65
+   },
+   "z1h": -0.46,
+   "atr1h_pct": 1.01,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": -4.5,
+   "spread_bp": 11.0,
+   "depth25_min_usd": 1309,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 319.54,
+    "ema20_4h": 320.3834,
+    "gap_sigma": -0.32,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "WLFIUSDT": {
+   "asset": "crypto",
+   "sector": "other",
+   "cell_1h": "R8",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.45,
+   "ret_pct": {
+    "1h": -0.68,
+    "4h": 0.26,
+    "24h": -3.57,
+    "7d": -5.5
+   },
+   "rel_btc_pct": {
+    "1h": -1.03,
+    "4h": -0.33,
+    "24h": -4.01,
+    "7d": 8.39
+   },
+   "z1h": -1.1,
+   "atr1h_pct": 0.89,
+   "funding_pct_pred": -0.0315,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 5.1,
+   "spread_bp": 4.4,
+   "depth25_min_usd": 33485,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.04596,
+    "ema20_4h": 0.046617,
+    "gap_sigma": -1.12,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "PONSUSDT": {
+   "asset": "crypto",
+   "sector": "unmapped",
+   "cell_1h": null,
+   "cell_4h": null,
+   "vol4h_pct_1y": 0.19,
+   "ret_pct": {
+    "1h": 0.42,
+    "4h": 0.33,
+    "24h": 0.67,
+    "7d": -25.4
+   },
+   "rel_btc_pct": {
+    "1h": 0.06,
+    "4h": -0.26,
+    "24h": 0.23,
+    "7d": -11.51
+   },
+   "z1h": 0.25,
+   "atr1h_pct": 2.16,
+   "funding_pct_pred": -0.0036,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 0.2,
+   "spread_bp": 8.35,
+   "depth25_min_usd": 11885,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.1209,
+    "ema20_4h": 0.127126,
+    "gap_sigma": -1.62,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "BARDUSDT": {
+   "asset": "crypto",
+   "sector": "unmapped",
+   "cell_1h": "R9",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.96,
+   "ret_pct": {
+    "1h": 1.31,
+    "4h": 0.03,
+    "24h": -5.0,
+    "7d": -7.72
+   },
+   "rel_btc_pct": {
+    "1h": 0.95,
+    "4h": -0.57,
+    "24h": -5.44,
+    "7d": 6.16
+   },
+   "z1h": 0.37,
+   "atr1h_pct": 2.88,
+   "funding_pct_pred": -0.08,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": -5.9,
+   "spread_bp": 7.27,
+   "depth25_min_usd": 2064,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.09658,
+    "ema20_4h": 0.106912,
+    "gap_sigma": -1.67,
+    "flush_ts": "2026-11-16T12:00:00+00:00",
+    "flush_bars_ago": 1,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "NIGHTUSDT": {
+   "asset": "crypto",
+   "sector": "unmapped",
+   "cell_1h": "R9",
+   "cell_4h": "R6",
+   "vol4h_pct_1y": 0.91,
+   "ret_pct": {
+    "1h": 3.52,
+    "4h": 3.25,
+    "24h": -9.57,
+    "7d": 12.91
+   },
+   "rel_btc_pct": {
+    "1h": 3.17,
+    "4h": 2.65,
+    "24h": -10.0,
+    "7d": 26.79
+   },
+   "z1h": 2.49,
+   "atr1h_pct": 2.52,
+   "funding_pct_pred": -0.0283,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": -6.7,
+   "spread_bp": 2.19,
+   "depth25_min_usd": 4338,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.04333,
+    "ema20_4h": 0.046254,
+    "gap_sigma": -2.14,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "TRXUSDT": {
+   "asset": "crypto",
+   "sector": "l1",
+   "cell_1h": "R6",
+   "cell_4h": "R9",
+   "vol4h_pct_1y": 0.81,
+   "ret_pct": {
+    "1h": -0.13,
+    "4h": -0.56,
+    "24h": 0.1,
+    "7d": -3.67
+   },
+   "rel_btc_pct": {
+    "1h": -0.49,
+    "4h": -1.15,
+    "24h": -0.34,
+    "7d": 10.22
+   },
+   "z1h": -0.53,
+   "atr1h_pct": 0.4,
+   "funding_pct_pred": -0.0079,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 0.9,
+   "spread_bp": 3.28,
+   "depth25_min_usd": 207685,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.3061,
+    "ema20_4h": 0.307629,
+    "gap_sigma": -0.9,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "LMTUSDT": {
+   "asset": "tradfi",
+   "sector": "tradfi_stock",
+   "cell_1h": null,
+   "cell_4h": null,
+   "vol4h_pct_1y": 0.28,
+   "ret_pct": {
+    "1h": -0.02,
+    "4h": -0.55,
+    "24h": -0.46,
+    "7d": -0.74
+   },
+   "rel_btc_pct": {
+    "1h": -0.38,
+    "4h": -1.15,
+    "24h": -0.9,
+    "7d": 13.15
+   },
+   "z1h": -0.04,
+   "atr1h_pct": 0.94,
+   "funding_pct_pred": 0.0,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 114.6,
+   "spread_bp": 10.62,
+   "depth25_min_usd": 21101,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 582.95,
+    "ema20_4h": 595.963662,
+    "gap_sigma": -3.35,
+    "flush_ts": null,
+    "flush_bars_ago": null,
+    "expired": false,
+    "armed": false,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": null
+   }
+  },
+  "ICNTUSDT": {
+   "asset": "crypto",
+   "sector": "infra",
+   "cell_1h": "R9",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.69,
+   "ret_pct": {
+    "1h": -1.72,
+    "4h": 0.04,
+    "24h": 1.79,
+    "7d": -32.34
+   },
+   "rel_btc_pct": {
+    "1h": -2.07,
+    "4h": -0.55,
+    "24h": 1.35,
+    "7d": -18.46
+   },
+   "z1h": -1.2,
+   "atr1h_pct": 3.54,
+   "funding_pct_pred": 0.005,
+   "funding_interval_h": 4.0,
+   "oi_chg_24h_pct": 20.5,
+   "spread_bp": 13.05,
+   "depth25_min_usd": 936,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.2323,
+    "ema20_4h": 0.240409,
+    "gap_sigma": -0.94,
+    "flush_ts": "2026-11-15T04:00:00+00:00",
+    "flush_bars_ago": 9,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 0.2422
+   }
+  },
+  "OPUSDT": {
+   "asset": "crypto",
+   "sector": "l2",
+   "cell_1h": "R8",
+   "cell_4h": "R8",
+   "vol4h_pct_1y": 0.53,
+   "ret_pct": {
+    "1h": 0.05,
+    "4h": 0.16,
+    "24h": -1.69,
+    "7d": -23.15
+   },
+   "rel_btc_pct": {
+    "1h": -0.31,
+    "4h": -0.43,
+    "24h": -2.12,
+    "7d": -9.27
+   },
+   "z1h": 0.05,
+   "atr1h_pct": 1.41,
+   "funding_pct_pred": -0.0002,
+   "funding_interval_h": 8.0,
+   "oi_chg_24h_pct": 2.5,
+   "spread_bp": 1.25,
+   "depth25_min_usd": 98524,
+   "abnormal_market": false,
+   "h_rb2": {
+    "close_4h_2000": 0.08043,
+    "ema20_4h": 0.084284,
+    "gap_sigma": -2.63,
+    "flush_ts": "2026-11-15T04:00:00+00:00",
+    "flush_bars_ago": 9,
+    "expired": false,
+    "armed": true,
+    "closed_above_ema_since_arm": false,
+    "triggered_bars_ago": null,
+    "rebound_high": 0.08278
+   }
+  }
+ }
+}
