@@ -2958,3 +2958,20 @@ hypotheses:
     prior: 0.30
     family: cross_venue_flow
     status: proposed
+
+  # ---- Tape footprints (block ICE; forward only on data/journal/tape; registered 2026-11-16 ~05:40 UTC by the orchestrator BEFORE any
+  # evaluation, after the ETH 1815 defence overnight; labels from `atx tape` tape-v1, config hash 635d9c91edbb9a0b). ----
+  H-ICE1:
+    title: "Forward: a price level defended by repeated large icebergs on one side is followed by a move away from it in the defended direction over the next 4h"
+    statement: >-
+      Event: for a symbol in the atx tape set, the third ICEBERG_BID (or ICEBERG_ASK) alert within 6 h whose price lies within 2 x the 1h ATR
+      band of the first one's price, with total absorbed notional >= 250 k USD (BTC: >= 1 M USD) across the alerts. One event per symbol
+      per 12 h. Outcome: Bybit perp mid 4h forward log return from the third alert, signed (+ for bids, - for asks), in units of the symbol's
+      4h sigma (log-HAR-t). Secondary: P(the defended level trades through by > 0.5 x 1h ATR within 4 h).
+    rationale: "Tonight ETH saw ~930 k USD absorbed at 1814-1818 across five iceberg alerts while Binance sold into it; BTC saw two-sided icebergs pinning 64,550. Whether persistent passive defence is informed or just a liquidity provider is untested."
+    test: "Mean signed 4h return in sigma units vs 0, day-block bootstrap (2000 resamples, seed 0), evaluated once after 40 events."
+    success: "Supports iff mean > 0 with the 95% CI above 0; contradicts iff mean <= 0 with >= 40 events; else inconclusive. Descriptive context only until recorded."
+    segment: "forward_shadow (clean_holdout)"
+    prior: 0.30
+    family: tape_footprints
+    status: proposed
