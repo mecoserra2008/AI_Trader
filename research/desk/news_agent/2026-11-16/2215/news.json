@@ -1,0 +1,475 @@
+{
+ "contract": "news_agent_round_v1",
+ "agent": "news",
+ "round": 2,
+ "cycle_id": "20261116T2215",
+ "as_of": "2026-11-16T22:15:00Z",
+ "model": "claude-opus-5-5",
+ "prompt_version": "desk-news-v1",
+ "snapshot_ref": "none since research/desk/2026-11-15/2056 (desk paused 08:15-22:00)",
+ "regime": {
+  "summary": "BTC 65,400 (+0.4% 24h, range 63,871-65,683) held while the Nasdaq fell ~2.5% and the S&P ~2% on NVIDIA's board report (no Huang return); funding ~0; 10y ~5.12-5.15%, the dollar at its highest since Apr 2025, a Dec hike ~92% priced; Deribit OI tops are the 80k C (13.5k BTC) and the 60k P (12.9k BTC).",
+  "cells": {
+   "BTCUSDT": "R9 (carried; no new snapshot)"
+  },
+  "market_2214": {
+   "BTCUSDT": 65400.0,
+   "ETHUSDT": 1833.92,
+   "ZECUSDT": 910.23,
+   "HUMAUSDT": 0.01001,
+   "NVDAUSDT": 156.59,
+   "QQQUSDT": 662.64,
+   "SOXLUSDT": 48.84,
+   "MSTRUSDT": 104.16,
+   "XAUUSDT": 3864.53,
+   "CLUSDT": 83.88,
+   "ANTUSDT": 97.18,
+   "funding_pct": {
+    "BTCUSDT_8h": 0.0083,
+    "HUMAUSDT_4h": -0.9063,
+    "KAVAUSDT_8h": -0.7702
+   }
+  }
+ },
+ "triggers": [
+  {
+   "ts_utc": "2026-11-16T14:30Z/21:00Z",
+   "trigger": "US cash session: Nasdaq ~-2.5%, S&P ~-2% after NVIDIA's board says it is not considering bringing Huang back; chipmakers >-5%",
+   "sources": [
+    "https://bitcoinmagazine.com/markets/bitcoin-price-holds-near-65000-nvidia"
+   ],
+   "perps": [
+    "QQQUSDT",
+    "NVDAUSDT",
+    "SOXLUSDT",
+    "MUUSDT",
+    "BTCUSDT"
+   ],
+   "theses": [
+    "b",
+    "d"
+   ],
+   "expected": {
+    "direction": "equity down; BTC flat",
+    "note": "QQQ 1h close 665.34 (17:00 bar) < 667.08: TF-1 trigger fired; BTC co-move same-hour only (R-PX-12)"
+   },
+   "status": "confirmed",
+   "window": "last_24h"
+  },
+  {
+   "ts_utc": "2026-11-16T13:30Z",
+   "trigger": "Empire State manufacturing",
+   "sources": [],
+   "perps": [],
+   "theses": [
+    "a"
+   ],
+   "expected": {
+    "direction": "n/a"
+   },
+   "status": "data gap: no 2026 print found",
+   "window": "last_24h"
+  },
+  {
+   "ts_utc": "2026-11-16T10:00Z",
+   "trigger": "Barr: AI and financial stability",
+   "sources": [
+    "https://www.federalreserve.gov/newsevents/2026-November.htm"
+   ],
+   "perps": [],
+   "theses": [
+    "a"
+   ],
+   "expected": {
+    "direction": "none"
+   },
+   "status": "happened per calendar; content not checked",
+   "window": "last_24h"
+  },
+  {
+   "ts_utc": "2026-11-16",
+   "trigger": "Warsh: AI 'could bring substantial labor market disruption'; no rate guidance",
+   "sources": [
+    "https://bitcoinmagazine.com/markets/bitcoin-price-holds-near-65000-nvidia"
+   ],
+   "perps": [],
+   "theses": [
+    "a",
+    "c"
+   ],
+   "expected": {
+    "direction": "none"
+   },
+   "status": "confirmed",
+   "window": "last_24h"
+  },
+  {
+   "ts_utc": "2026-11-16T13:00Z",
+   "trigger": "ARB unlock (92.65M): ARB 0.13204, -1.9% 24h, low 0.13081",
+   "sources": [
+    "Bybit tickers"
+   ],
+   "perps": [
+    "ARBUSDT"
+   ],
+   "theses": [],
+   "expected": {
+    "direction": "none",
+    "note": "no visible shock"
+   },
+   "status": "confirmed",
+   "window": "last_24h"
+  },
+  {
+   "ts_utc": "2026-11-16",
+   "trigger": "ANTHROPICUSDT renamed ANTUSDT: 97.18, 24h 75.55-103.33, PreLaunch; +22% log over the $78 range top; split ratio U (~14:1 implied)",
+   "sources": [
+    "Bybit instruments-info / tickers 22:14"
+   ],
+   "perps": [
+    "ANTUSDT"
+   ],
+   "theses": [
+    "b",
+    "d"
+   ],
+   "expected": {
+    "direction": "n/a"
+   },
+   "status": "rename confirmed; ratio unconfirmed",
+   "window": "last_24h"
+  },
+  {
+   "ts_utc": "2026-11-18/19",
+   "trigger": "Anthropic IPO multiple times oversubscribed; bankers weigh above $78 (~$1.5T); $26B private placement; pricing Wed 11-18, Nasdaq Thu 11-19",
+   "sources": [
+    "https://stockanalysis.com/news/anthropic-ipo-multiple-times-oversubscribed/",
+    "https://letsdatascience.com/news/anthropic-bankers-reportedly-weigh-higher-ipo-price-on-heavy-dcc7eee7",
+    "https://decrypt.co/383364/tom-lee-blames-nvidia-anthropic-ipo-ethereum-plunge-bitmine-buys"
+   ],
+   "perps": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "ANTUSDT"
+   ],
+   "theses": [
+    "b",
+    "d"
+   ],
+   "expected": {
+    "direction": "untested",
+    "note": "HC-NEWS-20261115-2"
+   },
+   "status": "oversubscription per Bloomberg/CNBC via secondary; placement U",
+   "window": "next_72h"
+  },
+  {
+   "ts_utc": "2026-11-16T13:38Z",
+   "trigger": "Strategy bought 485 BTC ($33.4M) + $228M STRC buybacks; MSTR 104.16 (+3.3%) vs BTC +0.4%",
+   "sources": [
+    "https://bitcoinmagazine.com/news/strategy-mstr-adds-485-bitcoin-holdings"
+   ],
+   "perps": [
+    "MSTRUSDT"
+   ],
+   "theses": [
+    "deep"
+   ],
+   "expected": {
+    "direction": "against T-NEWS-2"
+   },
+   "status": "confirmed",
+   "window": "last_24h"
+  },
+  {
+   "ts_utc": "2026-11-13",
+   "trigger": "Spot BTC ETFs -$185M Friday (7th straight day, ~$1.9B); Monday's figure not out",
+   "sources": [
+    "https://bitcoinmagazine.com/markets/bitcoin-price-holds-near-65000-nvidia",
+    "https://www.coindesk.com/markets/2026/11/16/bitcoin-risks-falling-below-usd60-000-as-nvidia-earnings-threaten-to-deepen-crypto-sell-off"
+   ],
+   "perps": [
+    "BTCUSDT"
+   ],
+   "theses": [
+    "a",
+    "deep"
+   ],
+   "expected": {
+    "direction": "none",
+    "note": "R-NEWS-7"
+   },
+   "status": "confirmed",
+   "window": "last_24h"
+  },
+  {
+   "ts_utc": "2026-11-16T17:20Z",
+   "trigger": "Kava retires HARD Lend (7-day vote); 53.9M KAVA stolen; pool 0.19 vs 55.2M owed; Coinone halted KAVA deposits/withdrawals",
+   "sources": [
+    "https://cryptoslate.com/kava-moves-to-shut-down-lending-platform-after-hackers-drain-nearly-4-million/"
+   ],
+   "perps": [
+    "KAVAUSDT"
+   ],
+   "theses": [],
+   "expected": {
+    "direction": "none",
+    "note": "funding -0.77%/8h; no depth"
+   },
+   "status": "confirmed",
+   "window": "last_24h"
+  },
+  {
+   "ts_utc": "2026-11-16T14:19Z/20:40Z",
+   "trigger": "Exploits: Lighter $15.5M (withdrawals paused); Safe/Zodiac $6.5M; Luxor AI-enabled hashrate hijack (up to 13 EH/s); Aster -32% in minutes",
+   "sources": [
+    "https://cryptoslate.com/lighter-loses-15-5m-in-sudden-drain-and-blames-a-single-api-leak/",
+    "https://cointelegraph.com/news/safe-wallet-reportedly-loses-millions-after-key-compromise",
+    "https://www.coindesk.com/tech/2026/11/16/bitcoin-miners-were-hijacked-and-their-btc-rewards-redirected-to-an-attacker"
+   ],
+   "perps": [
+    "ASTERUSDT",
+    "HYPEUSDT"
+   ],
+   "theses": [],
+   "expected": {
+    "direction": "untested"
+   },
+   "status": "confirmed",
+   "window": "last_24h"
+  },
+  {
+   "ts_utc": "2026-11-16T12:00Z",
+   "trigger": "Bybit: delist 8 pairs on 11-23 (list U); LIT risk-limit change 11-17; EUR SEPA deposits suspended",
+   "sources": [
+    "https://api.bybit.com/v5/announcements/index?locale=en-US&limit=30"
+   ],
+   "perps": [
+    "LITUSDT"
+   ],
+   "theses": [],
+   "expected": {
+    "direction": "none"
+   },
+   "status": "titles confirmed; details U",
+   "window": "last_24h"
+  },
+  {
+   "ts_utc": "2026-11-16T14:00Z",
+   "trigger": "HUMA +55%: no dated catalyst; OI 272M -> 347M contracts with price; funding -0.65%/4h (16:00), -0.82% (20:00), -0.906% next",
+   "sources": [
+    "Bybit kline / OI / funding history",
+    "https://coinmarketcap.com/cmc-ai/huma-finance/latest-updates"
+   ],
+   "perps": [
+    "HUMAUSDT"
+   ],
+   "theses": [],
+   "expected": {
+    "direction": "none",
+    "note": "crowded-short squeeze in a $3.5M-OI perp; unlock 11-26 (605M per CMC vs 458.75M per KuCoin, U)"
+   },
+   "status": "confirmed",
+   "window": "last_24h"
+  },
+  {
+   "ts_utc": "2026-11-16T12:00Z/15:00Z",
+   "trigger": "ZEC 887.8 -> 861.1 (12:00 bar), low 846 (15:00 bar), ~911 now; no ZEC-specific news; moved with BTC's 63,871 low and 14:00 spike; Cypherpunk bought 3,775 ZEC at ~$920 (holds 341,858), reported 18:43",
+   "sources": [
+    "https://www.theblock.co/news/business/2026-11-16-winklevoss-cypherpunk-buys-zcash-dip-mining-debut-delivers-2-6-million-operating-profit-441392"
+   ],
+   "perps": [
+    "ZECUSDT"
+   ],
+   "theses": [],
+   "expected": {
+    "direction": "none",
+    "note": "beta move; 849.3 pool tagged; zec-s1 stop 935 untouched"
+   },
+   "status": "confirmed",
+   "window": "last_24h"
+  },
+  {
+   "ts_utc": "2026-11-17T08:00Z",
+   "trigger": "Deribit 17NOV26 expiry: 3,655 BTC OI (~$239M), P/C 1.37, top 64k P / 62k P / 66k C",
+   "sources": [
+    "Deribit public get_book_summary_by_currency 22:20"
+   ],
+   "perps": [
+    "BTCUSDT"
+   ],
+   "theses": [],
+   "expected": {
+    "direction": "none",
+    "note": "R-VOL-28"
+   },
+   "status": "confirmed",
+   "window": "next_24h"
+  },
+  {
+   "ts_utc": "2026-11-17T13:30Z",
+   "trigger": "US October retail sales",
+   "sources": [
+    "https://forexfundamentals.com/economic-calendar/us-retail-sales/2026-11-17"
+   ],
+   "perps": [
+    "BTCUSDT",
+    "XAUUSDT",
+    "QQQUSDT"
+   ],
+   "theses": [
+    "a",
+    "d"
+   ],
+   "expected": {
+    "direction": "vol",
+    "note": "consensus +0.3% vs +0.2% (conflict)"
+   },
+   "status": "confirmed",
+   "window": "next_24h"
+  },
+  {
+   "ts_utc": "2026-11-17T14:10Z",
+   "trigger": "Waller: Payments (TCH)",
+   "sources": [
+    "https://www.federalreserve.gov/newsevents/2026-November.htm"
+   ],
+   "perps": [],
+   "theses": [
+    "a"
+   ],
+   "expected": {
+    "direction": "none"
+   },
+   "status": "confirmed",
+   "window": "next_24h"
+  },
+  {
+   "ts_utc": "2026-11-17T21:20Z",
+   "trigger": "NVDA Q3 FY27 results (1:20 p.m. PT); call 22:00 UTC",
+   "sources": [
+    "https://investor.nvidia.com/news/press-release-details/2026/NVIDIA-Sets-Conference-Call-for-Third-Quarter-Financial-Results/"
+   ],
+   "perps": [
+    "NVDAUSDT",
+    "QQQUSDT",
+    "SOXLUSDT",
+    "MUUSDT",
+    "BTCUSDT"
+   ],
+   "theses": [
+    "b",
+    "d"
+   ],
+   "expected": {
+    "direction": "vol",
+    "note": "implied +-9.6..10.8% (Nov 12): 142.3 / 172.4 from 156.59; BTC same-hour (R-PX-12); Polymarket Huang return by YE 14%"
+   },
+   "status": "confirmed",
+   "window": "next_24h"
+  },
+  {
+   "ts_utc": "2026-11-18T18:00Z/19:00Z",
+   "trigger": "20y auction / FOMC minutes; Anthropic pricing (time U)",
+   "sources": [
+    "https://www.federalreserve.gov/newsevents/2026-November.htm"
+   ],
+   "perps": [
+    "BTCUSDT",
+    "XAUUSDT"
+   ],
+   "theses": [
+    "a",
+    "d"
+   ],
+   "expected": {
+    "direction": "vol"
+   },
+   "status": "confirmed",
+   "window": "next_48h"
+  }
+ ],
+ "theses_file": "research/desk/news_agent/2026-11-16/2215/theses.yaml",
+ "theses": [
+  {
+   "id": "T-NEWS-20261115-1",
+   "p": 0.52,
+   "change": "unchanged",
+   "state": "on track (BTC 65,400 in [62,483, 68,041])"
+  },
+  {
+   "id": "T-NEWS-20261116-1",
+   "supersedes": "T-NEWS-20261115-2",
+   "p": 0.5,
+   "change": "0.55 -> 0.50"
+  },
+  {
+   "id": "T-NEWS-20261115-3",
+   "p": 0.55,
+   "change": "unchanged",
+   "state": "ETH/BTC -0.20% since round 1"
+  },
+  {
+   "id": "T-NEWS-20261116-2",
+   "supersedes": "T-NEWS-20261115-4",
+   "p": 0.4,
+   "change": "0.33 -> 0.40 (closer to the lower level)"
+  },
+  {
+   "id": "T-CLAUDE-20261115-deep",
+   "p": 0.6,
+   "change": "unchanged (news agent view)"
+  }
+ ],
+ "ledger_check": {
+  "run": "scripts/thesis_check.py --dry-run --no-refresh --as-of 2026-11-16T22:15Z (FRED to 11-13)",
+  "a": "strengthening 4/5",
+  "b": "active 4/6; likely 5/6 strengthening once FRED has Monday's S&P (~-5.2% from the high)",
+  "c": "weakening 1/5",
+  "d": "strengthening 7/9",
+  "deep": "active 3/6",
+  "btc_since_1900_sun_pct": 0.861,
+  "eth_since_1900_sun_pct": 0.737
+ },
+ "conflicts": [
+  {
+   "id": "HC-NEWS-20261116-6",
+   "narrative": "NVDA earnings will deepen the crypto sell-off; BTC < 60k",
+   "evidence": "CoinDesk 11-16 20:35 and 05:01 ('biggest bet is a drop below $60,000'); 60k put ~$845-900M notional",
+   "rules": [
+    "R-PX-12"
+   ],
+   "lean": "the rule (BTC held through Nasdaq -2.5% today)",
+   "hypothesis": "BTC log return 0-1h, 1-12h and 12-36h after NVDA earnings releases 2020-2026 (n ~26), regressed on NVDA's after-hours move; HAC",
+   "success": "1-12h slope t > 2 in both llm_in_sample and clean_holdout; otherwise R-PX-12 extends to earnings"
+  },
+  {
+   "id": "HC-NEWS-20261116-7",
+   "narrative": "treasury-company dip buying supports price",
+   "evidence": "Strategy 485 BTC, Bitmine 7,653 ETH, Cypherpunk 3,775 ZEC (11-16 headlines)",
+   "rules": [
+    "R-NEWS-7"
+   ],
+   "lean": "no direction",
+   "hypothesis": "Strategy Monday 8-K purchases 2024-2026, sized by BTC 20d ADV: BTC next-1d/5d vol-standardised return vs non-purchase Mondays",
+   "success": "> +0.2 sigma with CI > 0 in both segments"
+  },
+  {
+   "id": "HC-NEWS-20261115-1..5",
+   "status": "carried from round 1 (ETF streak now 7 days / -$1.9B; Tom Lee joins the IPO-drain crowd; HUMA is a squeeze anecdote, not evidence)"
+  }
+ ],
+ "data_gaps": [
+  "Empire State 2026 print not found",
+  "Barr remarks not checked",
+  "Monday ETF flows not out",
+  "Bybit pages blocked: 8 delisted pairs, ANT split ratio",
+  "HUMA unlock figures conflict",
+  "no desk snapshot since 2056 Sun",
+  "NVDA implied move dated Nov 12"
+ ],
+ "honesty": {
+  "direction_claim": false,
+  "no_sizes": true
+ }
+}

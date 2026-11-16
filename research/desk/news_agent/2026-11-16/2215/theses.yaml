@@ -1,0 +1,78 @@
+# News-agent theses, round 2 (2026-11-16 22:15 UTC). Same schema as research/desk/theses.yaml (theses_v1).
+# Round-1 theses are never edited. A changed probability is a new id that names the old one in `supersedes`.
+# T-NEWS-20261115-1 (P 0.52) and T-NEWS-20261115-3 (P 0.55) are unchanged and are not repeated here.
+# Model claude-opus-5-5, prompt desk-news-v1. All are narrative context with no tested edge (R-MAC-3, R-NEWS-7).
+
+theses:
+  - id: T-NEWS-20261116-1
+    supersedes: T-NEWS-20261115-2
+    component: forced_flow
+    title: "MSCI deletion: MSTR underperforms BTC into the Nov 30 effective close (revised P 0.50)"
+    author: news_agent
+    created_ts: 2026-11-16T22:15:00Z
+    claim: >-
+      MSTRUSDT's log return minus BTCUSDT's, from 2026-11-16 22:15 UTC to 2026-12-01 00:00 UTC, is negative.
+    mechanism: >-
+      The same as T-NEWS-20261115-2: passive MSCI trackers must sell by the Nov 30 close (JPM est. ~$2.8B).
+      Something new works against it. Strategy keeps buying: 485 BTC for $33.4M, plus $228M of STRC preferred
+      buybacks (Bitcoin Magazine, 11-16 13:38). Since round 1, MSTR is +2.9% vs BTC +0.5% (Bybit 22:14), so the
+      relative move went against the claim.
+    direction: short
+    direction_note: "MSTR relative to BTC; not a BTC call."
+    assets: [MSTRUSDT]
+    horizon_days: 15
+    probability: 0.50
+    base_rate: >-
+      The deletion drift is front-loaded (MSTR -23.7% in the 7 days to 11-15) and MSTR's beta to BTC is above 1. With
+      Strategy's buying in the tape and MSTR's own perp funding at 0, there is nothing to lean on: a coin flip.
+    resolution:
+      event: "ln(MSTRUSDT 2026-12-01T00:00Z / 2026-11-16T22:15Z) - ln(BTCUSDT same window) < 0"
+      also_record: ["the residual after a 30d beta to BTC", "MSTR minus BTC Dec 1 -> Dec 8 (expected reversal)"]
+    trigger: on_create
+    proxies:
+      - {id: mstr_lags_btc_5obs, series: "lake:MSTRUSDT", vs: "lake:BTCUSDT", transform: rel_logret_5, op: "<", value: 0.0}
+      - {id: mstr_lags_btc_1obs, series: "lake:MSTRUSDT", vs: "lake:BTCUSDT", transform: rel_logret_1, op: "<", value: 0.0}
+      - {id: mstr_below_leg, series: "lake:MSTRUSDT", transform: level, op: "<", value: 107.52}
+    invalidation:
+      any:
+        - {series: "lake:MSTRUSDT", vs: "lake:BTCUSDT", transform: rel_logret_10, op: ">=", value: 10.0}
+    status: active
+    watch: ["MSCI effective close 2026-11-30 21:00 UTC", "other index providers following MSCI", "Strategy 8-K purchases (Mondays)"]
+    links: [T-NEWS-20261115-2, R-MM-2, R-PD-1, R-MAC-3]
+
+  - id: T-NEWS-20261116-2
+    supersedes: T-NEWS-20261115-4
+    component: real_yields
+    title: "Gold tags 3777.97 before 3951.03 by Fri 20 Nov 20:00 UTC (revised P 0.40)"
+    author: news_agent
+    created_ts: 2026-11-16T22:15:00Z
+    claim: >-
+      XAUUSDT (3864.53 at 22:14 UTC) trades at or below 3777.97 (7d VAL) before it trades at or above 3951.03
+      (untouched 4h leg), and does so before 2026-11-20 20:00 UTC.
+    mechanism: >-
+      Monday traded up to 3904.94, above the 3881-3899.53 zone, then gave it back (24h low 3835.15). The dollar index
+      touched its highest level since April 2025, and the 10y sits near 5.12-5.15% (Bitcoin Magazine, CoinDesk,
+      11-16). Retail sales (Tue), the 20y auction and the minutes (Wed) can push real yields higher (theses a / d).
+      On the other side, oil's slide (CL 83.88, -4.0% 24h) lowers the inflation impulse.
+    direction: short
+    direction_note: "First-passage claim; score on `resolution`."
+    assets: [XAUUSDT]
+    horizon_days: 4
+    probability: 0.40
+    base_rate: >-
+      Driftless P(down level first) from 3864.53 = ln(3951.03/3864.53) / ln(3951.03/3777.97) = 0.49, less ~15-20%
+      of paths that touch neither level in the ~3.9 days left, giving ~0.40. No narrative uplift (R-MAC-1, R-MAC-3).
+    resolution:
+      event: "first touch of <= 3777.97 precedes first touch of >= 3951.03, within [created_ts, 2026-11-20T20:00Z]; neither = false"
+    trigger: on_create
+    proxies:
+      - {id: xau_below_zone, series: "lake:XAUUSDT", transform: level, op: "<", value: 3881.0}
+      - {id: xau_1d_down, series: "lake:XAUUSDT", transform: logret_1, op: "<", value: 0.0}
+      - {id: real_yield_up_5obs, series: "fred:DFII10", transform: chg_5, op: ">", value: 0.0}
+      - {id: dollar_up_5obs, series: "fred:DTWEXBGS", transform: chg_5, op: ">", value: 0.0}
+    invalidation:
+      any:
+        - {series: "lake:XAUUSDT", transform: level, op: ">=", value: 3951.03}
+    status: active
+    watch: ["retail sales 2026-11-17 13:30", "20y auction 2026-11-18 18:00", "FOMC minutes 2026-11-18 19:00"]
+    links: [T-NEWS-20261115-4, T-USER-20261115-a, T-USER-20261115-d, R-TF-6, R-PX-4, R-MAC-1, R-MAC-3]
