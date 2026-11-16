@@ -2898,3 +2898,31 @@ hypotheses:
     prior: 0.30
     family: kalman_fair_value
     status: proposed
+
+  # ---- Cross-sectional network v4 over all liquid pairs (block XS4; shadow only; registered 2026-11-16 ~00:40 UTC BEFORE any v4 data,
+  # training or live line). xs.v1 / v2.1 / xs.v3 stay pinned and untouched. ----
+  H-XS4:
+    title: "Forward: the shadow xs.v4 relative-return median ranks the next 4h / 24h relative returns of the liquid Bybit perps better than the low-volatility ranking"
+    statement: >-
+      xs.v4 = the xs.v3 architecture and training protocol (ml.xs_net kan_mix, D = 8, 2 heads, lr 1e-3, wd 1e-4 from v3's search, 3 seeds,
+      purged expanding walk-forward, warm start, early stopping on the last 15% of training days) on the same top-down features (market ->
+      sector -> token; xs_network_study.token_rows / assemble), over every Bybit USDT linear perp with symbolType "" (crypto; no
+      innovation zone, no TradFi, no SPY) whose trailing 24h turnover >= 20 M USD (point in time, from 1h klines) and, live, whose
+      top-of-book spread <= 5 bp at the run. Candidates = such perps with 24h turnover >= 10 M USD on 2026-11-16 plus universe L (today's
+      survivors: survivorship bias acknowledged). Sectors from config/sectors.yaml (overrides first), 14 sector embeddings. Data: Bybit
+      public REST 1h klines, funding history and 4h open interest from 2024-07-01, cached in data/research/xs_v4 (not the lake; klines are
+      final, known_ts = close + 2 s).
+      Forward score per non-overlapping origin (4h: 00, 04, .. UTC; 24h: 00 UTC): Spearman IC between the v4 rel median and the realised
+      relative return over the present tokens (>= 5), and the same IC for the low-vol ranking (-lsig2, the baseline that beat v3).
+    rationale: "User request: extend the cross-sectional network to every liquid pair. R-XS-2 / R-XS-3: v3's ranking is mostly a low-vol ranking and its spread loses after costs; a wider cross-section may or may not change that. Prior is low."
+    test: >-
+      Forward shadow from the first live line (data/journal/live_xs_v4/scores.jsonl). Evaluated once at 60 daily origins (and the 4h origins
+      over the same days): per-day mean IC difference (v4 - low-vol), NW t. Secondary (reported with the walk-forward backtest, not part
+      of the verdict): the walk-forward IC by segment, vol pinball of the 1h / 4h heads vs panel log-HAR-t x hour-of-week.
+    success: >-
+      Supports iff at >= 1 of the two horizons mean IC(v4) > 0 with NW t > 2 AND mean IC(v4) - IC(low-vol) > 0 with NW t > 2.
+      Contradicts iff at both horizons IC(v4) - IC(low-vol) <= 0. Else inconclusive. The ranking stays context only (R-XS-3) whatever the result.
+    segment: "forward_shadow (clean_holdout)"
+    prior: 0.20
+    family: xs_network
+    status: proposed

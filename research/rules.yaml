@@ -3543,3 +3543,67 @@ rules:
   - H-VOLT1
   review: a registered kernel test with positive net Sharpe in both segments
   status: active
+# 2026-11-16 00:30 UTC: merged Kalman fair-value candidates (research/reports/kalman_fv_2026-11-16.md; H-KFD1/2 contradict both segments; H-KFD3 inconclusive).
+- id: R-KFD-1
+  kind: avoid
+  rule: WHEN price sits k sigma away from a Kalman / EWMA fair value on 1m-1h bars THEN do not fade it toward fair value, even with limit entries at the touch
+  when: single-asset mean-reversion entries justified by a standardised deviation from a filtered fair value (k 1.5-3.5)
+  then: no fade; if anything the deviation carries on (R-PX-2 / H-T1); fair-value bands are context, not entries
+  scope:
+    assets: universe L and the flow_3s perps
+    horizon: 1m-1h
+    sides: both
+  effect: net -0.21 / -0.25 R per trade at 1h, -0.32 / -0.34 R at 5m, -0.35 R at 1m; gross already -0.12 to -0.17 R; all 10 variants negative, all 9 v0 cells negative
+  confidence: A
+  evidence:
+  - H-KFD1
+  review: a registered fade variant with gross R > 0 in both segments
+  status: active
+- id: R-KFD-2
+  kind: expect
+  rule: WHEN a local-level Kalman filter is fitted by maximum likelihood to crypto log prices at 1m-1h THEN expect a gain of about 1 (fair value = last price), so its deviation is just the standardised
+    last-bar return
+  when: building fair-value, deviation or 'mispricing' tools from state-space filters on one asset's price
+  then: treat such deviations as vol-standardised returns; any extra smoothing is a modelling choice, not an estimate
+  scope:
+    assets: universe L
+    horizon: 1m-1h
+    sides: both
+  effect: MLE K median 1.000 (1h), 0.992 (5m), 1.000 (1m); R/S about 2e-4 at 1h
+  confidence: A
+  evidence:
+  - H-KFD1
+  review: an MLE gain < 0.9 on a liquid perp over a quarter
+  status: active
+- id: R-KFD-3
+  kind: avoid
+  rule: WHEN a dynamic-beta (Kalman regression) pair spread prints a large standardised innovation THEN do not fade it at maker/taker costs; the reversion is real but smaller than four legs of fees
+  when: pairs ETH/BTC, SOL/ETH and same-sector universe-L pairs at 5m-1h
+  then: use the Kalman beta as a hedge ratio if a relative view exists for other reasons; not as an entry signal
+  scope:
+    assets: universe L pairs
+    horizon: 5m-1h
+    sides: both
+  effect: 5m gross +0.025 R both segments, net -0.25 / -0.21 R; 1h net -0.07 / -0.27 R (PBO 0.83)
+  confidence: B
+  evidence:
+  - H-KFD2
+  - H-RV1
+  review: a pairs variant whose gross edge exceeds 4-leg costs in both segments
+  status: active
+- id: R-KFD-4
+  kind: expect
+  rule: WHEN a single perp shows a large fast deviation from its fair value THEN expect it to come with taker flow in the same direction; a deviation without such flow is rare
+  when: reading order flow next to a price dislocation (15m taker delta, 1m delta and L1 OFI)
+  then: read same-direction flow as the normal state; an order-flow 'guardrail' removes 70-90% of the signals and has not been shown to improve the rest
+  scope:
+    assets: BTC, ETH (15m), 37 flow_3s perps (1m)
+    horizon: 1m-1h
+    sides: both
+  effect: guard kept 8-14% (15m) and 14-30% (1m) of signals; guarded minus unguarded -0.04 to +0.07 R, CIs straddle 0
+  confidence: C
+  evidence:
+  - H-KFD3
+  review: rerun H-KFD3 once flow_3s holds 60+ days
+  status: provisional
+

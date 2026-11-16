@@ -390,3 +390,12 @@ _Generated from [rules.yaml](rules.yaml) by `uv run python -m ai_trader.research
 | R-ROUGH-1 | A | WHEN reasoning about how crypto volatility evolves THEN expect log volatility to be rough (Hurst H about 0.1-0.15 daily) in every vol state, so vol shocks are anti-persistent at short lags while the level has long memory | daily H median 0.129 in-sample, 0.139 holdout; 23 of 23 token CIs below 0.35; H by vol state 0.12-0.15 / 0.08-0.17 | H-RFSV1 | active |
 | R-ROUGH-2 | C | WHEN a median (log-scale) forecast of next-hour realised volatility is needed THEN a power-law rough kernel on deseasonalised log RV is slightly better than log-HAR; for the variance level the risk engine reads keep log-HAR | log-MSE -3.4% (t -7.6) in-sample, -1.5% (t -3.1) holdout at 1h; QLIKE tie (registered verdict inconclusive) | H-RFSV2 | provisional |
 | R-ROUGH-3 | B | WHEN a long-memory (fractional / power-law) weighting of past returns is offered as a direction signal THEN do not expect it to beat plain EWMA momentum or to pay after costs | IC difference vs EWMA |t| < 1.5; in-sample net Sharpe -0.56 (1h) and -0.43 (4h) | H-VOLT1 | active |
+
+## KFD
+
+| id | grade | rule | effect | evidence | status |
+|---|---|---|---|---|---|
+| R-KFD-1 | A | WHEN price sits k sigma away from a Kalman / EWMA fair value on 1m-1h bars THEN do not fade it toward fair value, even with limit entries at the touch | net -0.21 / -0.25 R per trade at 1h, -0.32 / -0.34 R at 5m, -0.35 R at 1m; gross already -0.12 to -0.17 R; all 10 variants negative, all 9 v0 cells negative | H-KFD1 | active |
+| R-KFD-2 | A | WHEN a local-level Kalman filter is fitted by maximum likelihood to crypto log prices at 1m-1h THEN expect a gain of about 1 (fair value = last price), so its deviation is just the standardised last-bar return | MLE K median 1.000 (1h), 0.992 (5m), 1.000 (1m); R/S about 2e-4 at 1h | H-KFD1 | active |
+| R-KFD-3 | B | WHEN a dynamic-beta (Kalman regression) pair spread prints a large standardised innovation THEN do not fade it at maker/taker costs; the reversion is real but smaller than four legs of fees | 5m gross +0.025 R both segments, net -0.25 / -0.21 R; 1h net -0.07 / -0.27 R (PBO 0.83) | H-KFD2, H-RV1 | active |
+| R-KFD-4 | C | WHEN a single perp shows a large fast deviation from its fair value THEN expect it to come with taker flow in the same direction; a deviation without such flow is rare | guard kept 8-14% (15m) and 14-30% (1m) of signals; guarded minus unguarded -0.04 to +0.07 R, CIs straddle 0 | H-KFD3 | provisional |
