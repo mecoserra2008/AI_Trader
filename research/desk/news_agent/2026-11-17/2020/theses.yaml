@@ -1,0 +1,43 @@
+# News-agent theses, round 3 (2026-11-17 20:20 UTC). Schema theses_v1. Earlier theses are never edited; a probability
+# change of >= 0.05 gets a new id with `supersedes`. Smaller drifts are reported in news.md only:
+# T-NEWS-20261115-1 reads ~0.55, T-NEWS-20261115-3 ~0.52, T-NEWS-20261116-2 stays 0.40.
+# Model claude-opus-5-5, prompt desk-news-v1. Narrative context only, with no tested edge (R-MAC-3, R-NEWS-7).
+
+theses:
+  - id: T-NEWS-20261117-1
+    supersedes: T-NEWS-20261116-1
+    component: forced_flow
+    title: "MSCI deletion: MSTR underperforms BTC into the Nov 30 effective close (revised P 0.58)"
+    author: news_agent
+    created_ts: 2026-11-17T20:20:00Z
+    claim: >-
+      MSTRUSDT's log return minus BTCUSDT's, from 2026-11-17 20:20 UTC to 2026-12-01 00:00 UTC, is negative.
+    mechanism: >-
+      Passive MSCI trackers must sell by the Nov 30 close (JPM est. ~$2.8B). On Tuesday MSTR fell to 98.02 (-5.6% in
+      24h) against BTC's -1.6%, without a company headline (Bybit 20:21). Since round 2 that is -3.9% relative. This
+      looks like the forced flow showing up in NYSE hours (the perp's drop came in the 15:00 bar, the second cash
+      hour), with Strategy's own buying (485 BTC on Monday) not offsetting it. Wells Fargo doubled its IBIT stake (Bitcoin
+      Magazine, 11-17 16:00); the URL slug says "strategy-cut", which is unverified.
+    direction: short
+    direction_note: "MSTR relative to BTC; not a BTC call."
+    assets: [MSTRUSDT]
+    horizon_days: 14
+    probability: 0.58
+    base_rate: >-
+      Pair sign over two weeks is ~0.5. The deletion drift is real on average but front-loaded. MSTR's beta above 1 is
+      now working for the claim (BTC is falling), and that can reverse. Short-term relative reversal (R-XS-2) argues
+      against chasing. Net 0.58.
+    resolution:
+      event: "ln(MSTRUSDT 2026-12-01T00:00Z / 2026-11-17T20:20Z) - ln(BTCUSDT same window) < 0"
+      also_record: ["the residual after a 30d beta to BTC", "MSTR minus BTC Dec 1 -> Dec 8 (expected reversal)"]
+    trigger: on_create
+    proxies:
+      - {id: mstr_lags_btc_5obs, series: "lake:MSTRUSDT", vs: "lake:BTCUSDT", transform: rel_logret_5, op: "<", value: 0.0}
+      - {id: mstr_lags_btc_1obs, series: "lake:MSTRUSDT", vs: "lake:BTCUSDT", transform: rel_logret_1, op: "<", value: 0.0}
+      - {id: mstr_below_cash_low, series: "lake:MSTRUSDT", transform: level, op: "<", value: 108.25, note: "cash-week low (tradfi_week.md)"}
+    invalidation:
+      any:
+        - {series: "lake:MSTRUSDT", vs: "lake:BTCUSDT", transform: rel_logret_10, op: ">=", value: 10.0}
+    status: active
+    watch: ["MSCI effective close 2026-11-30 21:00 UTC", "other index providers following MSCI", "Strategy 8-K Monday 11-23"]
+    links: [T-NEWS-20261116-1, T-NEWS-20261115-2, R-MM-2, R-PD-1, R-XS-2, R-MAC-3]
