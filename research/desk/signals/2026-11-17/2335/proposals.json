@@ -1,0 +1,110 @@
+{
+ "session_id": "desk-signals-20261117T2335",
+ "proposals": [
+  {
+   "id": "uni-rb2-s1",
+   "symbol": "UNIUSDT",
+   "side": "short",
+   "entry_type": "limit",
+   "entry_mode": "pegged_limit",
+   "peg": "touch",
+   "entry": 5.307,
+   "stop": 5.499,
+   "targets": [
+    4.94
+   ],
+   "take_profit": 4.94,
+   "p_tp": 0.332,
+   "cluster": "crypto_beta",
+   "channel": "desk",
+   "horizon": "7d",
+   "thesis": "LEARNING TRADE: tested mechanism H-RB2 (R-RB-5, verdict inconclusive: net R in-sample -0.00 [-0.15,+0.15], holdout +0.42 [-0.42,+1.21]), entered LATE. UNI flushed at the 11-14 20:00 4h bar (48h return below its 1y p5, OI -9% from the 72h high, R9), rebounded >= 1.5 sigma (armed 16 bars ago), closed 4h bars at/above the EMA20, and at the 16:00 UTC 11-17 4h close made the FIRST close back below the EMA20 (5.306): that is the H-RB2 short trigger (public-kline replay; the desk was stopped 08:15-20:15 so it was missed). The 20:00 close (5.238) stayed below the EMA20 (5.307). Price is back at the trigger level (5.307 ask, +0.0% vs 5.306), so the tested geometry is intact: stop = rebound high 5.447 + 0.5 sigma_4h (1.90%) = 5.499; target = 2R from the trigger = 4.940; time exit 120 h (close via atx live close at 11-22 16:00 UTC; horizon 7d is the hard cap). Driftless P 0.331, R:R 2.02, net E[R] -0.03 after 9.5 bp: passes the learning gate (>= -0.15), NOT the TESTED gate (>= 0.10). UNI's own 4h/1h cells are R5 (balanced range), not inside any blackout; BTC is inside the 63,836-65,270 box, which the plan allows only for a tested mechanism on another token whose regime allows it. Submit window 23:45-00:30 UTC 11-18.",
+   "invalidation": "Void at submission if: the touch is outside 5.24-5.36 (R:R < 1.6 or stop < 1.5 x 1h ATR); a UNI liquidation cluster (R-FLOW-2) in the last 60 min; BTC a 15m close above 65,904 (Plan B reclaim, crypto-beta short against a breakout); BTC 15m cross-venue flow turning net buying on Binance AND OKX AND Coinbase (the orchestrator's pattern/learning flow rule); a 1h close above 5.447 (rebound high) before fill. After fill only the exchange stop, the target and the 120 h time exit apply (the tested rule; no discretionary exit, R-OPX-4 / R-EXIT-2).",
+   "equilibrium": {
+    "positioning": "Funding +0.0058%/8h (shorts receive a little); OI -0.3% over 24h, still 9.4% below its 72h high: the rebound was not built on new leverage. 7d -23.8%, 24h +1.8% (rel BTC +2.8%), 4h rel BTC -1.3%. Bybit taker flow last 11 min mildly net buy (+57k), Binance perp neutral (imbalance -0.035 over 14 min). UNI is not covered by xvenue_tape or lake liquidations (data gap).",
+    "trapped": "Longs who bought the post-flush rebound above the EMA20 (5.31-5.45, 12:00-16:00 closes) are flat to offside; buyers of the 5.447 24h high are 2.6% offside.",
+    "stops": "Buy stops above the 5.447 rebound high (24h high): our stop 5.499 sits beyond them. Sell stops below the 5.249 / 5.257 bid walls ($585k) and the 5.112 24h low; the 4.940 target is above the 4.614 post-flush low.",
+    "forced_flows": "00:00 UTC funding settlement (small) and 4h close; Wed FOMC minutes 19:00 UTC (blackout 18:00-20:00 for new entries only); BTC squeezes today (21:05, 21:30, 22:35) were each met by large sell sweeps.",
+    "payoff_asymmetry": "Stop 3.55% (2.1 x 1h ATR), target 7.17%: R:R 2.02, driftless P(target first) 0.331, net E[R] -0.03. The holdout point estimate (+0.42 R) is the only reason to expect better; its CI includes 0.",
+    "next_moves": {
+     "longs": "Need a 4h close back above the EMA20 (~5.31) and then 5.447 to squeeze shorts toward the 5.6 area.",
+     "shorts": "Need a loss of the 5.249-5.257 bid walls, then 5.112 (24h low), to open 4.94 and the 4.614 flush low."
+    },
+    "pain_thresholds": {
+     "longs": 5.112,
+     "shorts": 5.447
+    }
+   },
+   "supports": [
+    {
+     "agent": "xs",
+     "idea": "signals-20261117T2335-1"
+    }
+   ],
+   "rules": [
+    "R-RB-5",
+    "R-RB-1",
+    "R-RB-2",
+    "R-RB-3",
+    "R-EXE-1",
+    "R-EXE-2",
+    "R-EXEC-1",
+    "R-BUDGET-3",
+    "R-BUDGET-1",
+    "R-FLOW-2",
+    "R-FLOW-1",
+    "R-MM-2",
+    "R-PD-1",
+    "R-XS-3",
+    "R-PX-12",
+    "R-OPX-4",
+    "R-EXIT-2",
+    "R-CARRY-2",
+    "R-BOS-3"
+   ],
+   "evidence": [
+    {
+     "source": "signals.json",
+     "symbol": "UNIUSDT",
+     "metric": "h_rb2.trigger_close",
+     "value": 5.306
+    },
+    {
+     "source": "signals.json",
+     "symbol": "UNIUSDT",
+     "metric": "h_rb2.rebound_high",
+     "value": 5.447
+    },
+    {
+     "source": "signals.json",
+     "symbol": "UNIUSDT",
+     "metric": "h_rb2.ema20_4h",
+     "value": 5.307
+    },
+    {
+     "source": "signals.json",
+     "symbol": "UNIUSDT",
+     "metric": "book.ask",
+     "value": 5.307
+    },
+    {
+     "source": "signals.json",
+     "symbol": "UNIUSDT",
+     "metric": "atr1h_pct",
+     "value": 1.7
+    }
+   ]
+  }
+ ],
+ "clusters": {
+  "UNIUSDT": "crypto_beta"
+ },
+ "meta": {
+  "model": "claude-opus-5-5",
+  "prompt_version": "desk-signals-v1",
+  "as_of": "2026-11-17T23:35:00Z",
+  "snapshot": "research/desk/signals/2026-11-17/2335",
+  "cycle_id": "20261117T2335",
+  "note": "SIGNALS desk (no 'signals' agent id exists in the contract; supports uses 'xs'). No desk snapshot for today: numbers come from this agent's deterministic public-kline scan (scratch sig_scan/catchup), stored in signals.json, not a desk_snapshot.py snapshot. Learning trade, crypto_beta cluster: the only proposal."
+ }
+}
