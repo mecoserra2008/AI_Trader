@@ -1,0 +1,91 @@
+{
+ "contract": "signals_v0 (desk SIGNALS, no sizes)",
+ "cycle_id": "20261118T0415",
+ "as_of": "2026-11-18T04:12:30Z",
+ "model": "claude-opus-5-5",
+ "prompt_version": "desk-signals-v1",
+ "h_rb2_0400_check": {
+  "UNIUSDT": {
+   "flush_ts": "2026-11-14T20:00Z",
+   "armed": true,
+   "first_cross": "2026-11-17 16:00 close 5.306 (uni-rb2-s1)",
+   "close_0400": 5.201,
+   "ema20": 5.2975,
+   "verdict": "NOT a new H-RB2 trigger: the tested rule takes only the FIRST cross below EMA20 after the arm; 04:00 is the second. Same trade as uni-rb2-s1 (stop 5.499 / target 4.940)."
+  },
+  "LINKUSDT": {
+   "flush_ts": "2026-11-14T20:00Z",
+   "flush_bars_ago": 19,
+   "armed": true,
+   "arm_bars_ago": 18,
+   "post_flush_low": 8.567,
+   "closed_above_ema": "00:00 11-18 (9.322 vs 9.2765)",
+   "trigger": 9.215,
+   "trigger_note": "04:00 close 9.215 < EMA20 9.2706 (first cross)",
+   "rebound_high": 9.402,
+   "sigma4h_pct": 1.396,
+   "geometry_at_ask": {
+    "entry": 9.198,
+    "stop": 9.468,
+    "target": 8.681,
+    "rr": 2.0,
+    "p_driftless": 0.333,
+    "net_er": -0.033,
+    "stop_pct": 2.89,
+    "stop_atr1h": 2.43
+   },
+   "liquidity": {
+    "spread_bp": 1.09,
+    "depth25_min_usd": 853416
+   },
+   "qualifies": true
+  },
+  "SUIUSDT": {
+   "flush_ts": "2026-11-15T04:00Z",
+   "flush_bars_ago": 17,
+   "armed": true,
+   "post_flush_low": 0.6741,
+   "closed_above_ema": "00:00 (0.7386 vs 0.7348)",
+   "trigger": 0.729,
+   "trigger_note": "04:00 close 0.729 < EMA20 0.7342 (first cross)",
+   "rebound_high": 0.7438,
+   "sigma4h_pct": 1.642,
+   "geometry_at_ask": {
+    "entry": 0.7278,
+    "stop": 0.74993,
+    "target": 0.68548,
+    "rr": 2.0,
+    "p_driftless": 0.333,
+    "net_er": -0.032,
+    "stop_pct": 3.0,
+    "stop_atr1h": 2.3
+   },
+   "liquidity": {
+    "spread_bp": 1.37,
+    "depth25_min_usd": 543234
+   },
+   "qualifies": true,
+   "not_chosen": "same cluster; LINK has 1.6x the depth, a tighter spread and Binance taker selling (-0.273) vs SUI flat"
+  }
+ },
+ "flow": {
+  "BTC_xvenue_15m": {
+   "bybit": -3700000.0,
+   "binance": 5400000.0,
+   "okx": 520000.0,
+   "coinbase": -100000.0
+  },
+  "BTC_cb_premium_bp": -8.4,
+  "BTC_tape": "PUSH UP 2/3 target 64,525, whale +1.24M (04:12)",
+  "LINK_binance_perp_18min_imb": -0.273,
+  "LINK_bybit_24min_taker_usd": 11700,
+  "LINK_bybit_sweeps": "14 of 19 sell",
+  "verdict": "BTC mixed (Binance buying; Bybit, Coinbase selling): not all of Binance/OKX/Coinbase net buying -> no void; LINK flow confirms"
+ },
+ "regime": {
+  "BTC": "R9 4h, ~64,406, inside the box; funding -0.0002%; OI 70,338"
+ },
+ "proposals": [
+  "link-rb2-s1"
+ ]
+}

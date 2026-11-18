@@ -1,0 +1,102 @@
+{
+ "session_id": "desk-signals-20261118T0415",
+ "proposals": [
+  {
+   "id": "link-rb2-s1",
+   "symbol": "LINKUSDT",
+   "side": "short",
+   "entry_type": "limit",
+   "entry_mode": "pegged_limit",
+   "peg": "touch",
+   "entry": 9.198,
+   "stop": 9.468,
+   "targets": [
+    8.681
+   ],
+   "take_profit": 8.681,
+   "p_tp": 0.333,
+   "cluster": "crypto_beta",
+   "channel": "desk",
+   "horizon": "7d",
+   "thesis": "LEARNING TRADE on the tested mechanism H-RB2 (R-RB-5, inconclusive: net R in-sample -0.00 [-0.15,+0.15], holdout +0.42 [-0.42,+1.21]). Full conditions checked with the post_cascade_study definitions on public 4h klines: flush at the 11-14 20:00 4h bar (48h return below its 1y p5, OI <= -5% vs the 72h max, v0 R9); armed 18 bars ago (close >= post-flush low 8.567 x exp(1.5 sigma)); first 4h close at/above the EMA20 at 00:00 11-18 (9.322 vs 9.2765); FIRST close back below at 04:00 (9.215 vs 9.2706) = fresh trigger. Entry at the touch (ask 9.198, -0.18% vs the trigger close); stop = rebound high 9.402 + 0.5 sigma_4h (1.40%) = 9.468 (2.9%, 2.4 x 1h ATR); target 2R = 8.681; time exit 120 h (11-23 04:00 UTC via atx live close; horizon 7d is the cap). Driftless P 0.333, R:R 2.00, net E[R] -0.03 after 9.5 bp: passes the learning gate (>= -0.15), not the TESTED gate (>= 0.10). Flow: Binance LINK perp takers selling (imbalance -0.27 over 18 min), 14 of 19 Bybit sweeps sell. BTC is inside the 63,836-65,270 box: allowed only as a tested mechanism on another token. Same cluster as uni-rb2-s1: skip if that is open or working. Submit window now to 05:00 UTC 11-18.",
+   "invalidation": "Void at submission if: the touch is outside 9.12-9.27; a LINK liquidation cluster in the last 60 min (R-FLOW-2); a BTC 15m close above 65,904; Binance AND OKX AND Coinbase 15m BTC flow all net buying; a 1h close above 9.402 before fill; uni-rb2-s1 open or working (same crypto_beta bet). After fill only the exchange stop, the target and the 120 h time exit apply (R-OPX-4, R-EXIT-2).",
+   "equilibrium": {
+    "positioning": "Funding -0.0064%/8h; the post-flush rebound came on falling OI (alts-wide short covering since 11-15); Binance perp takers net selling (-0.27, 18 min); Bybit small net buy (+11.7k USD over 24 min) with 14 of 19 sweeps selling. No lake liquidations or xvenue coverage for LINK (data gap).",
+    "trapped": "Buyers of the 00:00 close above the EMA20 (9.32) and of the 9.402 rebound high are 1-2% offside.",
+    "stops": "Buy stops above the 9.402 rebound high: the stop 9.468 is beyond them. Sell stops below the 9.098 / 9.112 4h closes and the 8.567 post-flush low; the 8.681 target sits ahead of that pool.",
+    "forced_flows": "08:00 UTC Deribit expiry; Wed FOMC minutes 19:00 UTC (blackout 18:00-20:00 for new entries).",
+    "payoff_asymmetry": "Stop 2.89%, target 5.79%: R:R 2.00, driftless P 0.333, net E[R] -0.03; only the holdout point estimate (+0.42 R, CI includes 0) argues for better.",
+    "next_moves": {
+     "longs": "Need a 4h close back above the EMA20 (~9.27) then 9.402.",
+     "shorts": "Need 9.10 then the 8.86-8.57 flush lows."
+    },
+    "pain_thresholds": {
+     "longs": 9.098,
+     "shorts": 9.402
+    }
+   },
+   "supports": [
+    {
+     "agent": "xs",
+     "idea": "signals-20261118T0415-1"
+    }
+   ],
+   "rules": [
+    "R-RB-5",
+    "R-RB-1",
+    "R-RB-2",
+    "R-RB-3",
+    "R-EXE-1",
+    "R-EXE-2",
+    "R-EXEC-1",
+    "R-BUDGET-3",
+    "R-BUDGET-1",
+    "R-FLOW-2",
+    "R-FLOW-1",
+    "R-MM-2",
+    "R-PD-1",
+    "R-XS-3",
+    "R-OPX-4",
+    "R-EXIT-2",
+    "R-BOS-3"
+   ],
+   "evidence": [
+    {
+     "source": "signals.json",
+     "symbol": "LINKUSDT",
+     "metric": "h_rb2_0400_check.LINKUSDT.trigger",
+     "value": 9.215
+    },
+    {
+     "source": "signals.json",
+     "symbol": "LINKUSDT",
+     "metric": "h_rb2_0400_check.LINKUSDT.rebound_high",
+     "value": 9.402
+    },
+    {
+     "source": "signals.json",
+     "symbol": "LINKUSDT",
+     "metric": "h_rb2_0400_check.LINKUSDT.sigma4h_pct",
+     "value": 1.396
+    },
+    {
+     "source": "signals.json",
+     "symbol": "LINKUSDT",
+     "metric": "flow.LINK_binance_perp_18min_imb",
+     "value": -0.273
+    }
+   ]
+  }
+ ],
+ "clusters": {
+  "LINKUSDT": "crypto_beta"
+ },
+ "meta": {
+  "model": "claude-opus-5-5",
+  "prompt_version": "desk-signals-v1",
+  "as_of": "2026-11-18T04:12:30Z",
+  "snapshot": "research/desk/signals/2026-11-18/0415",
+  "cycle_id": "20261118T0415",
+  "note": "SIGNALS desk; numbers from this agent's deterministic public-kline H-RB2 check (post_cascade_study D params; sigma = EWMA sigma_next), stored in signals.json; no desk_snapshot.py snapshot. Learning trade; needs the user's atx live approve."
+ }
+}
