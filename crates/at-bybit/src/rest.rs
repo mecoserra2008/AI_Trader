@@ -60,6 +60,12 @@ impl BybitRest {
         self.creds.is_some()
     }
 
+    /// HMAC-SHA256 (hex) of `message` keyed by the API secret, without exposing the secret. Used to sign local
+    /// authorisations (the live trading delegation) so that a file without the key cannot forge them. None without credentials.
+    pub fn keyed_mac(&self, message: &str) -> Option<String> {
+        self.creds.as_ref().map(|c| crate::sign::hmac_hex(&c.api_secret, &format!("ai_trader-local|{message}")))
+    }
+
     pub async fn get_public(&self, path: &str, params: &[(&str, String)]) -> anyhow::Result<Value> {
         self.request(reqwest::Method::GET, path, &encode(params), None, false).await
     }

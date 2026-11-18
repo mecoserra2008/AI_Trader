@@ -101,6 +101,18 @@ pub enum LiveCmd {
         #[arg(long, default_value = "")]
         reason: String,
     },
+    /// For the USER only (interactive terminal and a confirmation code): let the orchestrator approve live entries itself,
+    /// for at most --trades proposals within --hours. Every risk limit still applies at every entry. The delegation is
+    /// signed with a key derived from the API secret (a file written without it is refused), binds the current risk
+    /// profile (any limit change voids it) and is revoked at any time with `atx live revoke`.
+    Delegate {
+        #[arg(long, default_value_t = 3)]
+        trades: u32,
+        #[arg(long, default_value_t = 72)]
+        hours: u64,
+    },
+    /// Revoke the approval delegation (anyone may run it; nothing else changes).
+    Revoke,
     /// Write the KILL flag and cancel every bot order. Bot positions keep their exchange-side stops.
     Kill,
     /// Cancel bot orders and close bot positions with reduce-only market orders. Never touches anything else.
@@ -138,6 +150,8 @@ pub async fn run(ctx: &Ctx, cmd: LiveCmd) -> anyhow::Result<()> {
         LiveCmd::Reconcile { read_only } => desk.reconcile_cmd(read_only).await,
         LiveCmd::Close { id, reason } => desk.close(&id, &reason).await,
         LiveCmd::Stop { id, stop, reason } => desk.move_stop(&id, stop, &reason).await,
+        LiveCmd::Delegate { trades, hours } => desk.delegate(trades, hours),
+        LiveCmd::Revoke => desk.revoke(),
         LiveCmd::Kill => desk.kill().await,
         LiveCmd::FlattenBot { yes } => desk.flatten_bot(yes).await,
     }
@@ -170,6 +184,9 @@ impl LivePaths {
     }
     fn done(&self, id: &str) -> PathBuf {
         self.root.join("done").join(format!("{id}.json"))
+    }
+    pub(crate) fn delegation(&self) -> PathBuf {
+        self.root.join("approvals").join("DELEGATION.json")
     }
     fn local_kill(&self) -> PathBuf {
         self.root.join("KILL")
@@ -350,6 +367,54 @@ pub struct Proposal {
     pub decision: LiveDecision,
     pub needs_approval: bool,
     pub versions: Value,
+}
+
+/// Compiled ceilings of an approval delegation (the user may grant less, never more).
+pub const MAX_DELEGATED_TRADES: u32 = 20;
+pub const MAX_DELEGATION_HOURS: u64 = 168;
+/// `approved_by` of an entry the orchestrator approved under a valid delegation (counts as a confirmed trade).
+pub const DELEGATED_BY: &str = "claude-delegated";
+
+/// The user's signed permission for the orchestrator to approve live entries itself (`atx live delegate`).
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Delegation {
+    pub env: String,
+    pub granted_ms: i64,
+    pub expires_ms: i64,
+    pub max_trades: u32,
+    /// live_small profile hash at grant time: any change to the risk limits voids the delegation.
+    pub profile: String,
+    /// keyed_mac(message()) with the API secret.
+    pub sig: String,
+}
+
+impl Delegation {
+    pub fn message(&self) -> String {
+        format!("delegation|{}|{}|{}|{}|{}", self.env, self.granted_ms, self.expires_ms, self.max_trades, self.profile)
+    }
+}
+
+/// Remaining delegated approvals, or why the delegation cannot be used. Pure (no I/O, no clock).
+pub fn delegation_left(d: &Delegation, sig_ok: bool, env: &str, profile: &str, used: u32, now: i64) -> Result<u32, String> {
+    if !sig_ok {
+        return Err("signature does not verify (not created by `atx live delegate` with this account's key)".into());
+    }
+    if d.env != env {
+        return Err(format!("granted for {} not {env}", d.env));
+    }
+    if d.profile != profile {
+        return Err("the risk profile changed since it was granted".into());
+    }
+    if d.max_trades == 0 || d.max_trades > MAX_DELEGATED_TRADES || d.expires_ms - d.granted_ms > MAX_DELEGATION_HOURS as i64 * 3_600_000 {
+        return Err("outside the compiled ceilings".into());
+    }
+    if now >= d.expires_ms {
+        return Err("expired".into());
+    }
+    if used >= d.max_trades {
+        return Err(format!("all {} delegated approvals used", d.max_trades));
+    }
+    Ok(d.max_trades - used)
 }
 
 fn fnv(s: &str) -> u64 {
@@ -1033,6 +1098,12 @@ impl<'a> Desk<'a> {
             st.confirmed_trades,
             c.approval.manual_trades
         );
+        if st.gate_manual(c) {
+            match self.delegation_check(st) {
+                Ok((d, left)) => println!("delegation: ACTIVE, {left} of {} approvals left, expires {}", d.max_trades, at_core::time::to_datetime(d.expires_ms).format("%Y-%m-%d %H:%M UTC")),
+                Err(why) => println!("delegation: none usable ({why})"),
+            }
+        }
         let coin = snap.coin.as_ref();
         println!(
             "USDT: wallet balance {} equity {} available-to-withdraw {} | account equity {:.2} USD, available {:.2} USD",
@@ -1266,9 +1337,78 @@ impl<'a> Desk<'a> {
             Some(t) if t.contains(&prop.confirm_code) => "user-file",
             Some(_) => bail!("{}: does not contain the confirmation code", self.paths.approval(id).display()),
             None if !st.gate_manual(&self.cfg) => "auto",
-            None => bail!("proposal {id} needs the user's approval ({} of {} confirmed trades): atx live approve {id}", st.confirmed_trades, self.cfg.approval.manual_trades),
+            None => match self.delegation_check(&st) {
+                Ok((d, left)) => {
+                    self.jw("manual_action", json!({"action": "delegated_approval", "proposal_id": id, "delegation_granted_ms": d.granted_ms, "left_before": left}), &prop.versions)?;
+                    println!("approved under the user's delegation ({left} of {} left, expires {})", d.max_trades, at_core::time::to_datetime(d.expires_ms).format("%Y-%m-%d %H:%M UTC"));
+                    DELEGATED_BY
+                }
+                Err(why) => bail!(
+                    "proposal {id} needs the user's approval ({} of {} confirmed trades): atx live approve {id} (delegation: {why})",
+                    st.confirmed_trades,
+                    self.cfg.approval.manual_trades
+                ),
+            },
         };
         self.submit_proposal(prop, by, test).await
+    }
+
+    fn delegation_check(&self, st: &LiveState) -> Result<(Delegation, u32), String> {
+        let t = std::fs::read_to_string(self.paths.delegation()).map_err(|_| "none granted".to_string())?;
+        let d: Delegation = serde_json::from_str(&t).map_err(|e| format!("unreadable: {e}"))?;
+        let sig_ok = self.venue.exec.keyed_mac(&d.message()).is_some_and(|s| s == d.sig);
+        let used = st.trades.iter().filter(|t| t.approved_by == DELEGATED_BY && t.submitted_ms >= d.granted_ms).count() as u32;
+        delegation_left(&d, sig_ok, self.env.as_str(), &self.cfg.profile_hash(), used, now_ms()).map(|left| (d, left))
+    }
+
+    pub fn delegate(&self, trades: u32, hours: u64) -> anyhow::Result<()> {
+        ensure!(
+            std::io::stdin().is_terminal() && std::io::stdout().is_terminal(),
+            "delegate is for the user: run it yourself in an interactive terminal (stdin/stdout must be a TTY)"
+        );
+        ensure!((1..=MAX_DELEGATED_TRADES).contains(&trades), "--trades must be 1..={MAX_DELEGATED_TRADES}");
+        ensure!((1..=MAX_DELEGATION_HOURS).contains(&hours), "--hours must be 1..={MAX_DELEGATION_HOURS}");
+        ensure!(self.venue.exec.has_credentials(), "no API credentials: a delegation is signed with the account key");
+        let now = now_ms();
+        let mut d = Delegation {
+            env: self.env.as_str().into(),
+            granted_ms: now,
+            expires_ms: now + hours as i64 * 3_600_000,
+            max_trades: trades,
+            profile: self.cfg.profile_hash(),
+            sig: String::new(),
+        };
+        d.sig = self.venue.exec.keyed_mac(&d.message()).context("signing failed")?;
+        let c = &self.cfg;
+        println!("DELEGATION on {}: the orchestrator (Claude) may approve up to {trades} live entries in the next {hours} h.", self.env.as_str().to_uppercase());
+        println!("Every limit below still applies to every entry (risk engine, not the orchestrator):");
+        println!(
+            "  max loss per trade {:.2} USD (risk to stop {:.2}) | daily loss stop {:.2} USD | {} entries/day | {} open, {} same side | gross {:.0} USD | exchange stop on every trade | kill switch",
+            c.max_loss_per_trade_usd, c.risk_to_stop_usd, c.daily_loss_stop_usd, c.max_entries_per_day, c.max_open_positions, c.max_same_direction, c.max_gross_notional_usd
+        );
+        println!("Revoke at any time: atx live revoke. Any change to config/risk.yaml voids it.");
+        let code = format!("{:06X}", fnv(&d.message()) & 0xff_ffff);
+        print!("type {code} to grant this delegation: ");
+        std::io::stdout().flush()?;
+        let mut line = String::new();
+        std::io::stdin().lock().read_line(&mut line)?;
+        ensure!(line.trim().eq_ignore_ascii_case(&code), "wrong code: not delegated");
+        write_json(&self.paths.delegation(), &serde_json::to_value(&d)?)?;
+        self.jw("manual_action", json!({"action": "delegate", "via": "cli", "max_trades": trades, "hours": hours, "granted_ms": d.granted_ms, "expires_ms": d.expires_ms, "profile": d.profile}), &self.versions(None))?;
+        println!("delegation granted: {}", self.paths.delegation().display());
+        Ok(())
+    }
+
+    pub fn revoke(&self) -> anyhow::Result<()> {
+        let p = self.paths.delegation();
+        if p.exists() {
+            std::fs::remove_file(&p)?;
+            self.jw("manual_action", json!({"action": "revoke_delegation", "via": "cli"}), &self.versions(None))?;
+            println!("delegation revoked; entries need `atx live approve <id>` again while the gate is manual");
+        } else {
+            println!("no delegation to revoke");
+        }
+        Ok(())
     }
 
     async fn submit_proposal(&self, prop: Proposal, approved_by: &str, test: &TestOpts) -> anyhow::Result<()> {
@@ -1866,6 +2006,36 @@ mod tests {
         assert_eq!(d.root, Path::new("data/live/demo"));
         assert_eq!(d.journal, Path::new("data/journal/live_demo"));
         assert_eq!(d.global_kill, m.global_kill, "data/live/KILL stops every environment");
+    }
+
+    #[test]
+    fn delegation_is_bounded_signed_and_bound_to_the_profile() {
+        let d = Delegation { env: "mainnet".into(), granted_ms: 1_000, expires_ms: 1_000 + 72 * 3_600_000, max_trades: 3, profile: "abc".into(), sig: "s".into() };
+        assert_eq!(delegation_left(&d, true, "mainnet", "abc", 0, 2_000), Ok(3));
+        assert_eq!(delegation_left(&d, true, "mainnet", "abc", 2, 2_000), Ok(1));
+        assert!(delegation_left(&d, true, "mainnet", "abc", 3, 2_000).is_err(), "all used");
+        assert!(delegation_left(&d, false, "mainnet", "abc", 0, 2_000).is_err(), "unsigned / forged");
+        assert!(delegation_left(&d, true, "demo", "abc", 0, 2_000).is_err(), "other environment");
+        assert!(delegation_left(&d, true, "mainnet", "changed", 0, 2_000).is_err(), "risk profile changed");
+        assert!(delegation_left(&d, true, "mainnet", "abc", 0, d.expires_ms).is_err(), "expired");
+        let big = Delegation { max_trades: MAX_DELEGATED_TRADES + 1, ..d.clone() };
+        assert!(delegation_left(&big, true, "mainnet", "abc", 0, 2_000).is_err(), "over the trade ceiling");
+        let long = Delegation { expires_ms: d.granted_ms + (MAX_DELEGATION_HOURS as i64 + 1) * 3_600_000, ..d.clone() };
+        assert!(delegation_left(&long, true, "mainnet", "abc", 0, 2_000).is_err(), "over the hour ceiling");
+        // the signed message covers every field, so editing any of them breaks the signature
+        let edited = Delegation { max_trades: 10, ..d.clone() };
+        assert_ne!(edited.message(), d.message());
+    }
+
+    #[test]
+    fn keyed_mac_needs_the_secret() {
+        let with = at_bybit::rest::BybitRest::new("https://x", Some(at_bybit::rest::Credentials { api_key: "k".into(), api_secret: "secret".into() }), 5000, 10.0).unwrap();
+        let other = at_bybit::rest::BybitRest::new("https://x", Some(at_bybit::rest::Credentials { api_key: "k".into(), api_secret: "other".into() }), 5000, 10.0).unwrap();
+        let none = at_bybit::rest::BybitRest::new("https://x", None, 5000, 10.0).unwrap();
+        let m = "delegation|mainnet|1|2|3|abc";
+        assert!(with.keyed_mac(m).is_some());
+        assert_ne!(with.keyed_mac(m), other.keyed_mac(m));
+        assert_eq!(none.keyed_mac(m), None);
     }
 
     #[test]

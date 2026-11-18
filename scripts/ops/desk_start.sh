@@ -14,4 +14,3 @@ start dashboard    'uv run --extra ml python scripts/live_dashboard.py >> logs/l
 start tape         './target/scalp/atx-tape.exe tape >> logs/tape.stdout.log 2>&1'
 start xvenue       '.venv/Scripts/python.exe scripts/xvenue_tape.py --symbols KAVA SOPH RARE >> logs/xvenue_tape.stdout.log 2>&1'
 start xs_v4        'uv run --extra ml python scripts/live_xs_v4.py --loop >> data/journal/live_xs_v4/loop.log 2>&1'
-start scalp_shadow './target/scalp/atx-scalp.exe scalp --mode shadow >> logs/scalp_kava.stdout.log 2>&1'
