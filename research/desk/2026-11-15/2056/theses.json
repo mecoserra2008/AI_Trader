@@ -12,7 +12,7 @@
     "BTCUSDT",
     "ETHUSDT"
    ],
-   "prev_status": "active",
+   "prev_status": "strengthening",
    "as_of": "2026-11-15T20:56:10.847834+00:00",
    "status": "strengthening",
    "net_support": 0.6,
@@ -25,20 +25,20 @@
    "invalidation_detail": [
     {
      "cond": "chg_20(fred:DGS2) <= -0.3",
-     "value": 0.04,
-     "obs_date": "2026-11-12",
+     "value": 0.11,
+     "obs_date": "2026-11-13",
      "met": false
     },
     {
      "cond": "spread_chg_20(fred:DGS10 vs fred:DGS2) >= 0.25",
-     "value": -0.13,
-     "obs_date": "2026-11-12",
+     "value": -0.06,
+     "obs_date": "2026-11-13",
      "met": false
     },
     {
      "cond": "chg_20(fred:DGS2) < 0.0",
-     "value": 0.04,
-     "obs_date": "2026-11-12",
+     "value": 0.11,
+     "obs_date": "2026-11-13",
      "met": false
     }
    ],
@@ -50,7 +50,7 @@
       {
        "cond": "regime(curve:regime) in ['bear_flattening']",
        "value": "bear_flattening",
-       "obs_date": "2026-11-12",
+       "obs_date": "2026-11-13",
        "met": true
       }
      ]
@@ -61,8 +61,8 @@
      "detail": [
       {
        "cond": "chg_5(fred:DGS2) > 0.0",
-       "value": 0.28,
-       "obs_date": "2026-11-12",
+       "value": 0.42,
+       "obs_date": "2026-11-13",
        "met": true
       }
      ]
@@ -73,8 +73,8 @@
      "detail": [
       {
        "cond": "spread_chg_20(fred:DGS10 vs fred:DGS2) < 0.0",
-       "value": -0.13,
-       "obs_date": "2026-11-12",
+       "value": -0.06,
+       "obs_date": "2026-11-13",
        "met": true
       }
      ]
@@ -85,8 +85,8 @@
      "detail": [
       {
        "cond": "chg_20(fred:DTWEXBGS) > 0.0",
-       "value": 0.4334,
-       "obs_date": "2026-11-06",
+       "value": 1.081,
+       "obs_date": "2026-11-13",
        "met": true
       }
      ]
@@ -97,8 +97,8 @@
      "detail": [
       {
        "cond": "chg_20(fred:BAMLH0A0HYM2) > 0.0",
-       "value": -0.05,
-       "obs_date": "2026-11-12",
+       "value": -0.08,
+       "obs_date": "2026-11-13",
        "met": false
       }
      ]
@@ -161,8 +161,8 @@
     },
     {
      "cond": "level(fred:VIXCLS) < 14.0",
-     "value": 18.7,
-     "obs_date": "2026-11-12",
+     "value": 19.3,
+     "obs_date": "2026-11-13",
      "met": false
     }
    ],
@@ -233,8 +233,8 @@
      "detail": [
       {
        "cond": "level(fred:VIXCLS) > 20.0",
-       "value": 18.7,
-       "obs_date": "2026-11-12",
+       "value": 19.3,
+       "obs_date": "2026-11-13",
        "met": false
       }
      ]
@@ -272,7 +272,7 @@
     "BTCUSDT",
     "ETHUSDT"
    ],
-   "prev_status": "active",
+   "prev_status": "weakening",
    "as_of": "2026-11-15T20:56:10.847834+00:00",
    "status": "weakening",
    "net_support": -0.6,
@@ -284,13 +284,13 @@
     {
      "cond": "regime(curve:regime) in ['bull_steepening']",
      "value": "bear_flattening",
-     "obs_date": "2026-11-12",
+     "obs_date": "2026-11-13",
      "met": false
     },
     {
      "cond": "chg_5(fred:BAMLH0A0HYM2) < 0.0",
-     "value": -0.12,
-     "obs_date": "2026-11-12",
+     "value": -0.19,
+     "obs_date": "2026-11-13",
      "met": true
     }
    ],
@@ -298,8 +298,8 @@
    "invalidation_detail": [
     {
      "cond": "chg_20(fred:BAMLH0A0HYM2) >= 0.5",
-     "value": -0.05,
-     "obs_date": "2026-11-12",
+     "value": -0.08,
+     "obs_date": "2026-11-13",
      "met": false
     },
     {
@@ -317,7 +317,7 @@
       {
        "cond": "regime(curve:regime) in ['bull_steepening']",
        "value": "bear_flattening",
-       "obs_date": "2026-11-12",
+       "obs_date": "2026-11-13",
        "met": false
       }
      ]
@@ -328,8 +328,8 @@
      "detail": [
       {
        "cond": "chg_20(fred:DGS2) < 0.0",
-       "value": 0.04,
-       "obs_date": "2026-11-12",
+       "value": 0.11,
+       "obs_date": "2026-11-13",
        "met": false
       }
      ]
@@ -340,8 +340,8 @@
      "detail": [
       {
        "cond": "spread_chg_20(fred:DGS10 vs fred:DGS2) > 0.0",
-       "value": -0.13,
-       "obs_date": "2026-11-12",
+       "value": -0.06,
+       "obs_date": "2026-11-13",
        "met": false
       }
      ]
@@ -352,8 +352,8 @@
      "detail": [
       {
        "cond": "chg_5(fred:BAMLH0A0HYM2) < 0.0",
-       "value": -0.12,
-       "obs_date": "2026-11-12",
+       "value": -0.19,
+       "obs_date": "2026-11-13",
        "met": true
       }
      ]
@@ -364,8 +364,8 @@
      "detail": [
       {
        "cond": "chg_20(fred:BAMLC0A0CM) < 0.0",
-       "value": 0.05,
-       "obs_date": "2026-11-12",
+       "value": 0.04,
+       "obs_date": "2026-11-13",
        "met": false
       }
      ]
@@ -382,7 +382,7 @@
     "BTCUSDT",
     "ETHUSDT"
    ],
-   "prev_status": "active",
+   "prev_status": "strengthening",
    "as_of": "2026-11-15T20:56:10.847834+00:00",
    "status": "strengthening",
    "net_support": 0.5555555555555556,
@@ -413,21 +413,21 @@
     },
     {
      "cond": "chg_21(fred:DGS2) < -0.5",
-     "value": 0.07,
-     "obs_date": "2026-11-12",
+     "value": 0.06,
+     "obs_date": "2026-11-13",
      "met": false
     },
     {
      "cond": "minus_median_1y(fred:BAMLC0A0CM) < 0.0",
      "value": 0.095,
-     "obs_date": "2026-11-12",
+     "obs_date": "2026-11-13",
      "met": false
     },
     {
      "cond": "chg_20(fred:DGS10) < 0.0",
-     "value": -0.09,
-     "obs_date": "2026-11-12",
-     "met": true
+     "value": 0.05,
+     "obs_date": "2026-11-13",
+     "met": false
     }
    ],
    "proxies": [
@@ -437,8 +437,8 @@
      "detail": [
       {
        "cond": "chg_20(fred:BAMLC0A0CM) > 0.0",
-       "value": 0.05,
-       "obs_date": "2026-11-12",
+       "value": 0.04,
+       "obs_date": "2026-11-13",
        "met": true
       }
      ]
@@ -449,8 +449,8 @@
      "detail": [
       {
        "cond": "chg_20(fred:BAMLC0A4CBBB) > 0.0",
-       "value": 0.07,
-       "obs_date": "2026-11-12",
+       "value": 0.05,
+       "obs_date": "2026-11-13",
        "met": true
       }
      ]
@@ -461,8 +461,8 @@
      "detail": [
       {
        "cond": "chg_20(fred:BAMLH0A0HYM2) > 0.0",
-       "value": -0.05,
-       "obs_date": "2026-11-12",
+       "value": -0.08,
+       "obs_date": "2026-11-13",
        "met": false
       }
      ]
@@ -473,8 +473,8 @@
      "detail": [
       {
        "cond": "chg_20(fred:THREEFYTP10) > 0.0",
-       "value": -0.1956,
-       "obs_date": "2026-11-06",
+       "value": -0.0175,
+       "obs_date": "2026-11-13",
        "met": false
       }
      ]
@@ -485,8 +485,8 @@
      "detail": [
       {
        "cond": "chg_20(fred:DFII10) > 0.0",
-       "value": 0.02,
-       "obs_date": "2026-11-12",
+       "value": 0.13,
+       "obs_date": "2026-11-13",
        "met": true
       }
      ]
@@ -497,8 +497,8 @@
      "detail": [
       {
        "cond": "pct_1y(fred:DGS2) >= 0.75",
-       "value": 0.9841,
-       "obs_date": "2026-11-12",
+       "value": 0.9921,
+       "obs_date": "2026-11-13",
        "met": true
       }
      ]
@@ -509,8 +509,8 @@
      "detail": [
       {
        "cond": "chg_20(fred:DGS2) > 0.0",
-       "value": 0.04,
-       "obs_date": "2026-11-12",
+       "value": 0.11,
+       "obs_date": "2026-11-13",
        "met": true
       }
      ]
@@ -638,8 +638,8 @@
      "detail": [
       {
        "cond": "chg_5(fred:DGS2) > 0.0",
-       "value": 0.28,
-       "obs_date": "2026-11-12",
+       "value": 0.42,
+       "obs_date": "2026-11-13",
        "met": true
       }
      ]
@@ -650,8 +650,8 @@
      "detail": [
       {
        "cond": "chg_5(fred:BAMLH0A0HYM2) > 0.0",
-       "value": -0.12,
-       "obs_date": "2026-11-12",
+       "value": -0.19,
+       "obs_date": "2026-11-13",
        "met": false
       }
      ]
@@ -662,8 +662,8 @@
      "detail": [
       {
        "cond": "level(fred:VIXCLS) > 20.0",
-       "value": 18.7,
-       "obs_date": "2026-11-12",
+       "value": 19.3,
+       "obs_date": "2026-11-13",
        "met": false
       }
      ]

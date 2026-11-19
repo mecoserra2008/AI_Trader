@@ -1,0 +1,89 @@
+# News-agent theses, round 4 (2026-11-19 22:05 UTC). Schema theses_v1. Earlier theses are never edited.
+# Resolutions to date (provisional; the scorer confirms them on lake data):
+#   T-CLAUDE-20261115-deep  YES: first print below 61,899 in the Thu 11-19 20:00 bar (low 61,708.4); low 61,388.1 in the
+#                           21:00 bar. High before it: 64,061 (Thu 13:00). 58,000 has not printed.
+#   T-NEWS-20261115-4 and T-NEWS-20261116-2  YES: XAU first traded <= 3777.97 in the Wed 11-18 07:00 bar (low 3772.13);
+#                           3951.03 never traded. XAU is now 3637.92.
+#   T-NEWS-20261115-3       likely NO: ETH/BTC +0.28% from creation to the Wed 23:00 bar close (ETH 1776.22, BTC 63,037.2).
+#   T-NEWS-20261115-1       likely NO: BTC 61,753 at 22:05 vs the 62,483 band floor; resolves on the 2026-11-19 23:00 close.
+# Model claude-opus-5-5, prompt desk-news-v1. Narrative context only, with no tested edge (R-MAC-3, R-NEWS-7).
+
+theses:
+  - id: T-NEWS-20261119-1
+    supersedes: T-NEWS-20261117-1
+    component: forced_flow
+    title: "MSCI deletion: MSTR underperforms BTC into the Nov 30 effective close (revised P 0.68)"
+    author: news_agent
+    created_ts: 2026-11-19T22:05:00Z
+    claim: >-
+      MSTRUSDT's log return minus BTCUSDT's, from 2026-11-19 22:05 UTC to 2026-12-01 00:00 UTC, is negative.
+    mechanism: >-
+      Passive MSCI trackers must sell by the Nov 30 close (JPM est. ~$2.8B). Since round 3, MSTR fell from 98.02 to
+      86.15 (-12.9% log) while BTC fell 3.5%, about -9.4% relative. Strategy's STRC preferred fell to $95 (CryptoSlate,
+      11-18), which strains its funding channel. Higher rates slow treasury-firm buying (Cointelegraph, 11-19). The
+      remaining forced selling is concentrated into the Nov 30 close.
+    direction: short
+    direction_note: "MSTR relative to BTC; not a BTC call."
+    assets: [MSTRUSDT]
+    horizon_days: 12
+    probability: 0.68
+    base_rate: >-
+      Pair sign over 11 days is ~0.5 unconditionally. The deletion drift into the effective date is negative on average,
+      and the flow is still ahead, which justifies a tilt. Against it: a -16% relative move since 11-15 invites
+      short-term reversal (R-XS-2), and MSTR's beta above 1 flips if BTC bounces. Net 0.68, not higher.
+    resolution:
+      event: "ln(MSTRUSDT 2026-12-01T00:00Z / 2026-11-19T22:05Z) - ln(BTCUSDT same window) < 0"
+      also_record: ["the residual after a 30d beta to BTC", "MSTR minus BTC Dec 1 -> Dec 8 (expected reversal)"]
+    trigger: on_create
+    proxies:
+      - {id: mstr_lags_btc_5obs, series: "lake:MSTRUSDT", vs: "lake:BTCUSDT", transform: rel_logret_5, op: "<", value: 0.0}
+      - {id: mstr_lags_btc_1obs, series: "lake:MSTRUSDT", vs: "lake:BTCUSDT", transform: rel_logret_1, op: "<", value: 0.0}
+      - {id: mstr_below_95, series: "lake:MSTRUSDT", transform: level, op: "<", value: 95.53, note: "prior 4h swing low (tradfi_week.md)"}
+    invalidation:
+      any:
+        - {series: "lake:MSTRUSDT", vs: "lake:BTCUSDT", transform: rel_logret_5, op: ">=", value: 8.0, note: "a sharp relative reversal: the flow is absorbed early"}
+    status: active
+    watch: ["MSCI effective close 2026-11-30 21:00 UTC", "Strategy 8-K Monday 11-23", "STRC preferred price"]
+    links: [T-NEWS-20261117-1, T-NEWS-20261116-1, T-NEWS-20261115-2, R-MM-2, R-PD-1, R-XS-2, R-MAC-3]
+
+  - id: T-NEWS-20261119-2
+    component: positioning
+    title: "BTC prints <= 58,000 before 2026-11-29 20:45 UTC (P 0.45)"
+    author: news_agent
+    created_ts: 2026-11-19T22:05:00Z
+    claim: >-
+      Bybit BTCUSDT trades at or below 58,000 at any point between 2026-11-19 22:05 UTC and 2026-11-29 20:45 UTC (the
+      end of the deep thesis's window, so its "whether 58,000 printed" field resolves too). 58,000 is the level the
+      crowd calls "the last line of defense" (Bitcoin Magazine, 11-19).
+    mechanism: >-
+      The undercut of 61,899 came with no reset: BTC OI is 70.6k BTC, still above the 69.7k of Sun 11-15 23:00 and only
+      2.5% off the 72.4k peak of Wed 22:00; funding is +0.0038%, not negative; DVOL 46.3; and there is no capitulation volume (the heaviest hours were $610-640M, against the 11-15
+      flush). Forced flows still to come: MSTR deletion (11-30) and ETF outflows (~$2.9B in November per Decrypt and
+      CoinDesk). Hawkish Fed: Waller floated 50 bp, the minutes called October "a close call", and a December hike is
+      fully priced. VIX is 24.6 and HY is wider over 5 and 20 obs. R-RB-2: after a flush, the 7-day low tends to come
+      5-9% further down, then a rebound.
+    direction: short
+    direction_note: "First-passage claim; score on `resolution`, not on the 10-day return sign."
+    assets: [BTCUSDT]
+    horizon_days: 10
+    probability: 0.45
+    base_rate: >-
+      Driftless touch probability of -6.3% (log) in 9.9 days at a daily sigma of ~3% is 2*Phi(-0.663) ~ 0.51. Shaded to
+      0.45 because the weekend is quiet (R-VOL-1, realised vol 0.6-0.8x) and big surprise days do not continue
+      (R-SIG-2). R-NEWS-7: none of the news above is a direction signal by itself.
+    resolution:
+      event: "min(Bybit BTCUSDT 1m low) over [2026-11-19T22:05Z, 2026-11-29T20:45Z] <= 58000"
+      also_record: ["time and depth of the low", "OI change into the low (the missing reset)"]
+    trigger: on_create
+    proxies:
+      - {id: btc_below_60k, series: "lake:BTCUSDT", transform: level, op: "<", value: 60000}
+      - {id: btc_3d_down, series: "lake:BTCUSDT", transform: logret_3, op: "<", value: 0.0}
+      - {id: hy_wider_5obs, series: "fred:BAMLH0A0HYM2", transform: chg_5, op: ">", value: 0.0}
+      - {id: vix_above_20, series: "fred:VIXCLS", transform: level, op: ">", value: 20.0}
+    invalidation:
+      any:
+        - {series: "lake:BTCUSDT", transform: level, op: ">=", value: 66132.7, note: "daily close above the 11-15 bounce high"}
+    status: active
+    watch: ["Fri 08:00 Deribit 20NOV26 expiry: 35.4k BTC, P/C 0.61, max pain 70,000", "Fri 15:00 UMich", "weekend (R-PX-9, R-VOL-1)",
+            "Sun 23:00 CME reopen", "an OI flush >= 10%"]
+    links: [T-CLAUDE-20261115-deep, R-RB-2, R-VOL-1, R-SIG-2, R-NEWS-7, R-ANA-3]

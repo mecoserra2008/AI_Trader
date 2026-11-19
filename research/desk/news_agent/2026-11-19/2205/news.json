@@ -1,0 +1,253 @@
+{
+ "contract": "news_agent_round_v1",
+ "agent": "news",
+ "round": 4,
+ "cycle_id": "20261119T2205",
+ "as_of": "2026-11-19T22:05:00Z",
+ "model": "claude-opus-5-5",
+ "prompt_version": "desk-news-v1",
+ "regime": {
+  "summary": "BTC 61,766 (low 61,388.1 at 21:00); funding +0.0038%; OI 70.6k BTC (no reset vs 69.7k on 11-15); DVOL 46.3; Nasdaq -2.06%, S&P -1.9%; VIX 24.56; curve bear_steepening",
+  "market_2205": {
+   "BTCUSDT": 61766.4,
+   "ETHUSDT": 1745.73,
+   "NVDAUSDT": 146.74,
+   "QQQUSDT": 645.31,
+   "SOXLUSDT": 45.06,
+   "AMDSTOCKUSDT": 483.21,
+   "MUUSDT": 689.11,
+   "MSTRUSDT": 86.15,
+   "XAUUSDT": 3637.92,
+   "ANTUSDT": 95.48,
+   "deribit_index": 61682.4,
+   "dvol": 46.32
+  },
+  "btc_oi_btc": {
+   "2026-11-15T23": 69766,
+   "2026-11-18T22": 72432,
+   "2026-11-19T22": 70608
+  }
+ },
+ "wednesday": {
+  "waller": {
+   "ts": "2026-11-18 (CNBC)",
+   "said": "Fed probably needs a 50 bp hike at Dec 8-9; 'You might need to, like, shock people'",
+   "reaction": "2y +4 bp to 4.83%, dollar at a 19-month high, gold -2.5% to its lowest in over a year, Dec + Jan hikes priced",
+   "source": "https://bitcoinmagazine.com/markets/bitcoin-price-trades-near-64000-waller"
+  },
+  "fomc_minutes": {
+   "ts": "2026-11-18T19:00Z",
+   "read": "10-2 hold a 'close call' (Cook, Hammack for a hike); AI-build inflation; AI-related debt grew via 'complex and opaque financing structures'",
+   "odds": "CME ~90% 25 bp / ~10% 50 bp in December",
+   "source": "https://cointelegraph.com/markets/fed-officials-saw-october-rate-hold-as-close-call-minutes-show"
+  },
+  "auction_20y": {
+   "status": "data gap: 2026-11-18 result not found"
+  },
+  "import_prices": {
+   "capital_goods_mm_pct": 1.5,
+   "note": "largest since Dec 1988",
+   "released": "2026-11-17",
+   "source": "https://cryptoslate.com/bitcoin-faces-a-new-threat-as-us-prices-surge-at-fastest-pace-in-38-years/"
+  }
+ },
+ "anthropic": {
+  "price": 83,
+  "range": [
+   70,
+   78
+  ],
+  "shares_m": 980,
+  "gross_bn": 81.34,
+  "gross_with_placement_bn": 107.34,
+  "valuation_fd_tn": 1.5,
+  "first_trade": "2026-11-19",
+  "open": 111.5,
+  "close": 97.17,
+  "close_vs_ipo_pct": 17,
+  "antusdt": {
+   "converted_to_standard": "2026-11-19T17:29Z (Bybit)",
+   "range_24h": [
+    92.38,
+    114.95
+   ],
+   "last": 95.48,
+   "bar_16_close": 105.19,
+   "bar_17_close": 96.83,
+   "oi_m": 47.0,
+   "turnover_24h_m": 325
+  },
+  "crypto_link": "BTC fell in the 15:00 bar (before ANT opened), then in the 17:00 and 20:00 bars as ANT and the Nasdaq faded: co-movement, not shown causation (HC-2)",
+  "sources": [
+   "https://decrypt.co/383623/anthropic-tops-spacex-initial-ipo-81-billion-deal-where-the-money-went",
+   "https://decrypt.co/383669/nvidia-amd-micron-ai-stocks-sink-anthropic-ipo-price",
+   "https://www.coindesk.com/daybook-us/2026/11/18/blaming-anthropic-s-ipo-for-bitcoin-s-slide-is-easy-to-believe-but-flawed-analysts-say"
+  ],
+  "conflict": "Decrypt dates trading to Nov 20; every other source says Nov 19"
+ },
+ "thursday_selloff": {
+  "path": [
+   [
+    "13:00",
+    64008.3
+   ],
+   [
+    "14:00",
+    63522.5
+   ],
+   [
+    "15:00",
+    63070.7,
+    "614M"
+   ],
+   [
+    "17:00",
+    62717.1,
+    "640M"
+   ],
+   [
+    "20:00",
+    62096.8,
+    "610M"
+   ],
+   [
+    "21:00",
+    61517.7,
+    "low 61388.1"
+   ]
+  ],
+  "drivers": [
+   "post-IPO tech sell-the-news: Nasdaq -2.06%, S&P -1.9%, VXN ~28",
+   "AI chips: NVDA -3.4%, AMD -7.7% (short report), MU -2.2%",
+   "hike repricing (minutes, Waller)",
+   "ETF outflows: November ~-$2.9B vs ~-$1.9B through Monday (~-$1B Tue-Wed, derived)",
+   "MSTR -16% vs BTC since 11-15; STRC $95",
+   "Sky USDS -35% ($1.5B) after an illicit-finance report"
+  ],
+  "us_data": "claims / Philly Fed 2026 prints not found (gap)",
+  "liquidations": "lake has no rows for 12-22 UTC (gap)",
+  "sources": [
+   "https://bitcoinmagazine.com/markets/bitcoin-price-slumps-under-62000",
+   "https://decrypt.co/383597/bitcoin-struggles-to-hold-64000-as-etf-outflows-hit-2-9b-in-november",
+   "https://www.coindesk.com/business/2026/11/19/sky-s-usds-stablecoin-shrinks-35-as-usd1-5-billion-exits-reserves-after-illicit-finance-report",
+   "https://cryptoslate.com/strategys-strc-stock-crashes-to-95-despite-promise-of-44-years-of-dividends/"
+  ]
+ },
+ "nvda_after_print": {
+  "pre_print": 155.4,
+  "30m": 158.06,
+  "wed_13": 159.94,
+  "wed_14": 155.13,
+  "now": 146.74,
+  "logret_from_pre_pct": -5.73,
+  "semis": {
+   "SOXLUSDT_24h_pct": -7.44,
+   "AMDSTOCKUSDT_24h_pct": -8.42,
+   "MUUSDT_24h_pct": -2.08
+  }
+ },
+ "schedule_48h": [
+  "2026-11-19T23:00Z T-NEWS-20261115-1 resolves",
+  "2026-11-20T00:00Z / 04:00Z / 08:00Z funding, 4h closes",
+  "2026-11-20T08:00Z Deribit 20NOV26 expiry: 35.4k BTC (~$2.2B), P/C 0.61, max pain 70,000 (R-VOL-28)",
+  "2026-11-20T13:25Z Waller (welcoming remarks)",
+  "2026-11-20T14:30Z NYSE open",
+  "2026-11-20T15:00Z UMich final (consensus not sourced)",
+  "2026-11-20T17:15Z Cook (Santiago)",
+  "2026-11-20T22:00Z TradFi weekend window starts (R-VOL-1, R-VOL-2, R-PX-9)",
+  "2026-11-21T08:00Z Deribit daily (P/C 1.45, max pain 64k)",
+  "2026-11-22T23:00Z CME reopen (just outside 48h)"
+ ],
+ "theses": [
+  {
+   "id": "T-USER-20261115-a",
+   "status": "strengthening 4/5 (curve now bear_steepening)"
+  },
+  {
+   "id": "T-USER-20261115-b",
+   "status": "strengthening 6/6"
+  },
+  {
+   "id": "T-USER-20261115-c",
+   "status": "weakening 0/5"
+  },
+  {
+   "id": "T-USER-20261115-d",
+   "status": "strengthening 8/9"
+  },
+  {
+   "id": "T-CLAUDE-20261115-deep",
+   "resolved": "YES",
+   "first_undercut_bar": "2026-11-19T20:00Z",
+   "low": 61388.1,
+   "high_before": 64061,
+   "printed_58000": false
+  },
+  {
+   "id": "T-NEWS-20261115-4",
+   "resolved": "YES",
+   "touch": "3772.13 in the 2026-11-18T07:00Z bar"
+  },
+  {
+   "id": "T-NEWS-20261116-2",
+   "resolved": "YES",
+   "touch": "3772.13 in the 2026-11-18T07:00Z bar"
+  },
+  {
+   "id": "T-NEWS-20261115-3",
+   "resolved": "likely NO",
+   "ethbtc_change_pct": 0.28
+  },
+  {
+   "id": "T-NEWS-20261115-1",
+   "resolved": "likely NO",
+   "p_yes": 0.1,
+   "note": "61,753 vs the 62,483 floor at 22:05; resolves on the 23:00 close"
+  },
+  {
+   "id": "T-NEWS-20261119-1",
+   "supersedes": "T-NEWS-20261117-1",
+   "p": 0.68
+  },
+  {
+   "id": "T-NEWS-20261119-2",
+   "p": 0.45,
+   "claim": "BTC <= 58,000 by 2026-11-29T20:45Z"
+  }
+ ],
+ "theses_file": "research/desk/news_agent/2026-11-19/2205/theses.yaml",
+ "conflicts": [
+  {
+   "id": "HC-NEWS-20261119-9",
+   "narrative": "death cross = more downside",
+   "evidence": "Decrypt 11-19 19:08; Bitcoin Magazine '$58K last line of defense'",
+   "rules": [
+    "R-PX-3",
+    "R-AVOID-1"
+   ],
+   "lean": "the rules",
+   "hypothesis": "BTC 50/200-day SMA death crosses 2015-2026: next-30d vol-standardised return vs unconditional, block bootstrap",
+   "success": "< -0.3 sigma with CI < 0 in both segments (low n: flag power)"
+  },
+  {
+   "id": "HC-NEWS-20261115-2",
+   "update": "ANT priced above the range and popped while BTC fell in the same hours; one event can't separate a drain from a shared risk-off"
+  },
+  {
+   "id": "HC-NEWS-20261115-4",
+   "update": "20NOV26 max pain 70,000, 12.6% above spot: record any drift toward it"
+  }
+ ],
+ "data_gaps": [
+  "20y auction result",
+  "Thursday claims / Philly Fed",
+  "daily ETF flows Tue-Thu",
+  "lake liquidations Thu 12-22 UTC",
+  "UMich consensus",
+  "Jefferson / Barr content"
+ ],
+ "honesty": {
+  "direction_claim": false,
+  "no_sizes": true
+ }
+}
