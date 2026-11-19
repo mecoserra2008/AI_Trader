@@ -113,6 +113,20 @@ pub enum LiveCmd {
     },
     /// Revoke the approval delegation (anyone may run it; nothing else changes).
     Revoke,
+    /// Close ONE non-bot (user) position at the user's explicit request: a reduce-only market order for exactly its size.
+    /// Refused unless --symbol/--side/--size match the venue position exactly, the symbol has no active bot trade, and
+    /// it is not SPY. Journaled. This is the only command that ever touches a position the bot did not open.
+    CloseForeign {
+        #[arg(long)]
+        symbol: String,
+        /// Side of the open position: Buy (long) or Sell (short).
+        #[arg(long)]
+        side: String,
+        #[arg(long)]
+        size: f64,
+        #[arg(long)]
+        reason: String,
+    },
     /// Write the KILL flag and cancel every bot order. Bot positions keep their exchange-side stops.
     Kill,
     /// Cancel bot orders and close bot positions with reduce-only market orders. Never touches anything else.
@@ -152,6 +166,7 @@ pub async fn run(ctx: &Ctx, cmd: LiveCmd) -> anyhow::Result<()> {
         LiveCmd::Stop { id, stop, reason } => desk.move_stop(&id, stop, &reason).await,
         LiveCmd::Delegate { trades, hours } => desk.delegate(trades, hours),
         LiveCmd::Revoke => desk.revoke(),
+        LiveCmd::CloseForeign { symbol, side, size, reason } => desk.close_foreign(&symbol, &side, size, &reason).await,
         LiveCmd::Kill => desk.kill().await,
         LiveCmd::FlattenBot { yes } => desk.flatten_bot(yes).await,
     }
@@ -1945,6 +1960,43 @@ impl<'a> Desk<'a> {
         for n in notes {
             println!("  {n}");
         }
+        Ok(())
+    }
+
+    pub async fn close_foreign(&self, symbol: &str, side: &str, size: f64, reason: &str) -> anyhow::Result<()> {
+        self.ensure_writes(&TestOpts::default())?;
+        ensure!(!symbol.to_uppercase().starts_with("SPY"), "SPY symbols are never touched");
+        ensure!(side == "Buy" || side == "Sell", "--side must be Buy or Sell (the open position's side)");
+        ensure!(!reason.trim().is_empty(), "--reason is required (quote the user's instruction)");
+        let _l = StateLock::acquire(&self.paths.root).await?;
+        let st = LiveState::load(&self.paths.state())?;
+        ensure!(!st.trades.iter().any(|t| t.symbol == symbol && t.active()), "{symbol} has an active bot trade: use `atx live close --id`");
+        let snap = self.snapshot().await?;
+        let p = snap.positions.iter().find(|p| p.symbol == symbol && p.side == side).with_context(|| format!("no open {side} position on {symbol}"))?;
+        ensure!((p.size - size).abs() < 1e-12, "size mismatch: the venue position is {} not {size}", p.size);
+        let rule = self.rules_for(symbol).await?;
+        let req = OrderRequest {
+            symbol: symbol.to_string(),
+            side: if side == "Buy" { "Sell" } else { "Buy" },
+            order_type: "Market",
+            qty: format_step(size, rule.qty_step),
+            price: None,
+            time_in_force: "IOC".into(),
+            take_profit: None,
+            stop_loss: None,
+            tp_trigger_by: self.ctx.s.execution.tp_trigger_by.clone(),
+            sl_trigger_by: self.cfg.stop_trigger_by.clone(),
+            reduce_only: true,
+            order_link_id: format!("{}uc-{}-{}", self.cfg.link_tag(), symbol.chars().take(8).collect::<String>(), now_ms() % 1_000_000).chars().take(36).collect(),
+        };
+        let r = self.venue.place(&req).await;
+        self.jw(
+            "manual_action",
+            json!({"action": "close_foreign", "symbol": symbol, "side": side, "size": size, "avg_price": p.avg_price, "mark": p.mark_price, "reason": reason, "ok": r.is_ok(), "order_id": r.as_ref().ok(), "error": r.as_ref().err().map(|e| format!("{e:#}"))}),
+            &self.versions(None),
+        )?;
+        let oid = r?;
+        println!("{symbol} {side} {size}: reduce-only market close sent (order {oid}), mark {:.4}", p.mark_price);
         Ok(())
     }
 
