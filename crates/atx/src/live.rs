@@ -463,6 +463,29 @@ pub fn intent_time_stop_h(context: Option<&Value>) -> Result<Option<f64>, String
     }
 }
 
+/// A dedicated thread that holds (flag true) or releases (false) the Windows "system required" execution state, which
+/// blocks idle sleep. One owning thread, because the state is per thread and tokio tasks migrate. No-op off Windows.
+fn keep_awake_thread() -> std::sync::Arc<std::sync::atomic::AtomicBool> {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    let flag = std::sync::Arc::new(AtomicBool::new(false));
+    let f = flag.clone();
+    std::thread::spawn(move || {
+        loop {
+            #[cfg(windows)]
+            {
+                use windows_sys::Win32::System::Power::{ES_CONTINUOUS, ES_SYSTEM_REQUIRED, SetThreadExecutionState};
+                let es = if f.load(Ordering::Relaxed) { ES_CONTINUOUS | ES_SYSTEM_REQUIRED } else { ES_CONTINUOUS };
+                // SAFETY: plain Win32 call with valid flags; no pointers involved.
+                unsafe { SetThreadExecutionState(es) };
+            }
+            #[cfg(not(windows))]
+            let _ = f.load(Ordering::Relaxed);
+            std::thread::sleep(Duration::from_secs(10));
+        }
+    });
+    flag
+}
+
 /// Ids of active bot trades whose time stop has passed. Pure (no I/O, no clock).
 pub fn time_stops_due(st: &LiveState, now: i64) -> Vec<String> {
     st.trades.iter().filter(|t| t.active() && t.time_stop_ms.is_some_and(|ts| ts <= now)).map(|t| t.id.clone()).collect()
@@ -2019,9 +2042,20 @@ impl<'a> Desk<'a> {
         self.ensure_writes(&TestOpts::default())?;
         let interval = Duration::from_secs(interval.max(10));
         println!("atx live watchdog: time stops, every {}s (env {})", interval.as_secs(), self.env.as_str());
+        // While a bot trade has a pending time stop, keep the machine from idle sleep (2026-11-20: the PC suspended
+        // 10:38-21:56 UTC and a time stop was missed). It cannot stop a manual sleep or a closed lid.
+        let awake = keep_awake_thread();
+        let mut holding = false;
         loop {
             let now = now_ms();
-            let due = LiveState::load(&self.paths.state()).map(|st| time_stops_due(&st, now));
+            let st = LiveState::load(&self.paths.state());
+            let want = st.as_ref().is_ok_and(|s| s.trades.iter().any(|t| t.active() && t.time_stop_ms.is_some()));
+            if want != holding {
+                awake.store(want, std::sync::atomic::Ordering::Relaxed);
+                holding = want;
+                println!("{} keep-awake {}", Utc::now().format("%FT%TZ"), if want { "ON (a time stop is pending)" } else { "off" });
+            }
+            let due = st.map(|st| time_stops_due(&st, now));
             match due {
                 Ok(ids) => {
                     for id in ids {
