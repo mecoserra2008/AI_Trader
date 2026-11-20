@@ -14,3 +14,6 @@ start dashboard    'uv run --extra ml python scripts/live_dashboard.py >> logs/l
 start tape         './target/scalp/atx-tape.exe tape >> logs/tape.stdout.log 2>&1'
 start xvenue       '.venv/Scripts/python.exe scripts/xvenue_tape.py --symbols KAVA SOPH RARE >> logs/xvenue_tape.stdout.log 2>&1'
 start xs_v4        'uv run --extra ml python scripts/live_xs_v4.py --loop >> data/journal/live_xs_v4/loop.log 2>&1'
+# Plan time stops (intent context.time_stop_h): closes due BOT trades reduce-only, never opens anything. Runs from a copy
+# (bin/atx-live.exe) so builds don't hit a locked binary; refresh the copy after changing crates/atx/src/live.rs.
+start watchdog  'while true; do L=logs/watchdog_$(date -u +%Y%m%d).log; echo "### start $(date -u +%FT%TZ)" >> $L; AI_TRADER_ENVIRONMENT=mainnet AI_TRADER_ALLOW_MAINNET=1 ./bin/atx-live.exe live watchdog --interval 60 2>&1 | grep --line-buffered -v -iE "balance|equity|wallet|available" >> $L; echo "### exited; restart in 30s" >> $L; sleep 30; done'

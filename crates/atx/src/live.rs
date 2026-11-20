@@ -8,6 +8,7 @@
 //!   atx live submit --id <id>       internal: submits an approved (or auto-gated) proposal
 //!   atx live reconcile              venue -> bot state: fills, closes and P&L, missing stops repaired, stale bot entries cancelled
 //!   atx live close --id <trade>     early exit of one bot trade (reduce-only market close)
+//!   atx live watchdog               plan time stops (intent context.time_stop_h): closes due bot trades, reduce-only
 //!   atx live kill                   data/live/KILL + cancel every bot order (positions keep their exchange stops)
 //!   atx live flatten-bot --yes      cancel bot orders and close BOT positions with reduce-only market orders
 //!
@@ -127,6 +128,15 @@ pub enum LiveCmd {
         #[arg(long)]
         reason: String,
     },
+    /// Enforce plan time stops: every --interval seconds, close (reduce-only, like `atx live close`) each active bot trade
+    /// whose time stop has passed. It only ever exits bot trades on their own predefined rule; it never opens anything.
+    Watchdog {
+        #[arg(long, default_value_t = 60)]
+        interval: u64,
+        /// One pass, then exit.
+        #[arg(long)]
+        once: bool,
+    },
     /// Write the KILL flag and cancel every bot order. Bot positions keep their exchange-side stops.
     Kill,
     /// Cancel bot orders and close bot positions with reduce-only market orders. Never touches anything else.
@@ -167,6 +177,7 @@ pub async fn run(ctx: &Ctx, cmd: LiveCmd) -> anyhow::Result<()> {
         LiveCmd::Delegate { trades, hours } => desk.delegate(trades, hours),
         LiveCmd::Revoke => desk.revoke(),
         LiveCmd::CloseForeign { symbol, side, size, reason } => desk.close_foreign(&symbol, &side, size, &reason).await,
+        LiveCmd::Watchdog { interval, once } => desk.watchdog(interval, once).await,
         LiveCmd::Kill => desk.kill().await,
         LiveCmd::FlattenBot { yes } => desk.flatten_bot(yes).await,
     }
@@ -259,6 +270,10 @@ pub struct TradeRec {
     /// Reduce-only take-profit order (scalper), kept out of `order_ids` (those are the entry orders).
     #[serde(default)]
     pub tp_order_id: Option<String>,
+    /// Plan time stop (intent `context.time_stop_h`, counted from submission): `atx live watchdog` closes the trade
+    /// reduce-only once it has passed, so the exit never depends on an orchestrator session being alive.
+    #[serde(default)]
+    pub time_stop_ms: Option<i64>,
 }
 
 impl TradeRec {
@@ -430,6 +445,27 @@ pub fn delegation_left(d: &Delegation, sig_ok: bool, env: &str, profile: &str, u
         return Err(format!("all {} delegated approvals used", d.max_trades));
     }
     Ok(d.max_trades - used)
+}
+
+/// Longest plan time stop an intent may carry (hours).
+pub const MAX_TIME_STOP_HOURS: f64 = 168.0;
+
+/// The intent's plan time stop in hours (`context.time_stop_h`). None when absent; an error when present but not a
+/// number in (0, MAX_TIME_STOP_HOURS], so a malformed time stop refuses the proposal instead of being dropped silently.
+pub fn intent_time_stop_h(context: Option<&Value>) -> Result<Option<f64>, String> {
+    let Some(v) = context.and_then(|c| c.get("time_stop_h")) else { return Ok(None) };
+    if v.is_null() {
+        return Ok(None);
+    }
+    match v.as_f64() {
+        Some(h) if h > 0.0 && h <= MAX_TIME_STOP_HOURS => Ok(Some(h)),
+        _ => Err(format!("context.time_stop_h must be a number in (0, {MAX_TIME_STOP_HOURS}] hours, got {v}")),
+    }
+}
+
+/// Ids of active bot trades whose time stop has passed. Pure (no I/O, no clock).
+pub fn time_stops_due(st: &LiveState, now: i64) -> Vec<String> {
+    st.trades.iter().filter(|t| t.active() && t.time_stop_ms.is_some_and(|ts| ts <= now)).map(|t| t.id.clone()).collect()
 }
 
 fn fnv(s: &str) -> u64 {
@@ -1143,6 +1179,10 @@ impl<'a> Desk<'a> {
                 ),
                 None => println!("  {}{} {:<12} {:?} {} pending entry qty {} stop {} (orders {:?})", if t.is_scalp() { "[scalp] " } else { "" }, t.id, t.symbol, t.side, t.status, t.qty, t.stop, t.order_ids),
             }
+            if let Some(ts) = t.time_stop_ms {
+                let left_h = (ts - now_ms()) as f64 / HOUR as f64;
+                println!("    time stop {} ({left_h:+.1} h; enforced by `atx live watchdog`)", chrono::DateTime::from_timestamp_millis(ts).map(|d| d.format("%F %H:%M UTC").to_string()).unwrap_or_default());
+            }
         }
         let tag = c.link_tag();
         let bot_orders: Vec<&Value> = snap.orders.iter().filter(|o| Snapshot::bot_order(o, &tag)).collect();
@@ -1285,6 +1325,10 @@ impl<'a> Desk<'a> {
     pub async fn propose(&self, file: &Path, test: &TestOpts) -> anyhow::Result<()> {
         self.ensure_writes(test)?;
         let intent = Self::read_intent(file)?;
+        let time_stop_h = intent_time_stop_h(intent.context.as_ref()).map_err(|e| anyhow::anyhow!("REFUSED: {e}"))?;
+        if let Some(h) = time_stop_h {
+            println!("plan time stop {h} h after submission (closed by `atx live watchdog`; keep it running)");
+        }
         let versions = self.versions(Some(&intent));
         let lock = StateLock::acquire(&self.paths.root).await?;
         let mut st = LiveState::load(&self.paths.state())?;
@@ -1444,6 +1488,13 @@ impl<'a> Desk<'a> {
             self.jw("decision", json!({"action": "expired", "proposal_id": id}), &versions)?;
             bail!("proposal {id} expired");
         }
+        let time_stop_h = match intent_time_stop_h(prop.intent.context.as_ref()) {
+            Ok(h) => h,
+            Err(e) => {
+                finish("refused_at_submit", json!({"rejections": [e.clone()]}))?;
+                bail!("REFUSED at submission: {e}");
+            }
+        };
         // ---- re-check and reserve under the lock
         let lock = StateLock::acquire(&self.paths.root).await?;
         let mut st = LiveState::load(&self.paths.state())?;
@@ -1484,6 +1535,7 @@ impl<'a> Desk<'a> {
             lease_until_ms: now + window_ms + 120_000,
             approved_by: approved_by.into(),
             versions: versions.clone(),
+            time_stop_ms: time_stop_h.map(|h| now + (h * HOUR as f64) as i64),
             ..Default::default()
         };
         st.entries_today += 1;
@@ -1963,6 +2015,31 @@ impl<'a> Desk<'a> {
         Ok(())
     }
 
+    pub async fn watchdog(&self, interval: u64, once: bool) -> anyhow::Result<()> {
+        self.ensure_writes(&TestOpts::default())?;
+        let interval = Duration::from_secs(interval.max(10));
+        println!("atx live watchdog: time stops, every {}s (env {})", interval.as_secs(), self.env.as_str());
+        loop {
+            let now = now_ms();
+            let due = LiveState::load(&self.paths.state()).map(|st| time_stops_due(&st, now));
+            match due {
+                Ok(ids) => {
+                    for id in ids {
+                        let r = self.close(&id, "time stop (watchdog)").await;
+                        let err = r.as_ref().err().map(|e| format!("{e:#}"));
+                        println!("{} time stop {id}: {}", Utc::now().format("%FT%TZ"), err.as_deref().unwrap_or("closed"));
+                        self.jw("time_stop", json!({"trade_id": id, "now_ms": now, "ok": r.is_ok(), "error": err}), &self.versions(None))?;
+                    }
+                }
+                Err(e) => println!("{} watchdog: state unreadable: {e:#}", Utc::now().format("%FT%TZ")),
+            }
+            if once {
+                return Ok(());
+            }
+            tokio::time::sleep(interval).await;
+        }
+    }
+
     pub async fn close_foreign(&self, symbol: &str, side: &str, size: f64, reason: &str) -> anyhow::Result<()> {
         self.ensure_writes(&TestOpts::default())?;
         ensure!(!symbol.to_uppercase().starts_with("SPY"), "SPY symbols are never touched");
@@ -2077,6 +2154,28 @@ mod tests {
         // the signed message covers every field, so editing any of them breaks the signature
         let edited = Delegation { max_trades: 10, ..d.clone() };
         assert_ne!(edited.message(), d.message());
+    }
+
+    #[test]
+    fn time_stops_are_validated_and_fire_only_on_active_trades() {
+        assert_eq!(intent_time_stop_h(None), Ok(None));
+        assert_eq!(intent_time_stop_h(Some(&json!({"reason": "x"}))), Ok(None));
+        assert_eq!(intent_time_stop_h(Some(&json!({"time_stop_h": null}))), Ok(None));
+        assert_eq!(intent_time_stop_h(Some(&json!({"time_stop_h": 8}))), Ok(Some(8.0)));
+        assert!(intent_time_stop_h(Some(&json!({"time_stop_h": 0}))).is_err(), "zero");
+        assert!(intent_time_stop_h(Some(&json!({"time_stop_h": -1.0}))).is_err(), "negative");
+        assert!(intent_time_stop_h(Some(&json!({"time_stop_h": "8"}))).is_err(), "not a number");
+        assert!(intent_time_stop_h(Some(&json!({"time_stop_h": MAX_TIME_STOP_HOURS + 1.0}))).is_err(), "over the ceiling");
+        let t = |id: &str, status: &str, ts: Option<i64>| TradeRec { id: id.into(), status: status.into(), time_stop_ms: ts, ..Default::default() };
+        let st = LiveState {
+            trades: vec![t("due", "open", Some(100)), t("later", "open", Some(200)), t("none", "open", None), t("closed", "closed", Some(50)), t("resting", "pending", Some(100))],
+            ..Default::default()
+        };
+        assert_eq!(time_stops_due(&st, 150), vec!["due".to_string(), "resting".to_string()]);
+        assert_eq!(time_stops_due(&st, 99), Vec::<String>::new());
+        // an older state file without the field still loads (serde default)
+        let old: TradeRec = serde_json::from_value(json!({"id": "x", "intent_id": "i", "symbol": "BTCUSDT", "side": null, "tier": "liquid", "status": "open", "qty": 0.001, "filled_qty": 0.001, "entry_ref": 1.0, "mid_at_submit": 1.0, "first_peg_price": 1.0, "avg_entry": 1.0, "stop": 0.9, "target": null, "risk_to_stop_usd": 1.0, "max_loss_usd": 1.0, "stop_slip_bps": 0.0, "order_ids": [], "link_ids": [], "repegs": 0, "submitted_ms": 0, "first_fill_ms": null, "entry_done_ms": null, "entry_end_reason": null, "lease_until_ms": 0, "closed_ms": null, "exit_avg": null, "exit_kind": null, "realised_usd": null, "approved_by": "u", "versions": {}, "notes": []})).unwrap();
+        assert_eq!(old.time_stop_ms, None);
     }
 
     #[test]
