@@ -716,6 +716,211 @@ pub fn needs_replace(cfg: &MmCfg, rule: &InstrumentRules, want: Option<Quote>, c
     }
 }
 
+// ---------------------------------------------------------------- weekend alt quoting rules (H-MMW1-4; pure, shared by `atx mm-replay`)
+
+/// H-MMW1 level ladder: quote prices at structural zones (`levels_file` / scripts/levels.py, `(lo, hi)`) lying
+/// `band.0`..`band.1` x `sigma_1h` from the mid: a support zone below the mid quotes a bid at its top edge (the first
+/// price of the zone a falling market touches), a resistance zone above quotes an ask at its bottom edge. Distances are
+/// log distances of that edge from the mid. Returns (bids, asks), nearest to the mid first, duplicates removed.
+pub fn ladder_levels(zones: &[(f64, f64)], mid: f64, sigma_1h: f64, band: (f64, f64)) -> (Vec<f64>, Vec<f64>) {
+    let (mut bids, mut asks) = (vec![], vec![]);
+    if !(mid > 0.0 && sigma_1h > 0.0) {
+        return (bids, asks);
+    }
+    let inside = |px: f64| {
+        let d = (px / mid).ln().abs() / sigma_1h;
+        px > 0.0 && d >= band.0 && d <= band.1
+    };
+    for &(lo, hi) in zones {
+        if hi < mid && inside(hi) {
+            bids.push(hi);
+        } else if lo > mid && inside(lo) {
+            asks.push(lo);
+        }
+    }
+    bids.sort_by(|a, b| b.total_cmp(a));
+    asks.sort_by(|a, b| a.total_cmp(b));
+    bids.dedup();
+    asks.dedup();
+    (bids, asks)
+}
+
+/// Stop of a level-ladder position: `k` x `sigma_risk` (log units, the unshrunk risk sigma, R-VOL-2) beyond the level.
+pub fn level_stop(level: f64, long: bool, k: f64, sigma_risk: f64) -> f64 {
+    if long { level * (-k * sigma_risk).exp() } else { level * (k * sigma_risk).exp() }
+}
+
+/// Take-profit of a level-ladder fill: the mid at fill time on the tick grid, rounded away from the entry, and never less
+/// than one tick beyond the entry (a take-profit is never a loss).
+pub fn ladder_tp(entry: f64, mid_fill: f64, long: bool, tick: f64) -> f64 {
+    if long {
+        round_to_step(mid_fill, tick, Round::Up).max(round_to_step(entry + tick, tick, Round::Nearest))
+    } else {
+        round_to_step(mid_fill, tick, Round::Down).min(round_to_step(entry - tick, tick, Round::Nearest))
+    }
+}
+
+/// H-MMW2: the larger of the BTC 1 s and 5 s log returns in units of the BTC 1h sigma scaled to that horizon.
+pub fn btc_move_z(r1: f64, r5: f64, sigma_1h: f64) -> f64 {
+    if sigma_1h <= 0.0 {
+        return 0.0;
+    }
+    (r1.abs() / (sigma_1h * (1.0f64 / 3600.0).sqrt())).max(r5.abs() / (sigma_1h * (5.0f64 / 3600.0).sqrt()))
+}
+
+/// BTC tape state for the H-MMW2 pull: recent prints for the 1 s / 5 s returns and 1m closes for the 1h sigma (the robust
+/// `sigma_1h` of the last 240 closed minutes, refreshed once a minute; `floor_bps` floor).
+#[derive(Clone, Debug, Default)]
+pub struct BtcTape {
+    recent: std::collections::VecDeque<(i64, f64)>,
+    closes: std::collections::BTreeMap<i64, f64>,
+    pub sigma: f64,
+    sigma_min: i64,
+    pub floor_bps: f64,
+}
+
+impl BtcTape {
+    pub fn new(floor_bps: f64) -> Self {
+        Self { floor_bps, sigma_min: i64::MIN, ..Default::default() }
+    }
+
+    /// Seed 1m closes (warm-up bars of earlier days): minute start ms -> close.
+    pub fn seed_close(&mut self, minute_ms: i64, close: f64) {
+        self.closes.insert(minute_ms, close);
+    }
+
+    fn px_at(&self, t: i64) -> Option<f64> {
+        let i = self.recent.partition_point(|x| x.0 <= t);
+        if i == 0 { None } else { Some(self.recent[i - 1].1) }
+    }
+
+    /// One BTC print: returns its move z (`btc_move_z`; 0 while the sigma or the 5 s history is not available).
+    pub fn on_print(&mut self, ts: i64, px: f64) -> f64 {
+        if px <= 0.0 {
+            return 0.0;
+        }
+        let minute = ts.div_euclid(60_000) * 60_000;
+        if minute != self.sigma_min {
+            self.sigma_min = minute;
+            let c: Vec<f64> = self.closes.range(minute - 240 * 60_000..minute).map(|x| *x.1).collect();
+            self.sigma = if c.len() >= 31 { sigma_1h(&c, self.floor_bps) } else { 0.0 };
+        }
+        self.closes.insert(minute, px);
+        while self.recent.len() > 1 && self.recent[1].0 < ts - 6_000 {
+            self.recent.pop_front();
+        }
+        let (p1, p5) = (self.px_at(ts - 1_000), self.px_at(ts - 5_000));
+        self.recent.push_back((ts, px));
+        match (p1, p5) {
+            (Some(a), Some(b)) if self.sigma > 0.0 => btc_move_z((px / a).ln(), (px / b).ln(), self.sigma),
+            _ => 0.0,
+        }
+    }
+}
+
+/// Top-`n` book imbalance in quantity: (bid qty - ask qty) / total over the first `n` levels of each side.
+pub fn top_imbalance(bids: &[(f64, f64)], asks: &[(f64, f64)], n: usize) -> f64 {
+    let b: f64 = bids.iter().take(n).map(|x| x.1).sum();
+    let a: f64 = asks.iter().take(n).map(|x| x.1).sum();
+    if a + b > 0.0 { (b - a) / (a + b) } else { 0.0 }
+}
+
+/// H-MMW3: the side an order-flow signal threatens. Buying pressure beyond the threshold (> +t) threatens our ask (we would
+/// sell before a rise): Some(true) = ask; selling pressure (< -t) threatens our bid: Some(false). None inside.
+pub fn threatened_side(signal: f64, threshold: f64) -> Option<bool> {
+    if threshold <= 0.0 {
+        None
+    } else if signal > threshold {
+        Some(true)
+    } else if signal < -threshold {
+        Some(false)
+    } else {
+        None
+    }
+}
+
+/// H-MMW3 side pull on target quotes: the threatened side is withdrawn (`widen_sigma` <= 0) or moved `widen_sigma` x
+/// `sigma` further from the mid (ask up, bid down, on the tick grid).
+pub fn side_pull(bid: Option<Quote>, ask: Option<Quote>, threatened_ask: Option<bool>, widen_sigma: f64, sigma: f64, tick: f64) -> (Option<Quote>, Option<Quote>) {
+    match threatened_ask {
+        None => (bid, ask),
+        Some(true) if widen_sigma <= 0.0 => (bid, None),
+        Some(false) if widen_sigma <= 0.0 => (None, ask),
+        Some(true) => (bid, ask.map(|q| Quote { price: round_to_step(q.price * (1.0 + widen_sigma * sigma), tick, Round::Up), ..q })),
+        Some(false) => (bid.map(|q| Quote { price: round_to_step(q.price * (1.0 - widen_sigma * sigma), tick, Round::Down), ..q }), ask),
+    }
+}
+
+/// H-MMW4: join the touch only when the others' size ahead of us is below `q` x the median touch size.
+pub fn short_queue(ahead: f64, median_level: f64, q: f64) -> bool {
+    q > 0.0 && median_level > 0.0 && ahead < q * median_level
+}
+
+/// H-MMW4 leave rule: the size behind us now is below (1 - `frac`) x its maximum over the last `window_ms` (it fell by
+/// more than `frac`). `hist` = (time, behind) observations, oldest first, the last one current.
+pub fn behind_thinned(hist: &[(i64, f64)], now: i64, window_ms: i64, frac: f64) -> bool {
+    let Some(&(_, cur)) = hist.last() else { return false };
+    let mx = hist.iter().filter(|x| x.0 >= now - window_ms).map(|x| x.1).fold(0.0, f64::max);
+    mx > 0.0 && cur < (1.0 - frac) * mx
+}
+
+/// Median of a sample (NaN when empty).
+pub fn median(v: &[f64]) -> f64 {
+    if v.is_empty() {
+        return f64::NAN;
+    }
+    let mut s = v.to_vec();
+    s.sort_by(|a, b| a.total_cmp(b));
+    let n = s.len();
+    if n % 2 == 1 { s[n / 2] } else { 0.5 * (s[n / 2 - 1] + s[n / 2]) }
+}
+
+/// H-MMW1 arm A2 liquidation-cluster proxy from a public tape that carries no liquidation flag (pre-declared
+/// 2026-11-21): at least `min_prints` same-side (same aggressor) prints within `window_ms`, spanning at least
+/// `min_levels` distinct price levels, with summed notional >= `min_notional` (10 x the previous day's median print
+/// notional). A trigger empties that side's window, so the next cluster needs fresh prints.
+#[derive(Clone, Debug)]
+pub struct LiqProxy {
+    pub window_ms: i64,
+    pub min_prints: usize,
+    pub min_levels: usize,
+    pub min_notional: f64,
+    buf: [std::collections::VecDeque<(i64, i64, f64)>; 2],
+}
+
+impl LiqProxy {
+    pub fn new(window_ms: i64, min_prints: usize, min_levels: usize, min_notional: f64) -> Self {
+        Self { window_ms, min_prints, min_levels, min_notional, buf: Default::default() }
+    }
+
+    /// One print (time, price tick, notional USD, buy aggressor): true when it completes a cluster.
+    pub fn on_print(&mut self, ts: i64, tick: i64, notional: f64, buy: bool) -> bool {
+        if self.min_notional <= 0.0 {
+            return false;
+        }
+        let b = &mut self.buf[buy as usize];
+        while b.front().is_some_and(|x| x.0 < ts - self.window_ms) {
+            b.pop_front();
+        }
+        b.push_back((ts, tick, notional));
+        if b.len() < self.min_prints {
+            return false;
+        }
+        let total: f64 = b.iter().map(|x| x.2).sum();
+        if total < self.min_notional {
+            return false;
+        }
+        let mut ticks: Vec<i64> = b.iter().map(|x| x.1).collect();
+        ticks.sort_unstable();
+        ticks.dedup();
+        if ticks.len() < self.min_levels {
+            return false;
+        }
+        b.clear();
+        true
+    }
+}
+
 // ---------------------------------------------------------------- run
 
 pub async fn run(ctx: &Ctx, until: &str, config: Option<&str>, skip_busy: bool, adopt: bool, dry_run: bool, yes: bool) -> anyhow::Result<()> {
@@ -1548,5 +1753,135 @@ mod tests {
         let closes: Vec<f64> = (0..241).map(|i| if i % 2 == 0 { 100.0 } else { 100.1 }).collect();
         let s = sigma_1h(&closes, 1.0);
         assert!((s - 0.001 * (std::f64::consts::PI / 2.0).sqrt() * 60f64.sqrt()).abs() < 1e-4);
+    }
+
+    // ------------------------------------------------------------ weekend alt quoting rules (H-MMW1-4)
+
+    #[test]
+    fn ladder_levels_keep_zones_inside_the_sigma_band() {
+        // mid 100, sigma 1%: band 1.5-3.5% from the mid
+        let zones = [(97.0, 98.0), (95.0, 96.0), (99.5, 99.8), (101.6, 102.5), (103.0, 104.0), (90.0, 91.0)];
+        let (b, a) = ladder_levels(&zones, 100.0, 0.01, (1.5, 3.5));
+        // support tops 98.0 (2.0%) and 96.0 (4.1%: out), 99.8 (0.2%: too close), 91 (out)
+        assert_eq!(b, vec![98.0]);
+        // resistance bottoms 101.6 (1.59%) and 103.0 (2.96%), nearest first
+        assert_eq!(a, vec![101.6, 103.0]);
+        // a zone straddling the mid quotes nothing; no sigma, no levels
+        assert_eq!(ladder_levels(&[(99.0, 101.0)], 100.0, 0.01, (0.0, 9.0)), (vec![], vec![]));
+        assert_eq!(ladder_levels(&zones, 100.0, 0.0, (1.5, 3.5)), (vec![], vec![]));
+    }
+
+    #[test]
+    fn ladder_stop_and_take_profit() {
+        let s = level_stop(100.0, true, 1.5, 0.01);
+        assert!((s - 100.0 * (-0.015f64).exp()).abs() < 1e-12 && s < 100.0);
+        assert!(level_stop(100.0, false, 1.5, 0.01) > 100.0);
+        // long filled at 100.00 with the mid at 100.025 (tick 0.01): TP at 100.03 (mid rounded up)
+        assert!((ladder_tp(100.0, 100.025, true, 0.01) - 100.03).abs() < 1e-9);
+        // a fill through the price (mid already below the entry): never below entry + 1 tick
+        assert!((ladder_tp(100.0, 99.90, true, 0.01) - 100.01).abs() < 1e-9);
+        // short: mid rounded down, at most entry - 1 tick
+        assert!((ladder_tp(100.0, 99.975, false, 0.01) - 99.97).abs() < 1e-9);
+        assert!((ladder_tp(100.0, 100.2, false, 0.01) - 99.99).abs() < 1e-9);
+    }
+
+    #[test]
+    fn btc_move_z_scales_to_the_horizon() {
+        let s = 0.006; // 60 bp per hour -> 1 s sd = 1 bp, 5 s sd = 2.236 bp
+        assert!((btc_move_z(0.0001, 0.0, s) - 1.0).abs() < 1e-9);
+        assert!((btc_move_z(0.0, -0.0002236068, s) - 1.0).abs() < 1e-6);
+        assert!((btc_move_z(0.0003, 0.0001, s) - 3.0).abs() < 1e-9);
+        assert_eq!(btc_move_z(0.01, 0.01, 0.0), 0.0);
+    }
+
+    #[test]
+    fn btc_tape_needs_sigma_and_history_then_flags_jumps() {
+        let mut t = BtcTape::new(1.0);
+        // no warm-up: z = 0
+        assert_eq!(t.on_print(0, 100.0), 0.0);
+        let mut t = BtcTape::new(1.0);
+        // 240 warm-up minutes alternating +-10 bp: sigma ~ 10 bp x sqrt(pi/2) x sqrt(60)
+        for i in 0..240 {
+            t.seed_close(-(240 - i) * 60_000, if i % 2 == 0 { 100.0 } else { 100.1 });
+        }
+        assert_eq!(t.on_print(0, 100.0), 0.0, "no 5 s history yet");
+        assert!(t.sigma > 0.0);
+        assert!(t.on_print(3_000, 100.0) == 0.0, "still no print 5 s back");
+        assert!(t.on_print(6_000, 100.0).abs() < 1e-12, "flat: z 0");
+        // +30 bp in 1 s: z = 0.003 / (sigma / 60) >> 4
+        let z = t.on_print(7_000, 100.3);
+        assert!(z > 4.0, "{z} sigma {}", t.sigma);
+        assert!((z - 0.003f64.max((100.3f64 / 100.0).ln()) / (t.sigma / 60.0)).abs() < 0.2);
+    }
+
+    #[test]
+    fn imbalance_and_side_pull() {
+        let bids = [(9.9, 10.0), (9.8, 10.0), (9.7, 5.0), (9.6, 5.0), (9.5, 5.0), (9.4, 1000.0)];
+        let asks = [(10.0, 5.0), (10.1, 5.0), (10.2, 5.0), (10.3, 5.0), (10.4, 5.0)];
+        assert!((top_imbalance(&bids, &asks, 5) - (35.0 - 25.0) / 60.0).abs() < 1e-12, "only the top 5 levels count");
+        assert_eq!(top_imbalance(&[], &[], 5), 0.0);
+        assert_eq!(threatened_side(0.6, 0.5), Some(true));
+        assert_eq!(threatened_side(-0.6, 0.5), Some(false));
+        assert_eq!(threatened_side(0.4, 0.5), None);
+        assert_eq!(threatened_side(0.9, 0.0), None, "threshold 0 = off");
+        let b = Some(Quote { price: 99.0, qty: 1.0, reduce_only: false });
+        let a = Some(Quote { price: 101.0, qty: 1.0, reduce_only: true });
+        assert_eq!(side_pull(b, a, Some(true), 0.0, 0.01, 0.01), (b, None), "buying pressure withdraws the ask");
+        assert_eq!(side_pull(b, a, Some(false), 0.0, 0.01, 0.01), (None, a));
+        assert_eq!(side_pull(b, a, None, 0.0, 0.01, 0.01), (b, a));
+        let (b2, a2) = side_pull(b, a, Some(true), 1.0, 0.01, 0.01);
+        assert_eq!(b2, b);
+        let a2 = a2.unwrap();
+        assert!((a2.price - 102.01).abs() < 1e-9 && a2.reduce_only, "widened by 1 sigma, rounded up: {}", a2.price);
+        let (b3, _) = side_pull(b, a, Some(false), 1.0, 0.01, 0.01);
+        assert!((b3.unwrap().price - 98.01).abs() < 1e-9);
+    }
+
+    #[test]
+    fn short_queue_and_leave_rules() {
+        assert!(short_queue(40.0, 100.0, 0.5));
+        assert!(!short_queue(50.0, 100.0, 0.5));
+        assert!(!short_queue(0.0, 0.0, 1.0), "no median yet: never join");
+        assert!(!short_queue(0.0, 100.0, 0.0));
+        let h = [(0, 10.0), (1_000, 100.0), (2_500, 49.0)];
+        assert!(behind_thinned(&h, 2_500, 2_000, 0.5), "100 -> 49 within 2 s");
+        assert!(!behind_thinned(&[(0, 100.0), (1_000, 60.0), (2_500, 49.0)], 2_500, 2_000, 0.5), "the 100 is older than 2 s");
+        assert!(!behind_thinned(&[(0, 0.0)], 0, 2_000, 0.5));
+        assert!(!behind_thinned(&[], 0, 2_000, 0.5));
+        assert_eq!(median(&[3.0, 1.0, 2.0]), 2.0);
+        assert_eq!(median(&[4.0, 1.0, 2.0, 3.0]), 2.5);
+        assert!(median(&[]).is_nan());
+    }
+
+    #[test]
+    fn liquidation_proxy_needs_count_levels_and_notional() {
+        // 5 sells within 30 s over 3 levels with >= 1000 USD in total
+        let mut p = LiqProxy::new(30_000, 5, 3, 1_000.0);
+        let prints = [(0, 100, 300.0), (1_000, 100, 300.0), (2_000, 99, 100.0), (3_000, 99, 100.0)];
+        for (t, k, n) in prints {
+            assert!(!p.on_print(t, k, n, false));
+        }
+        // a buy print does not count for the sell side
+        assert!(!p.on_print(3_500, 101, 5_000.0, true));
+        assert!(p.on_print(4_000, 98, 300.0, false), "5th sell, 3 levels, 1100 USD");
+        assert!(!p.on_print(4_500, 97, 300.0, false), "a trigger empties the window");
+        // too few levels: 5 prints at 2 prices
+        let mut q = LiqProxy::new(30_000, 5, 3, 10.0);
+        for i in 0..6 {
+            assert!(!q.on_print(i * 100, 100 + i % 2, 50.0, true));
+        }
+        // the window slides: prints older than 30 s drop out
+        let mut r = LiqProxy::new(30_000, 5, 3, 10.0);
+        for (i, t) in [0, 1_000, 2_000, 3_000].into_iter().enumerate() {
+            assert!(!r.on_print(t, 100 + i as i64, 10.0, false));
+        }
+        assert!(!r.on_print(40_000, 110, 10.0, false), "the first four are gone");
+        // notional below the floor; a zero floor switches the proxy off
+        let mut s = LiqProxy::new(30_000, 5, 3, 1e9);
+        let mut z = LiqProxy::new(30_000, 1, 1, 0.0);
+        for i in 0..6 {
+            assert!(!s.on_print(i, 100 + i, 10.0, false));
+            assert!(!z.on_print(i, 100 + i, 10.0, false));
+        }
     }
 }

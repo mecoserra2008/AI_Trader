@@ -28,6 +28,14 @@
 //!   - Retail-price-improvement prints (RPI = 1) and prints off the book's tick grid trade against hidden quotes, not the
 //!     visible queue: they feed the flow and bars but do not move or fill our queue unless `--fill-rpi`.
 //!
+//! Weekend alt quoting rules (H-MMW1-4, the pure rules in `mm`): `mode` "ladder" (minimum lots at structural zones
+//! `--zones` 1.5-3.5 sigma from the mid, a passive take-profit at the mid at fill time, a taker stop 1.5 sigma_risk
+//! beyond the level), "touch" (join the touch only behind a short queue, leave when the queue behind us thins); overlays
+//! on any mode: a BTC-move pull (`btc_k`, `--btc-trades`: cancel every quote when |BTC 1 s or 5 s return| > k x the BTC
+//! 1h sigma scaled to the horizon, re-quote after `btc_cooldown_s`), a liquidation-cluster pull (`liq_pull_min`, the
+//! public-tape proxy `mm::LiqProxy` with `--liq-min-notional`) and a side pull on top-5 imbalance or 30 s taker flow
+//! (`side_signal`). `latencies_ms` runs one quoter per latency in the same pass.
+//!
 //! Not modelled (stated in the report): portfolio coupling across symbols (gross / net caps see only this symbol),
 //! structural zones (`levels_file`), the live link's stale tops and per-tick work time (use `tick_ms`), funding,
 //! Bybit internals (hidden priority, internal latency).
@@ -43,6 +51,7 @@ use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, bail};
+use at_core::num::{Round, round_to_step};
 use at_core::types::InstrumentRules;
 use at_match::{Grid, InputEvent, NewOrder, Ob200Replayer, OrderBook, Side, Tif};
 use at_risk::{FeeRates, FeeSchedule};
@@ -206,6 +215,30 @@ pub fn read_trades(path: &Path, grid: &Grid) -> anyhow::Result<Vec<Tr>> {
     Ok(out)
 }
 
+/// Reads a public.bybit.com trade archive as a price tape (ms, price), stable-sorted by ms (the BTC tape of H-MMW2).
+pub fn read_px_tape(path: &Path) -> anyhow::Result<Vec<(i64, f64)>> {
+    let mut rdr = csv::Reader::from_reader(open_lines(path)?);
+    let h = rdr.headers()?.clone();
+    let col = |n: &str| h.iter().position(|x| x == n);
+    let (c_ts, c_px) = (col("timestamp").context("no timestamp")?, col("price").context("no price")?);
+    let mut out = Vec::new();
+    let mut rec = csv::StringRecord::new();
+    while rdr.read_record(&mut rec)? {
+        let secs: f64 = rec[c_ts].parse()?;
+        out.push(((secs * 1000.0).round() as i64, rec[c_px].parse::<f64>()?));
+    }
+    out.sort_by_key(|t| t.0);
+    Ok(out)
+}
+
+/// Structural zones of one symbol from a `levels_file`-format JSON ({"SYM": [{"lo", "hi"}, ..]}, or a bare list).
+pub fn read_zones(path: &Path, symbol: &str) -> anyhow::Result<Vec<(f64, f64)>> {
+    let v: Value = serde_json::from_str(&std::fs::read_to_string(path).with_context(|| path.display().to_string())?)?;
+    let list = if v.is_array() { &v } else { v.get(symbol).unwrap_or(&Value::Null) };
+    let num = |x: &Value| x.as_f64().or_else(|| x.as_str().and_then(|s| s.parse().ok())).unwrap_or(f64::NAN);
+    Ok(list.as_array().map(|a| a.iter().map(|z| (num(&z["lo"]), num(&z["hi"]))).filter(|z| z.0.is_finite() && z.1.is_finite()).collect()).unwrap_or_default())
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct Ohlc {
     pub o: f64,
@@ -285,6 +318,20 @@ pub struct Market {
     pub check_mismatch: u64,
     pub changed: Vec<(Side, i64)>,
     pub snapshot_msg: bool,
+    /// H-MMW2: the BTC tape (1 s / 5 s returns, 1h sigma) and the counts of BTC prints with z > 2 / 3 / 4.
+    pub btc: mm::BtcTape,
+    pub btc_prints: u64,
+    pub btc_z_counts: [u64; 3],
+    /// H-MMW1 A2: the liquidation-cluster proxy and its trigger times.
+    pub liq: mm::LiqProxy,
+    pub liq_events: Vec<i64>,
+    /// Every print's notional (USD), for the day's median print (the next day's proxy threshold).
+    pub print_notional: Vec<f32>,
+    /// H-MMW4: touch sizes (lots) sampled every 10 s over the last 60 min, and their median (refreshed once a minute).
+    touch_samples: VecDeque<(i64, f64)>,
+    next_touch_sample: i64,
+    touch_med: f64,
+    touch_med_at: i64,
 }
 
 impl Market {
@@ -319,6 +366,16 @@ impl Market {
             check_mismatch: 0,
             changed: vec![],
             snapshot_msg: false,
+            btc: mm::BtcTape::new(1.0),
+            btc_prints: 0,
+            btc_z_counts: [0; 3],
+            liq: mm::LiqProxy::new(30_000, 5, 3, 0.0),
+            liq_events: vec![],
+            print_notional: vec![],
+            touch_samples: VecDeque::new(),
+            next_touch_sample: i64::MIN,
+            touch_med: f64::NAN,
+            touch_med_at: i64::MIN / 4,
         })
     }
 
@@ -399,6 +456,16 @@ impl Market {
             self.last_top = (b, a);
             self.mids.push((cts, 0.5 * (self.grid.price(b) + self.grid.price(a))));
         }
+        if cts >= self.next_touch_sample
+            && let (Some(b), Some(a)) = (self.book.best_bid(), self.book.best_ask())
+        {
+            self.touch_samples.push_back((cts, b.1 as f64));
+            self.touch_samples.push_back((cts, a.1 as f64));
+            while self.touch_samples.front().is_some_and(|x| x.0 < cts - 3_600_000) {
+                self.touch_samples.pop_front();
+            }
+            self.next_touch_sample = cts.div_euclid(10_000) * 10_000 + 10_000;
+        }
         if self.n_msgs % 20_000 == 1 {
             self.checks += 1;
             if self.rp.book() != self.book.snapshot(usize::MAX) {
@@ -408,7 +475,29 @@ impl Market {
         Ok(())
     }
 
-    pub fn on_trade(&mut self, t: &Tr) {
+    /// Median touch size (lots) of the samples before `now` (last 60 min), refreshed once a minute; NaN before any.
+    pub fn touch_median(&mut self, now: i64) -> f64 {
+        if now - self.touch_med_at >= MIN_MS {
+            let v: Vec<f64> = self.touch_samples.iter().filter(|x| x.0 <= now && x.0 >= now - 3_600_000).map(|x| x.1).collect();
+            self.touch_med = mm::median(&v);
+            self.touch_med_at = now;
+        }
+        self.touch_med
+    }
+
+    /// One BTC print (H-MMW2): its move z.
+    pub fn on_btc(&mut self, ts: i64, px: f64) -> f64 {
+        let z = self.btc.on_print(ts, px);
+        self.btc_prints += 1;
+        for (k, c) in [2.0, 3.0, 4.0].iter().zip(self.btc_z_counts.iter_mut()) {
+            *c += (z > *k) as u64;
+        }
+        z
+    }
+
+    /// A public trade: bars, flow history, the print-notional sample and the liquidation-cluster proxy (true = a cluster
+    /// completed on this print).
+    pub fn on_trade(&mut self, t: &Tr) -> bool {
         self.n_trades += 1;
         self.n_rpi += t.rpi as u64;
         if !t.rpi
@@ -429,6 +518,18 @@ impl Market {
         b.c = t.px;
         b.v += q;
         b.n += 1;
+        self.print_notional.push((q * t.px) as f32);
+        let liq = self.liq.on_print(t.ts, t.tick, q * t.px, t.buy);
+        if liq {
+            self.liq_events.push(t.ts);
+        }
+        liq
+    }
+
+    /// Median print notional (USD) of the trades seen.
+    pub fn median_print_notional(&self) -> f64 {
+        let v: Vec<f64> = self.print_notional.iter().map(|x| *x as f64).collect();
+        mm::median(&v)
     }
 
     /// Closes of the CLOSED 1m bars opening in [from, now - 1 min] (Bybit klines as `atx mm` reads them); minutes
@@ -509,6 +610,33 @@ pub enum SigmaMode {
     Forecast,
 }
 
+/// How a quoter prices its orders.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum QuoteMode {
+    /// The live `atx mm` rule (`mm::target_quotes`).
+    #[default]
+    Spread,
+    /// H-MMW1 level ladder (`mm::ladder_levels`): minimum lots at structural zones `ladder_band` x 1h sigma from the mid,
+    /// a passive reduce-only take-profit at the mid at fill time (`mm::ladder_tp`), a taker stop `ladder_stop_sigma` x
+    /// the 1h sigma beyond the level (`mm::level_stop`).
+    Ladder,
+    /// H-MMW4 touch join: the live rule's sides, sizes and reduce-only flags, priced at the touch, joined only when the
+    /// size ahead is < `touch_q` x the median touch size (`mm::short_queue`); cancelled when the size behind us falls by
+    /// more than `touch_leave_frac` within `touch_leave_ms` (`mm::behind_thinned`).
+    Touch,
+}
+
+/// H-MMW3 signal.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum SideSignal {
+    /// Top-5 book imbalance in quantity (`mm::top_imbalance`).
+    Imb5,
+    /// Signed taker notional imbalance of the last 30 s (`mm::trade_imbalance`).
+    Flow30,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct VariantSpec {
@@ -544,6 +672,66 @@ pub struct VariantSpec {
     /// With a gate: when it turns off with inventory, cancel and close at market (taker) instead of exit-only quotes.
     #[serde(default)]
     pub gate_flatten: bool,
+    /// One quoter per latency (and queue model) in the same pass; empty = `--latency-ms`.
+    #[serde(default)]
+    pub latencies_ms: Vec<i64>,
+    #[serde(default)]
+    pub mode: QuoteMode,
+    #[serde(default = "ladder_band")]
+    pub ladder_band: (f64, f64),
+    #[serde(default = "ladder_stop")]
+    pub ladder_stop_sigma: f64,
+    #[serde(default = "ladder_max")]
+    pub ladder_max_per_side: usize,
+    /// H-MMW1 A2: minutes without adding quotes after a liquidation-cluster proxy trigger (0 = off).
+    #[serde(default)]
+    pub liq_pull_min: f64,
+    /// H-MMW2: cancel every quote when the BTC move z (`mm::btc_move_z`) exceeds `btc_k` (0 = off); no quotes for
+    /// `btc_cooldown_s` after the latest trigger.
+    #[serde(default)]
+    pub btc_k: f64,
+    #[serde(default)]
+    pub btc_cooldown_s: f64,
+    /// H-MMW3: withdraw (`side_widen_sigma` = 0) or widen the side the signal threatens beyond `side_threshold`.
+    #[serde(default)]
+    pub side_signal: Option<SideSignal>,
+    #[serde(default)]
+    pub side_threshold: f64,
+    #[serde(default)]
+    pub side_widen_sigma: f64,
+    /// H-MMW4 (mode touch).
+    #[serde(default)]
+    pub touch_q: f64,
+    #[serde(default = "half")]
+    pub touch_leave_frac: f64,
+    #[serde(default = "two_s")]
+    pub touch_leave_ms: i64,
+}
+
+impl Default for VariantSpec {
+    fn default() -> Self {
+        serde_json::from_value(json!({"name": "", "config": ""})).expect("defaults")
+    }
+}
+
+fn ladder_band() -> (f64, f64) {
+    (1.5, 3.5)
+}
+
+fn ladder_stop() -> f64 {
+    1.5
+}
+
+fn ladder_max() -> usize {
+    3
+}
+
+fn half() -> f64 {
+    0.5
+}
+
+fn two_s() -> i64 {
+    2_000
 }
 
 fn one() -> f64 {
@@ -586,6 +774,23 @@ struct SimOrder {
     ahead0: f64,
     closed: bool,
     filled: i64,
+    /// 0 = a plain quote; TAG_ADD = a ladder adding order; > 0 = the take-profit of ladder lot `tag`.
+    tag: i64,
+    /// Touch mode: (time, lots behind us) observations of the last `touch_leave_ms`.
+    bh: Vec<(i64, f64)>,
+}
+
+const TAG_ADD: i64 = -1;
+
+/// One ladder position lot: filled at `entry`, stopped (taker) beyond `stop`, cleared passively at `tp`.
+#[derive(Clone, Debug)]
+struct Lot {
+    id: i64,
+    long: bool,
+    lots: i64,
+    tp: f64,
+    stop: f64,
+    closing: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -627,6 +832,16 @@ pub struct Funnel {
     pub gate_off_ticks: u64,
     pub gate_flattens: u64,
     pub fills_gate: u64,
+    pub btc_pulls: u64,
+    pub btc_pull_cancels: u64,
+    pub liq_pulls: u64,
+    pub side_pull_ticks: u64,
+    pub touch_skips: u64,
+    pub touch_leaves: u64,
+    pub ladder_adds_placed: u64,
+    pub ladder_lots: u64,
+    pub ladder_tp_fills: u64,
+    pub ladder_stops: u64,
 }
 
 pub struct Quoter {
@@ -660,6 +875,14 @@ pub struct Quoter {
     sym_index: Option<usize>,
     gate: Option<std::rc::Rc<Vec<(i64, bool)>>>,
     gate_was_on: bool,
+    grid: Grid,
+    zones: std::rc::Rc<Vec<(f64, f64)>>,
+    lots: Vec<Lot>,
+    next_lot: i64,
+    /// Pending taker orders (due time, side, lots, kind, ladder lot id or 0).
+    mkt: Vec<(i64, Side, i64, &'static str, i64)>,
+    pull_until: i64,
+    liq_until: i64,
 }
 
 fn side_str(s: Side) -> &'static str {
@@ -705,7 +928,7 @@ impl Quoter {
             fee_paid: 0.0,
             orders: vec![],
             next_tick: start,
-            sigma_at: 0,
+            sigma_at: i64::MIN / 4,
             tick_n: 0,
             markouts: vec![],
             stopped: None,
@@ -716,7 +939,23 @@ impl Quoter {
             sym_index,
             gate: None,
             gate_was_on: false,
+            grid: Grid::new(rules.tick_size, rules.qty_step).expect("instrument grid"),
+            zones: std::rc::Rc::new(vec![]),
+            lots: vec![],
+            next_lot: 1,
+            mkt: vec![],
+            pull_until: i64::MIN,
+            liq_until: i64::MIN,
         }
+    }
+
+    /// Attach the structural zones of the day (`--zones`, read once by the driver).
+    pub fn set_zones(&mut self, z: std::rc::Rc<Vec<(f64, f64)>>) {
+        self.zones = z;
+    }
+
+    pub fn latency(&self) -> i64 {
+        self.latency
     }
 
     /// Attach the regime gate rows (`VariantSpec::gate`, read once per file by the driver).
@@ -741,6 +980,11 @@ impl Quoter {
 
     /// Place a PostOnly limit order (sent now, live after the latency).
     pub fn place(&mut self, side: Side, price: f64, qty: f64, reduce_only: bool, now: i64, grid: &Grid) -> bool {
+        self.place_tagged(side, price, qty, reduce_only, now, grid, 0)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn place_tagged(&mut self, side: Side, price: f64, qty: f64, reduce_only: bool, now: i64, grid: &Grid, tag: i64) -> bool {
         let (Some(tick), Some(lots)) = (grid.ticks(price), grid.lots(qty)) else { return false };
         if lots <= 0 {
             return false;
@@ -761,6 +1005,8 @@ impl Quoter {
             ahead0: 0.0,
             closed: false,
             filled: 0,
+            tag,
+            bh: vec![],
         });
         true
     }
@@ -796,11 +1042,14 @@ impl Quoter {
 
     /// Book a fill of `lots` at `price` on `side`.
     #[allow(clippy::too_many_arguments)]
-    fn book_fill(&mut self, ts: i64, side: Side, price: f64, lots: i64, maker: bool, kind: &'static str, reduce_only: bool, ahead0: f64, mid: f64) {
+    fn book_fill(&mut self, ts: i64, side: Side, price: f64, lots: i64, maker: bool, kind: &'static str, reduce_only: bool, ahead0: f64, mid: f64, tag: i64) {
         if lots <= 0 {
             return;
         }
         let s = side.sign();
+        if self.spec.mode == QuoteMode::Ladder {
+            self.ladder_on_fill(ts, side, price, lots, mid, tag);
+        }
         let notional = self.rules.qty_step * lots as f64 * price;
         let fee = notional * if maker { self.fees.maker_bps } else { self.fees.taker_bps } / 1e4;
         self.cash -= s as f64 * notional + fee;
@@ -867,12 +1116,139 @@ impl Quoter {
         if done {
             self.close_order(i, ts);
         }
-        self.book_fill(ts, side, price, f, true, kind, ro, a0, mid);
+        let tag = self.orders[i].tag;
+        self.book_fill(ts, side, price, f, true, kind, ro, a0, mid, tag);
         f
     }
 
+    /// Ladder lot bookkeeping of one fill (before the position update): the reducing part closes lot `tag` first, then the
+    /// oldest lots; the adding part opens a lot with its stop and places its take-profit (sent now).
+    fn ladder_on_fill(&mut self, ts: i64, side: Side, price: f64, lots: i64, mid: f64, tag: i64) {
+        let s = side.sign();
+        let reduce = if self.pos != 0 && self.pos.signum() != s { lots.min(self.pos.abs()) } else { 0 };
+        let mut left = reduce;
+        if tag > 0
+            && let Some(l) = self.lots.iter_mut().find(|l| l.id == tag)
+        {
+            let x = left.min(l.lots);
+            l.lots -= x;
+            left -= x;
+            self.funnel.ladder_tp_fills += (x > 0) as u64;
+        }
+        for l in self.lots.iter_mut() {
+            let x = left.min(l.lots);
+            l.lots -= x;
+            left -= x;
+        }
+        self.lots.retain(|l| l.lots > 0);
+        let add = lots - reduce;
+        if add <= 0 {
+            return;
+        }
+        let long = s > 0;
+        let tick = self.rules.tick_size;
+        let id = self.next_lot;
+        self.next_lot += 1;
+        let tp = mm::ladder_tp(price, mid, long, tick);
+        let stop = mm::level_stop(price, long, self.spec.ladder_stop_sigma, self.st.sigma);
+        self.lots.push(Lot { id, long, lots: add, tp, stop, closing: false });
+        self.funnel.ladder_lots += 1;
+        // holding inventory: the other side's adding orders go (they would net against the lot)
+        for i in 0..self.orders.len() {
+            if self.orders[i].tag == TAG_ADD && self.orders[i].side != side {
+                self.cancel_idx(i, ts);
+            }
+        }
+        let g = self.grid;
+        let q = g.qty(add);
+        self.place_tagged(side.opposite(), tp, q, true, ts, &g, id);
+    }
+
+    /// Ladder stops on a print: a lot whose stop the print reached is closed at market (taker) one latency later; its
+    /// take-profit is cancelled.
+    fn ladder_stops(&mut self, px: f64, ts: i64) {
+        for k in 0..self.lots.len() {
+            let l = &self.lots[k];
+            if l.closing || !(if l.long { px <= l.stop } else { px >= l.stop }) {
+                continue;
+            }
+            let (id, long, n) = (l.id, l.long, l.lots);
+            self.lots[k].closing = true;
+            for i in 0..self.orders.len() {
+                if self.orders[i].tag == id {
+                    self.cancel_idx(i, ts);
+                }
+            }
+            self.mkt.push((ts + self.latency, if long { Side::Sell } else { Side::Buy }, n, "stop", id));
+            self.funnel.ladder_stops += 1;
+        }
+    }
+
+    /// H-MMW2: a BTC print with move z: beyond `btc_k`, cancel every quote now and quote nothing for the cooldown.
+    pub fn on_btc(&mut self, ts: i64, z: f64) {
+        if self.spec.btc_k <= 0.0 || z <= self.spec.btc_k || self.stopped.is_some() {
+            return;
+        }
+        if ts >= self.pull_until {
+            self.funnel.btc_pulls += 1;
+        }
+        self.pull_until = self.pull_until.max(ts + (self.spec.btc_cooldown_s * 1000.0) as i64);
+        for i in 0..self.orders.len() {
+            if !self.orders[i].closed && self.orders[i].cancel_ms.is_none() {
+                self.funnel.btc_pull_cancels += 1;
+                self.cancel_idx(i, ts);
+            }
+        }
+    }
+
+    /// H-MMW1 A2: a liquidation cluster: cancel the adding quotes now and add nothing for `liq_pull_min`.
+    pub fn on_liq(&mut self, ts: i64) {
+        if self.spec.liq_pull_min <= 0.0 || self.stopped.is_some() {
+            return;
+        }
+        if ts >= self.liq_until {
+            self.funnel.liq_pulls += 1;
+        }
+        self.liq_until = self.liq_until.max(ts + (self.spec.liq_pull_min * 60_000.0) as i64);
+        for i in 0..self.orders.len() {
+            if !self.orders[i].reduce_only {
+                self.cancel_idx(i, ts);
+            }
+        }
+    }
+
+    /// A taker order of `lots` on `side` against the book, reduce-only (capped at the position; a ladder lot `tag` is
+    /// capped at that lot); an empty book side closes at the mid.
+    fn market_order(&mut self, now: i64, side: Side, lots: i64, kind: &'static str, tag: i64, m: &Market) {
+        let mut left = lots.min(self.reducible(side));
+        if tag > 0 {
+            left = left.min(self.lots.iter().find(|l| l.id == tag).map_or(0, |l| l.lots));
+        }
+        if left <= 0 {
+            return;
+        }
+        let (bids, asks) = m.levels(usize::MAX);
+        let book = if side == Side::Sell { bids } else { asks };
+        let mid = m.mid().unwrap_or(self.avg);
+        let mut fills = vec![];
+        for (p, q) in book {
+            if left == 0 {
+                break;
+            }
+            let n = m.grid().lots_nearest(q).min(left);
+            fills.push((p, n));
+            left -= n;
+        }
+        if left > 0 {
+            fills.push((mid, left));
+        }
+        for (p, n) in fills {
+            self.book_fill(now, side, p, n, false, kind, true, f64::NAN, mid, tag);
+        }
+    }
+
     /// Fire every timer strictly before `t` (activations, effective cancels, the stop flatten, decision ticks), in order.
-    pub fn advance(&mut self, t: i64, m: &Market) {
+    pub fn advance(&mut self, t: i64, m: &mut Market) {
         loop {
             let mut next = i64::MAX;
             for o in self.orders.iter().filter(|o| !o.closed) {
@@ -885,6 +1261,9 @@ impl Quoter {
             }
             if let Some(f) = self.flatten_ms {
                 next = next.min(f);
+            }
+            for x in &self.mkt {
+                next = next.min(x.0);
             }
             if self.stopped.is_none() && self.next_tick < self.end {
                 next = next.min(self.next_tick);
@@ -904,6 +1283,13 @@ impl Quoter {
                 }
                 if !self.orders[i].active && self.orders[i].active_ms <= next {
                     self.activate(i, m);
+                }
+            }
+            if self.mkt.iter().any(|x| x.0 <= next) {
+                let due: Vec<_> = self.mkt.iter().filter(|x| x.0 <= next).cloned().collect();
+                self.mkt.retain(|x| x.0 > next);
+                for (t, side, n, kind, tag) in due {
+                    self.market_order(t, side, n, kind, tag, m);
                 }
             }
             if self.flatten_ms.is_some_and(|f| f <= next) {
@@ -949,6 +1335,9 @@ impl Quoter {
 
     /// A real trade: queue consumption at our price, fills through it.
     pub fn on_trade(&mut self, tr: &Tr, m: &Market) {
+        if !self.lots.is_empty() {
+            self.ladder_stops(tr.px, tr.ts);
+        }
         if tr.rpi && !self.fill_rpi {
             return;
         }
@@ -985,7 +1374,26 @@ impl Quoter {
                 if f > 0 {
                     self.fill_order(i, f, tr.ts, "queue", mid);
                 }
+                self.touch_leave(i, tr.ts);
             }
+        }
+    }
+
+    /// Touch mode: record the size behind order `i` and cancel it when that queue thinned (`mm::behind_thinned`).
+    fn touch_leave(&mut self, i: usize, now: i64) {
+        if self.spec.mode != QuoteMode::Touch {
+            return;
+        }
+        let (w, frac) = (self.spec.touch_leave_ms, self.spec.touch_leave_frac);
+        let o = &mut self.orders[i];
+        if o.closed || !o.active || o.cancel_ms.is_some() || !o.q.known {
+            return;
+        }
+        o.bh.retain(|x| x.0 >= now - w);
+        o.bh.push((now, o.q.behind));
+        if mm::behind_thinned(&o.bh, now, w, frac) {
+            self.funnel.touch_leaves += 1;
+            self.cancel_idx(i, now);
         }
     }
 
@@ -1026,6 +1434,7 @@ impl Quoter {
                 let lvl = m.book.level_qty(side, tick) as f64;
                 let model = self.model;
                 self.orders[i].q.on_level(lvl, model);
+                self.touch_leave(i, cts);
             }
         }
     }
@@ -1053,8 +1462,9 @@ impl Quoter {
             fills.push((mid, left));
         }
         for (p, lots) in fills {
-            self.book_fill(now, side, p, lots, false, kind, true, f64::NAN, mid);
+            self.book_fill(now, side, p, lots, false, kind, true, f64::NAN, mid, 0);
         }
+        self.lots.clear();
     }
 
     fn stop(&mut self, now: i64, why: &'static str) {
@@ -1077,7 +1487,7 @@ impl Quoter {
     }
 
     /// One decision, as one symbol inside the `atx mm` loop.
-    fn tick(&mut self, now: i64, m: &Market) {
+    fn tick(&mut self, now: i64, m: &mut Market) {
         self.funnel.ticks += 1;
         self.orders.retain(|o| !o.closed);
         let cfg = self.cfg.clone();
@@ -1145,6 +1555,15 @@ impl Quoter {
         self.funnel.guard_ticks += guard as u64;
         let gate_off = self.gate_off(now);
         self.funnel.gate_off_ticks += gate_off as u64;
+        if now < self.pull_until {
+            // H-MMW2 pull: every quote stays cancelled until the cooldown ends
+            for i in 0..self.orders.len() {
+                self.cancel_idx(i, now);
+            }
+            self.gate_was_on = !gate_off;
+            self.tick_n += 1;
+            return;
+        }
         if gate_off && self.spec.gate_flatten && self.gate_was_on && self.pos != 0 && self.flatten_ms.is_none() {
             for i in 0..self.orders.len() {
                 self.cancel_idx(i, now);
@@ -1154,8 +1573,14 @@ impl Quoter {
         }
         self.gate_was_on = !gate_off;
         let exit_only = gate_off || self.spec.deadline_ms.is_some_and(|d| now >= d - cfg.exit_window_min * MIN_MS);
+        let liq_paused = now < self.liq_until;
+        if self.spec.mode == QuoteMode::Ladder {
+            self.tick_ladder(now, bid1, ask1, exit_only || liq_paused || now < e.paused_until_ms);
+            self.tick_n += 1;
+            return;
+        }
         let pos = (self.position_qty(), if self.pos == 0 { 0.0 } else { self.avg });
-        let mut x = mm::symbol_inputs(&cfg, &self.symbol, &e, bid1, ask1, pos, Others::default(), exit_only, now < e.paused_until_ms, guard);
+        let mut x = mm::symbol_inputs(&cfg, &self.symbol, &e, bid1, ask1, pos, Others::default(), exit_only, now < e.paused_until_ms || liq_paused, guard);
         match self.spec.sigma_mode {
             SigmaMode::Config => {}
             SigmaMode::Fixed => x.sigma = self.spec.fixed_bps / 1e4,
@@ -1164,7 +1589,28 @@ impl Quoter {
                 None => self.funnel.forecast_missing_ticks += 1,
             },
         }
-        let (bid, ask) = mm::target_quotes(&cfg, &self.rules, &x, &e.levels);
+        let (mut bid, mut ask) = mm::target_quotes(&cfg, &self.rules, &x, &e.levels);
+        if let Some(sig) = self.spec.side_signal {
+            let s = match sig {
+                SideSignal::Imb5 => {
+                    let (b5, a5) = m.levels(5);
+                    mm::top_imbalance(&b5, &a5, 5)
+                }
+                SideSignal::Flow30 => {
+                    let tr: Vec<(i64, f64, f64)> = m.recent(1000, now).filter(|t| t.ts >= now - 30_000).map(|t| (t.ts, if t.buy { 1.0 } else { -1.0 }, t.px * g.qty(t.lots))).collect();
+                    mm::trade_imbalance(&tr, now - 30_000)
+                }
+            };
+            let th = mm::threatened_side(s, self.spec.side_threshold);
+            self.funnel.side_pull_ticks += th.is_some() as u64;
+            (bid, ask) = mm::side_pull(bid, ask, th, self.spec.side_widen_sigma, x.sigma, self.rules.tick_size);
+        }
+        if self.spec.mode == QuoteMode::Touch {
+            let med = m.touch_median(now);
+            self.tick_touch(now, &g, (bt, at), bid, ask, med, m);
+            self.tick_n += 1;
+            return;
+        }
         let mut t_op = now;
         let pause = cfg.order_pause_ms as i64;
         for (side, want) in [(Side::Buy, bid), (Side::Sell, ask)] {
@@ -1190,6 +1636,104 @@ impl Quoter {
             }
         }
         self.tick_n += 1;
+    }
+
+    /// H-MMW1 ladder decision: take-profits of open lots re-sent when missing (post-only safe at the touch), adding
+    /// orders at the qualifying levels within the caps (resting adds counted as filled; one lot from flat), stale adds
+    /// cancelled.
+    fn tick_ladder(&mut self, now: i64, bid1: f64, ask1: f64, no_adds: bool) {
+        let cfg = self.cfg.clone();
+        let g = self.grid;
+        let tick = self.rules.tick_size;
+        let pause = cfg.order_pause_ms as i64;
+        let mut t_op = now;
+        let mid = 0.5 * (bid1 + ask1);
+        // take-profits
+        let lots: Vec<(i64, bool, i64, f64)> = self.lots.iter().filter(|l| !l.closing).map(|l| (l.id, l.long, l.lots, l.tp)).collect();
+        for (id, long, n, tp) in lots {
+            if self.orders.iter().any(|o| !o.closed && o.cancel_ms.is_none() && o.tag == id) {
+                continue;
+            }
+            let px = if long { tp.max(bid1 + tick) } else { tp.min(ask1 - tick) };
+            self.place_tagged(if long { Side::Sell } else { Side::Buy }, px, g.qty(n), true, t_op, &g, id);
+            t_op += pause;
+        }
+        // adding orders
+        let (sup, res) = if no_adds { (vec![], vec![]) } else { mm::ladder_levels(&self.zones, mid, self.st.sigma, self.spec.ladder_band) };
+        let lot = mm::min_lot(&self.rules, mid);
+        let inv = self.position_qty() * mid;
+        for (side, levels) in [(Side::Buy, sup), (Side::Sell, res)] {
+            let adding = match side {
+                Side::Buy => self.pos >= 0,
+                Side::Sell => self.pos <= 0,
+            };
+            let cap = if side == Side::Buy { cfg.max_long_usd } else { cfg.max_short_usd };
+            let mut want: Vec<i64> = vec![];
+            if adding {
+                let mut used = inv.abs();
+                for px in levels.into_iter().take(self.spec.ladder_max_per_side) {
+                    let p = round_to_step(px, tick, if side == Side::Buy { Round::Down } else { Round::Up });
+                    let ok_px = if side == Side::Buy { p < ask1 } else { p > bid1 };
+                    let n = lot * p;
+                    if !ok_px || !(used + n <= cap || (self.pos == 0 && want.is_empty())) {
+                        break;
+                    }
+                    used += n;
+                    if let Some(t) = g.ticks(p) {
+                        want.push(t);
+                    }
+                }
+            }
+            let resting: Vec<usize> = (0..self.orders.len()).filter(|&i| !self.orders[i].closed && self.orders[i].cancel_ms.is_none() && self.orders[i].tag == TAG_ADD && self.orders[i].side == side).collect();
+            for &i in &resting {
+                if !want.contains(&self.orders[i].tick) {
+                    self.cancel_idx(i, t_op);
+                    t_op += pause;
+                }
+            }
+            for t in want {
+                if resting.iter().any(|&i| self.orders[i].tick == t) {
+                    continue;
+                }
+                if self.place_tagged(side, g.price(t), lot, false, t_op, &g, TAG_ADD) {
+                    self.funnel.ladder_adds_placed += 1;
+                }
+                t_op += pause;
+            }
+        }
+    }
+
+    /// H-MMW4 touch decision: each wanted quote (side, size, reduce-only from the live rule) priced at the touch; a resting
+    /// quote stays while it is at the touch and of the right kind, otherwise it goes; a new one joins only a short queue.
+    #[allow(clippy::too_many_arguments)]
+    fn tick_touch(&mut self, now: i64, g: &Grid, top: (i64, i64), bid: Option<Quote>, ask: Option<Quote>, med: f64, m: &Market) {
+        let pause = self.cfg.order_pause_ms as i64;
+        let mut t_op = now;
+        for (side, want, touch) in [(Side::Buy, bid, top.0), (Side::Sell, ask, top.1)] {
+            let resting: Vec<usize> = (0..self.orders.len()).filter(|&i| !self.orders[i].closed && self.orders[i].cancel_ms.is_none() && self.orders[i].side == side).collect();
+            let mut keep = None;
+            for &i in &resting {
+                let o = &self.orders[i];
+                let ok = keep.is_none() && want.is_some_and(|q| o.tick == touch && o.reduce_only == q.reduce_only && (g.qty(o.leaves) - q.qty).abs() <= self.rules.qty_step * 0.5);
+                if ok {
+                    keep = Some(i);
+                } else {
+                    self.cancel_idx(i, t_op);
+                    t_op += pause;
+                }
+            }
+            let Some(q) = want else { continue };
+            if keep.is_some() {
+                continue;
+            }
+            let ahead = m.book.level_qty(side, touch) as f64;
+            if !mm::short_queue(ahead, med, self.spec.touch_q) {
+                self.funnel.touch_skips += 1;
+                continue;
+            }
+            self.place(side, g.price(touch), q.qty, q.reduce_only, t_op, g);
+            t_op += pause;
+        }
     }
 
     fn forecast_now(&self, now: i64) -> Option<f64> {
@@ -1232,7 +1776,7 @@ impl Quoter {
         let ledger = self.cash + self.position_qty() * mid_end;
         let fu = &self.funnel;
         let span = (end - self.start).max(1) as f64;
-        json!({
+        let mut out = json!({
             "name": self.name, "queue": self.model.as_str(), "symbol": self.symbol,
             "sigma_mode": self.spec.sigma_mode, "fixed_bps": self.spec.fixed_bps, "forecast_scale": self.spec.forecast_scale, "tick_ms": self.tick_ms,
             "pnl": {"net": net, "gross": gross, "spread": spread, "adverse_1s": adv[0], "adverse_10s": adv[1], "adverse_60s": adv[2],
@@ -1252,7 +1796,16 @@ impl Quoter {
                 "gate_off_ticks": fu.gate_off_ticks, "gate_flattens": fu.gate_flattens, "fills_gate": fu.fills_gate,
             },
             "gate": self.spec.gate, "gate_flatten": self.spec.gate_flatten,
-        })
+        });
+        out["latency_ms"] = json!(self.latency);
+        out["mode"] = json!(self.spec.mode);
+        let mmw = json!({"btc_pulls": fu.btc_pulls, "btc_pull_cancels": fu.btc_pull_cancels, "liq_pulls": fu.liq_pulls, "side_pull_ticks": fu.side_pull_ticks,
+                         "touch_skips": fu.touch_skips, "touch_leaves": fu.touch_leaves, "ladder_adds_placed": fu.ladder_adds_placed,
+                         "ladder_lots": fu.ladder_lots, "ladder_tp_fills": fu.ladder_tp_fills, "ladder_stops": fu.ladder_stops});
+        if let (Some(f), Some(x)) = (out["funnel"].as_object_mut(), mmw.as_object()) {
+            f.extend(x.clone());
+        }
+        out
     }
 }
 
@@ -1271,9 +1824,27 @@ pub struct ReplayParams {
     pub depth: usize,
 }
 
-/// Runs every quoter over one symbol-day: book messages from `book`, trades `trades` (time-sorted).
-pub fn run_replay(m: &mut Market, quoters: &mut [Quoter], book: &mut dyn BufRead, trades: &[Tr], p: &ReplayParams) -> anyhow::Result<()> {
+/// BTC prints up to `upto` (inclusive): the tape state, and inside the window the pull of every quoter with `btc_k` < z.
+fn feed_btc(m: &mut Market, quoters: &mut [Quoter], btc: &[(i64, f64)], bi: &mut usize, upto: i64, p: &ReplayParams, min_k: f64) {
+    while *bi < btc.len() && btc[*bi].0 <= upto {
+        let (ts, px) = btc[*bi];
+        *bi += 1;
+        let z = m.on_btc(ts, px);
+        if z > min_k && ts >= p.start && ts < p.end {
+            for q in quoters.iter_mut() {
+                q.advance(ts, m);
+                q.on_btc(ts, z);
+            }
+        }
+    }
+}
+
+/// Runs every quoter over one symbol-day: book messages from `book`, trades `trades` (time-sorted), the BTC price tape
+/// `btc` (time-sorted; empty = no BTC pull).
+pub fn run_replay(m: &mut Market, quoters: &mut [Quoter], book: &mut dyn BufRead, trades: &[Tr], btc: &[(i64, f64)], p: &ReplayParams) -> anyhow::Result<()> {
     let mut ti = 0usize;
+    let mut bi = 0usize;
+    let min_k = quoters.iter().map(|q| q.spec.btc_k).filter(|k| *k > 0.0).fold(f64::INFINITY, f64::min);
     let mut line = String::new();
     let mut last_cts = i64::MIN;
     let step = |m: &mut Market, quoters: &mut [Quoter], tr: &Tr| {
@@ -1282,10 +1853,13 @@ pub fn run_replay(m: &mut Market, quoters: &mut [Quoter], book: &mut dyn BufRead
                 q.advance(tr.ts, m);
             }
         }
-        m.on_trade(tr);
+        let liq = m.on_trade(tr);
         if tr.ts >= p.start && tr.ts < p.end {
             for q in quoters.iter_mut() {
                 q.on_trade(tr, m);
+                if liq {
+                    q.on_liq(tr.ts);
+                }
             }
         }
     };
@@ -1302,9 +1876,11 @@ pub fn run_replay(m: &mut Market, quoters: &mut [Quoter], book: &mut dyn BufRead
         let cts = msg["cts"].as_i64().or_else(|| msg["ts"].as_i64()).unwrap_or(last_cts).max(last_cts);
         last_cts = cts;
         while ti < trades.len() && trades[ti].ts <= cts {
+            feed_btc(m, quoters, btc, &mut bi, trades[ti].ts, p, min_k);
             step(m, quoters, &trades[ti]);
             ti += 1;
         }
+        feed_btc(m, quoters, btc, &mut bi, cts, p, min_k);
         if cts < p.end {
             for q in quoters.iter_mut() {
                 q.advance(cts, m);
@@ -1318,9 +1894,11 @@ pub fn run_replay(m: &mut Market, quoters: &mut [Quoter], book: &mut dyn BufRead
         }
     }
     while ti < trades.len() {
+        feed_btc(m, quoters, btc, &mut bi, trades[ti].ts, p, min_k);
         step(m, quoters, &trades[ti]);
         ti += 1;
     }
+    feed_btc(m, quoters, btc, &mut bi, p.end, p, min_k);
     for q in quoters.iter_mut() {
         q.advance(p.end, m);
         q.finish(p.end);
@@ -1376,9 +1954,21 @@ pub struct MmReplayArgs {
     tick: Option<f64>,
     #[arg(long)]
     qty_step: Option<f64>,
-    /// Only write bars_1m.csv from the trades.
+    /// Only write bars_1m.csv (and tape_stats.json) from the trades.
     #[arg(long)]
     bars_only: bool,
+    /// Structural zones (levels_file format) for mode "ladder".
+    #[arg(long)]
+    zones: Option<PathBuf>,
+    /// BTCUSDT public trade archive of the same day (H-MMW2 pull).
+    #[arg(long)]
+    btc_trades: Option<PathBuf>,
+    /// BTCUSDT 1m bars of earlier days (BTC sigma warm-up).
+    #[arg(long, value_delimiter = ',')]
+    btc_warmup_bars: Vec<PathBuf>,
+    /// Liquidation-cluster proxy notional floor (USD; 10 x the previous day's median print); 0 = proxy off.
+    #[arg(long, default_value_t = 0.0)]
+    liq_min_notional: f64,
 }
 
 fn parse_day(d: &str) -> anyhow::Result<i64> {
@@ -1428,12 +2018,31 @@ pub fn run(ctx: &Ctx, a: MmReplayArgs) -> anyhow::Result<()> {
         }
         let (lo, hi) = (trades.first().map_or(0, |t| t.ts.div_euclid(MIN_MS) * MIN_MS), trades.last().map_or(0, |t| t.ts + 1));
         write_bars(&a.out.join("bars_1m.csv"), &m.bars, lo, hi)?;
+        std::fs::write(a.out.join("tape_stats.json"), serde_json::to_string_pretty(&json!({"symbol": symbol, "prints": trades.len(), "median_print_notional": m.median_print_notional()}))?)?;
         println!("{symbol}: {} trades -> {} 1m bars in {}", trades.len(), m.bars.len(), a.out.display());
         return Ok(());
     }
     for p in &a.warmup_bars {
         read_bars(p, &mut m.bars)?;
     }
+    m.liq.min_notional = a.liq_min_notional;
+    let zones = std::rc::Rc::new(match &a.zones {
+        Some(z) => read_zones(z, &symbol)?,
+        None => vec![],
+    });
+    let btc = match &a.btc_trades {
+        Some(b) => {
+            let mut wb = BTreeMap::new();
+            for p in &a.btc_warmup_bars {
+                read_bars(p, &mut wb)?;
+            }
+            for (k, b) in wb {
+                m.btc.seed_close(k, b.c);
+            }
+            read_px_tape(b)?
+        }
+        None => vec![],
+    };
     if let Some(f) = &a.forecast {
         let v = read_forecast(f)?;
         FORECAST.with(|x| *x.borrow_mut() = std::rc::Rc::new(v));
@@ -1452,17 +2061,21 @@ pub fn run(ctx: &Ctx, a: MmReplayArgs) -> anyhow::Result<()> {
             Some(g) => gates.get(g).cloned(),
             None => None,
         };
-        for qm in &v.queues {
-            let mut q = Quoter::new(cfg.clone(), v.clone(), *qm, &symbol, &rules, fees, a.latency_ms, start, end, a.fill_rpi);
-            if let Some(g) = &gate {
-                q.set_gate(g.clone());
+        let lats = if v.latencies_ms.is_empty() { vec![a.latency_ms] } else { v.latencies_ms.clone() };
+        for lat in lats {
+            for qm in &v.queues {
+                let mut q = Quoter::new(cfg.clone(), v.clone(), *qm, &symbol, &rules, fees, lat, start, end, a.fill_rpi);
+                if let Some(g) = &gate {
+                    q.set_gate(g.clone());
+                }
+                q.set_zones(zones.clone());
+                quoters.push(q);
             }
-            quoters.push(q);
         }
     }
     let p = ReplayParams { start, end, latency_ms: a.latency_ms, fill_rpi: a.fill_rpi, depth: a.depth };
     let mut book = open_lines(a.ob200.as_ref().context("--ob200")?)?;
-    run_replay(&mut m, &mut quoters, &mut *book, &trades, &p)?;
+    run_replay(&mut m, &mut quoters, &mut *book, &trades, &btc, &p)?;
     let day_lo = start.div_euclid(DAY_MS) * DAY_MS;
     write_bars(&a.out.join("bars_1m.csv"), &m.bars, day_lo, day_lo + DAY_MS)?;
     write_outputs(&a.out, &m, &quoters, &p, &symbol, &rules, fees, t0.elapsed().as_secs_f64())?;
@@ -1491,6 +2104,7 @@ pub fn write_outputs(out: &Path, m: &Market, quoters: &[Quoter], p: &ReplayParam
             let mk: Vec<Value> = MARKOUTS_S.iter().map(|h| json!(m.mid_at((f.ts + h * 1000).min(p.end)))).collect();
             v["variant"] = json!(q.name);
             v["queue"] = json!(q.model.as_str());
+            v["latency_ms"] = json!(q.latency());
             v["mid_1s"] = mk[0].clone();
             v["mid_10s"] = mk[1].clone();
             v["mid_60s"] = mk[2].clone();
@@ -1507,7 +2121,10 @@ pub fn write_outputs(out: &Path, m: &Market, quoters: &[Quoter], p: &ReplayParam
         "rules": rules, "fees": {"maker_bps": fees.maker_bps, "taker_bps": fees.taker_bps},
         "market": {"book_messages": m.n_msgs, "trades": m.n_trades, "rpi_trades": m.n_rpi, "engine_trades": m.engine_trades, "engine_rejects": m.engine_rejects,
                    "crossed_messages": m.crossed_msgs, "trades_outside_touch": m.trades_outside_touch, "replayer_checks": m.checks,
-                   "replayer_check_mismatches": m.check_mismatch, "mid_changes": m.mids.len(), "mid_start": first_mid, "mid_end": m.mid_at(p.end)},
+                   "replayer_check_mismatches": m.check_mismatch, "mid_changes": m.mids.len(), "mid_start": first_mid, "mid_end": m.mid_at(p.end),
+                   "median_print_notional": m.median_print_notional(), "liq_min_notional": m.liq.min_notional, "liq_clusters": m.liq_events.len(),
+                   "liq_cluster_ts": m.liq_events, "btc_prints": m.btc_prints, "btc_z_gt_2": m.btc_z_counts[0], "btc_z_gt_3": m.btc_z_counts[1],
+                   "btc_z_gt_4": m.btc_z_counts[2]},
         "quoters": rows,
         "perf": {"seconds": secs},
     });
@@ -1524,20 +2141,7 @@ mod tests {
     }
 
     fn spec(name: &str) -> VariantSpec {
-        VariantSpec {
-            name: name.into(),
-            config: "config/mm_illiq20.yaml".into(),
-            overrides: serde_json::Map::new(),
-            sigma_mode: SigmaMode::Fixed,
-            fixed_bps: 10.0,
-            forecast_scale: 1.0,
-            tick_ms: 0,
-            flow_rotation: false,
-            queues: all_queues(),
-            deadline_ms: None,
-            gate: None,
-            gate_flatten: false,
-        }
+        VariantSpec { name: name.into(), config: "config/mm_illiq20.yaml".into(), sigma_mode: SigmaMode::Fixed, fixed_bps: 10.0, ..VariantSpec::default() }
     }
 
     fn cfg() -> MmCfg {
@@ -1616,15 +2220,15 @@ mod tests {
 
     #[test]
     fn latency_on_placement_and_cancel() {
-        let (m, mut q) = setup(QueueModel::Prorata);
+        let (mut m, mut q) = setup(QueueModel::Prorata);
         // a sell sweep through our price 100 ms after sending: the order is not live yet
         let t = trade(2_100, 0.2999, 500, false);
-        q.advance(t.ts, &m);
+        q.advance(t.ts, &mut m);
         q.on_trade(&t, &m);
         assert!(q.fills.is_empty(), "not live before the latency");
         // 150 ms after sending it is live and joins behind the 100 lots
         let t = trade(2_200, 0.2999, 30, false);
-        q.advance(t.ts, &m);
+        q.advance(t.ts, &mut m);
         assert_eq!(q.orders[0].q.ahead, 100.0);
         q.on_trade(&t, &m);
         assert_eq!(q.fills.len(), 1, "a print through our price fills us");
@@ -1633,14 +2237,14 @@ mod tests {
         // a cancel sent at 3000 takes effect at 3150: a fill at 3100 still counts, at 3200 it does not
         let g = *m.grid();
         q.place(Side::Sell, 0.3002, 20.0, true, 2_500, &g);
-        q.advance(2_700, &m);
+        q.advance(2_700, &mut m);
         q.cancel_idx(1, 3_000);
         let t = trade(3_100, 0.3003, 10, true);
-        q.advance(t.ts, &m);
+        q.advance(t.ts, &mut m);
         q.on_trade(&t, &m);
         assert_eq!(q.fills.len(), 2, "fills before the cancel is effective count");
         let t = trade(3_200, 0.3003, 10, true);
-        q.advance(t.ts, &m);
+        q.advance(t.ts, &mut m);
         q.on_trade(&t, &m);
         assert_eq!(q.fills.len(), 2, "no fill after the cancel took effect");
     }
@@ -1650,17 +2254,17 @@ mod tests {
         let mut got = vec![];
         for model in [QueueModel::Pessimistic, QueueModel::Prorata, QueueModel::Optimistic] {
             let (mut m, mut q) = setup(model);
-            q.advance(2_200, &m);
+            q.advance(2_200, &mut m);
             // 30 lots join behind us, then the level drops by 60 with no print (cancels): 130 -> 70
             m.apply_book(&msg("delta", 2_300, vec![lv(0.3000, 130.0)], vec![]), 2_300).unwrap();
-            q.advance(2_300, &m);
+            q.advance(2_300, &mut m);
             q.on_book(&m, 2_300);
             m.apply_book(&msg("delta", 2_400, vec![lv(0.3000, 70.0)], vec![]), 2_400).unwrap();
             q.on_book(&m, 2_400);
             let ahead = q.orders[0].q.ahead;
             // then a 60-lot sell print at our price
             let t = trade(2_500, 0.3000, 60, false);
-            q.advance(t.ts, &m);
+            q.advance(t.ts, &mut m);
             q.on_trade(&t, &m);
             got.push((ahead, q.fills.iter().map(|f| f.qty).sum::<f64>()));
         }
@@ -1674,7 +2278,7 @@ mod tests {
     #[test]
     fn crossing_book_fills_and_postonly_rejects() {
         let (mut m, mut q) = setup(QueueModel::Prorata);
-        q.advance(2_200, &m);
+        q.advance(2_200, &mut m);
         // asks move down to our bid price (a resting seller at 0.3000): we are filled there
         m.apply_book(&msg("delta", 2_300, vec![lv(0.3000, 0.0)], vec![lv(0.3000, 5.0)]), 2_300).unwrap();
         q.on_book(&m, 2_300);
@@ -1684,7 +2288,7 @@ mod tests {
         let g = *m.grid();
         q.place(Side::Buy, 0.3001, 20.0, false, 3_000, &g);
         m.apply_book(&msg("delta", 3_100, vec![], vec![lv(0.3001, 9.0)]), 3_100).unwrap();
-        q.advance(3_200, &m);
+        q.advance(3_200, &mut m);
         assert_eq!(q.funnel.postonly_rejects, 1);
     }
 
@@ -1732,7 +2336,7 @@ mod tests {
         let text = lines.join("\n");
         let mut rd = BufReader::new(text.as_bytes());
         let p = ReplayParams { start: 0, end: 3 * 3_600_000, latency_ms: 150, fill_rpi: false, depth: 200 };
-        run_replay(&mut m, &mut quoters, &mut rd, &trades, &p).unwrap();
+        run_replay(&mut m, &mut quoters, &mut rd, &trades, &[], &p).unwrap();
         let dir = std::env::temp_dir().join(format!("mm_replay_test_{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         write_outputs(&dir, &m, &quoters, &p, "TRXUSDT", &rules(), FeeRates { maker_bps: 2.0, taker_bps: 5.5, slippage_bps: 0.0 }, 0.0).unwrap();
@@ -1792,7 +2396,7 @@ mod tests {
         let text = lines.join("\n");
         let mut rd = BufReader::new(text.as_bytes());
         let p = ReplayParams { start: 0, end: 3 * 3_600_000, latency_ms: 150, fill_rpi: false, depth: 200 };
-        run_replay(&mut m_new(), &mut quoters, &mut rd, &trades, &p).unwrap();
+        run_replay(&mut m_new(), &mut quoters, &mut rd, &trades, &[], &p).unwrap();
         for q in &quoters[..2] {
             // 720 decision ticks (5 s) inside the off hour
             assert_eq!(q.funnel.gate_off_ticks, 720, "{}", q.name);
@@ -1812,5 +2416,228 @@ mod tests {
 
     fn m_new() -> Market {
         Market::new(&rules(), 200).unwrap()
+    }
+
+    // ------------------------------------------------------------ H-MMW engine paths
+
+    fn mmw_quoter(model: QueueModel, s: VariantSpec) -> Quoter {
+        Quoter::new(cfg_with(&s), s, model, "TRXUSDT", &rules(), FeeRates { maker_bps: 2.0, taker_bps: 5.5, slippage_bps: 0.0 }, 150, 0, 10_000_000, false)
+    }
+
+    fn book_0300() -> Market {
+        let mut m = Market::new(&rules(), 200).unwrap();
+        m.apply_book(&msg("snapshot", 1_000, vec![lv(0.3000, 100.0), lv(0.2999, 50.0)], vec![lv(0.3002, 100.0), lv(0.3003, 50.0)]), 1_000).unwrap();
+        m
+    }
+
+    #[test]
+    fn ladder_quotes_levels_takes_profit_and_stops_at_market() {
+        let mut m = book_0300();
+        let mut s = spec("ladder");
+        s.mode = QuoteMode::Ladder;
+        s.sigma_mode = SigmaMode::Config;
+        let mut q = mmw_quoter(QueueModel::Prorata, s);
+        // sigma = the 20 bp floor (no bars): band 30-70 bp; support top 0.2985 (53 bp), resistance bottom 0.3020 (63 bp);
+        // 0.2995 (20 bp) is too close, 0.2900 too far
+        q.set_zones(std::rc::Rc::new(vec![(0.2980, 0.2985), (0.2990, 0.2995), (0.2890, 0.2900), (0.3020, 0.3030)]));
+        q.next_tick = 2_000;
+        q.advance(2_001, &mut m);
+        let live: Vec<(Side, f64, i64)> = q.orders.iter().filter(|o| !o.closed).map(|o| (o.side, o.price, o.tag)).collect();
+        assert_eq!(live, vec![(Side::Buy, 0.2985, TAG_ADD), (Side::Sell, 0.3020, TAG_ADD)], "{live:?}");
+        assert!((q.st.sigma - 0.002).abs() < 1e-12);
+        // a sell sweep through the bid after the latency fills one minimum lot (5.25 USD / 0.2985 -> 18 lots)
+        let t = trade(2_500, 0.2984, 500, false);
+        q.advance(t.ts, &mut m);
+        q.on_trade(&t, &m);
+        assert_eq!(q.fills.len(), 1);
+        assert_eq!((q.fills[0].kind, q.fills[0].qty), ("through", 18.0));
+        assert_eq!(q.lots.len(), 1);
+        // take-profit at the mid at fill time (0.3001, rounded up) sent at the fill; the adding ask is cancelled
+        let tp: Vec<&SimOrder> = q.orders.iter().filter(|o| !o.closed && o.tag > 0).collect();
+        assert_eq!(tp.len(), 1);
+        assert!(tp[0].reduce_only && tp[0].side == Side::Sell && (tp[0].price - 0.3001).abs() < 1e-9);
+        assert!(q.orders.iter().any(|o| o.tag == TAG_ADD && o.side == Side::Sell && o.cancel_ms == Some(2_650)));
+        let stop = q.lots[0].stop;
+        assert!((stop - 0.2985 * (-1.5f64 * 0.002).exp()).abs() < 1e-12);
+        // a print at the stop: a taker close of the lot one latency later, at the bid (0.3000 in this static book)
+        let t = trade(3_000, 0.2975, 1, false);
+        q.advance(t.ts, &mut m);
+        q.on_trade(&t, &m);
+        assert_eq!(q.funnel.ladder_stops, 1);
+        q.advance(3_200, &mut m);
+        let last = q.fills.last().unwrap();
+        assert_eq!((last.kind, last.maker, last.qty, last.pos_after), ("stop", false, 18.0, 0.0));
+        assert!(q.lots.is_empty() && q.position_qty() == 0.0);
+        assert!(q.orders.iter().filter(|o| o.tag > 0).all(|o| o.closed || o.cancel_ms.is_some()), "the TP is cancelled");
+    }
+
+    #[test]
+    fn ladder_take_profit_fill_closes_its_lot() {
+        let mut m = book_0300();
+        let mut s = spec("ladder");
+        s.mode = QuoteMode::Ladder;
+        let mut q = mmw_quoter(QueueModel::Prorata, s);
+        q.set_zones(std::rc::Rc::new(vec![(0.2980, 0.2985)]));
+        q.next_tick = 2_000;
+        q.advance(2_001, &mut m);
+        let t = trade(2_500, 0.2984, 500, false);
+        q.advance(t.ts, &mut m);
+        q.on_trade(&t, &m);
+        // the TP (0.3001) is live after 150 ms; a buy print through it fills it
+        let t = trade(2_800, 0.3002, 500, true);
+        q.advance(t.ts, &mut m);
+        q.on_trade(&t, &m);
+        assert_eq!(q.fills.len(), 2);
+        assert!((q.fills[1].price - 0.3001).abs() < 1e-9 && q.fills[1].reduce_only && q.fills[1].maker);
+        assert_eq!(q.funnel.ladder_tp_fills, 1);
+        assert!(q.lots.is_empty() && q.position_qty() == 0.0);
+    }
+
+    #[test]
+    fn btc_pull_cancels_everything_for_the_cooldown() {
+        let mut m = book_0300();
+        let mut s = spec("pull");
+        s.btc_k = 3.0;
+        s.btc_cooldown_s = 10.0;
+        let mut q = mmw_quoter(QueueModel::Prorata, s);
+        q.next_tick = 2_000;
+        q.advance(2_001, &mut m);
+        let n0 = q.funnel.placed;
+        assert!(n0 >= 2);
+        q.on_btc(2_500, 2.9);
+        assert!(q.orders.iter().all(|o| o.cancel_ms.is_none()), "below k: nothing");
+        q.on_btc(2_500, 3.5);
+        assert!(q.orders.iter().all(|o| o.cancel_ms == Some(2_650)), "every quote cancelled, effective one latency later");
+        assert_eq!(q.funnel.btc_pulls, 1);
+        // the 10 s ticks inside the cooldown place nothing; the first tick after it quotes again
+        q.advance(12_001, &mut m);
+        assert_eq!(q.funnel.placed, n0);
+        q.advance(22_001, &mut m);
+        assert!(q.funnel.placed > n0);
+    }
+
+    #[test]
+    fn liquidation_pull_cancels_adding_quotes_only() {
+        let mut m = book_0300();
+        let mut s = spec("liq");
+        s.liq_pull_min = 60.0;
+        let mut q = mmw_quoter(QueueModel::Prorata, s);
+        let g = *m.grid();
+        q.next_tick = i64::MAX;
+        q.place(Side::Buy, 0.2990, 20.0, false, 1_500, &g);
+        q.place(Side::Sell, 0.3011, 20.0, true, 1_500, &g);
+        q.on_liq(2_000);
+        assert_eq!(q.orders[0].cancel_ms, Some(2_150));
+        assert_eq!(q.orders[1].cancel_ms, None, "a reduce-only quote stays");
+        assert_eq!(q.liq_until, 2_000 + 3_600_000);
+        // the market's proxy: 5 sells over 3 levels within 30 s, notional >= the floor
+        m.liq.min_notional = 10.0;
+        let fired: Vec<bool> = (0..5).map(|i| m.on_trade(&trade(3_000 + i * 100, 0.3000 - 0.0001 * (i % 3) as f64, 100, false))).collect();
+        assert_eq!(fired, vec![false, false, false, false, true]);
+        assert_eq!(m.liq_events, vec![3_400]);
+    }
+
+    #[test]
+    fn touch_joins_short_queues_and_leaves_when_the_queue_behind_thins() {
+        let mut m = book_0300();
+        let mut s = spec("touch");
+        s.mode = QuoteMode::Touch;
+        s.touch_q = 0.5;
+        let mut q = mmw_quoter(QueueModel::Pessimistic, s);
+        q.next_tick = 2_000;
+        // median touch size 100 lots: 100 ahead is not a short queue on either side
+        q.advance(2_001, &mut m);
+        assert_eq!(q.funnel.touch_skips, 2);
+        assert_eq!(q.funnel.placed, 0);
+        // the bid level thins to 30 lots: the next tick joins it (at the touch, 0.3000)
+        m.apply_book(&msg("delta", 5_000, vec![lv(0.3000, 30.0)], vec![]), 5_000).unwrap();
+        q.advance(12_001, &mut m);
+        let o: Vec<(Side, f64)> = q.orders.iter().filter(|o| !o.closed).map(|o| (o.side, o.price)).collect();
+        assert_eq!(o, vec![(Side::Buy, 0.3000)]);
+        q.advance(12_200, &mut m);
+        assert_eq!(q.orders[0].q.ahead, 30.0);
+        // 50 lots join behind us, then 40 cancel (pessimistic: from behind first): behind 50 -> 10 within 2 s: leave
+        m.apply_book(&msg("delta", 12_300, vec![lv(0.3000, 80.0)], vec![]), 12_300).unwrap();
+        q.on_book(&m, 12_300);
+        assert_eq!(q.funnel.touch_leaves, 0);
+        m.apply_book(&msg("delta", 13_000, vec![lv(0.3000, 40.0)], vec![]), 13_000).unwrap();
+        q.on_book(&m, 13_000);
+        assert_eq!(q.funnel.touch_leaves, 1);
+        assert_eq!(q.orders[0].cancel_ms, Some(13_150));
+    }
+
+    #[test]
+    fn mmw_modes_end_to_end_keep_the_ledger_and_are_deterministic() {
+        let run = || {
+            let (lines, trades) = synthetic_day();
+            let mut m = Market::new(&rules(), 200).unwrap();
+            m.liq.min_notional = 30.0;
+            let mut specs = vec![];
+            let mut base = spec("base");
+            base.overrides.insert("refresh_s".into(), json!(5));
+            base.fixed_bps = 3.0;
+            let mut ladder = base.clone();
+            ladder.name = "ladder".into();
+            ladder.mode = QuoteMode::Ladder;
+            ladder.sigma_mode = SigmaMode::Config;
+            ladder.liq_pull_min = 5.0;
+            ladder.ladder_band = (0.2, 3.5);
+            specs.push(ladder);
+            let mut touch = base.clone();
+            touch.name = "touch".into();
+            touch.mode = QuoteMode::Touch;
+            touch.touch_q = 1.0;
+            specs.push(touch);
+            let mut btc = base.clone();
+            btc.name = "btc".into();
+            btc.btc_k = 3.0;
+            btc.btc_cooldown_s = 30.0;
+            specs.push(btc);
+            for (n, sig) in [("imb", SideSignal::Imb5), ("flow", SideSignal::Flow30)] {
+                let mut x = base.clone();
+                x.name = n.into();
+                x.side_signal = Some(sig);
+                x.side_threshold = 0.3;
+                x.side_widen_sigma = if n == "imb" { 1.0 } else { 0.0 };
+                specs.push(x);
+            }
+            let fee = FeeRates { maker_bps: 2.0, taker_bps: 5.5, slippage_bps: 0.0 };
+            let zones = std::rc::Rc::new(vec![(0.2985, 0.2990), (0.2960, 0.2965), (0.3011, 0.3016), (0.3040, 0.3045)]);
+            let mut quoters = vec![];
+            for s in &specs {
+                for lat in [150, 300] {
+                    for qm in [QueueModel::Pessimistic, QueueModel::Prorata] {
+                        let mut q = Quoter::new(cfg_with(s), s.clone(), qm, "TRXUSDT", &rules(), fee, lat, 0, 3 * 3_600_000, false);
+                        q.set_zones(zones.clone());
+                        quoters.push(q);
+                    }
+                }
+            }
+            // BTC: a print every 200 ms, flat with a 40 bp jump every 20 min after the first hour
+            let btc: Vec<(i64, f64)> = (0..54_000i64).map(|i| (i * 200, if i * 200 > 3_600_000 && (i * 200) % 1_200_000 < 30_000 { 60_240.0 } else { 60_000.0 + (i % 7) as f64 })).collect();
+            let text = lines.join("\n");
+            let mut rd = BufReader::new(text.as_bytes());
+            let p = ReplayParams { start: 0, end: 3 * 3_600_000, latency_ms: 150, fill_rpi: false, depth: 200 };
+            run_replay(&mut m, &mut quoters, &mut rd, &trades, &btc, &p).unwrap();
+            let rows: Vec<Value> = quoters.iter().map(|q| q.summary(&m, p.end)).collect();
+            (rows, m.liq_events.len(), m.btc_z_counts)
+        };
+        let (a, liq_a, z_a) = run();
+        let (b, liq_b, z_b) = run();
+        assert_eq!(serde_json::to_string(&a).unwrap(), serde_json::to_string(&b).unwrap(), "deterministic");
+        assert_eq!((liq_a, z_a), (liq_b, z_b));
+        assert!(liq_a > 0, "the proxy fires on the synthetic tape");
+        assert!(z_a[2] > 0, "BTC jumps are seen");
+        for r in &a {
+            assert!(r["pnl"]["ledger_check"].as_f64().unwrap().abs() < 1e-9, "{}", r["name"]);
+        }
+        let get = |name: &str, key: &str| a.iter().filter(|r| r["name"] == name).map(|r| r["funnel"][key].as_u64().unwrap()).sum::<u64>();
+        assert!(get("ladder", "ladder_adds_placed") > 0 && get("ladder", "liq_pulls") > 0);
+        assert!(get("touch", "placed") > 0 && get("touch", "touch_skips") > 0);
+        assert!(get("btc", "btc_pulls") > 0);
+        assert!(get("imb", "side_pull_ticks") > 0 && get("flow", "side_pull_ticks") > 0);
+        // one quoter per latency x queue, and the latency is reported
+        assert_eq!(a.iter().filter(|r| r["name"] == "btc").count(), 4);
+        assert!(a.iter().any(|r| r["latency_ms"] == 300));
     }
 }

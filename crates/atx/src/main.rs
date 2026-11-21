@@ -229,7 +229,7 @@ enum Command {
     /// Order events (JSONL) -> at-match engine (Bybit semantics) -> trades, ob200-shaped book, rejects. Simulator only.
     MatchSim(match_sim::MatchSimArgs),
     /// Market-making backtest: the `atx mm` quoter on a replayed real ob200 book + trade tape (research only, no orders).
-    MmReplay(mm_replay::MmReplayArgs),
+    MmReplay(Box<mm_replay::MmReplayArgs>),
     /// Entry execution replay: market vs pegged limit entries of trade signals on a real ob200 book + trade tape (research only).
     ExecReplay(exec_replay::ExecReplayArgs),
     /// LIVE desk, small size (config/risk.yaml live_small): status | tiers | propose | approve | submit | reconcile | kill | flatten-bot.
@@ -361,7 +361,7 @@ async fn main() -> anyhow::Result<()> {
             exec_intents::run(&ctx, args).await
         }
         Command::MatchSim(a) => match_sim::run(&ctx, a),
-        Command::MmReplay(a) => mm_replay::run(&ctx, a),
+        Command::MmReplay(a) => mm_replay::run(&ctx, *a),
         Command::ExecReplay(a) => exec_replay::run(&ctx, a),
         Command::Ctrader(c) => ctrader::run(&ctx, c).await,
         Command::Live(c) => live::run(&ctx, c).await,
