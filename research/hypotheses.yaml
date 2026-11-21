@@ -2975,3 +2975,74 @@ hypotheses:
     prior: 0.30
     family: tape_footprints
     status: proposed
+
+  # ---- Weekend alt market making (block MMW; user request 2026-11-21 ~00:45 UTC "market make around these levels into altcoins
+  # with minimal size limit orders ... improve the bot first by simulating it"). Registered by the orchestrator 2026-11-21 ~01:10 UTC
+  # BEFORE any download or replay. Engine: atx mm-replay (ob200 + public tape, live quoting code, minimum lots). Universe (pre-declared
+  # rule, research/mm_weekend/select_universe.py, run once 00:55 UTC): ATOMUSDT, XLMUSDT, WIFUSDT, TRUMPUSDT, ICPUSDT, WLDUSDT,
+  # PUMPFUNUSDT. Days: the Saturday and Sunday UTC days of the 8 weekends 2026-09-26/27 .. 11-14/15; FIT = the 4 older weekends
+  # (09-26 .. 10-18), HELD = the 4 newer (10-24 .. 11-15); 11-21/22 is a one-shot forward check. Every day is after the knowledge
+  # cutoff: clean_holdout. Unit: net USD per symbol-day (spread + adverse 60 s + inventory - fees, marked to mid at 24:00 UTC);
+  # day-clustered bootstrap 95% CI (B = 10000). Pass = held mean > 0 with the CI above 0 under BOTH the pro-rata and the FIFO-
+  # pessimistic queue, at 150 ms AND 300 ms latency. Baselines: B0 the live mm_illiq20 width (R-MMR-2), and no trading (0).
+  # Parameters of each family are chosen on FIT days only (purged CV over weekends); HELD is evaluated once per family. ----
+  H-MMW1:
+    title: "Level ladders: resting minimum-lot quotes only at structural levels earn positive net P&L on held-out weekend days"
+    statement: >-
+      Quote only at structural levels (4h pivots clustered by ATR, as of each day's 00:00 UTC, scripts/levels.py logic) lying 1.5-3.5
+      sigma_1h from the mid, both sides; after a fill a passive reduce-only take-profit at the mid at fill time and a stop 1.5 sigma_risk
+      beyond the level (R-VOL-2, no weekend shrink). Two arms: A1 quotes through liquidation clusters, A2 pulls all quotes for 60 min after
+      a liquidation cluster (R-FLOW-2).
+    rationale: "User: market make around levels; in R9 high vol, liquidation wicks into levels are frequent and the touch loses to adverse selection (R-MMR-1)."
+    test: "Pass rule of the block; plus A2 minus A1 paired per symbol-day (a direct test of R-FLOW-2 for passive fills)."
+    success: "Supports iff the chosen arm passes; contradicts iff its held mean <= 0 with the CI below 0; else inconclusive."
+    prior: 0.20
+    family: mm_weekend
+    status: proposed
+  H-MMW2:
+    title: "Pulling alt quotes when BTC moves cuts adverse selection enough to make weekend quoting positive"
+    statement: >-
+      Cancel every quote when |BTCUSDT 1 s or 5 s log return| > k x its 1h sigma scaled to that horizon (k chosen on FIT from {2, 3, 4}),
+      re-quote after a cooldown (chosen from {10, 30, 60} s), at the B0 width and at 0.5 x the B0 width.
+    rationale: "R-MM-2: alt fills are one correlated bet that BTC leads; a pull may avoid the toxic fills, if our latency allows."
+    test: "Pass rule of the block; plus paired difference vs the same width without the pull."
+    success: "Supports iff it passes; contradicts iff the held mean <= 0 with the CI below 0; else inconclusive."
+    prior: 0.20
+    family: mm_weekend
+    status: proposed
+  H-MMW3:
+    title: "Pulling the threatened side on order-book imbalance or taker flow makes weekend quoting positive"
+    statement: "Withdraw (or widen by 1 sigma) the side against which top-5 book imbalance or 30 s signed taker flow points beyond a FIT-chosen threshold; otherwise the B0 width."
+    rationale: "A defensive use of order flow (H-SCALP1 rejected flow as a taker entry, not as a quote filter)."
+    test: "Pass rule of the block; plus paired difference vs B0."
+    success: "Supports iff it passes; contradicts iff the held mean <= 0 with the CI below 0; else inconclusive."
+    prior: 0.15
+    family: mm_weekend
+    status: proposed
+  H-MMW4:
+    title: "Joining only short queues, and leaving when the queue behind us thins, makes touch quoting positive on thin alts"
+    statement: "Rest at the touch only when the size ahead of us is < q x the median level size (q chosen on FIT from {0.25, 0.5, 1}); cancel when the size behind us falls by > 50% within 2 s."
+    rationale: "Queue position decides who fills us; R-MMR-1's touch losses may be the back-of-queue fills."
+    test: "Pass rule of the block (the pessimistic queue is decisive here)."
+    success: "Supports iff it passes; contradicts iff the held mean <= 0 with the CI below 0; else inconclusive."
+    prior: 0.10
+    family: mm_weekend
+    status: proposed
+  H-MMW5:
+    title: "Jump-gated quoting (low jump probability and a narrow 4h range only) beats always-on quoting on weekend days"
+    statement: "The B0 quoter and the best H-MMW1-4 quoter run only while the field P(jump) is in its bottom tercile and |4h return| < 1 sigma with no shock in 6 h (the H-MMR3 gate); stop when P(jump) rises above its median."
+    rationale: "User rule: market make only in low-vol sideways, stop before the next jump; R-MMR-5/6 found the gate mostly stops trading on weekdays."
+    test: "Gated minus ungated, paired per symbol-day, held days, both queue models."
+    success: "Supports iff gated minus ungated > 0 with the CI above 0 AND the gated arm's held mean > 0; else inconclusive or contradicts as in the block rule."
+    prior: 0.15
+    family: mm_weekend
+    status: proposed
+  H-MMW6:
+    title: "Portfolio coupling: the multi-symbol weekend book of the best passing variant keeps its edge under joint net and gross caps"
+    statement: "Merging all symbols' fills on one clock with the live caps (net 40 USD, gross 80 USD, resting adding orders counted as filled) keeps the held mean net P&L per day > 0."
+    rationale: "R-MM-2: the single-symbol replay ignores co-fills; a variant only goes live if it survives them."
+    test: "Portfolio pass over the held days; day-clustered bootstrap."
+    success: "Supports iff the held mean > 0 with the CI above 0; evaluated only if a variant passes H-MMW1-5."
+    prior: 0.30
+    family: mm_weekend
+    status: proposed
