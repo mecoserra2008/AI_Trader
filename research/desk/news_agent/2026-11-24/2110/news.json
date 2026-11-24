@@ -1,0 +1,361 @@
+{
+ "contract": "news_agent_round_v1",
+ "agent": "news",
+ "round": 5,
+ "cycle_id": "20261124T2110",
+ "as_of": "2026-11-24T21:10:00Z",
+ "model": "claude-opus-5-5",
+ "prompt_version": "desk-news-v1",
+ "research_only": true,
+ "regime": {
+  "summary": "BTC 59,735 (24h -2.6%), funding +0.0041%, OI ~67.9k BTC (-3.8% vs 11-19; no deep reset), DVOL 53.7; alts weaker (ETH -3.0%, SOL -5.1%, ZEC -9.0%); NVDA -6.6%, SOXL -25%",
+  "market_2110": {
+   "BTCUSDT": 59735.1,
+   "ETHUSDT": 1673.54,
+   "NVDAUSDT": 154.65,
+   "SOXLUSDT": 32.7,
+   "QQQUSDT": 637.83,
+   "MSTRUSDT": 77.37,
+   "ANTUSDT": 81.41,
+   "XAUUSDT": 3556.81,
+   "XAGUSDT": 40.85,
+   "MONUSDT": 0.00929,
+   "dvol": 53.67
+  }
+ },
+ "flush_and_rebound": [
+  {
+   "ts_utc": "2026-11-19",
+   "fact": "Spot BTC ETFs -$582M; IBIT -$541.1M record one-day outflow",
+   "sources": [
+    "https://bitcoinmagazine.com/markets/bitcoin-price-slips-58300-nasdaq"
+   ],
+   "status": "confirmed"
+  },
+  {
+   "ts_utc": "2026-11-20T20:00Z",
+   "fact": "NVDA -12.5%..-13% to ~$127-128 on Reuters/WSJ reports of an SEC accounting probe (geography-reporting change); Nasdaq -5.3%, S&P -3.5%; week Nasdaq -10.4%, S&P -8.6%",
+   "sources": [
+    "https://decrypt.co/383744/nvidia-shares-sink-52-week-low-sec-probing-accounting",
+    "https://www.coindesk.com/markets/2026/11/23/market-rout-kills-50-basis-points-december-fed-rate-hike-bets"
+   ],
+   "status": "confirmed"
+  },
+  {
+   "ts_utc": "2026-11-20",
+   "fact": "Bessent pushes back on a 50 bp hike; crypto liquidations $1.53B in 24h ($1.4B longs); Bybit first <= 58,000 in the 18:00 bar",
+   "sources": [
+    "https://bitcoinmagazine.com/markets/bessent-fed-bigger-rate-hike-bitcoin",
+    "https://bitcoinmagazine.com/markets/bitcoin-price-slips-58300-nasdaq"
+   ],
+   "status": "confirmed"
+  },
+  {
+   "ts_utc": "2026-11-21T03:00Z/07:00Z",
+   "fact": "Weekend leverage flush, no new fundamental headline found: 03:00 bar 58,577 -> 56,698 on $1.31B; low 55,100.0 in the 06:00 bar; lake BTC long liquidations $36.3M (00-04) + $21.4M (04-08); Coinbase premium -71 bp (coordinator)",
+   "sources": [
+    "Bybit 1h klines",
+    "lake liquidations",
+    "https://crypto.news/bitcoin-price-rebounds-55k-2-7b-liquidations/"
+   ],
+   "status": "price/liquidations confirmed; 'no catalyst' is secondary-source reading"
+  },
+  {
+   "ts_utc": "2026-11-22",
+   "fact": "Kraken BTC/CAD printed $17K, trades upheld (venue-specific)",
+   "sources": [
+    "https://cointelegraph.com/news/bitcoin-17k-kraken-canadian-dollar-market-trades-stand"
+   ],
+   "status": "confirmed"
+  },
+  {
+   "ts_utc": "2026-11-23T04:45Z",
+   "fact": "50 bp December hike odds to 0% (from 15%); no hike 12%",
+   "sources": [
+    "https://www.coindesk.com/markets/2026/11/23/market-rout-kills-50-basis-points-december-fed-rate-hike-bets"
+   ],
+   "status": "confirmed"
+  },
+  {
+   "ts_utc": "2026-11-23T14:00Z",
+   "fact": "NVIDIA reinstates Huang; NVDA +31-35%, Nasdaq +6.5%; BTC to 64,572.5, $372M shorts liquidated, then faded to ~61.3k",
+   "sources": [
+    "https://decrypt.co/383797/nvidia-reinstates-jensen-huang-as-ceo-days-after-board-ruled-out-his-return",
+    "https://cryptoslate.com/bitcoin-rockets-above-64000-as-nvidia-reinstates-jensen-huang-wiping-out-372-million-in-shorts/"
+   ],
+   "status": "confirmed"
+  },
+  {
+   "ts_utc": "2026-11-23",
+   "fact": "Strategy 457 BTC + $212M preferred buybacks, buyback ceiling $4B; ETF week -$1.8B; Monday -$569.7M",
+   "sources": [
+    "https://www.coindesk.com/markets/2026/11/24/bitcoin-hands-back-monday-s-nvidia-driven-gains-liquidations-triple"
+   ],
+   "status": "confirmed"
+  },
+  {
+   "ts_utc": "2026-11-24T13:15Z",
+   "fact": "WSJ: tariff increases on China, Japan, South Korea and others 'as soon as this week'; NDX -2.1%, NVDA -7.5%; MSTR 52-week low $78.50; ANT at $83; November ETF outflows record $4.71B; Williams: higher rates, against 50 bp",
+   "sources": [
+    "https://www.coindesk.com/tech/2026/11/24/live-updates-bitcoin-pulls-back-to-usd60-000-as-stock-rally-fails-to-budge-crypto",
+    "https://www.coindesk.com/daybook-us/2026/11/24/bitcoin-drops-as-november-spot-etf-outflows-increase-to-record-usd4-71-billion"
+   ],
+   "status": "confirmed"
+  }
+ ],
+ "interpretation": [
+  "Friday: an equity/AI-accounting shock plus forced ETF selling",
+  "Saturday: crypto-native leverage into a thin weekend book",
+  "Monday: an NVDA-headline short squeeze that did not hold (R-SIG-2)",
+  "BTC took the full downside of Nasdaq moves and only part of the upside (R-PX-12 same-hour)"
+ ],
+ "calendar_72h": [
+  {
+   "ts_utc": "2026-11-25T08:00Z",
+   "event": "Deribit 25NOV26 expiry",
+   "detail": "6.2k BTC, P/C 1.00, max pain 61k"
+  },
+  {
+   "ts_utc": "2026-11-25",
+   "event": "Plasma (XPL) unlock 4.78% (~$10.3M); Sophon withdrawal deadline",
+   "source": "https://www.coindesk.com/markets/2026/11/23/u-s-inflation-thanksgiving-trading-crypto-week-ahead"
+  },
+  {
+   "ts_utc": "2026-11-25T12:25Z",
+   "event": "Bowman (supervision, pre-recorded video)",
+   "source": "https://www.federalreserve.gov/newsevents/2026-November.htm"
+  },
+  {
+   "ts_utc": "2026-11-25T13:30Z",
+   "event": "Q3 GDP 2nd est (est 3.4%), Oct PCE (est +0.3% m/m, prior +0.5%), durable goods, jobless claims (prior 203k), new-home sales",
+   "status": "date U (CoinDesk weekday labels off by one)"
+  },
+  {
+   "ts_utc": "2026-11-25T18:00Z",
+   "event": "CME equity/crypto settlement 12:00 CT",
+   "status": "U"
+  },
+  {
+   "ts_utc": "2026-11-25T19:00Z",
+   "event": "Beige Book",
+   "source": "https://www.federalreserve.gov/newsevents/2026-November.htm"
+  },
+  {
+   "ts_utc": "2026-11-26",
+   "event": "Thanksgiving: NYSE/Nasdaq closed; ~40h ETF trading gap; CME equity halt 12:00 CT, reopen 17:00 CT",
+   "status": "CME hours U"
+  },
+  {
+   "ts_utc": "2026-11-26",
+   "event": "HUMA unlock",
+   "status": "amount U"
+  },
+  {
+   "ts_utc": "2026-11-27T08:00Z",
+   "event": "Deribit 27NOV26 monthly expiry",
+   "detail": "111.8k BTC (~$6.7B), P/C 0.89, max pain 72,000 (+18.7%); top 90k C, 75k/70k/65k/63k/68k P",
+   "rule": "R-VOL-28"
+  },
+  {
+   "ts_utc": "2026-11-27T18:00Z",
+   "event": "NYSE early close (13:00 ET)"
+  },
+  {
+   "ts_utc": "2026-11-27",
+   "event": "Bybit delists 5 tokens",
+   "status": "list U"
+  },
+  {
+   "ts_utc": "any",
+   "event": "tariff announcement (WSJ)",
+   "status": "timing U"
+  },
+  {
+   "ts_utc": "2026-11-30T21:00Z",
+   "event": "MSCI MSTR deletion effective (outside 72h)"
+  }
+ ],
+ "metals": {
+  "xau": {
+   "last": 3556.81,
+   "chg24h_pct": -2.37,
+   "closes": {
+    "11-17": 3855.24,
+    "11-20": 3549.76,
+    "11-23": 3637.7,
+    "11-24": 3556.35
+   },
+   "drawdown_60d_pct": -24.6,
+   "support": [
+    3550,
+    [
+     3500,
+     3520
+    ],
+    [
+     3380,
+     3400
+    ]
+   ],
+   "resistance": [
+    [
+     3630,
+     3650
+    ],
+    3694.9
+   ]
+  },
+  "xag": {
+   "last": 40.85,
+   "chg24h_pct": -5.51,
+   "closes": {
+    "11-17": 47.57,
+    "11-24": 40.86
+   },
+   "support": [
+    [
+     40.5,
+     41.0
+    ],
+    [
+     37.5,
+     38.0
+    ]
+   ],
+   "resistance": [
+    [
+     44.0,
+     44.5
+    ],
+    47.0
+   ]
+  },
+  "gold_silver_ratio": 87.6,
+  "drivers": [
+   "real yields: 2y real > 2.40% (highest since 2023), 10y/30y real at 20+ year highs (CoinDesk 11-20); FRED DFII10 2.88 on 11-18",
+   "dollar at a 19-month high on 11-18; off yearly highs on 11-24 (FXEmpire)",
+   "hike path Dec/Jan/Mar (JPM)",
+   "cross-asset 'liquidity event that started in AI stocks' (Cointelegraph)",
+   "tariff headline 11-24"
+  ],
+  "sources": [
+   "https://cointelegraph.com/markets/bitcoin-dips-60k-gold-worst-60-day-loss-1980s",
+   "https://www.coindesk.com/markets/2026/11/20/here-s-what-s-crashing-gold-and-likely-weighing-on-bitcoin-too",
+   "https://www.fxempire.com/forecasts/article/gold-xauusd-silver-platinum-forecasts-gold-retreats-below-3600-1646965"
+  ],
+  "note": "context only; no view on the user's positions"
+ },
+ "theses_ranked": [
+  {
+   "rank": 1,
+   "id": "T-NEWS-20261124-1",
+   "p": 0.45,
+   "claim": "BTC stays inside [57,000, 62,500] through 2026-11-27T21:00Z",
+   "rules": [
+    "R-NEWS-5",
+    "R-PX-12",
+    "R-VOL-28",
+    "R-VOL-1"
+   ]
+  },
+  {
+   "rank": 2,
+   "id": "T-NEWS-20261124-2",
+   "supersedes": "T-NEWS-20261119-1",
+   "p": 0.7,
+   "claim": "MSTR underperforms BTC to 2026-12-01",
+   "rules": [
+    "R-MM-2",
+    "R-PD-1",
+    "R-XS-2"
+   ]
+  },
+  {
+   "rank": 3,
+   "id": "T-NEWS-20261124-3",
+   "p": 0.35,
+   "claim": "BTC < 55,100 before 2026-12-04T08:00Z",
+   "rules": [
+    "R-RB-2",
+    "R-ANA-3",
+    "R-SIG-2",
+    "R-NEWS-7"
+   ]
+  }
+ ],
+ "resolved": [
+  {
+   "id": "T-NEWS-20261119-2",
+   "result": "YES",
+   "detail": "first <= 58,000 in the 2026-11-20T18:00Z bar (57,906.8)"
+  },
+  {
+   "id": "T-NEWS-20261115-1",
+   "result": "NO"
+  }
+ ],
+ "ledger": {
+  "a": "strengthening 4/5",
+  "b": "strengthening 6/6",
+  "c": "weakening 0/5 (Tuesday's yield fall is 10y-led with HY wider: no bull_steepening + HY easing)",
+  "d": "strengthening 8/9",
+  "fred_through": "2026-11-18"
+ },
+ "crowd_vs_rule": [
+  {
+   "id": "HC-NEWS-20261124-10",
+   "crowd": "Thanksgiving = quiet holiday drift",
+   "rule": "none for US holidays (R-VOL-1 is weekends only)",
+   "positioning": "ETF gap 40h+, CME halts",
+   "lean": "test",
+   "hypothesis": "Realised vol on Thanksgiving Thu + half-day Fri and other NYSE full holidays 2018-2025 vs the robust forecast (as in H-W1)",
+   "success": "median rv_ratio < 0.9 in both segments"
+  },
+  {
+   "id": "HC-NEWS-20261124-11",
+   "crowd": "capitulation is in (record ETF-outflow month, 11.6M BTC underwater, F&G record low, Grayscale 'oversold')",
+   "rule": [
+    "R-NEWS-7",
+    "R-RB-1",
+    "R-RB-2"
+   ],
+   "positioning": "funding p1 at the low, now +0.004%; OI -3.8% only; CB premium -71 -> -17 bp",
+   "lean": "the rules",
+   "hypothesis": "BTC 30d vol-standardised return after record monthly ETF outflows and after F&G record lows, 2024-2026",
+   "success": "> +0.3 sigma with CI > 0"
+  },
+  {
+   "id": "HC-NEWS-20261124-12",
+   "crowd": "Huang's return ignites the bull market (Bitwise)",
+   "rule": "R-SIG-2",
+   "evidence": "the Monday spike was fully reversed in 24h",
+   "lean": "the rule (a confirmation case)",
+   "hypothesis": "asymmetric BTC beta to QQQ on big up vs down days, both segments",
+   "success": "down-beta minus up-beta > 0 with t > 2"
+  },
+  {
+   "id": "HC-NEWS-20261115-4",
+   "update": "27NOV26 max pain 72,000 is 18.7% above spot; record any drift (R-VOL-28)"
+  },
+  {
+   "id": "tariffs",
+   "crowd": "tariffs = risk-off",
+   "rule": "R-NEWS-7",
+   "action": "record BTC 1h/24h around the official announcement"
+  }
+ ],
+ "data_gaps": [
+  "no desk snapshot since 11-15",
+  "lake liquidations missing Fri 14-24 and most of Mon",
+  "FRED store ends 11-18",
+  "Wednesday data date (CoinDesk weekday labels conflict)",
+  "CME holiday hours from a secondary summary",
+  "Bybit 5-token delisting list",
+  "HUMA unlock size"
+ ],
+ "honesty": {
+  "direction_claim": false,
+  "no_sizes": true,
+  "no_orders": true
+ }
+}

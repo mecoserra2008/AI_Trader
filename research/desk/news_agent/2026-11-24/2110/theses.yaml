@@ -1,0 +1,119 @@
+# News-agent theses, round 5 (2026-11-24 21:10 UTC). Schema theses_v1. Earlier theses are never edited.
+# Resolutions since round 4 (provisional; the scorer confirms them on lake data):
+#   T-NEWS-20261119-2 (BTC <= 58,000 by 11-29)  YES: first <= 58,000 in the Fri 11-20 18:00 bar (low 57,906.8). Low
+#                     55,100.0 in the Sat 11-21 06:00 bar. Lake BTC long liquidations: $36.3M at 00-04 UTC, $21.4M at 04-08.
+#   T-NEWS-20261115-1 (BTC band at 11-19 23:00)  NO (61.5k close vs the 62,483 floor).
+#   T-NEWS-20261119-1 (MSTR < BTC to 12-01)      open, on track: MSTR -10.7% (log) vs BTC -3.3% since 11-19 22:05.
+# Model claude-opus-5-5, prompt desk-news-v1. Narrative context only, with no tested edge (R-MAC-3, R-NEWS-7).
+
+theses:
+  - id: T-NEWS-20261124-1
+    component: event_vol
+    title: "Holiday-thin, expiry-heavy tape: BTC stays inside [57,000, 62,500] through Fri 11-27 21:00 UTC (P 0.45)"
+    author: news_agent
+    created_ts: 2026-11-24T21:10:00Z
+    claim: >-
+      Bybit BTCUSDT (59,735 at 21:10) trades neither at or below 57,000 nor at or above 62,500 between creation and
+      2026-11-27 21:00 UTC. The window covers Wednesday's 13:30 data dump (Q3 GDP second estimate, October PCE, durable
+      goods, claims), the 19:00 Beige Book, Thanksgiving Thursday (NYSE shut), Friday's NYSE half-day, the 08:00 Deribit
+      monthly expiry (111.8k BTC, ~$6.7B) and the tariff announcement the WSJ expects "as soon as this week".
+    mechanism: >-
+      The band is -4.7% / +4.5% (log). Holiday liquidity thins books, and the 40+ hour gap in ETF trading removes the
+      US spot bid (CryptoSlate). Thin books make cascades in either direction more likely, the way the Saturday 03:00
+      bar did. Against that, R-VOL-1-style holiday quiet (untested for holidays; HC-NEWS-20261124-10) argues for a
+      narrower range.
+    direction: neutral
+    direction_note: "A range claim. Score on `resolution` (first passage), not the theses.py neutral scorer."
+    assets: [BTCUSDT]
+    horizon_days: 3
+    probability: 0.45
+    base_rate: >-
+      Daily sigma ~2.8% (DVOL 53.7 / sqrt(365)), so the 3-day sigma is ~4.9%. Driftless single-barrier touch
+      probabilities are ~0.35 down and ~0.36 up, about 0.62 for either, so ~0.38 for neither. Raised to 0.45 for
+      holiday damping (US cash shut Thu, half-day Fri), which R-VOL-1 suggests is plausible for TradFi-closed windows.
+    resolution:
+      event: "Bybit BTCUSDT 1m low > 57000 AND 1m high < 62500 over [2026-11-24T21:10Z, 2026-11-27T21:00Z]"
+      also_record: ["which side broke first and when", "realised vol Thu 11-26 vs the robust forecast (feeds HC-10)"]
+    trigger: on_create
+    proxies:
+      - {id: btc_above_57k, series: "lake:BTCUSDT", transform: level, op: ">", value: 57000}
+      - {id: btc_below_62_5k, series: "lake:BTCUSDT", transform: level, op: "<", value: 62500}
+    invalidation:
+      any:
+        - {series: "lake:BTCUSDT", transform: level, op: "<=", value: 57000}
+        - {series: "lake:BTCUSDT", transform: level, op: ">=", value: 62500}
+    status: active
+    watch: ["Wed 13:30 GDP / PCE / durables / claims", "Wed 19:00 Beige Book", "Fri 08:00 Deribit 27NOV26 expiry", "tariff announcement (WSJ)"]
+    links: [R-VOL-1, R-VOL-2, R-VOL-28, R-PX-12, R-NEWS-5]
+
+  - id: T-NEWS-20261124-2
+    supersedes: T-NEWS-20261119-1
+    component: forced_flow
+    title: "MSCI deletion: MSTR underperforms BTC into the Nov 30 effective close (revised P 0.70)"
+    author: news_agent
+    created_ts: 2026-11-24T21:10:00Z
+    claim: >-
+      MSTRUSDT's log return minus BTCUSDT's, from 2026-11-24 21:10 UTC to 2026-12-01 00:00 UTC, is negative.
+    mechanism: >-
+      Passive MSCI sellers execute at the Nov 30 close. MSTR is at a 52-week low (cash $78.50 on Tuesday, CoinDesk;
+      perp 77.37). Strategy raised its buyback ceiling to $4B (CryptoSlate, 11-23) and keeps buying BTC (457 BTC plus
+      $212M of preferred buybacks), so the company is a bid for its own securities. Since 11-19 22:05 MSTR is -7.4%
+      relative to BTC.
+    direction: short
+    direction_note: "MSTR relative to BTC; not a BTC call."
+    assets: [MSTRUSDT]
+    horizon_days: 7
+    probability: 0.70
+    base_rate: >-
+      Pair sign over ~6 days is ~0.5. The deletion flow is still ahead (Nov 30) and concentrated at the close, which
+      justifies a tilt. Against it: MSTR is already -25% vs BTC since 11-15, buybacks up to $4B can absorb the ~$2.8B
+      JPM estimate, and R-XS-2 reversal applies. Net 0.70.
+    resolution:
+      event: "ln(MSTRUSDT 2026-12-01T00:00Z / 2026-11-24T21:10Z) - ln(BTCUSDT same window) < 0"
+      also_record: ["MSTR minus BTC Dec 1 -> Dec 8 (expected post-deletion reversal)"]
+    trigger: on_create
+    proxies:
+      - {id: mstr_lags_btc_1obs, series: "lake:MSTRUSDT", vs: "lake:BTCUSDT", transform: rel_logret_1, op: "<", value: 0.0}
+      - {id: mstr_lags_btc_5obs, series: "lake:MSTRUSDT", vs: "lake:BTCUSDT", transform: rel_logret_5, op: "<", value: 0.0}
+    invalidation:
+      any:
+        - {series: "lake:MSTRUSDT", vs: "lake:BTCUSDT", transform: rel_logret_3, op: ">=", value: 8.0, note: "a buyback-led squeeze"}
+    status: active
+    watch: ["MSCI close 2026-11-30 21:00 UTC", "Strategy 8-K Mon 11-30", "buyback execution"]
+    links: [T-NEWS-20261119-1, R-MM-2, R-PD-1, R-XS-2, R-MAC-3]
+
+  - id: T-NEWS-20261124-3
+    component: positioning
+    title: "BTC prints below the 55,100 flush low before Fri 12-04 08:00 UTC (P 0.35)"
+    author: news_agent
+    created_ts: 2026-11-24T21:10:00Z
+    claim: >-
+      Bybit BTCUSDT trades below 55,100.0 (the Sat 11-21 06:00 bar low) before 2026-12-04 08:00 UTC, the expiry of the
+      largest listed BTC option line, the 58,000 put (6,642 BTC, ~$398M, CoinDesk).
+    mechanism: >-
+      The flush cleared longs (funding hit the 1st percentile; Coinbase premium -71 bp at the low). But OI is ~67.9k
+      BTC vs 70.6k on 11-19 (-3.8%), not a deep reset. The Monday rebound to 64,572 was fully given back within 24h,
+      and November ETF outflows are a record $4.71B (CoinDesk). Tariffs (WSJ) and the AI-capex unwind (NVDA -6.6%,
+      SOXL -25% on Tuesday) are the live downside channels. On the other side, 50 bp December bets are dead (12% no
+      hike, CoinDesk 11-23) and Bessent and Williams oppose 50 bp.
+    direction: short
+    direction_note: "First-passage claim; score on `resolution`."
+    assets: [BTCUSDT]
+    horizon_days: 10
+    probability: 0.35
+    base_rate: >-
+      Driftless touch probability of -8.1% (log) in 9.5 days at a ~2.8% daily sigma is 2*Phi(-0.94) ~ 0.35. No uplift:
+      R-RB-2's "low usually 1-3 days later" window has passed, and R-ANA-3 says the week branches either way.
+    resolution:
+      event: "min(Bybit BTCUSDT 1m low) over [2026-11-24T21:10Z, 2026-12-04T08:00Z] < 55100"
+    trigger: on_create
+    proxies:
+      - {id: btc_below_58k, series: "lake:BTCUSDT", transform: level, op: "<", value: 58000}
+      - {id: btc_3d_down, series: "lake:BTCUSDT", transform: logret_3, op: "<", value: 0.0}
+      - {id: hy_wider_5obs, series: "fred:BAMLH0A0HYM2", transform: chg_5, op: ">", value: 0.0}
+    invalidation:
+      any:
+        - {series: "lake:BTCUSDT", transform: level, op: ">=", value: 64572.5, note: "daily close above the Monday rebound high"}
+    status: active
+    watch: ["tariff announcement", "Wed PCE", "Fri 27NOV26 expiry", "MSCI close 11-30", "an OI flush >= 10%"]
+    links: [T-CLAUDE-20261115-deep, R-RB-2, R-ANA-3, R-SIG-2, R-NEWS-7]

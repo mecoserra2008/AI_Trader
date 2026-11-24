@@ -1,44 +1,46 @@
 # xs.v4 shadow line (not LATEST.md)
 
-_SHADOW, context only, not a signal (R-XS-2 / R-XS-3); no orders; the decision sessions do not read it. H-XS4 forward test (rank IC vs the low-vol ranking). Updated 2026-11-20T08:02 UTC, forecast hour S = 2026-11-20T08:00 UTC._
+_SHADOW, context only, not a signal (R-XS-2 / R-XS-3); no orders; the decision sessions do not read it. H-XS4 forward test (rank IC vs the low-vol ranking). Updated 2026-11-24T08:02 UTC, forecast hour S = 2026-11-24T08:00 UTC._
 
-- universe now: 26 perps pass 24h turnover >= 20 M USD and spread <= 5 bp; present in the panel: 26
+- universe now: 28 perps pass 24h turnover >= 20 M USD and spread <= 5 bp; present in the panel: 28
 - absent: none
 - model: trained 2026-11-16T00:35, data to 2026-11-16T00:00, weights 787be7ca6d62addf
 
 | token | sector | 24h rel q10 / q50 / q90 (bp) | rank 24h | rank 4h | low-vol rank | 1h |r| q50 / q90 % (v4) | log-HAR-t q50 / q90 % |
 |---|---|---|---|---|---|---|---|
-| XAUTUSDT | other | -317 / -7 / +344 | 1 | 5 | 1 | 0.23 / 0.61 | 0.17 / 0.50 |
-| BTCUSDT | btc | -196 / -9 / +199 | 2 | 1 | 2 | 0.35 / 0.95 | 0.32 / 0.90 |
-| XRPUSDT | payments | -253 / -24 / +273 | 3 | 10 | 3 | 0.41 / 1.12 | 0.36 / 1.03 |
-| SOLUSDT | l1 | -211 / -24 / +198 | 4 | 2 | 7 | 0.45 / 1.24 | 0.42 / 1.18 |
-| LTCUSDT | payments | -236 / -25 / +229 | 5 | 3 | 10 | 0.52 / 1.44 | 0.45 / 1.27 |
-| XMRUSDT | privacy | -629 / -25 / +686 | 6 | 6 | 21 | 0.63 / 1.77 | 0.77 / 2.19 |
-| SUIUSDT | l1 | -189 / -25 / +169 | 7 | 8 | 8 | 0.46 / 1.25 | 0.46 / 1.30 |
-| DOGEUSDT | meme | -185 / -26 / +162 | 8 | 4 | 5 | 0.43 / 1.20 | 0.41 / 1.15 |
-| ETHUSDT | l1 | -214 / -30 / +199 | 9 | 9 | 4 | 0.43 / 1.17 | 0.38 / 1.09 |
-| AVAXUSDT | l1 | -217 / -30 / +203 | 10 | 11 | 6 | 0.46 / 1.26 | 0.43 / 1.24 |
-| AAVEUSDT | defi | -272 / -31 / +286 | 11 | 12 | 11 | 0.54 / 1.54 | 0.49 / 1.39 |
-| LINKUSDT | oracle | -203 / -32 / +170 | 12 | 7 | 9 | 0.47 / 1.31 | 0.47 / 1.35 |
-| INITUSDT | l1 | -1159 / -33 / +1439 | 13 | 19 | 23 | 1.31 / 3.63 | 1.24 / 3.52 |
-| 1000PEPEUSDT | meme | -329 / -37 / +333 | 14 | 13 | 17 | 0.66 / 1.76 | 0.68 / 1.94 |
-| PUMPFUNUSDT | meme | -348 / -37 / +380 | 15 | 14 | 16 | 0.71 / 1.96 | 0.67 / 1.91 |
-| HYPEUSDT | exchange | -306 / -46 / +294 | 16 | 15 | 13 | 0.57 / 1.61 | 0.60 / 1.71 |
-| UNIUSDT | defi | -286 / -48 / +286 | 17 | 18 | 12 | 0.69 / 1.88 | 0.54 / 1.54 |
-| SKYUSDT | other | -1004 / -48 / +1149 | 18 | 21 | 25 | 1.16 / 3.22 | 1.17 / 3.33 |
-| ENAUSDT | defi | -360 / -52 / +436 | 19 | 22 | 15 | 0.77 / 2.18 | 0.64 / 1.83 |
-| ZECUSDT | privacy | -356 / -54 / +349 | 20 | 16 | 19 | 0.76 / 2.07 | 0.69 / 1.96 |
-| INJUSDT | l1 | -358 / -56 / +364 | 21 | 20 | 22 | 0.77 / 1.97 | 0.80 / 2.26 |
-| NEARUSDT | l1 | -358 / -58 / +352 | 22 | 17 | 18 | 0.74 / 1.99 | 0.70 / 2.00 |
-| WLDUSDT | ai | -326 / -65 / +337 | 23 | 23 | 14 | 0.70 / 1.96 | 0.67 / 1.91 |
-| STRKUSDT | l2 | -408 / -83 / +452 | 24 | 24 | 20 | 0.87 / 2.39 | 0.68 / 1.94 |
-| BARDUSDT | other | -757 / -108 / +946 | 25 | 25 | 24 | 1.30 / 3.76 | 1.10 / 3.13 |
-| PIEVERSEUSDT | ai | -1713 / -142 / +2146 | 26 | 26 | 26 | 1.90 / 5.23 | 1.73 / 4.93 |
+| AKEUSDT | ai | -3380 / +130 / +4284 | 1 | 1 | 27 | 2.02 / 5.32 | 3.09 / 8.78 |
+| AAVEUSDT | defi | -279 / +2 / +294 | 2 | 3 | 15 | 0.50 / 1.30 | 0.47 / 1.33 |
+| SOLUSDT | l1 | -259 / +2 / +279 | 3 | 6 | 5 | 0.34 / 0.93 | 0.32 / 0.91 |
+| BTCUSDT | btc | -240 / +1 / +253 | 4 | 4 | 4 | 0.30 / 0.81 | 0.30 / 0.85 |
+| XAUTUSDT | other | -336 / +1 / +382 | 5 | 10 | 1 | 0.17 / 0.46 | 0.19 / 0.53 |
+| AVAXUSDT | l1 | -228 / -2 / +233 | 6 | 8 | 7 | 0.38 / 0.99 | 0.36 / 1.01 |
+| ETHUSDT | l1 | -208 / -2 / +209 | 7 | 5 | 6 | 0.33 / 0.89 | 0.33 / 0.93 |
+| TAOUSDT | ai | -239 / -3 / +252 | 8 | 11 | 11 | 0.41 / 1.07 | 0.41 / 1.17 |
+| XRPUSDT | payments | -309 / -5 / +326 | 9 | 12 | 10 | 0.36 / 0.99 | 0.41 / 1.17 |
+| BNBUSDT | exchange | -242 / -5 / +245 | 10 | 9 | 2 | 0.29 / 0.77 | 0.31 / 0.88 |
+| PIEVERSEUSDT | ai | -1343 / -9 / +1458 | 11 | 2 | 28 | 1.61 / 4.03 | 1.83 / 5.21 |
+| ENAUSDT | defi | -281 / -10 / +278 | 12 | 15 | 20 | 0.55 / 1.40 | 0.62 / 1.76 |
+| ONDOUSDT | rwa | -226 / -10 / +221 | 13 | 13 | 13 | 0.43 / 1.11 | 0.44 / 1.24 |
+| LTCUSDT | payments | -255 / -16 / +287 | 14 | 24 | 9 | 0.39 / 1.00 | 0.38 / 1.09 |
+| LINKUSDT | oracle | -264 / -16 / +276 | 15 | 20 | 3 | 0.36 / 0.98 | 0.33 / 0.94 |
+| HYPEUSDT | exchange | -274 / -17 / +286 | 16 | 21 | 12 | 0.44 / 1.16 | 0.43 / 1.22 |
+| ARBUSDT | l2 | -262 / -18 / +258 | 17 | 17 | 19 | 0.55 / 1.38 | 0.58 / 1.65 |
+| DOGEUSDT | meme | -245 / -18 / +245 | 18 | 19 | 8 | 0.35 / 0.94 | 0.32 / 0.91 |
+| ZECUSDT | privacy | -317 / -18 / +307 | 19 | 7 | 23 | 0.58 / 1.53 | 0.63 / 1.80 |
+| PUMPFUNUSDT | meme | -297 / -19 / +314 | 20 | 22 | 21 | 0.58 / 1.48 | 0.60 / 1.70 |
+| SUIUSDT | l1 | -227 / -19 / +204 | 21 | 14 | 14 | 0.44 / 1.15 | 0.45 / 1.29 |
+| INJUSDT | l1 | -296 / -19 / +281 | 22 | 16 | 22 | 0.57 / 1.48 | 0.62 / 1.75 |
+| UNIUSDT | defi | -267 / -25 / +255 | 23 | 23 | 17 | 0.52 / 1.34 | 0.48 / 1.36 |
+| LITUSDT | other | -374 / -27 / +352 | 24 | 18 | 26 | 0.64 / 1.66 | 0.73 / 2.07 |
+| WLDUSDT | ai | -309 / -33 / +321 | 25 | 26 | 16 | 0.53 / 1.38 | 0.52 / 1.48 |
+| NEARUSDT | l1 | -318 / -35 / +337 | 26 | 25 | 18 | 0.58 / 1.51 | 0.57 / 1.63 |
+| VVVUSDT | ai | -549 / -48 / +675 | 27 | 28 | 25 | 0.77 / 1.99 | 0.61 / 1.73 |
+| 1000PEPEUSDT | meme | -407 / -64 / +438 | 28 | 27 | 24 | 0.65 / 1.71 | 0.62 / 1.75 |
 
-Top 5 by 24h median: XAUTUSDT, BTCUSDT, XRPUSDT, SOLUSDT, LTCUSDT. Bottom 5: NEARUSDT, WLDUSDT, STRKUSDT, BARDUSDT, PIEVERSEUSDT. Calmest 5 (low-vol): XAUTUSDT, BTCUSDT, XRPUSDT, ETHUSDT, DOGEUSDT.
+Top 5 by 24h median: AKEUSDT, AAVEUSDT, SOLUSDT, BTCUSDT, XAUTUSDT. Bottom 5: LITUSDT, WLDUSDT, NEARUSDT, VVVUSDT, 1000PEPEUSDT. Calmest 5 (low-vol): XAUTUSDT, BNBUSDT, LINKUSDT, BTCUSDT, SOLUSDT.
 
 Forward scores (H-XS4; evaluated once at 60 daily origins):
 
-- 4h origins: n 14, mean IC v4 +0.057, low-vol +0.020, diff +0.037
-- 24h origins: n 4, mean IC v4 +0.262, low-vol +0.200, diff +0.061
-- 1h vol pinball: n 56, v4 +0.118, log-HAR-t +0.121
+- 4h origins: n 19, mean IC v4 +0.045, low-vol +0.073, diff -0.028
+- 24h origins: n 6, mean IC v4 +0.252, low-vol +0.187, diff +0.065
+- 1h vol pinball: n 73, v4 +0.127, log-HAR-t +0.131
