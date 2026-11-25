@@ -61,6 +61,8 @@ SERIES: dict[str, tuple[str, str, int]] = {
     "DGS3MO": ("daily", "3-month Treasury constant maturity, %", 0),
     "T10Y3M": ("daily", "10-year minus 3-month Treasury constant maturity, pp", 0),
     "T10YIE": ("daily", "10-year breakeven inflation, %", 0),
+    "BAA10Y": ("daily", "Moody's Baa corporate yield minus 10-year Treasury, pp", 0),
+    "DCOILWTICO": ("daily", "WTI crude oil spot, USD/bbl", 0),
     "ECBDFR": ("daily", "ECB deposit facility rate, %", 0),
     "UNRATE": ("monthly", "Unemployment rate, %", 10),
     "SAHMREALTIME": ("monthly", "Real-time Sahm rule recession indicator, pp", 10),

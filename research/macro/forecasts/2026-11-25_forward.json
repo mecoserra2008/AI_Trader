@@ -1,0 +1,246 @@
+{
+ "written_ts": "2026-11-25T00:54:12+00:00",
+ "hypotheses": [
+  "H-MAC9"
+ ],
+ "note": "Forecasts for events after 2026-11-25. Core PCE path from the pre-release file (origin 2026-11-25 00:00 UTC, AR(12) beyond h = 0); it will be superseded by a bridge nowcast once November CPI/PPI are out (a new file, this one is never edited). Policy probabilities are monthly ordered-logit outputs (non-meeting months were holds in training, which dilutes meeting-month probabilities); H-MAC5 found the Fed reaction function worse than climatology out of sample, so the market proxy and market pricing are the better guides.",
+ "events": [
+  {
+   "event": "US CPI, November 2026",
+   "scheduled_utc": "2026-12-10T13:30:00+00:00",
+   "forecast_core_cpi": {
+    "month": "2026-11",
+    "model": "AR(2) core CPI",
+    "mm_log_x100": 0.2767,
+    "mm_80": [
+     0.161,
+     0.392
+    ],
+    "mm_90": [
+     0.126,
+     0.428
+    ],
+    "mm_print_probabilities": {
+     "0.1": 0.071,
+     "0.2": 0.298,
+     "0.3": 0.415,
+     "0.4": 0.174,
+     "0.5": 0.029
+    },
+    "yoy_simple_pct": 2.96,
+    "last_mm_rw": 0.2958,
+    "t_df": 14.28,
+    "t_scale": 0.0859,
+    "val_rmse": 0.09254945176699568,
+    "test_rmse_ex_covid": 0.10468725423868355,
+    "test_cov80": 0.8050847457627118
+   }
+  },
+  {
+   "event": "FOMC decision",
+   "scheduled_utc": "2026-12-09T19:00:00+00:00",
+   "p_hike_reaction_function": 0.326,
+   "p_hold_reaction_function": 0.663,
+   "p_hike_market_proxy_model": 0.587,
+   "market_as_given": "0.93-0.96 (user brief, web)",
+   "path_reaction_function": [
+    {
+     "month": "2026-12",
+     "meeting": true,
+     "p_cut": 0.010702352298855444,
+     "p_hold": 0.6634937824880257,
+     "p_hike": 0.32580386521311894,
+     "rate_mean": 4.0781625,
+     "rate_p10": 4.0,
+     "rate_p90": 4.25
+    },
+    {
+     "month": "2027-01",
+     "meeting": true,
+     "p_cut": 0.013698392469417621,
+     "p_hold": 0.6636880655517865,
+     "p_hike": 0.3226135419787958,
+     "rate_mean": 4.1553125,
+     "rate_p10": 4.0,
+     "rate_p90": 4.5
+    },
+    {
+     "month": "2027-02",
+     "meeting": false,
+     "p_cut": 0.0,
+     "p_hold": 1.0,
+     "p_hike": 0.0,
+     "rate_mean": 4.1553125,
+     "rate_p10": 4.0,
+     "rate_p90": 4.5
+    },
+    {
+     "month": "2027-03",
+     "meeting": true,
+     "p_cut": 0.017750645991766022,
+     "p_hold": 0.6746954253614643,
+     "p_hike": 0.3075539286467697,
+     "rate_mean": 4.2276,
+     "rate_p10": 4.0,
+     "rate_p90": 4.5
+    }
+   ]
+  },
+  {
+   "event": "ECB decision",
+   "scheduled_utc": "2026-12-17T13:15:00+00:00",
+   "p_hike_reaction_function": 0.286,
+   "p_hold_reaction_function": 0.708,
+   "persistence_benchmark": {
+    "p_cut_hold_hike": [
+     0.032,
+     0.652,
+     0.316
+    ],
+    "n": 76
+   },
+   "market_as_given": "expected +25 bp to 2.75% (user brief, web)",
+   "path_reaction_function": [
+    {
+     "month": "2026-12",
+     "meeting": true,
+     "p_cut": 0.006093345369514182,
+     "p_hold": 0.7075859629539994,
+     "p_hike": 0.2863206916764862,
+     "rate_mean": 2.5694,
+     "rate_p10": 2.5,
+     "rate_p90": 2.75
+    },
+    {
+     "month": "2027-01",
+     "meeting": false,
+     "p_cut": 0.0,
+     "p_hold": 1.0,
+     "p_hike": 0.0,
+     "rate_mean": 2.5694,
+     "rate_p10": 2.5,
+     "rate_p90": 2.75
+    },
+    {
+     "month": "2027-02",
+     "meeting": true,
+     "p_cut": 0.007127318761819502,
+     "p_hold": 0.7080447112283748,
+     "p_hike": 0.28482797000980564,
+     "rate_mean": 2.638675,
+     "rate_p10": 2.5,
+     "rate_p90": 2.75
+    },
+    {
+     "month": "2027-03",
+     "meeting": true,
+     "p_cut": 0.008324047225135845,
+     "p_hold": 0.7085756698792722,
+     "p_hike": 0.28310028289559197,
+     "rate_mean": 2.70745,
+     "rate_p10": 2.5,
+     "rate_p90": 3.0
+    }
+   ]
+  },
+  {
+   "event": "US PCE, November 2026 (BEA date to verify)",
+   "forecast_core_pce": {
+    "h": 1,
+    "month": "2026-11",
+    "model": "AR12",
+    "mm_log_x100": 0.2455,
+    "mm_simple_pct": 0.2458,
+    "mm_80": [
+     0.14,
+     0.351
+    ],
+    "mm_90": [
+     0.11,
+     0.381
+    ],
+    "yoy_simple_pct": 3.282,
+    "yoy_80": [
+     3.127,
+     3.437
+    ],
+    "yoy_90": [
+     3.082,
+     3.482
+    ],
+    "t_df": 200.0,
+    "t_scale": 0.0821,
+    "p_mm_ge_0.25": 0.478,
+    "p_mm_ge_0.35": 0.102
+   }
+  },
+  {
+   "event": "US PCE, December 2026",
+   "forecast_core_pce": {
+    "h": 2,
+    "month": "2026-12",
+    "model": "AR12",
+    "mm_log_x100": 0.2306,
+    "mm_simple_pct": 0.2309,
+    "mm_80": [
+     0.123,
+     0.338
+    ],
+    "mm_90": [
+     0.093,
+     0.369
+    ],
+    "yoy_simple_pct": 3.195,
+    "yoy_80": [
+     2.978,
+     3.412
+    ],
+    "yoy_90": [
+     2.916,
+     3.473
+    ],
+    "t_df": 200.0,
+    "t_scale": 0.0836,
+    "p_mm_ge_0.25": 0.409,
+    "p_mm_ge_0.35": 0.077
+   }
+  }
+ ],
+ "recession_probability_12m": {
+  "model": "TS_CS",
+  "months": [
+   "2007-09",
+   "2008-06",
+   "2008-09",
+   "2018-12",
+   "2026-10",
+   "2026-11"
+  ],
+  "p": [
+   0.4386,
+   0.229,
+   0.1874,
+   0.5124,
+   0.125,
+   0.1927
+  ],
+  "p80": [
+   [
+    0.3294,
+    0.1001,
+    0.0711,
+    0.4004,
+    0.0622,
+    0.1109
+   ],
+   [
+    0.5566,
+    0.3193,
+    0.3611,
+    0.6798,
+    0.1695,
+    0.2527
+   ]
+  ]
+ }
+}

@@ -767,3 +767,650 @@ def cmd_nowcast(path: str) -> dict[str, Any]:
         raise FileExistsError(f"{p} exists: pre-release files are never rewritten")
     p.write_text(json.dumps(doc, indent=1, default=float), encoding="utf-8")
     return doc
+
+
+# ====================================================================== M3: recession probit
+
+M3_SERIES = ["USREC", "GS10", "TB3MS", "BAA10YM", "FEDFUNDS", "PCEPILFE", "SAHMREALTIME", "NFCI", "UNRATE"]
+M3_CANDIDATES: dict[str, list[str]] = {
+    "TS": ["ts"],
+    "TS_CS": ["ts", "cs", "dcs6"],
+    "TS_SAHM": ["ts", "sahm"],
+    "TS_CS_RR_SAHM": ["ts", "cs", "dcs6", "rr", "sahm"],
+    "TS_CS_RR_SAHM_NFCI": ["ts", "cs", "dcs6", "rr", "sahm", "nfci"],
+}
+M3_VAL = (month_index(date(1972, 1, 1)), month_index(date(1989, 12, 1)))
+M3_TEST = (month_index(date(1990, 1, 1)), month_index(date(2024, 10, 1)))
+M3_PURGE = 24
+M3_COVID = (month_index(date(2019, 3, 1)), month_index(date(2020, 4, 1)))
+
+
+def m3_origin_ts(k: int) -> datetime:
+    """Features of month k are read at day 12 of month k+1 (00:00 UTC), after the employment report."""
+    d = index_month(k + 1)
+    return datetime(d.year, d.month, 12, tzinfo=UTC)
+
+
+def m3_features(V: Vintages, k: int, t: datetime | None = None) -> dict[str, float]:
+    """Real-time features of month k as known at t (default m3_origin_ts(k)); NaN when not available."""
+    t = t or m3_origin_ts(k)
+    g = lambda sid: series_asof(V, sid, t, log=False)  # noqa: E731
+    gs10, tb3, baa, ff, sahm = g("GS10"), g("TB3MS"), g("BAA10YM"), g("FEDFUNDS"), g("SAHMREALTIME")
+    pce = series_asof(V, "PCEPILFE", t)
+    last_p = max((j for j in pce if j <= k), default=None)
+    infl = 100 * (pce[last_p] / pce[last_p - 12] - 1) if last_p is not None and last_p - 12 in pce else np.nan
+    o, v, _ = V.asof("NFCI", t)
+    nf = [float(x) for d0, x in zip(o, v) if month_index(d0) == k]
+    f = {"ts": gs10.get(k, np.nan) - tb3.get(k, np.nan), "cs": baa.get(k, np.nan),
+         "dcs6": baa.get(k, np.nan) - baa.get(k - 6, np.nan), "rr": ff.get(k, np.nan) - infl,
+         "sahm": sahm.get(k, np.nan), "nfci": float(np.mean(nf)) if nf else np.nan, "core_pce_yoy": infl, "ff": ff.get(k, np.nan)}
+    return f
+
+
+def recession_labels(V: Vintages, t: datetime) -> dict[int, int]:
+    """Y_k = 1 if USREC = 1 in any of k+1..k+12 (latest USREC vintage at t; k only where all 12 months exist)."""
+    rec = series_asof(V, "USREC", t, log=False)
+    out = {}
+    for k in rec:
+        fut = [rec.get(k + j) for j in range(1, 13)]
+        if all(x is not None for x in fut):
+            out[k] = int(max(fut) > 0.5)
+    return out
+
+
+def probit_fit(X: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Probit MLE (Newton with step halving) with an intercept column already in X."""
+    b = np.zeros(X.shape[1])
+    for _ in range(100):
+        xb = np.clip(X @ b, -8, 8)
+        p = np.clip(stats.norm.cdf(xb), 1e-10, 1 - 1e-10)
+        phi = stats.norm.pdf(xb)
+        g = X.T @ (phi * (y - p) / (p * (1 - p)))
+        w = phi**2 / (p * (1 - p))
+        Hm = X.T @ (X * w[:, None]) + 1e-8 * np.eye(X.shape[1])
+        step = np.linalg.solve(Hm, g)
+        ll0 = np.sum(y * np.log(p) + (1 - y) * np.log(1 - p))
+        s = 1.0
+        while s > 1e-4:
+            nb = b + s * step
+            q = np.clip(stats.norm.cdf(np.clip(X @ nb, -8, 8)), 1e-10, 1 - 1e-10)
+            if np.sum(y * np.log(q) + (1 - y) * np.log(1 - q)) >= ll0 - 1e-12:
+                break
+            s /= 2
+        b = nb
+        if np.max(np.abs(s * step)) < 1e-8:
+            break
+    return b
+
+
+def probit_predict(b: np.ndarray, X: np.ndarray) -> np.ndarray:
+    return stats.norm.cdf(np.clip(X @ b, -8, 8))
+
+
+def m3_frame(V: Vintages, last: int) -> tuple[dict[int, dict[str, float]], dict[int, int]]:
+    feats = {k: m3_features(V, k) for k in range(month_index(date(1960, 1, 1)), last + 1)}
+    labels = recession_labels(V, datetime.now(UTC))
+    return feats, labels
+
+
+def m3_oos(feats: dict[int, dict[str, float]], labels: dict[int, int], cols: list[str], origins: range) -> dict[int, float]:
+    out: dict[int, float] = {}
+    ks = sorted(feats)
+    for t in origins:
+        rows = [k for k in ks if k <= t - M3_PURGE and k in labels and all(np.isfinite(feats[k][c]) for c in cols)]
+        if t not in feats or not all(np.isfinite(feats[t][c]) for c in cols):
+            continue
+        y = np.array([labels[k] for k in rows], float)
+        if len(rows) < 48 or y.sum() < 6:
+            continue
+        X = np.column_stack([np.ones(len(rows))] + [[feats[k][c] for k in rows] for c in cols])
+        b = probit_fit(X, y)
+        out[t] = float(probit_predict(b, np.array([[1.0] + [feats[t][c] for c in cols]]))[0])
+    return out
+
+
+def score_probs(pred: dict[int, float], labels: dict[int, int], keep) -> dict[str, float]:
+    ks = [k for k in sorted(pred) if k in labels and keep(k)]
+    if not ks:
+        return {"n": 0}
+    p = np.array([pred[k] for k in ks])
+    y = np.array([labels[k] for k in ks])
+    pc = np.clip(p, 1e-6, 1 - 1e-6)
+    return {"n": len(ks), "n_pos": int(y.sum()), "brier": float(np.mean((p - y) ** 2)), "auc": auc(p, y),
+            "log_score": float(np.mean(y * np.log(pc) + (1 - y) * np.log(1 - pc)))}
+
+
+def run_m3(V: Vintages, log=print) -> dict[str, Any]:
+    now_k = month_index(date(2026, 10, 1))
+    feats, labels = m3_frame(V, now_k)
+    val_o = range(M3_VAL[0], M3_VAL[1] + 1)
+    test_o = range(M3_TEST[0], M3_TEST[1] + 1)
+    preds_val = {n: m3_oos(feats, labels, c, val_o) for n, c in M3_CANDIDATES.items()}
+    common = set.intersection(*[set(p) for p in preds_val.values()])
+    val = {n: {"all_origins": score_probs(p, labels, lambda k: True),
+               "common_origins": score_probs(p, labels, lambda k: k in common)} for n, p in preds_val.items()}
+    sel = max(M3_CANDIDATES, key=lambda n: val[n]["common_origins"]["log_score"])
+    log(f"  M3 selected {sel}")
+    preds_test = {n: m3_oos(feats, labels, c, test_o) for n, c in M3_CANDIDATES.items()}
+    ex_covid = lambda k: not (M3_COVID[0] <= k <= M3_COVID[1])  # noqa: E731
+    test = {n: {"ex_covid": score_probs(p, labels, ex_covid), "all": score_probs(p, labels, lambda k: True)} for n, p in preds_test.items()}
+    ks = [k for k in sorted(preds_test[sel]) if k in preds_test["TS"] and k in labels and ex_covid(k)]
+    d = np.array([(preds_test[sel][k] - labels[k]) ** 2 - (preds_test["TS"][k] - labels[k]) ** 2 for k in ks])
+    diff = block_bootstrap_mean(d, 24)
+    ks_all = [k for k in sorted(preds_test[sel]) if k in preds_test["TS"] and k in labels]
+    d_all = np.array([(preds_test[sel][k] - labels[k]) ** 2 - (preds_test["TS"][k] - labels[k]) ** 2 for k in ks_all])
+    return {"feats": feats, "labels": labels, "preds_val": preds_val, "preds_test": preds_test, "val": val, "test": test,
+            "selected": sel, "brier_diff_sel_minus_ts_ex_covid": diff, "brier_diff_sel_minus_ts_all": block_bootstrap_mean(d_all, 24)}
+
+
+def m3_current(res: dict[str, Any], model: str, ks_eval: list[int], nboot: int = 500) -> dict[str, Any]:
+    """Full-sample fit (labels purged as at the latest origin) evaluated at the given months; 24-month block-bootstrap bands."""
+    feats, labels = res["feats"], res["labels"]
+    cols = M3_CANDIDATES[model]
+    last_origin = max(feats)
+    rows = [k for k in sorted(feats) if k <= last_origin - M3_PURGE and k in labels and all(np.isfinite(feats[k][c]) for c in cols)]
+    X = np.column_stack([np.ones(len(rows))] + [[feats[k][c] for k in rows] for c in cols])
+    y = np.array([labels[k] for k in rows], float)
+    b = probit_fit(X, y)
+    Xe = np.array([[1.0] + [feats[k][c] for c in cols] for k in ks_eval])
+    p0 = probit_predict(b, Xe)
+    rng = np.random.default_rng(SEED)
+    n, blk = len(rows), 24
+    draws = []
+    for _ in range(nboot):
+        st = rng.integers(0, n - blk + 1, size=int(math.ceil(n / blk)))
+        idx = (st[:, None] + np.arange(blk)[None, :]).ravel()[:n]
+        if y[idx].sum() < 5:
+            continue
+        draws.append(probit_predict(probit_fit(X[idx], y[idx]), Xe))
+    D = np.array(draws)
+    return {"model": model, "coef": dict(zip(["const"] + cols, b.round(4).tolist())), "n_rows": n,
+            "months": [str(index_month(k))[:7] for k in ks_eval], "p": p0.round(4).tolist(),
+            "p_lo90": np.quantile(D, 0.05, axis=0).round(4).tolist(), "p_hi90": np.quantile(D, 0.95, axis=0).round(4).tolist(),
+            "p_lo80": np.quantile(D, 0.10, axis=0).round(4).tolist(), "p_hi80": np.quantile(D, 0.90, axis=0).round(4).tolist(),
+            "features": {str(index_month(k))[:7]: {c: round(float(feats[k][c]), 3) for c in feats[k]} for k in ks_eval}}
+
+
+# ====================================================================== 2018 / 2008 comparison
+
+EPISODES: dict[str, date] = {
+    "2007-09-17 (day before the first cut)": date(2007, 9, 17),
+    "2008-06-30 (mid-2008, Fed on hold at 2%)": date(2008, 6, 30),
+    "2008-09-12 (Friday before Lehman)": date(2008, 9, 12),
+    "2018-12-18 (day before Powell's Dec hike)": date(2018, 12, 18),
+    "2019-01-03 (day before the Jan 4 pivot)": date(2019, 1, 3),
+    "now (2026-11-24)": date(2026, 11, 24),
+}
+
+
+def _daily(sid: str, d: date) -> pl.DataFrame:
+    from ai_trader.narrative import macro
+    return macro.read_asof(sid, utc(d) + timedelta(days=1)).filter(pl.col("obs_date") <= d)
+
+
+def daily_last(sid: str, d: date) -> float:
+    x = _daily(sid, d)
+    return float(x["value"][-1]) if x.height else float("nan")
+
+
+def drawdown(sid: str, d: date, days: int = 365) -> float:
+    """Log drawdown x100 from the trailing max over `days` calendar days."""
+    x = _daily(sid, d).filter(pl.col("obs_date") > d - timedelta(days=days))
+    if x.height < 20:
+        return float("nan")
+    return float(100 * math.log(x["value"][-1] / x["value"].max()))
+
+
+def log_change(sid: str, d: date, days: int) -> float:
+    x = _daily(sid, d)
+    a = x.filter(pl.col("obs_date") <= d - timedelta(days=days))
+    if x.height == 0 or a.height == 0:
+        return float("nan")
+    return float(100 * math.log(x["value"][-1] / a["value"][-1]))
+
+
+def policy_rate(V: Vintages, d: date) -> float:
+    if d >= date(2008, 12, 16):
+        return daily_last("DFEDTARU", d)
+    o, v, _ = V.asof("DFEDTAR", utc(date(2009, 1, 1)))
+    xs = [float(x) for o0, x in zip(o, v) if o0 <= d]
+    return xs[-1] if xs else float("nan")
+
+
+def episode_row(V: Vintages, d: date) -> dict[str, float]:
+    t = utc(d) + timedelta(days=1)
+    pce = series_asof(V, "PCEPILFE", t)
+    kp = max(pce)
+    core_pce = 100 * (pce[kp] / pce[kp - 12] - 1)
+    cpi = series_asof(V, "CPIAUCSL", t)
+    kc = max(cpi)
+    un = series_asof(V, "UNRATE", t, log=False)
+    ku = max(un)
+    pay = series_asof(V, "PAYEMS", t, log=False)
+    kpay = max(pay)
+    o, v, _ = V.asof("NROU", t)
+    nrou = float(v[[i for i, o0 in enumerate(o) if o0 <= d][-1]])
+    sahm = series_asof(V, "SAHMREALTIME", t, log=False)
+    o, v, _ = V.asof("NFCI", t)
+    i = [j for j, o0 in enumerate(o) if o0 <= d][-1]
+    pr = policy_rate(V, d)
+    pr_3m = policy_rate(V, d - timedelta(days=91))
+    gap = -2.0 * (un[ku] - nrou)
+    taylor = 0.5 + core_pce + 0.5 * (core_pce - 2) + 0.5 * gap
+    row = {
+        "policy_rate_upper": pr, "policy_change_3m_bp": 100 * (pr - pr_3m),
+        "y10": daily_last("DGS10", d), "y2": daily_last("DGS2", d), "y3m": daily_last("DGS3MO", d),
+        "curve_10y_3m": daily_last("DGS10", d) - daily_last("DGS3MO", d), "curve_10y_2y": daily_last("DGS10", d) - daily_last("DGS2", d),
+        "real_10y_tips": daily_last("DFII10", d), "breakeven_10y": daily_last("T10YIE", d),
+        "baa_10y_spread": daily_last("BAA10Y", d), "hy_oas": daily_last("BAMLH0A0HYM2", d), "vix": daily_last("VIXCLS", d),
+        "core_pce_yoy": core_pce, "core_pce_month": str(index_month(kp))[:7], "cpi_yoy": 100 * (cpi[kc] / cpi[kc - 12] - 1),
+        "real_policy_rate": pr - core_pce, "unemployment": un[ku], "unemp_minus_nrou": un[ku] - nrou,
+        "unemp_change_12m": un[ku] - un[ku - 12], "sahm_realtime": sahm[max(sahm)],
+        "payrolls_3m_avg_k": (pay[kpay] - pay[kpay - 3]) / 3, "nfci": float(v[i]),
+        "nasdaq_drawdown_1y_log": drawdown("NASDAQCOM", d), "sp500_drawdown_1y_log": drawdown("SP500", d),
+        "dollar_broad_6m_log": log_change("DTWEXBGS", d, 182), "wti_6m_log": log_change("DCOILWTICO", d, 182),
+        "taylor1993_core_pce": taylor, "taylor_minus_actual": taylor - pr, "inflation_gap": core_pce - 2,
+    }
+    if row["sp500_drawdown_1y_log"] != row["sp500_drawdown_1y_log"]:
+        row.pop("sp500_drawdown_1y_log")
+    return row
+
+
+def comparison(V: Vintages) -> dict[str, dict[str, float]]:
+    return {name: episode_row(V, d) for name, d in EPISODES.items()}
+
+
+# ====================================================================== M2: policy reaction functions
+
+
+def ologit_fit(X: np.ndarray, y: np.ndarray, ridge: float = 1e-3) -> np.ndarray:
+    """Ordered logit with 3 classes (0 cut, 1 hold, 2 hike); X without a constant. Params [beta..., c1, log(c2 - c1)].
+    A tiny ridge keeps separation cases finite."""
+    from scipy.optimize import minimize
+
+    k = X.shape[1]
+
+    def nll(th):
+        b, c1, c2 = th[:k], th[k], th[k] + math.exp(th[k + 1])
+        xb = X @ b
+        p0 = 1 / (1 + np.exp(-(c1 - xb)))
+        p01 = 1 / (1 + np.exp(-(c2 - xb)))
+        p = np.where(y == 0, p0, np.where(y == 1, p01 - p0, 1 - p01))
+        return -np.sum(np.log(np.clip(p, 1e-12, 1))) + ridge * float(b @ b)
+
+    th0 = np.zeros(k + 2)
+    th0[k], th0[k + 1] = -2.0, math.log(4.0)
+    r = minimize(nll, th0, method="BFGS", options={"maxiter": 500})
+    return r.x
+
+
+def ologit_predict(th: np.ndarray, X: np.ndarray) -> np.ndarray:
+    k = X.shape[1]
+    b, c1, c2 = th[:k], th[k], th[k] + math.exp(th[k + 1])
+    xb = X @ b
+    p0 = 1 / (1 + np.exp(-(c1 - xb)))
+    p01 = 1 / (1 + np.exp(-(c2 - xb)))
+    return np.column_stack([p0, p01 - p0, 1 - p01])
+
+
+def move_class(dx: float, tol: float = 0.06) -> int:
+    return 0 if dx < -tol else 2 if dx > tol else 1
+
+
+def month_end_series(daily: list[tuple[date, float]], k0: int, k1: int) -> dict[int, float]:
+    """Last value on or before each month end."""
+    out, j = {}, 0
+    daily = sorted(daily)
+    for k in range(k0, k1 + 1):
+        end = index_month(k + 1) - timedelta(days=1)
+        while j + 1 < len(daily) and daily[j + 1][0] <= end:
+            j += 1
+        if daily and daily[j][0] <= end:
+            out[k] = daily[j][1]
+    return out
+
+
+def fed_target_daily(V: Vintages) -> list[tuple[date, float]]:
+    from ai_trader.narrative import macro
+    o, v, _ = V.asof("DFEDTAR", utc(date(2009, 1, 1)))
+    pre = [(o0, float(x)) for o0, x in zip(o, v) if o0 < date(2008, 12, 16)]
+    post = macro.read_asof("DFEDTARU", utc(date(2100, 1, 1)))
+    return pre + list(zip(post["obs_date"].to_list(), post["value"].to_list()))
+
+
+def ecb_dfr_daily() -> list[tuple[date, float]]:
+    from ai_trader.narrative import macro
+    x = macro.read_asof("ECBDFR", utc(date(2100, 1, 1)))
+    return list(zip(x["obs_date"].to_list(), x["value"].to_list()))
+
+
+def bill_proxy(k: int) -> float:
+    """Mean 3-month bill (DTB3) over the 5 obs before month k starts, minus the target midpoint then (Fed proxy)."""
+    from ai_trader.narrative import macro
+    t = utc(index_month(k))
+    b = macro.read_asof("DTB3", t).filter(pl.col("obs_date") < index_month(k)).tail(5)
+    return float(b["value"].mean()) if b.height else float("nan")
+
+
+@dataclass
+class PolicySpec:
+    name: str
+    rate: dict[int, float]                     # month-end policy rate
+    feats: dict[int, dict[str, float]]         # decision month k -> features known at the start of month k
+    candidates: dict[str, list[str]]
+    train_start: int
+    val: tuple[int, int]
+    test_start: int
+    zlb: float
+
+
+def fed_features(V: Vintages, rate: dict[int, float], k: int, t: datetime | None = None) -> dict[str, float]:
+    t = t or utc(index_month(k))
+    pce = series_asof(V, "PCEPILFE", t)
+    kp = max(pce)
+    infl = 100 * (pce[kp] / pce[kp - 12] - 1)
+    un = series_asof(V, "UNRATE", t, log=False)
+    o, v, _ = V.asof("NROU", t)
+    nr = [float(x) for o0, x in zip(o, v) if o0 <= index_month(k)]
+    o2, v2, _ = V.asof("NFCI", t)
+    nf = [float(x) for o0, x in zip(o2, v2) if o0 < index_month(k)][-4:]
+    level = rate.get(k - 1, np.nan)
+    last = 0.0
+    for j in range(k - 1, k - 7, -1):
+        if j in rate and j - 1 in rate and abs(rate[j] - rate[j - 1]) > 0.06:
+            last = float(np.sign(rate[j] - rate[j - 1]))
+            break
+    mid = level - 0.125 if index_month(k) > date(2008, 12, 31) else level
+    return {"infl_gap": infl - 2.0, "u_gap": un[max(un)] - (nr[-1] if nr else np.nan), "nfci": float(np.mean(nf)) if nf else np.nan,
+            "level": level, "last_move": last, "bill_minus_target": bill_proxy(k) - mid}
+
+
+def ecb_features(V: Vintages, rate: dict[int, float], k: int, t: datetime | None = None) -> dict[str, float]:
+    t = t or utc(index_month(k))
+    core = series_asof(V, "00XEFDEZ19M086NEST", t)
+    head = series_asof(V, "CP0000EZ19M086NEST", t)
+    kc, kh = max(core), max(head)
+    last = 0.0
+    for j in range(k - 1, k - 7, -1):
+        if j in rate and j - 1 in rate and abs(rate[j] - rate[j - 1]) > 0.06:
+            last = float(np.sign(rate[j] - rate[j - 1]))
+            break
+    return {"core_gap": 100 * (core[kc] / core[kc - 12] - 1) - 2.0, "head_gap": 100 * (head[kh] / head[kh - 12] - 1) - 2.0,
+            "level": rate.get(k - 1, np.nan), "last_move": last}
+
+
+FED_CANDIDATES = {"A_gaps_last": ["infl_gap", "u_gap", "last_move"], "B_plus_nfci": ["infl_gap", "u_gap", "nfci", "last_move"],
+                  "C_plus_level": ["infl_gap", "u_gap", "nfci", "level", "last_move"], "D_last_only": ["last_move"]}
+ECB_CANDIDATES = {"A_core_last": ["core_gap", "last_move"], "B_core_head_last": ["core_gap", "head_gap", "last_move"],
+                  "C_plus_level": ["core_gap", "head_gap", "level", "last_move"], "D_last_only": ["last_move"]}
+
+
+def policy_oos(spec: PolicySpec, cols: list[str], origins: range, kind: str = "model") -> dict[int, np.ndarray]:
+    """Expanding-window one-month-ahead class probabilities. kind: model | clim | persist."""
+    out: dict[int, np.ndarray] = {}
+    for t in origins:
+        if t not in spec.feats or t not in spec.rate or (t - 1) not in spec.rate:
+            continue
+        rows = [k for k in range(spec.train_start, t) if k in spec.feats and k in spec.rate and k - 1 in spec.rate
+                and spec.rate[k - 1] > spec.zlb and all(np.isfinite(spec.feats[k][c]) for c in cols)]
+        if len(rows) < 36:
+            continue
+        y = np.array([move_class(spec.rate[k] - spec.rate[k - 1]) for k in rows])
+        if kind == "clim":
+            out[t] = (np.bincount(y, minlength=3) + 0.5) / (len(y) + 1.5)
+            continue
+        if kind == "persist":
+            lm = spec.feats[t]["last_move"]
+            ys = np.array([yy for yy, k in zip(y, rows) if spec.feats[k]["last_move"] == lm])
+            out[t] = (np.bincount(ys, minlength=3) + 0.5) / (len(ys) + 1.5)
+            continue
+        if not all(np.isfinite(spec.feats[t][c]) for c in cols):
+            continue
+        X = np.array([[spec.feats[k][c] for c in cols] for k in rows])
+        mu, sd = X.mean(0), X.std(0) + 1e-9
+        th = ologit_fit((X - mu) / sd, y)
+        out[t] = ologit_predict(th, ((np.array([spec.feats[t][c] for c in cols]) - mu) / sd)[None, :])[0]
+    return out
+
+
+def policy_score(spec: PolicySpec, pred: dict[int, np.ndarray], keep) -> dict[str, Any]:
+    ks = [k for k in sorted(pred) if keep(k)]
+    if not ks:
+        return {"n": 0}
+    y = np.array([move_class(spec.rate[k] - spec.rate[k - 1]) for k in ks])
+    P = np.array([pred[k] for k in ks])
+    b = brier_multi(P, y)
+    return {"n": len(ks), "brier": float(b.mean()), "n_moves": int((y != 1).sum()), "n_hikes": int((y == 2).sum()),
+            "log_score": float(np.mean(np.log(np.clip(P[np.arange(len(y)), y], 1e-9, 1)))), "_b": b, "_k": ks}
+
+
+def run_policy(spec: PolicySpec, bench_market: str | None = None) -> dict[str, Any]:
+    val_o = range(spec.val[0], spec.val[1] + 1)
+    last = max(spec.rate)
+    test_o = range(spec.test_start, last + 1)
+    keep_val = lambda k: spec.rate.get(k - 1, 0) > spec.zlb  # noqa: E731
+    keep_test = lambda k: spec.rate.get(k - 1, 0) > spec.zlb and not is_covid(k)  # noqa: E731
+    keep_zlb = lambda k: spec.rate.get(k - 1, 0) <= spec.zlb and not is_covid(k)  # noqa: E731
+    val = {n: policy_score(spec, policy_oos(spec, c, val_o), keep_val) for n, c in spec.candidates.items()}
+    sel = min(spec.candidates, key=lambda n: val[n]["brier"])
+    preds = {"model": policy_oos(spec, spec.candidates[sel], test_o), "clim": policy_oos(spec, [], test_o, "clim"),
+             "persist": policy_oos(spec, [], test_o, "persist")}
+    if bench_market:
+        preds["market"] = policy_oos(spec, [bench_market], test_o)
+    test = {n: policy_score(spec, p, keep_test) for n, p in preds.items()}
+    zlb = {n: policy_score(spec, p, keep_zlb) for n, p in preds.items()}
+    diffs = {}
+    for n in preds:
+        if n == "model":
+            continue
+        ks = sorted(set(test["model"]["_k"]) & set(test[n]["_k"]))
+        bm = dict(zip(test["model"]["_k"], test["model"]["_b"]))
+        bn = dict(zip(test[n]["_k"], test[n]["_b"]))
+        diffs[n] = block_bootstrap_mean(np.array([bm[k] - bn[k] for k in ks]), 12)
+    strip = lambda d: {k: v for k, v in d.items() if not k.startswith("_")}  # noqa: E731
+    return {"selected": sel, "val": {n: strip(v) for n, v in val.items()}, "test": {n: strip(v) for n, v in test.items()},
+            "zlb_test": {n: strip(v) for n, v in zlb.items()}, "brier_diff_model_minus": diffs, "_preds": preds}
+
+
+def policy_path(spec: PolicySpec, cols: list[str], start: int, feat0: dict[str, float], infl_path: dict[int, float] | None,
+                gap_key: str, meeting_months: set[int], n_months: int, nsim: int = 20000, step: float = 0.25) -> dict[str, Any]:
+    """Simulates the selected ordered logit forward from month `start`; non-meeting months are forced holds."""
+    rows = [k for k in range(spec.train_start, start) if k in spec.feats and k in spec.rate and k - 1 in spec.rate
+            and spec.rate[k - 1] > spec.zlb and all(np.isfinite(spec.feats[k][c]) for c in cols)]
+    X = np.array([[spec.feats[k][c] for c in cols] for k in rows])
+    y = np.array([move_class(spec.rate[k] - spec.rate[k - 1]) for k in rows])
+    mu, sd = X.mean(0), X.std(0) + 1e-9
+    th = ologit_fit((X - mu) / sd, y)
+    rng = np.random.default_rng(SEED)
+    level = np.full(nsim, feat0["level"])
+    last = np.full(nsim, feat0["last_move"])
+    out = []
+    for j in range(n_months):
+        k = start + j
+        f = {c: np.full(nsim, feat0[c]) for c in cols}
+        if "level" in f:
+            f["level"] = level.copy()
+        f["last_move"] = last.copy()
+        if infl_path and gap_key in f and k in infl_path:
+            f[gap_key] = np.full(nsim, infl_path[k] - 2.0)
+        if k in meeting_months:
+            P = ologit_predict(th, (np.column_stack([f[c] for c in cols]) - mu) / sd)
+            u = rng.random(nsim)
+            cls = np.where(u < P[:, 0], 0, np.where(u < P[:, 0] + P[:, 1], 1, 2))
+        else:
+            P = np.tile([0.0, 1.0, 0.0], (nsim, 1))
+            cls = np.ones(nsim, int)
+        move = (cls - 1) * step
+        level = level + move
+        last = np.where(cls != 1, cls - 1, last)
+        out.append({"month": str(index_month(k))[:7], "meeting": k in meeting_months, "p_cut": float(P[:, 0].mean()),
+                    "p_hold": float(P[:, 1].mean()), "p_hike": float(P[:, 2].mean()),
+                    "rate_mean": float(level.mean()), "rate_p10": float(np.quantile(level, 0.1)), "rate_p90": float(np.quantile(level, 0.9))})
+    return {"coef_std_units": dict(zip(cols + ["c1", "log_dc"], th.round(3).tolist())), "path": out}
+
+
+# ====================================================================== M4: BTC response to inflation surprises
+
+
+def cpi_ar_track(V: Vintages, p_grid=range(1, 13)) -> dict[str, Any]:
+    """Core CPI m/m expectation before each CPI release: AR(p) on data through m-1 as known at the release date,
+    p chosen on 2003-2014 validation origins (h = 0 RMSE)."""
+    mm, _, rel = targets(V, "CPILFESL")
+    fc: dict[int, dict[int, float]] = {}
+    for k, t in sorted(rel.items()):
+        if k < VAL[0]:
+            continue
+        lv = series_asof(V, "CPILFESL", t)
+        x = logdiff(lv)
+        y = np.array([x[j] for j in range(M1_EST_START, k) if j in x])
+        if len(y) < 60 or (k - 1) not in x:
+            continue
+        fc[k] = {p: float(ar_forecast(y, ar_fit(y, p)[0], 1)[0]) for p in p_grid}
+    val = {p: rmse(np.array([mm[k] - fc[k][p] for k in fc if k in mm and VAL[0] <= k <= VAL[1]])) for p in p_grid}
+    p = min(val, key=lambda q: val[q])
+    return {"p": p, "val_rmse": val, "expect": {k: v[p] for k, v in fc.items()}, "actual": mm, "release": rel}
+
+
+def btc_daily_closes(as_of: datetime) -> dict[date, float]:
+    from ai_trader.research.macro_study import btc_daily
+    d, _ = btc_daily(as_of)
+    return dict(zip(d["d"].to_list(), d["close"].to_list()))
+
+
+def nw_ols(y: np.ndarray, x: np.ndarray, lags: int) -> dict[str, float]:
+    """Slope of y on [1, x] with Newey-West SEs."""
+    X = np.column_stack([np.ones(len(x)), x])
+    b, e = ols(y, X)
+    n = len(y)
+    S = (X * e[:, None]).T @ (X * e[:, None]) / n
+    for l in range(1, lags + 1):
+        w = 1 - l / (lags + 1)
+        G = (X[l:] * e[l:, None]).T @ (X[:-l] * e[:-l, None]) / n
+        S += w * (G + G.T)
+    Q = np.linalg.inv(X.T @ X / n)
+    cov = Q @ S @ Q / n
+    se = math.sqrt(max(cov[1, 1], 1e-18))
+    return {"slope": float(b[1]), "se": se, "t": float(b[1] / se), "n": n}
+
+
+def run_m4(V: Vintages, m1res: dict[str, Any], m1ev: dict[str, Any]) -> dict[str, Any]:
+    from ai_trader.research.evaluate import knowledge_cutoff
+    cpi = cpi_ar_track(V)
+    bsel = m1ev["bridge_selected"]
+    pce_exp = {r["m"]: (r["br"][bsel] if r["br"][bsel] is not None else float(r["fc"][m1ev["selected"]][0])) for r in m1res["recs"]}
+    closes = btc_daily_closes(datetime.now(UTC))
+    days = sorted(closes)
+    lr = {d: math.log(closes[d] / closes[days[i - 1]]) for i, d in enumerate(days) if i > 0}
+    events = []
+    for name, exp, act, rel in (("core_cpi", cpi["expect"], cpi["actual"], cpi["release"]), ("core_pce", pce_exp, m1res["mm"], m1res["rel"])):
+        for k, t in rel.items():
+            if k not in exp or k not in act:
+                continue
+            d = t.date()  # release day (08:30 ET = 13:30 / 12:30 UTC)
+            prev = d - timedelta(days=1)
+            if prev not in closes or d + timedelta(days=4) not in closes or d < date(2020, 4, 1):
+                continue
+            past = [lr[prev - timedelta(days=j)] for j in range(30) if (prev - timedelta(days=j)) in lr]
+            if len(past) < 25:
+                continue
+            sd = float(np.std(past, ddof=1))
+            r1 = math.log(closes[d] / closes[prev])
+            r5 = math.log(closes[d + timedelta(days=4)] / closes[prev])
+            events.append({"release": name, "month": str(index_month(k))[:7], "day": str(d), "surprise": act[k] - exp[k],
+                           "z1": r1 / sd, "z5": r5 / (sd * math.sqrt(5)), "r1": r1, "r5": r5})
+    out: dict[str, Any] = {"cpi_ar_p": cpi["p"], "cpi_val_rmse": cpi["val_rmse"][cpi["p"]], "n_events": len(events)}
+    cut = knowledge_cutoff().date()
+    for rel in ("pooled", "core_cpi", "core_pce"):
+        ev = [e for e in events if rel == "pooled" or e["release"] == rel]
+        if not ev:
+            continue
+        s = np.array([e["surprise"] for e in ev])
+        sdv = s.std(ddof=1)
+        for seg in ("all", "llm_in_sample", "clean_holdout"):
+            sel = [i for i, e in enumerate(ev) if seg == "all" or ((date.fromisoformat(e["day"]) < cut) == (seg == "llm_in_sample"))]
+            if len(sel) < 4:
+                out[f"{rel}|{seg}"] = {"n": len(sel)}
+                continue
+            # order by day so the NW lags follow calendar time
+            sel = sorted(sel, key=lambda i: ev[i]["day"])
+            x = s[sel] / sdv
+            out[f"{rel}|{seg}"] = {"h1": nw_ols(np.array([ev[i]["z1"] for i in sel]), x, 2),
+                                   "h5": nw_ols(np.array([ev[i]["z5"] for i in sel]), x, 5), "surprise_sd": float(sdv)}
+    out["events"] = events
+    return out
+
+
+def cpi_forecast_now(V: Vintages, t: datetime, m: int, p: int) -> dict[str, Any]:
+    """Core CPI m/m for month m (log x100) from AR(p) on data through m-1 known at t; t interval from the 2003-2014
+    validation errors of the same p; test RMSE (2015-2026 ex COVID) reported descriptively (not a registered test)."""
+    mm, _, rel = targets(V, "CPILFESL")
+    errs_v, errs_t = [], []
+    for k, tk in sorted(rel.items()):
+        if k < VAL[0] or k not in mm:
+            continue
+        x = logdiff(series_asof(V, "CPILFESL", tk))
+        y = np.array([x[j] for j in range(M1_EST_START, k) if j in x])
+        if len(y) < 60 or (k - 1) not in x:
+            continue
+        e = mm[k] - float(ar_forecast(y, ar_fit(y, p)[0], 1)[0])
+        if k <= VAL[1]:
+            errs_v.append(e)
+        elif not is_covid(k):
+            errs_t.append(e)
+    df, sc = t_fit(np.array(errs_v))
+    x = logdiff(series_asof(V, "CPILFESL", t))
+    y = np.array([x[j] for j in range(M1_EST_START, m) if j in x])
+    f = float(ar_forecast(y, ar_fit(y, p)[0], 1)[0])
+    lv = series_asof(V, "CPILFESL", t)
+    yoy = 100 * (math.exp(math.log(lv[m - 1] / lv[m - 12]) + f / 100) - 1)
+    rw = x[m - 1]
+    return {"month": str(index_month(m))[:7], "model": f"AR({p}) core CPI", "mm_log_x100": round(f, 4),
+            "mm_80": [round(v, 3) for v in t_interval(f, df, sc, 0.8)], "mm_90": [round(v, 3) for v in t_interval(f, df, sc, 0.9)],
+            "mm_print_probabilities": print_probs(f, df, sc, [0.1, 0.2, 0.3, 0.4, 0.5]),
+            "yoy_simple_pct": round(yoy, 3), "last_mm_rw": round(rw, 4), "t_df": round(df, 2), "t_scale": round(sc, 4),
+            "val_rmse": rmse(np.array(errs_v)), "test_rmse_ex_covid": rmse(np.array(errs_t)),
+            "test_cov80": calib(np.array(errs_t), df, sc).get("cov80")}
+
+
+def cmd_forward(path: str) -> dict[str, Any]:
+    """Forward forecasts for the next releases and meetings (H-MAC9), written once per date and never rewritten."""
+    V, res, ev = build_m1(log=lambda *a: None)
+    t = datetime.now(UTC)
+    m4 = json.loads((out_dir() / "m4.json").read_text(encoding="utf-8"))
+    m2 = json.loads((out_dir() / "m2_current.json").read_text(encoding="utf-8"))
+    m3 = json.loads((out_dir() / "m3_current.json").read_text(encoding="utf-8"))
+    pre = json.loads((load().root / "research/macro/forecasts/2026-11-25_pre_release.json").read_text(encoding="utf-8"))
+    cpi = cpi_forecast_now(V, t, month_index(date(2026, 11, 1)), int(m4["cpi_ar_p"]))
+    pce_path = pre["core_pce_path"]
+    fed_rf, fed_mp, ecb_rf = m2["fed_reaction_function"]["path"], m2["fed_market_proxy"]["path"], m2["ecb_reaction_function"]["path"]
+    doc = {
+        "written_ts": t.isoformat(timespec="seconds"), "hypotheses": ["H-MAC9"],
+        "note": ("Forecasts for events after 2026-11-25. Core PCE path from the pre-release file (origin 2026-11-25 00:00 UTC, "
+                 "AR(12) beyond h = 0); it will be superseded by a bridge nowcast once November CPI/PPI are out (a new file, "
+                 "this one is never edited). Policy probabilities are monthly ordered-logit outputs (non-meeting months were "
+                 "holds in training, which dilutes meeting-month probabilities); H-MAC5 found the Fed reaction function worse "
+                 "than climatology out of sample, so the market proxy and market pricing are the better guides."),
+        "events": [
+            {"event": "US CPI, November 2026", "scheduled_utc": "2026-12-10T13:30:00+00:00", "forecast_core_cpi": cpi},
+            {"event": "FOMC decision", "scheduled_utc": "2026-12-09T19:00:00+00:00",
+             "p_hike_reaction_function": round(fed_rf[0]["p_hike"], 3), "p_hold_reaction_function": round(fed_rf[0]["p_hold"], 3),
+             "p_hike_market_proxy_model": round(fed_mp[0]["p_hike"], 3),
+             "market_as_given": m2["market_as_given"]["fed_dec_hike_prob_cme_fedwatch"],
+             "path_reaction_function": fed_rf},
+            {"event": "ECB decision", "scheduled_utc": "2026-12-17T13:15:00+00:00",
+             "p_hike_reaction_function": round(ecb_rf[0]["p_hike"], 3), "p_hold_reaction_function": round(ecb_rf[0]["p_hold"], 3),
+             "persistence_benchmark": m2["ecb_persistence_benchmark"], "market_as_given": m2["market_as_given"]["ecb_dec_hike"],
+             "path_reaction_function": ecb_rf},
+            {"event": "US PCE, November 2026 (BEA date to verify)", "forecast_core_pce": pce_path[1]},
+            {"event": "US PCE, December 2026", "forecast_core_pce": pce_path[2]},
+        ],
+        "recession_probability_12m": {"model": m3["recession_now"]["TS_CS"]["model"],
+                                      "months": m3["recession_now"]["TS_CS"]["months"], "p": m3["recession_now"]["TS_CS"]["p"],
+                                      "p80": [m3["recession_now"]["TS_CS"]["p_lo80"], m3["recession_now"]["TS_CS"]["p_hi80"]]},
+    }
+    p = load().root / path
+    if p.exists():
+        raise FileExistsError(f"{p} exists: forecast files are never rewritten")
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(doc, indent=1, default=float), encoding="utf-8")
+    return doc
