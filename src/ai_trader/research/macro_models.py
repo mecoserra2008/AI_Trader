@@ -1414,3 +1414,182 @@ def cmd_forward(path: str) -> dict[str, Any]:
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(doc, indent=1, default=float), encoding="utf-8")
     return doc
+
+
+# ====================================================================== scoring and CLI
+
+
+def score_pre_release(pre_path: str, out_path: str) -> dict[str, Any]:
+    """Scores a pre-release file once the release is in the lake (refresh first: `atx alt fred --series PCEPILFE,GDPC1`).
+    Writes a separate score file; the pre-release file is never touched."""
+    pre = json.loads((load().root / pre_path).read_text(encoding="utf-8"))
+    V = Vintages(["PCEPILFE", "GDPC1"])
+    mm, yy, rel = targets(V, "PCEPILFE")
+    k = month_index(date(2026, 10, 1))
+    if k not in mm:
+        raise RuntimeError("October 2026 core PCE not in the lake yet: run `atx alt fred --series PCEPILFE,GDPC1` after the release")
+    c = pre["core_pce_oct_2026"]
+    actual_mm, actual_yy = mm[k], yy[k]
+    lo80, hi80 = c["mm_80_log_x100"]
+    cons = pre["consensus_as_given"]
+    simple = 100 * (math.exp(actual_mm / 100) - 1)
+    out: dict[str, Any] = {
+        "scored_ts": datetime.now(UTC).isoformat(timespec="seconds"), "pre_release_file": pre_path,
+        "core_pce_oct_2026": {
+            "actual_mm_log_x100": round(actual_mm, 4), "actual_mm_simple_pct": round(simple, 4), "actual_print_1dp": round(simple, 1),
+            "actual_yoy_simple_pct": round(actual_yy, 3), "released": rel[k].isoformat(),
+            "model_mm_median": c["mm_median_log_x100"], "model_error_mm": round(actual_mm - c["mm_median_log_x100"], 4),
+            "in_80_frozen": lo80 <= actual_mm <= hi80, "in_80_recalibrated": c["mm_80_recalibrated"][0] <= actual_mm <= c["mm_80_recalibrated"][1],
+            "model_p_of_actual_print": c["mm_print_probabilities"].get(f"{round(simple, 1):.1f}"),
+            "consensus_mm": cons["core_pce_oct_2026_mm_pct"], "abs_err_model_mm": round(abs(simple - c["mm_median_simple_pct"]), 4),
+            "abs_err_consensus_mm": round(abs(simple - cons["core_pce_oct_2026_mm_pct"]), 4),
+            "model_yoy_median": c["yoy_median_simple_pct"], "abs_err_model_yoy": round(abs(actual_yy - c["yoy_median_simple_pct"]), 4),
+            "abs_err_consensus_yoy": round(abs(actual_yy - cons["core_pce_oct_2026_yoy_pct"]), 4),
+            "in_80_yoy": c["yoy_80"][0] <= actual_yy <= c["yoy_80"][1],
+        },
+    }
+    g = pre.get("real_gdp_q3_2026_second_estimate")
+    if g:
+        rows = {r["quarter"]: r for r in gdp_revisions(V)}
+        r = rows.get(g["quarter"], {})
+        if "second" in r:
+            out["gdp_q3_2026_second"] = {"actual": round(r["second"], 3), "model_median": g["second_median"],
+                                         "abs_err_model": round(abs(r["second"] - g["second_median"]), 3),
+                                         "abs_err_consensus": round(abs(r["second"] - cons["real_gdp_q3_2026_second_saar_pct"]), 3),
+                                         "in_80": g["80"][0] <= r["second"] <= g["80"][1]}
+    p = load().root / out_path
+    if p.exists():
+        raise FileExistsError(f"{p} exists")
+    p.write_text(json.dumps(out, indent=1, default=float), encoding="utf-8")
+    return out
+
+
+def _strip(d: dict[str, Any]) -> dict[str, Any]:
+    return {k: v for k, v in d.items() if not k.startswith("_")}
+
+
+def cmd_m1() -> dict[str, Any]:
+    V, res, ev = build_m1()
+    cur = m1_current(V, ev, datetime(2026, 11, 25, tzinfo=UTC), month_index(date(2026, 10, 1)))
+    doc = {"eval": _strip(ev), "tparams": {k: list(v) for k, v in ev["_tparams"].items()}, "current": cur}
+    (out_dir() / "m1_eval.json").write_text(json.dumps(doc, indent=1, default=float), encoding="utf-8")
+    return doc
+
+
+def cmd_m3() -> dict[str, Any]:
+    from ai_trader.narrative import macro
+    V = Vintages(M3_SERIES + ["DFEDTAR", "CPIAUCSL", "PAYEMS", "NROU"])
+    res = run_m3(V)
+    nov = month_index(date(2026, 11, 1))
+
+    def mavg(sid: str, k: int) -> float:
+        x = macro.read_asof(sid, utc(date(2026, 11, 25))).filter((pl.col("obs_date") >= index_month(k)) & (pl.col("obs_date") < index_month(k + 1)))
+        return float(x["value"].mean())
+
+    f_nov = dict(res["feats"][nov - 1])  # November to date: GS10 = mean DGS10, TB3MS = mean DTB3, BAA10YM ~ mean BAA10Y
+    f_nov |= {"ts": mavg("DGS10", nov) - mavg("DTB3", nov), "cs": mavg("BAA10Y", nov)}
+    f_nov["dcs6"] = f_nov["cs"] - res["feats"][nov - 6]["cs"]
+    res["feats"][nov] = f_nov
+    ks = [month_index(date(y, m, 1)) for y, m in [(2007, 9), (2008, 6), (2008, 9), (2018, 12), (2026, 10), (2026, 11)]]
+    now = {m: m3_current(res, m, ks) for m in dict.fromkeys([res["selected"], "TS", "TS_CS_RR_SAHM"])}
+    scen = {}
+    for name, dts, dcs in [("Dec +25bp, 10y flat", -0.25, 0.0), ("Dec+Jan +50bp, 10y flat", -0.5, 0.0), ("+50bp and Baa spread +50bp", -0.5, 0.5),
+                           ("+50bp, spread +100bp (2008-like credit)", -0.5, 1.0), ("pivot: -50bp bills, spread +50", 0.5, 0.5)]:
+        g = dict(f_nov)
+        g["ts"] += dts
+        g["cs"] += dcs
+        g["dcs6"] += dcs
+        res["feats"][nov + 1] = g
+        c = m3_current(res, res["selected"], [nov + 1], nboot=300)
+        scen[name] = {"p": c["p"][0], "p80": [c["p_lo80"][0], c["p_hi80"][0]], "ts": round(g["ts"], 3), "cs": round(g["cs"], 3)}
+    del res["feats"][nov + 1]
+    oos_hist = {str(index_month(k))[:7]: {n: res["preds_test"][n].get(k) for n in M3_CANDIDATES} for k in ks[:4]}
+    doc = {"comparison": comparison(V), "recession_now": now, "scenarios": scen, "nov_to_date_features": f_nov, "realtime_oos_at_episodes": oos_hist,
+           "selected": res["selected"], "val": res["val"], "test": res["test"],
+           "brier_diff_sel_minus_ts_ex_covid": res["brier_diff_sel_minus_ts_ex_covid"]}
+    (out_dir() / "m3_current.json").write_text(json.dumps(doc, indent=1, default=float), encoding="utf-8")
+    return doc
+
+
+def cmd_m2() -> dict[str, Any]:
+    import pickle
+
+    from ai_trader.narrative import macro
+    V = Vintages(["PCEPILFE", "UNRATE", "NROU", "NFCI", "DFEDTAR", "00XEFDEZ19M086NEST", "CP0000EZ19M086NEST"])
+    last = month_index(date(2026, 10, 1))
+    fr = month_end_series(fed_target_daily(V), month_index(date(1982, 10, 1)), last)
+    ff = {k: fed_features(V, fr, k) for k in range(month_index(date(1990, 1, 1)), last + 1)}
+    fed = PolicySpec("fed", fr, ff, FED_CANDIDATES, month_index(date(1990, 1, 1)), (month_index(date(2003, 1, 1)), month_index(date(2014, 12, 1))),
+                     TEST_START, 0.25)
+    rf = run_policy(fed, "bill_minus_target")
+    er = month_end_series(ecb_dfr_daily(), month_index(date(1999, 1, 1)), last)
+    ef = {k: ecb_features(V, er, k) for k in range(month_index(date(1999, 2, 1)), last + 1)}
+    ecb = PolicySpec("ecb", er, ef, ECB_CANDIDATES, month_index(date(1999, 2, 1)), (month_index(date(2008, 1, 1)), month_index(date(2014, 12, 1))),
+                     TEST_START, -99.0)
+    re_ = run_policy(ecb)
+    with (out_dir() / "m2_res.pkl").open("wb") as fh:
+        pickle.dump({"fed": rf, "ecb": re_, "fed_rate": fr, "ecb_rate": er, "fed_feats": ff, "ecb_feats": ef}, fh)
+    # current: features as known now, simulated path over the next meetings
+    now = datetime(2026, 11, 25, tzinfo=UTC)
+    dec = month_index(date(2026, 12, 1))
+    fr[dec - 1] = daily_last("DFEDTARU", date(2026, 11, 24))
+    er[dec - 1] = daily_last("ECBDFR", date(2026, 11, 24))
+    f0 = fed_features(V, fr, dec, now)
+    b = macro.read_asof("DTB3", now).tail(5)
+    f0["bill_minus_target"] = float(b["value"].mean()) - (fr[dec - 1] - 0.125)
+    e0 = ecb_features(V, er, dec, now)
+    m1 = json.loads((out_dir() / "m1_eval.json").read_text(encoding="utf-8"))["current"]["path"]
+    infl_path = {month_index(date.fromisoformat(p["month"] + "-01")) + 2: p["yoy_simple_pct"] for p in m1}
+    fed_meet, ecb_meet = {dec, dec + 1, dec + 3}, {dec, dec + 2, dec + 3}
+    out: dict[str, Any] = {
+        "as_of": now.isoformat(), "fed_features_now": f0, "ecb_features_now": e0,
+        "assumed_meeting_months": {"fed": ["2026-12 (Dec 8-9)", "2027-01", "2027-03"], "ecb": ["2026-12 (Dec 17)", "2027-02", "2027-03"]},
+        "fed_reaction_function": policy_path(fed, FED_CANDIDATES[rf["selected"]], dec, f0, infl_path, "infl_gap", fed_meet, 4),
+        "fed_market_proxy": policy_path(fed, ["bill_minus_target"], dec, f0, None, "", fed_meet, 1),
+        "ecb_reaction_function": policy_path(ecb, ECB_CANDIDATES[re_["selected"]], dec, e0, None, "core_gap", ecb_meet, 4),
+        "fed_selected": rf["selected"], "ecb_selected": re_["selected"],
+        "fed_eval": _strip(rf), "ecb_eval": _strip(re_),
+        "market_as_given": {"fed_dec_hike_prob_cme_fedwatch": "0.93-0.96 (user brief, web)", "ecb_dec_hike": "expected +25 bp to 2.75% (user brief, web)"}}
+    for name, spec, rate, x0 in (("fed", fed, fr, f0), ("ecb", ecb, er, e0)):
+        rows = [k for k in range(spec.train_start, dec) if k in spec.feats and k in rate and k - 1 in rate and rate[k - 1] > spec.zlb]
+        ys = [move_class(rate[k] - rate[k - 1]) for k in rows if spec.feats[k]["last_move"] == x0["last_move"]]
+        out[f"{name}_persistence_benchmark"] = {"p_cut_hold_hike": ((np.bincount(ys, minlength=3) + 0.5) / (len(ys) + 1.5)).round(3).tolist(), "n": len(ys)}
+    (out_dir() / "m2_current.json").write_text(json.dumps(out, indent=1, default=float), encoding="utf-8")
+    return out
+
+
+def cmd_m4() -> dict[str, Any]:
+    V, res, ev = build_m1(log=lambda *a: None)
+    r = run_m4(V, res, ev)
+    (out_dir() / "m4.json").write_text(json.dumps(r, indent=1, default=float), encoding="utf-8")
+    return r
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("cmd", choices=["m1", "m2", "m3", "m4", "nowcast", "forward", "score"])
+    ap.add_argument("--path", default="")
+    a = ap.parse_args()
+    if a.cmd == "m1":
+        d = cmd_m1()
+        print(json.dumps(d["current"]["path"][0], default=float))
+    elif a.cmd == "m3":
+        d = cmd_m3()
+        print(json.dumps(d["recession_now"], default=float)[:2000])
+    elif a.cmd == "m2":
+        d = cmd_m2()
+        print(json.dumps({k: d[k] for k in ("fed_reaction_function", "fed_market_proxy", "ecb_reaction_function")}, default=float)[:3000])
+    elif a.cmd == "m4":
+        d = cmd_m4()
+        print(json.dumps({k: v for k, v in d.items() if k != "events"}, default=float)[:3000])
+    elif a.cmd == "nowcast":
+        cmd_nowcast(a.path or "research/macro/forecasts/2026-11-25_pre_release.json")
+    elif a.cmd == "forward":
+        cmd_forward(a.path or f"research/macro/forecasts/{datetime.now(UTC):%Y-%m-%d}_forward.json")
+    else:
+        d = score_pre_release("research/macro/forecasts/2026-11-25_pre_release.json", a.path or "research/macro/forecasts/2026-11-25_score.json")
+        print(json.dumps(d, indent=1, default=float))
+
+
+if __name__ == "__main__":
+    main()
