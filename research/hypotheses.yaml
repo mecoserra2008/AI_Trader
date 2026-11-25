@@ -3119,3 +3119,165 @@ hypotheses:
     prior: 0.20
     family: macro_models
     status: proposed
+
+  # ---- Block GEO: intraday structure and market geometry (agent GEO, user request 2026-11-25 ~22:15 UTC; registered
+  # 2026-11-25 ~22:30 UTC before any fit). Data: Bybit linear 5m klines, universe L (23 perps), 2022-01-01 .. 2026-11-25
+  # (data/research/bos/bars/5m + a public-REST extension in data/research/intraday_geometry/bars), lake funding,
+  # lake flow_3s (spread / depth, 2026-11-07 on), lake liquidations (2026-11-08 on), news/events.parquet (CPI / NFP / FOMC
+  # scheduled UTC times). Segments split at research.knowledge_cutoff (2026-07-01): llm_in_sample before, clean_holdout
+  # after; clean_holdout is read once per hypothesis. sigma_slow = sqrt(trailing 7-day mean of 5m r^2), shifted one bar
+  # (causal); every return below is a log return divided by sigma_slow * sqrt(bars). Cross-symbol pooling averages over
+  # symbols per timestamp (or clusters by UTC day for events). Design frozen in data/research/intraday_geometry/design.json.
+  H-GEO1:
+    title: "The hour-of-week shape of crypto variance and volume is stable across months and across the cutoff"
+    statement: "The 168-cell (UTC hour x weekday) profile of hourly realised variance and of turnover, each divided by its own trailing 7-day hourly mean (shape only), estimated on llm_in_sample, ranks the clean_holdout profile with Spearman rho >= 0.8, and >= 80% of calendar months have rho >= 0.5 between their 48-cell (hour x weekday/weekend) profile and the leave-that-month-out in-sample profile."
+    rationale: "R-VOL-26 / R-VOL-27 use an hour-of-week vol factor; this checks its stability at monthly resolution, for volume too, on 5m-derived data for all 23 perps."
+    test: "Per symbol hourly RV = sum of 12 squared 5m log returns; ratio to the trailing 168-hour mean (shifted); pooled = mean over symbols per hour; cell means (winsorised at the 99.5th percentile); Spearman across cells."
+    success: "Supports iff rho_holdout >= 0.8 AND month share >= 0.8 for BOTH variance and volume; contradicts iff rho_holdout < 0.5 for either; else inconclusive."
+    prior: 0.85
+    family: intraday_geometry
+    status: proposed
+  H-GEO2:
+    title: "There is a tradable hour-of-week direction pattern in crypto perps"
+    statement: "Mean vol-standardised hourly returns differ across the 168 hour-of-week cells (joint test), the in-sample cell means rank the holdout cell means (Spearman > 0.2, p < 0.05), and a tilt that holds the in-sample sign of every |t| > 2 cell earns positive net R in the holdout after a 15 bp round trip per held hour."
+    rationale: "Folk lore of 'Asia dumps, US pumps'; R-AVOID-4 rejected session-level tilts (H-NS3); this is the finer hour x weekday version and the expected answer is noise."
+    test: "Pooled (mean over symbols per hour) z-returns; per cell mean and SE across weeks (one observation per week per cell); joint chi-square = sum of t^2 on 168 df (diagonal approximation); rank correlation; tilt P&L in R (1 R = one hourly sigma) net of costs."
+    success: "Supports iff the in-sample joint p < 0.01 AND holdout Spearman > 0.2 with p < 0.05 AND the holdout tilt is net positive; contradicts iff the holdout Spearman <= 0 or the holdout tilt is net negative; else inconclusive."
+    prior: 0.05
+    family: intraday_geometry
+    status: proposed
+  H-GEO3:
+    title: "Scheduled US releases (CPI, NFP 08:30 ET; FOMC 14:00 ET) carry a large, fast-decaying 5m variance spike in crypto"
+    statement: "The 5m bar starting at the scheduled release time has mean r^2 / sigma_slow^2 >= 3x that of the same UTC minute on the 20 previous non-event weekdays, and the ratio falls by more than half by the 30-60 minute window, in both segments."
+    rationale: "Macro information arrives at known times; the variance is forecastable even if the direction is not."
+    test: "Event = CPI / NFP / FOMC scheduled_ts from news/events.parquet (schedule known 7-30 days ahead); per event the pooled (mean over symbols) standardised r^2 for windows [0,5), [5,15), [15,30), [30,60) min divided by the baseline; bootstrap over events (2000 draws) for the 95% CI of the [0,5) ratio."
+    success: "Supports iff the [0,5) ratio >= 3 with the CI lower bound >= 1.5 AND the [30,60) ratio < half the [0,5) ratio, in both segments; contradicts iff the [0,5) ratio < 1.5 in either segment; else inconclusive."
+    prior: 0.85
+    family: intraday_geometry
+    status: proposed
+  H-GEO4:
+    title: "Funding settlements (00/08/16 UTC) carry excess 5m variance beyond the neighbouring top-of-hour bars"
+    statement: "The 5m bars [hh:00, hh:05) at hh in {0, 8, 16} have mean standardised r^2 at least 1.2x the [hh:00, hh:05) bars at the neighbouring hours (hh-1, hh+1) of the same day, in both segments."
+    rationale: "Funding-driven position adjustment and the funding print; R-ML-10 found no funding-hour gain in the hourly forecast, so a 5m-level effect would be small."
+    test: "Pooled over symbols per bar; ratio of means; day-block bootstrap CI (2000 draws). 00 UTC is confounded with the UTC day roll and the Asia open, so 08 and 16 UTC are also reported alone."
+    success: "Supports iff the ratio for 08+16 UTC >= 1.2 with CI lower bound > 1 in both segments; contradicts iff the 08+16 ratio < 1.05 in either segment; else inconclusive."
+    prior: 0.40
+    family: intraday_geometry
+    status: proposed
+  H-GEO5:
+    title: "Price drifts against the funding payer into the settlement and back after it"
+    statement: "Signed by -sign(funding rate known one hour before settlement), the pooled vol-standardised return over [-60, 0) min before 00/08/16 UTC is positive (the paying side unwinds into the print), and over [0, +60) min the sign flips."
+    rationale: "Funding-avoidance flow (close before the print, reopen after) would push price against the paying side before and toward it after."
+    test: "One observation per settlement = mean over symbols of the signed z; Newey-West t (lag 3) over settlements; settlements with |funding| >= 1 bp (8h) form the headline, all settlements are reported too."
+    success: "Supports iff the pre-window signed mean > 0 with t > 2 in llm_in_sample AND > 0 with one-sided p < 0.1 in clean_holdout; contradicts iff the in-sample t <= 0 or the holdout sign is opposite; else inconclusive."
+    prior: 0.15
+    family: intraday_geometry
+    status: proposed
+  H-GEO6:
+    title: "Session opens step up variance, and the US step follows New York time (DST), not a fixed UTC clock"
+    statement: "On weekdays without a scheduled release, variance in the 30 min after the US cash open (09:30 ET) is >= 1.5x the 30 min before, in both segments; the step sits at 13:30 UTC in EDT months and 14:30 UTC in EST months (the off-clock ratio at the other UTC time is < 1.2); the London open (08:00 London) and the Asia open (00:00 UTC) steps are reported."
+    rationale: "Cash-equity and ETF flow arrives with the US open; if the crypto vol step tracks ET it is a TradFi-session effect, not a clock artefact."
+    test: "Per day pooled ratio of sums of standardised r^2 (after / before); mean over days; day-bootstrap CI; release days (CPI / NFP / FOMC) excluded; NYSE holidays not modelled (known simplification)."
+    success: "Supports iff the US ratio >= 1.5 with CI lower bound > 1.2 in both segments AND the off-clock ratio < 1.2 in both DST regimes (in-sample); contradicts iff the US ratio < 1.2 in either segment; else inconclusive."
+    prior: 0.75
+    family: intraday_geometry
+    status: proposed
+  H-GEO7:
+    title: "Month-end (last UTC day, 15:00-16:00 UTC around the London 4 pm fix) carries excess variance and a direction"
+    statement: "The 15:00-16:00 UTC hour of the last calendar day of the month has standardised variance >= 1.3x the same hour on other weekdays of the month, and the pooled vol-standardised return of that hour has |t| > 2 in-sample with the same sign in the holdout."
+    rationale: "Rebalancing flows at the month-end fix are documented in FX and equities; crypto exposure via ETFs could import them."
+    test: "One observation per month; variance ratio of means with a month-bootstrap CI; direction mean and t over months (n ~ 54 in-sample, ~5 holdout)."
+    success: "The verdict is the vol part: supports iff ratio >= 1.3 with CI lower bound > 1 in both segments; contradicts iff the vol ratio < 1.1 in either segment; else inconclusive. The direction part (|t| > 2 in-sample, same sign in holdout) is reported in the metrics."
+    prior: 0.20
+    family: intraday_geometry
+    status: proposed
+  H-GEO8:
+    title: "Spreads widen and depth thins in the loud hours: the hour-of-day spread profile tracks the variance profile"
+    statement: "Across the 24 UTC hours, the pooled (median over symbols of per-symbol z-scored profiles) mean spread_bps has Spearman > 0.5 with the variance profile, and depth within 25 bp (bid + ask) has Spearman < -0.5."
+    rationale: "Inventory risk: market makers widen when volatility rises; matters for when pegged entries and stops cost the most."
+    test: "lake flow_3s (3 s TWA spread, depth_25, close) 2026-11-07 .. 2026-11-25 for the 23 perps, rolled to 5m and hours; day-block bootstrap CI of the correlations. clean_holdout only (no in-sample data exist)."
+    success: "Supports iff both correlations pass with bootstrap 90% CIs excluding 0; contradicts iff the spread correlation < 0 or the depth correlation > 0; else inconclusive."
+    prior: 0.70
+    family: intraday_geometry
+    status: proposed
+  H-GEO9:
+    title: "Some intraday geometry object x event x horizon has a direction effect beyond placebo levels that survives selection and the holdout"
+    statement: "In the pre-specified grid of 13 objects (prior-day high/low, prior-day close, prior-week high/low, opening range 15/30/60 min of the Asia/London/US sessions, Asia box 00-08 UTC, session VWAP, anchored VWAP from the last 1h swing, prior-day value-area edges, prior-day POC, 4h pivot zones, round numbers) x 4 events (touch, sweep-and-reclaim, acceptance = first close beyond, breakout-retest) x 3 horizons (15m, 1h, 4h), at least one cell's mean continuation-signed vol-standardised forward return differs from the same statistic on placebo levels (the same level shifted by +-0.5..1.5 daily sigma) after BH at 10% in llm_in_sample, and keeps its sign in clean_holdout."
+    rationale: "R-PX-4 / R-PX-5 / H-BO1 / H-VZ* found levels near random-walk behaviour at 1h-1d on hourly data; intraday 5m first tests of session-scale levels are the remaining untested geometry."
+    test: "First test of each level within its validity window, approach side fixed by the close before the window, events on 5m bars; continuation sign = direction of approach; touch measured from the level, other events from the event-bar close; real minus placebo difference with a day-clustered (Newey-West lag 2 over days) SE; BH over the 156 cells in-sample; survivors read once in the holdout (one-sided p, BH 10% among survivors)."
+    success: "Supports iff >= 1 cell survives in-sample BH AND >= 1 survivor passes the holdout BH with the same sign; contradicts iff no cell survives in-sample BH, or no survivor keeps its sign in the holdout; else inconclusive."
+    prior: 0.20
+    family: intraday_geometry
+    status: proposed
+  H-GEO10:
+    title: "A sweep-and-reclaim of the prior-day high or low reverses over the next hour (liquidity-sweep fade)"
+    statement: "After a 5m bar trades beyond the prior UTC day's high (low) by >= 0.1 hourly sigma and closes back inside, the 1h continuation-signed return is below that of placebo levels."
+    rationale: "Stop-run lore: stops above the prior high are taken and the move fails."
+    test: "Grid cell PD_HL x sweep x 1h of H-GEO9 (named in advance, so not BH-adjusted); day-clustered NW t."
+    success: "Supports iff real - placebo < 0 with t < -2 in llm_in_sample AND < 0 with one-sided p < 0.1 in clean_holdout; contradicts iff in-sample t >= 0 or the holdout sign is positive; else inconclusive."
+    prior: 0.25
+    family: intraday_geometry
+    status: proposed
+  H-GEO11:
+    title: "Acceptance beyond the 30-minute opening range (Asia, London, US sessions) continues over the next 4 hours"
+    statement: "After the first 5m close beyond the 30-minute opening range of a session, the 4h continuation-signed return exceeds that of placebo levels."
+    rationale: "Opening-range breakout lore; H-TF3 contradicted it for equity perps, untested for crypto."
+    test: "Grid cell OR30 x accept x 4h of H-GEO9 (named); per session reported."
+    success: "Supports iff real - placebo > 0 with t > 2 in llm_in_sample AND > 0 with one-sided p < 0.1 in clean_holdout; contradicts iff in-sample t <= 0 or the holdout sign is negative; else inconclusive."
+    prior: 0.20
+    family: intraday_geometry
+    status: proposed
+  H-GEO12:
+    title: "The first acceptance across the session VWAP continues over the next hour"
+    statement: "After the first 5m close across the session (UTC day) VWAP, from 01:00 UTC on, the 1h continuation-signed return exceeds that of a placebo VWAP (the same curve shifted by +-0.5..1.5 daily sigma)."
+    rationale: "VWAP as the institutional fair-value line: crossing it flips who is in profit."
+    test: "Grid cell VWAP_S x accept x 1h of H-GEO9 (named)."
+    success: "Supports iff real - placebo > 0 with t > 2 in llm_in_sample AND > 0 with one-sided p < 0.1 in clean_holdout; contradicts iff in-sample t <= 0 or the holdout sign is negative; else inconclusive."
+    prior: 0.20
+    family: intraday_geometry
+    status: proposed
+  H-GEO13:
+    title: "Round numbers hold on the first touch over the next hour"
+    statement: "Measured from the level, the 1h continuation-signed return after the first touch of a round number (multiples of 10^(floor(log10 P) - 1) nearest the day open) is below that of placebo levels."
+    rationale: "Resting orders cluster at round numbers (Osler 2003 in FX)."
+    test: "Grid cell ROUND x touch x 1h of H-GEO9 (named)."
+    success: "Supports iff real - placebo < 0 with t < -2 in llm_in_sample AND < 0 with one-sided p < 0.1 in clean_holdout; contradicts iff in-sample t >= 0 or the holdout sign is positive; else inconclusive."
+    prior: 0.25
+    family: intraday_geometry
+    status: proposed
+  H-GEO14:
+    title: "A sweep of the Asia box during the London morning reverses (the 'Judas swing')"
+    statement: "A 5m sweep-and-reclaim of the 00:00-08:00 UTC high or low between 07:00 and 11:00 UTC has a 1h continuation-signed return below placebo."
+    rationale: "ICT / session lore: London takes the Asian liquidity and reverses."
+    test: "ASIA_BOX x sweep x 1h restricted to events 07:00-11:00 UTC (named); day-clustered NW t."
+    success: "Supports iff real - placebo < 0 with t < -2 in llm_in_sample AND < 0 with one-sided p < 0.1 in clean_holdout; contradicts iff in-sample t >= 0 or the holdout sign is positive; else inconclusive."
+    prior: 0.15
+    family: intraday_geometry
+    status: proposed
+  H-GEO15:
+    title: "Geometry effects depend on the v0 regime cell and session in a way that persists out of sample"
+    statement: "For the H-GEO9 in-sample BH survivors (or, if none, the named cells H-GEO10..14), the real-minus-placebo effect differs across v0 cells and sessions (Wald p < 0.01 in-sample) and the in-sample cell ranking predicts the holdout ranking (Spearman > 0.3 over cells with >= 100 events in both segments)."
+    rationale: "R-SYN-2 / R-MAP-1 / H-BOS2: regime maps tell where strategies lose; geometry might be regime-dependent too."
+    test: "Per cell effects shrunk toward the pooled effect with w = episodes / (episodes + 10); Wald on the unshrunk cell effects with day-clustered SEs; Spearman across cells."
+    success: "Supports iff Wald p < 0.01 in-sample AND holdout Spearman > 0.3 for the majority of the tested cells; contradicts iff the holdout Spearman <= 0 for the majority; else inconclusive."
+    prior: 0.25
+    family: intraday_geometry
+    status: proposed
+  H-GEO16:
+    title: "A geometry rule is executable: positive net R after realistic costs, beating regime-matched random entries"
+    statement: "For each rule built from an H-GEO9 in-sample survivor (or, if none survive, the 3 largest-|t| in-sample cells and the 5 named cells H-GEO10..14, labelled best-of-grid), selected among 16 exit variants (stop 1 or 2 hourly sigma, 2R limit target or none, time stop 1h or 4h, flat or hour-of-week-scaled stop) by purged expanding walk-forward on llm_in_sample, net R per trade is > 0 with a day-clustered 95% CI above 0 in the walk-forward stream, the deflated Sharpe over all variants tried is >= 0.95, PBO < 0.5, the holdout net R is > 0, and the rule beats regime-matched (same symbol, v0 cell, session, side) random entries with the same exits."
+    rationale: "R-BOS-1: intraday breakouts lose to a ~15 bp round trip; an executable geometry edge must clear that."
+    test: "Costs: pegged entry at the next 5m open + 1.3 bp, maker 2.0 bp; limit at the level 2.0 bp, filled only on a 1 bp trade-through; taker 5.5 bp + 2.0 bp slippage; stops taker with slippage, gaps fill at the open; limit targets maker 2.0 bp on a 1 bp trade-through; time exits taker; funding charged; worst-case intrabar ordering; latency arms 0 and 5 min (entry at the open of bar t+1 or t+2); sensitivity adding each alt's median half-spread to taker legs. Walk-forward test years 2023, 2024, 2025, 2026H1 (select on prior years, 1-day embargo); holdout = clean_holdout with the variant chosen on all of llm_in_sample."
+    success: "Supports iff any rule meets every condition; contradicts iff no rule has walk-forward net R > 0 with CI above 0; else inconclusive."
+    prior: 0.08
+    family: intraday_geometry
+    status: proposed
+  H-GEO17:
+    title: "(exploratory) Recent liquidation-cluster prices act as levels"
+    statement: "Price bins (0.25%) holding the top trailing-24h liquidation notional above and below the price at each UTC hour, first touched within the next 24h, show a 1h continuation-signed return different from placebo."
+    rationale: "Where forced flow already printed, liquidity is thin or replenished; the lake only has liquidations from 2026-11-08, so this is a holdout-only exploration."
+    test: "Universe L symbols with >= 1000 liquidation prints in the lake; same event machine as H-GEO9 (touch, sweep, accept) at 1h; day-clustered t."
+    success: "Supports iff |t| > 2 on >= 200 touch events; contradicts iff |t| < 1 on >= 200 events; inconclusive otherwise (expected, given 17 days)."
+    prior: 0.15
+    family: intraday_geometry
+    status: proposed
