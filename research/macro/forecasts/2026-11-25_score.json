@@ -1,0 +1,30 @@
+{
+ "scored_ts": "2026-11-25T21:10:29+00:00",
+ "pre_release_file": "research/macro/forecasts/2026-11-25_pre_release.json",
+ "core_pce_oct_2026": {
+  "actual_mm_log_x100": 0.2921,
+  "actual_mm_simple_pct": 0.2925,
+  "actual_print_1dp": 0.3,
+  "actual_yoy_simple_pct": 3.261,
+  "released": "2026-11-25T00:00:00+00:00",
+  "model_mm_median": 0.243,
+  "model_error_mm": 0.0491,
+  "in_80_frozen": true,
+  "in_80_recalibrated": true,
+  "model_p_of_actual_print": 0.427,
+  "consensus_mm": 0.3,
+  "abs_err_model_mm": 0.0492,
+  "abs_err_consensus_mm": 0.0075,
+  "model_yoy_median": 3.189,
+  "abs_err_model_yoy": 0.0721,
+  "abs_err_consensus_yoy": 0.0611,
+  "in_80_yoy": true
+ },
+ "gdp_q3_2026_second": {
+  "actual": 4.282,
+  "model_median": 3.473,
+  "abs_err_model": 0.809,
+  "abs_err_consensus": 0.782,
+  "in_80": 0.0
+ }
+}
