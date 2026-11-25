@@ -3281,3 +3281,131 @@ hypotheses:
     prior: 0.15
     family: intraday_geometry
     status: proposed
+
+  # ==== Market participants with machine learning (block PART; agent PART, registered 2026-11-25 ~22:35 UTC BEFORE any fit or
+  # look at the reduced data). Code: src/ai_trader/research/participants.py; outputs data/research/participants/; report
+  # research/reports/participants_2026-11-26.md. Universe BTCUSDT ETHUSDT SOLUSDT XRPUSDT DOGEUSDT (linear perps). Days: the 12
+  # pre-cutoff micro_days dates (2025-08-31 .. 2026-06-21, llm_in_sample) + every UTC day 2026-10-06 .. 2026-11-24 (clean_holdout).
+  # FIT = the 12 pre-cutoff days + 2026-10-06 .. 2026-10-29 (36 days); HELD = 2026-10-30 .. 2026-11-24 (26 days), read once.
+  # Raw: public.bybit.com prints (taker side, size) + quote-saver ob200 (snapshot + delta), reduced to taker orders (same-ms
+  # same-side print runs) and a 1 s book with in-bin maker flows (near-touch adds/removals <= 5 bp, best-level refills, L1 CKS OFI).
+  # Every feature is point in time (book = 1 s state at or before the order / minute; trailing windows only; HMM forward filter
+  # only). Holm within each hypothesis across its horizons. All public-tape types are TAKERS (aggressors): makers are seen only
+  # through the book-state model. ----
+  H-PART1:
+    title: "Taker orders split into k >= 3 stable, auditable types (GMM on order traits)"
+    statement: >-
+      A full-covariance GMM on 11 robust-standardised (per symbol, FIT medians / IQR, clipped +-6) order-trait features
+      (log10 notional, log notional / opposite L1 notional, log notional / opposite depth within 10 bp, log1p ticks crossed,
+      log1p prints, log1p ms since previous order, log1p ms since previous same-side order, log1p orders in trailing 1 s and 10 s,
+      log1p count of the previous 20 same-side orders with the exact same size, significant digits of the size), pooled over the
+      5 symbols, with k chosen on FIT by the frozen rule (k in 2..10; candidates = k with mean pairwise bootstrap ARI >= 0.80 over
+      10 bootstrap fits of 30k FIT orders scored on a common 20k FIT evaluation set; pick the minimum-BIC candidate on a 100k FIT
+      sample; if no candidate, the max-ARI k) yields k >= 3 types; every type's share of orders on HELD days is within 5 pp of its
+      FIT share; k-means (same k, same standardised features) agrees with the GMM at ARI >= 0.5. Types are named only after
+      describing them (traits, notional share, time of day, markouts).
+    rationale: "Retail clicks, child-order algos (clipping, regular cadence), sweepers and HFT takers should leave different size / aggression / timing footprints; the atx tape heuristics assume they do."
+    test: "Seeded sample of 3,000 book-valid orders per FIT symbol-day (seed 20261125); BIC and bootstrap ARI as stated; HELD assignment by predict on every HELD order."
+    success: "Supports iff the chosen k >= 3 with mean ARI >= 0.80 AND all HELD shares within 5 pp of FIT AND k-means ARI >= 0.5; contradicts iff no k >= 3 reaches mean ARI >= 0.60; else inconclusive."
+    prior: 0.55
+    family: participants
+    status: proposed
+  H-PART2:
+    title: "Taker types differ in informedness: their 60 s mid-to-mid markouts differ"
+    statement: >-
+      For at least one H-PART1 type, the mean 60 s mid-to-mid markout (side x ln(mid(t + 60 s) / mid(t)) x 1e4, mid = 1 s book state
+      at / before t and the first state at / after t + 60 s; per order, averaged per symbol-day) differs from the all-order mean of the
+      same symbol-days by > 0.5 bp with day-clustered |t| > 3 on FIT and the same sign with |t| > 2 on HELD.
+    rationale: "Informed vs uninformed flow is the participant distinction that matters for market makers and for following flow."
+    test: "Per type, symbol-day differences (type minus all), t clustered by day; segments llm_in_sample / clean_holdout reported separately within FIT; 10 s markout reported as a descriptor."
+    success: "Supports iff some type passes on FIT (|t| > 3, |diff| > 0.5 bp) and HELD (same sign, |t| > 2); contradicts iff no type has |t| > 2 on FIT; else inconclusive."
+    prior: 0.65
+    family: participants
+    status: proposed
+  H-PART3:
+    title: "Participant-type signed flow and flow-state transitions predict forward 1 / 5 / 60 min returns beyond OFI, total taker imbalance and lagged returns"
+    statement: >-
+      On a 1-minute grid per symbol (rows from 01:00 UTC, labels inside the day), target = ln(mid(t+h)/mid(t)) / (sigma_t sqrt(h)),
+      sigma_t = EWMA (half-life 30 min) of 1-min squared log mid returns, winsorised +-10. Baseline B = {L1 CKS OFI over the last 1 and
+      5 min / trailing-60-min mean L1 notional, total taker imbalance (buy - sell)/(buy + sell) notional over 1 and 5 min, lagged
+      standardised returns 1, 5, 60 min}. P = B + {per-type signed notional over 1 and 5 min / total taker notional of the window,
+      per-type share of taker notional over 5 min, forward-filtered HMM state probabilities (K - 1 columns), state-change flag}.
+      Pooled OLS; out-of-sample R^2 gain dR2 = (SSE_B - SSE_P) / sum(y^2).
+    rationale: "If some participants are informed (H-PART2), their flow should carry information that the aggregate imbalance averages away."
+    test: >-
+      FIT: purged blocked CV (6 chronological blocks of FIT days, 1-day embargo each side), OOS dR2 by segment (llm_in_sample days,
+      clean FIT days). HELD: fit on all FIT, score once; 95% CI and one-sided p by day-block bootstrap (2000, seed 20261125); Holm over
+      the 3 horizons. Secondary (not in the criterion): logistic P(r > 0) at 5 and 60 min, Platt-calibrated on FIT-CV OOS scores,
+      Brier skill vs B on HELD. GBM challenger (LightGBM depth <= 3, 300 trees, lr 0.05, min_data_in_leaf 500) only for horizons
+      whose FIT-CV dR2 > 0 in both segments, admitted iff its HELD dR2 vs linear P has CI lower bound > 0.
+    success: "Supports iff, for at least one horizon, HELD dR2 > 0 with Holm-adjusted p < 0.05 AND FIT-CV dR2 > 0 in both FIT segments; contradicts iff HELD dR2 <= 0 at all three horizons; else inconclusive."
+    prior: 0.25
+    family: participants
+    status: proposed
+  H-PART4:
+    title: "Participant activity mix and flow states predict forward realised volatility beyond lagged RV"
+    statement: >-
+      Target = ln RV over (t, t+h], h = 5 and 60 min, from 10 s mid log returns. B_vol = {ln RV last 5 and 60 min, ln taker notional
+      last 5 min minus its trailing-60-min mean, |lagged 1-min standardised return|, ln spread (last-minute mean of 1 s states)}.
+      P_vol = B_vol + {per-type share of taker notional and of order count over 5 min, forward-filtered HMM probabilities, state-change
+      flag}. Same OLS, CV, HELD, bootstrap and Holm (2 horizons) as H-PART3; dR2 relative to the FIT-mean forecast.
+    rationale: "Sweepers and HFT bursts should precede volatility; the flow-state HMM is built to capture regime transitions."
+    test: "As H-PART3 (dR2 = (SSE_B - SSE_P) / SST around the FIT mean)."
+    success: "Supports iff at least one horizon has HELD dR2 > 0 with Holm p < 0.05 AND FIT-CV dR2 > 0 in both segments; contradicts iff HELD dR2 <= 0 at both; else inconclusive."
+    prior: 0.45
+    family: participants
+    status: proposed
+  H-PART5:
+    title: "Participant features predict the adverse selection of passive fills beyond spread, volatility and recent adverse selection"
+    statement: >-
+      Target AS_h(t) = equal-weighted mean over taker orders in (t, t + 1 min] of side x (mid(tau + h) - first print price) / first
+      print price x 1e4 (the loss of a tiny maker resting at the touch that the order hit), h = 10 s and 60 s, minutes with >= 5
+      orders. B_as = {AS_10 of the last minute (known at t), AS_60 of the minute (t-2m, t-1m], ln spread, ln RV last 5 min, |total
+      taker imbalance| 1 min, |OFI| 1 min}. P_as = B_as + {per-type share of orders and of notional over 5 min, per-type |signed
+      imbalance| over 1 min, HMM probabilities, state-change flag}. Same protocol as H-PART3 (2 horizons, Holm; dR2 around the FIT mean).
+    rationale: "A maker who knows which participants are active should quote less when the informed ones are."
+    test: "As H-PART3."
+    success: "Supports iff at least one horizon has HELD dR2 > 0 with Holm p < 0.05 AND FIT-CV dR2 > 0 in both segments; contradicts iff HELD dR2 <= 0 at both; else inconclusive."
+    prior: 0.40
+    family: participants
+    status: proposed
+  H-PART6:
+    title: "Executable: the participant models make money after costs at our size on HELD"
+    statement: >-
+      Variants fixed now, using the P models fitted on FIT: (a) taker-directional for h = 5 and 60 min: trade the sign of the
+      prediction when |prediction| > its FIT 95th percentile, enter at the touch of the 1 s state at t + 1 s (latency >= 1 s, harsher
+      than 150-300 ms), exit at the touch at t + h, 5.5 bp fee per side, non-overlapping per symbol; (b) the same with a maker entry at
+      the touch posted at t + 1 s, filled only if a taker order prints strictly through the limit within h/2 (else no trade), fee
+      2 bp in + 5.5 bp out, plus a pegged-limit cost case 2.0 + 1.3 bp per side; (c) maker quote filter: a 1-lot quote at both touches
+      in minutes whose predicted AS_60 is below the FIT median vs all minutes; P&L per fill = -(AS_60 of the fill) - 2 bp fee.
+      Net bp per trade (per fill for c), day-block bootstrap CI on HELD.
+    rationale: "Predictability that does not survive spread, fees and latency is not edge."
+    test: "HELD only, once; Holm across the 5 variants (a5, a60, b5, b60, c); capacity reported as our notional vs median L1 depth and vs the signal-type flow."
+    success: "Supports iff some variant has mean net > 0 with Holm-adjusted bootstrap p < 0.05; contradicts iff every variant has mean net <= 0; else inconclusive."
+    prior: 0.12
+    family: participants
+    status: proposed
+  H-PART7:
+    title: "Cross-venue taker flow (Binance, OKX, Coinbase) adds to Bybit 5-min return prediction beyond Bybit participant features"
+    statement: >-
+      At each xvenue snapshot (data/journal/xvenue, 2026-11-15 .. 2026-11-24) for BTC ETH SOL XRP DOGE: target = Bybit standardised
+      5-min forward return from the snapshot time; P = H-PART3 P features at the last full minute before the snapshot; X = P + {bn,
+      ok, cb 1-min and 5-min taker delta / that venue's 5-min volume}. Fit on 2026-11-15 .. 2026-11-19, score on 2026-11-20 .. 11-24.
+    rationale: "Binance is the price-discovery venue for most perps; Bybit flow types may only echo it."
+    test: "OOS dR2 (X vs P), day-block bootstrap CI on the scored days (few days: descriptive weight)."
+    success: "Supports iff dR2 > 0 with CI lower bound > 0; contradicts iff dR2 <= 0; else inconclusive."
+    prior: 0.20
+    family: participants
+    status: proposed
+  H-PART8:
+    title: "Sanity: the unsupervised types line up with the atx tape heuristic labels"
+    statement: >-
+      On 2026-11-15 .. 2026-11-24 (tape-v1 journal), the type with the highest median ticks crossed is over-represented (>= 2x its
+      base share of orders) among orders within +-1 s of SWEEP alerts of the same symbol, and the type with the highest median clip
+      count is over-represented (>= 2x) inside ALGO_BUY / ALGO_SELL windows (first_ms .. last_ms) on the same side.
+    rationale: "Heuristic labels are not ground truth, but a taxonomy that ignores them entirely would be suspicious."
+    test: "Counts of HELD orders per type in the labelled windows vs base shares on the same symbol-days."
+    success: "Supports iff both ratios >= 2; contradicts iff both < 1.2; else inconclusive."
+    prior: 0.55
+    family: participants
+    status: proposed
