@@ -1512,6 +1512,35 @@ def evaluate_rules(n_trials_total: int | None = None) -> dict:
     return out
 
 
+
+# named cells: registered direction of the classic claim (+1 continuation, -1 reversal / hold)
+NAMED_DSIGN = {"H-GEO10": -1, "H-GEO11": 1, "H-GEO12": 1, "H-GEO13": -1, "H-GEO14": -1}
+
+
+def choose_rule_cells() -> list[dict]:
+    """H-GEO16: rules from the in-sample BH survivors; if none, the 3 largest-|t| in-sample cells (direction = the
+    in-sample sign) plus the 5 named cells (registered direction). Uses llm_in_sample statistics only."""
+    G = pl.read_parquet(out_dir() / "grid.parquet")
+    surv = G.filter(pl.col("bh_in"))
+    cells = []
+    if surv.height:
+        src = surv
+        label = "survivor"
+    else:
+        src = G.filter(pl.col("t_llm").is_not_nan()).with_columns(pl.col("t_llm").abs().alias("_a")).sort("_a", descending=True).head(3)
+        label = "best_of_grid"
+    seen = set()
+    for r in src.sort(pl.col("t_llm").abs(), descending=True).iter_rows(named=True):
+        key = (r["obj"], r["ev"], 1 if r["diff_llm"] > 0 else -1)
+        if key in seen:  # the same trades at another horizon label: exits are the variants, so keep one rule
+            continue
+        seen.add(key)
+        cells.append({"name": f"{label}:{r['obj']}/{r['ev']}/{r['h']}", "obj": r["obj"], "ev": r["ev"], "h": r["h"],
+                      "dsign": 1 if r["diff_llm"] > 0 else -1, "hours": None, "t_in": r["t_llm"]})
+    for hid, (on, en, hz, hrs) in NAMED.items():
+        cells.append({"name": f"{hid}:{on}/{en}/{hz}", "obj": on, "ev": en, "h": hz, "dsign": NAMED_DSIGN[hid], "hours": hrs})
+    return cells
+
 # ====================================================================== liquidation clusters (H-GEO17, exploratory)
 def stage_liq() -> dict:
     from ai_trader.storage.lake import Lake
@@ -1570,7 +1599,7 @@ def stage_liq() -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("stage", choices=["map", "events", "infer", "liq"])
+    ap.add_argument("stage", choices=["map", "events", "infer", "liq", "hetero", "rules", "evaluate"])
     ap.add_argument("--symbols", default="")
     a = ap.parse_args()
     if a.stage == "map":
@@ -1581,6 +1610,20 @@ def main() -> None:
         print(json.dumps(stage_infer(), default=float)[:2000])
     elif a.stage == "liq":
         print(json.dumps(stage_liq(), default=float)[:2000])
+    elif a.stage == "hetero":
+        G = pl.read_parquet(out_dir() / "grid.parquet").filter(pl.col("bh_in"))
+        cells = [(r["obj"], r["ev"], r["h"], None) for r in G.iter_rows(named=True)] or list(NAMED.values())
+        res = heterogeneity(cells)
+        (out_dir() / "hetero_results.json").write_text(json.dumps(res, default=float, indent=1))
+        print(json.dumps({k: {g: {kk: v[g][kk] for kk in ("wald", "p", "groups_in", "common", "rho_in_ho")} for g in v} for k, v in res.items()}, default=float))
+    elif a.stage == "rules":
+        cells = choose_rule_cells()
+        (out_dir() / "rule_cells.json").write_text(json.dumps(cells, default=float, indent=1))
+        print(stage_rules(cells))
+    elif a.stage == "evaluate":
+        n_tr = (156 + len(NAMED)) * len(VARIANTS)
+        res = evaluate_rules(n_tr)
+        print(json.dumps(res, default=float)[:4000])
 
 
 if __name__ == "__main__":
