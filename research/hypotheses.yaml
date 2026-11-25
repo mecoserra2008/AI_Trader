@@ -3409,3 +3409,176 @@ hypotheses:
     prior: 0.55
     family: participants
     status: proposed
+
+  # ==== Stress test of every deterministic strategy in every scenario (block STRESS; agent STRESS; user request 2026-11-25
+  # ~22:15 UTC "above all let's stress test every strategy in every scenario"; registered 2026-11-25 ~22:45 UTC BEFORE any
+  # stress run). Code: src/ai_trader/research/stress.py (+ tests/test_stress.py); outputs data/research/stress/; report
+  # research/reports/stress_test_2026-11-26.md. The LLM decision layer is NOT tested (CLAUDE.md principle 1): only the
+  # deterministic generators, the desk setups as coded or specified and the live risk engine (config/risk.yaml live_small).
+  #
+  # FROZEN DESIGN (also in the diary "STRESS design frozen before results" and data/research/stress/design.json):
+  # Stress units: the 17 registered strategies (tsmom, donchian_breakout, ema_stack, zscore_reversion, rsi_reversion,
+  #   compression_breakout, funding_contrarian, oi_price_divergence, shock_regime, weekend_shock_follow, weekend_drift_fade,
+  #   cme_gap_fill on 1h; geo_struct, geo_pivot_bo, geo_flag_bo on 4h; flow_momentum, cvd_divergence on BTCUSDT 1h flow_bars
+  #   only, 2026-05-11+) + zoo_ensemble (4h) + desk setups: trend_4h (agent.session: 4h ema_stack |s| >= 0.3 at a 4h close,
+  #   stop 1.5 x HAR daily sigma capped at 4 sigma_4h, TP 3R, pegged-limit entry, no TradFi-weekend entries, bracket exits,
+  #   one position per symbol), shock_desk (agent.session shock candidates: market entry at the shock-bar close, structural
+  #   stop/TP, stop cap 4 sigma_1h, min 0.5 sigma, continuation TP 2R, bracket exits), hs2_fade_blackout (reversal leg only,
+  #   entry at the close of the bar AFTER the shock bar = the R-FLOW-2 60-min no-fade blackout, same structural levels,
+  #   skipped if the TP or the stop was already crossed), hrb2 (post_cascade_study H-RB2 flush / arm / EMA20-cross logic and
+  #   placement, time stop 120 h), setup_c_proxy (PLAN_2026-11-15 setup C on BTCUSDT / ETHUSDT 15m bars 2024-01+: sweep of
+  #   the prior-72h low, 60-min wait, a 15m close back above the swept level within 24 h; pegged-limit long; stop = sweep
+  #   low - 0.5 sigma_15m (cap 4, min 0.5); target = lowest confirmed 15m pivot high (4 bars each side) above the entry in
+  #   the prior 72 h, else the 72h high; time stop 8 h. The spot-absorption and Coinbase-premium confirmations have no
+  #   history in the lake and are DROPPED: this is a proxy, not setup C as specified), weekend MM quoters
+  #   (mm_weekend_2026-11-21 replay results only, not re-run).
+  # Universe L = trend_zoo_study.UNIVERSE (23 crypto perps), Bybit, market_frame(as_of = run time); BTC-PERPETUAL (Deribit
+  #   1h, 2020-01+) only for the 2020-03-12/13 window. Signals on the full history, P&L split by entry date at
+  #   research.knowledge_cutoff (llm_in_sample / clean_holdout).
+  # Trade layer (generic, every signal strategy): enter at the bar close when flat and |s| >= 0.3 (the trend_4h desk
+  #   threshold) in sign(s); exit at the close of the first bar with s * side <= 0 (may reverse on that bar if |s| >= 0.3);
+  #   exchange stop at 4.0 x sigma_risk_next (per bar, strategy frequency; = the applied stop cap in
+  #   data/models/risk/stop_cap.json) from the fill, checked on 1h bars (4h strategies walk the 1h path); after a stop-out
+  #   no re-entry until the signal is flat or flips. No time exits. R = (d (exit - entry) - c_in entry - c_out exit) /
+  #   (|entry - stop| + entry (c_in_base + c_out_base)) (the at-risk sizing budget; cost shocks change the numerator only).
+  #   Base costs (live): entry pegged limit maker 2.0 + 1.3 bp (shock_desk / hs2: market 5.5 + 2.0), every exit taker
+  #   5.5 + 2.0 bp; stop fills at the stop price.
+  # Scenarios: S0 base; S1 slices of base trades by v0 cell at entry (1h regimes.label), TradFi weekend, NYSE holidays,
+  #   funding windows (entry within +-1 h of 00/08/16 UTC), segment; S2 crisis windows (entry dates, inclusive):
+  #   2020-03-09..03-20 (BTC Deribit only), 2021-05-12..05-26, 2021-12-01..12-31, 2022-05-05..05-20, 2022-06-10..06-25,
+  #   2022-11-06..11-20, 2023-03-08..03-20, 2024-08-01..08-10, the 3 largest non-overlapping BTC 14-day close-to-close
+  #   declines with the trough in 2025-01-01..2026-11-18 (window = trough - 14 d .. trough + 3 d), 2026-11-19..11-25;
+  #   per window: sum R, max DD in R, worst trade, stop-gap slippage in R; S3 costs: fees x1.5 and x2 (maker and taker),
+  #   slippage +5 / +10 / +25 bp per side, stop filled at the bar open when the bar opens through the stop (gap), stop
+  #   filled at the NEXT bar open after the touching bar (stop_next_open), no exchange stop (signal exits only, sizing
+  #   unchanged); S4 latency 1 / 5 / 15 min on entries and signal exits (fill = Brownian-bridge conditional mean between
+  #   the open and close of the first 1h bar after the decision, log-linear in elapsed time; checked against BTC 5m bars);
+  #   stops and targets are exchange-side (no latency); S5 parameters: every key parameter x0.5 / 0.8 / 1.2 / 1.5 one at a
+  #   time (integers rounded, >= 1; lists scaled elementwise) plus the harness theta_in and stop_k, and 30 joint draws
+  #   (each factor U(0.5, 1.5), seed 20261126), on universe D8 = agent.session.DEFAULT (BTC ETH SOL ADA AVAX LINK XRP DOGE)
+  #   against the D8 base; CLIFF = a +-20% one-at-a-time change that makes mean net R <= 0 when the D8 base is > 0;
+  #   S6 synthetic: 1000 one-year 1h paths (+2000-bar warm-up) per unit, 500 stationary block bootstrap (Politis-White on
+  #   |r|, sim.resample) + 500 regime-switching (v0 cell chain), sources cycled over BTC ETH SOL XRP DOGE LINK full 1h
+  #   history (no selection is made from synthetic results); bar-only units (positioning, flow, hrb2, setup_c_proxy n/a);
+  #   S7 correlation: in down states (BTC 1h v0 cell R7 / R8 / R9 at that time) a stop-out closes every concurrent same-side
+  #   open trade of the unit at its stop (-1R; rho -> 1, one-sided); S8 liquidity drought: mid / illiquid tiers (trailing
+  #   30-day median daily turnover < 100M USD, point in time) pay spread x3 (extra = 2 x tier half-spread per side,
+  #   half-spread = tier max_spread_bps / 2) and their stop exits slip sqrt(2) x tier stop_slip_bps (half depth,
+  #   square-root impact) instead of 2 bp; S9 live risk engine: live_small applied to the unit's pooled chronological trade
+  #   stream (1.30 USD per R, 2 USD worst case incl. tier stop slip, 20 entries per UTC day, 10 USD daily loss budget on
+  #   realised + open worst cases, 3 open, 2 same side, 400 USD gross, tier notional caps 200 / 100 / 50, stop distance
+  #   <= 10%; EV gate >= 0.10 only where a probability is defined: bracket setups with p = driftless first-passage null +
+  #   documented prior edge (shock 0.05, trend 0.03, others 0); first come first served by entry time).
+  # Metrics per unit x scenario: n, mean net R/trade with 95% CI (stationary bootstrap of entry days, mean block 5, 2000
+  #   draws), hit rate, profit factor, max DD (R), CVaR5% per trade and per day, time under water, top-5 share; S9 adds
+  #   P(daily stop hit per active day), P(>= 5 consecutive losers within 3 months), mean drawdown spell (days),
+  #   P(3-month cumulative loss >= 25 / 50 / 100 USD) by stationary day bootstrap (mean block 5 days, 91 days, 5000 draws).
+  # VERDICT RULES (H-STRESS0), on the base universe stream unless stated:
+  #   FAILS    if mean net R/trade <= 0 in S0, or <= 0 under fees x1.5.
+  #   FRAGILE  (if not FAILS) if any: G1 a +-20% one-at-a-time parameter change gives mean <= 0 (cliff, D8); G2 5-min
+  #            latency mean <= 0; G3 one crisis window costs more than 20 R on the S9 live-engine stream; G4 +5 bp per
+  #            side mean <= 0; G5 clean_holdout mean <= 0 with >= 20 holdout trades; G6 the S0 95% CI includes 0;
+  #            G7 total net R without the 5 best trades <= 0.
+  #   SURVIVES otherwise. The other scenarios are reported, not part of the verdict. Data-generated units (shock_regime,
+  #   shock_desk, hs2_fade_blackout, hrb2: designed after seeing their evidence) carry the tag "historical = not evidence".
+  #   Rule candidates (switch X off in cell Y) go to the report only, never to research/rules.yaml.
+  # ----
+  H-STRESS0:
+    title: "Scorecard: each stress unit is robust (SURVIVES) under the frozen verdict rules"
+    statement: "Recorded once per stress unit (segment pooled): SURVIVES -> supports, FRAGILE -> inconclusive, FAILS -> contradicts, with the rule(s) that fired."
+    rationale: "One registered decision rule for robust, fixed before any stress number is seen."
+    test: "Frozen design above; verdict rules F1/F2, G1..G7."
+    success: "Per unit as stated; no aggregate claim."
+    prior: 0.25
+    family: stress
+    status: proposed
+  H-STRESS1:
+    title: "Trend-family units keep net R > 0 under fees x1.5 and under +5 bp per side"
+    statement: "For each of tsmom, ema_stack, donchian_breakout, compression_breakout, geo_struct, geo_pivot_bo, geo_flag_bo, zoo_ensemble, trend_4h: mean net R/trade > 0 under fees x1.5 AND under +5 bp slippage per side, in both segments."
+    rationale: "R-PD-2: the trend family is one TSMOM bet with a positive in-sample loading; slow holding periods should keep costs small per R."
+    test: "S3 on the base trade layer, per segment."
+    success: "Supports iff >= 6 of the 9 units meet the statement in both segments; contradicts iff <= 2 do; else inconclusive."
+    prior: 0.40
+    family: stress
+    status: proposed
+  H-STRESS2:
+    title: "Mean-reversion and calendar units FAIL in the live trade layer"
+    statement: "zscore_reversion, rsi_reversion, weekend_shock_follow, weekend_drift_fade and cme_gap_fill each get verdict FAILS."
+    rationale: "Earlier panels (strategy_map_2026-11-11) found little or negative net edge for these families at taker costs; a 4-sigma exchange stop adds whipsaw losses."
+    test: "H-STRESS0 verdicts."
+    success: "Supports iff >= 4 of the 5 FAIL; contradicts iff <= 1 FAILS; else inconclusive."
+    prior: 0.65
+    family: stress
+    status: proposed
+  H-STRESS3:
+    title: "A 5-minute fill delay costs less than 0.05 R per trade for every unit"
+    statement: "|mean net R(latency 5 min) - mean net R(S0)| < 0.05 R for every bar unit with >= 30 trades."
+    rationale: "Entries and signal exits are a small share of a 4-sigma stop distance; drift within 5 minutes of a bar close is small on average."
+    test: "S4, pooled segments."
+    success: "Supports iff true for every unit; contradicts iff >= 3 units exceed 0.05 R; else inconclusive."
+    prior: 0.55
+    family: stress
+    status: proposed
+  H-STRESS4:
+    title: "The live limits cap every crisis window at a loss of at most 20 R"
+    statement: "On the S9 live-engine stream of every unit, no S2 crisis window sums to less than -20 R."
+    rationale: "3 open / 2 same side / 20 entries / 10 USD daily budget bound the loss per day; crisis windows last 1-4 weeks."
+    test: "S2 on the S9 stream."
+    success: "Supports iff no unit-window < -20 R; contradicts iff >= 3 unit-windows < -20 R; else inconclusive."
+    prior: 0.70
+    family: stress
+    status: proposed
+  H-STRESS5:
+    title: "Co-stopping in down states raises the daily CVaR5% of the live-engine stream by less than 50%"
+    statement: "For every unit with >= 30 S9 trades, CVaR5% of daily R under S7 applied to the S9 stream is no worse than 1.5 x the S9 value."
+    rationale: "max_same_direction = 2 bounds a same-side cluster to two stops."
+    test: "S7 on the S9 stream."
+    success: "Supports iff true for every unit; contradicts iff false for >= 3 units; else inconclusive."
+    prior: 0.60
+    family: stress
+    status: proposed
+  H-STRESS6:
+    title: "Under live_small, units with positive base edge rarely hit the 10 USD daily stop or lose 50 USD in 3 months"
+    statement: "For every unit with S0 mean > 0 and >= 30 S9 trades: P(daily stop hit per active day) < 2% and P(3-month cumulative loss >= 50 USD) < 5%."
+    rationale: "1.30 USD per R with at most 3 open positions needs about 8 full stops in one day to reach 10 USD."
+    test: "S9."
+    success: "Supports iff true for every such unit; contradicts iff false for >= half of them; else inconclusive."
+    prior: 0.55
+    family: stress
+    status: proposed
+  H-STRESS7:
+    title: "No parameter cliffs: a +-20% one-at-a-time change keeps the sign of mean net R"
+    statement: "Among units with D8 base mean > 0, at least two thirds have no CLIFF (S5)."
+    rationale: "Pre-registered judgement parameters were not tuned, so the surface should be smooth unless the edge is noise."
+    test: "S5 on D8."
+    success: "Supports iff >= 2/3 of such units have no cliff; contradicts iff <= 1/3; else inconclusive."
+    prior: 0.50
+    family: stress
+    status: proposed
+  H-STRESS8:
+    title: "Resampled paths do not reproduce the historical trend edge"
+    statement: "For the H-STRESS1 trend units with S0 mean > 0, the median stationary-block-bootstrap path (S6) has mean net R/trade <= 0."
+    rationale: "Block bootstrap keeps vol clustering and within-block momentum but breaks persistence beyond the block length; regime-switching keeps cell durations and is reported alongside."
+    test: "S6, SBB half for the statement, RS half reported."
+    success: "Supports iff true for >= 2/3 of those units; contradicts iff <= 1/3; else inconclusive."
+    prior: 0.60
+    family: stress
+    status: proposed
+  H-STRESS9:
+    title: "A liquidity drought does not flip the sign of any unit with positive base edge"
+    statement: "For every unit with S0 mean > 0, S8 mean net R/trade > 0."
+    rationale: "Universe L is mostly liquid / mid tier; spread x3 on mid tiers costs a few bp per side."
+    test: "S8."
+    success: "Supports iff true for every such unit; contradicts iff false for >= 3 units; else inconclusive."
+    prior: 0.60
+    family: stress
+    status: proposed
+  H-STRESS10:
+    title: "Units that survive on llm_in_sample alone keep a positive mean in the clean holdout"
+    statement: "Apply the verdict rules to llm_in_sample trades only (G5 skipped, G1 on in-sample D8); every unit that SURVIVES there has clean_holdout mean net R/trade > 0."
+    rationale: "RESEARCH_PROTOCOL section 1: in-sample evidence is necessary, the holdout is the test."
+    test: "Recorded in segment clean_holdout."
+    success: "Supports iff >= 1 unit survives in-sample and all of them are > 0 in the holdout; contradicts iff at least half are <= 0; else inconclusive."
+    prior: 0.45
+    family: stress
+    status: proposed
