@@ -1,0 +1,239 @@
+{
+ "written_ts": "2026-11-25T00:44:14+00:00",
+ "forecast_origin": "2026-11-25T00:00:00+00:00",
+ "data_cutoff_rule": "every input has known_ts <= forecast_origin (ALFRED vintages; known_ts = vintage date + 1 day)",
+ "hypotheses": [
+  "H-MAC4",
+  "H-MAC9"
+ ],
+ "release": {
+  "name": "BEA Personal Income and Outlays, October 2026",
+  "scheduled_utc": "2026-11-25T13:30:00+00:00"
+ },
+ "core_pce_oct_2026": {
+  "model": "bridge_S2_core_cpi_ppi",
+  "selection": "bridge S2_core_cpi_ppi chosen on 2010-2014 validation origins; frozen before the test",
+  "mm_median_simple_pct": 0.2433,
+  "mm_median_log_x100": 0.243,
+  "mm_80_log_x100": [
+   0.175,
+   0.311
+  ],
+  "mm_90_log_x100": [
+   0.156,
+   0.33
+  ],
+  "mm_print_probabilities": {
+   "0.1": 0.039,
+   "0.2": 0.511,
+   "0.3": 0.427,
+   "0.4": 0.022,
+   "0.5": 0.0
+  },
+  "yoy_median_simple_pct": 3.189,
+  "yoy_80": [
+   3.105,
+   3.274
+  ],
+  "yoy_90": [
+   3.08,
+   3.299
+  ],
+  "yoy_print_probabilities": {
+   "3.0": 0.02,
+   "3.1": 0.254,
+   "3.2": 0.55,
+   "3.3": 0.166,
+   "3.4": 0.009
+  },
+  "interval_note": "Frozen intervals: Student-t fitted to 2010-2014 validation errors. On the 2015-2026 test the bridge's 80% interval covered only 0.67 (too narrow); the recalibrated interval below refits the scale on all ex-COVID errors through the origin (forward convenience only).",
+  "mm_80_recalibrated": [
+   0.155,
+   0.331
+  ],
+  "mm_90_recalibrated": [
+   0.129,
+   0.357
+  ],
+  "recalibrated_t": {
+   "df": 30.23,
+   "scale": 0.0674,
+   "n": 261
+  },
+  "mm_print_probabilities_recalibrated": {
+   "0.1": 0.085,
+   "0.2": 0.451,
+   "0.3": 0.398,
+   "0.4": 0.06,
+   "0.5": 0.002
+  },
+  "alternatives_h0": {
+   "AR12": 0.2499,
+   "VAR6_l0.2": 0.2283,
+   "RW": 0.316,
+   "MEAN12": 0.2561,
+   "bridge_S1_core_cpi": 0.2417,
+   "bridge_S2_core_cpi_ppi": 0.243,
+   "bridge_S3_cpi_components": 0.2371,
+   "bridge_S4_cpi_ppi_components": 0.2603
+  }
+ },
+ "core_pce_path": [
+  {
+   "h": 0,
+   "month": "2026-10",
+   "model": "bridge_S2_core_cpi_ppi",
+   "mm_log_x100": 0.243,
+   "mm_simple_pct": 0.2433,
+   "mm_80": [
+    0.175,
+    0.311
+   ],
+   "mm_90": [
+    0.156,
+    0.33
+   ],
+   "yoy_simple_pct": 3.189,
+   "yoy_80": [
+    3.105,
+    3.274
+   ],
+   "yoy_90": [
+    3.08,
+    3.299
+   ],
+   "t_df": 200.0,
+   "t_scale": 0.0526,
+   "p_mm_ge_0.25": 0.447,
+   "p_mm_ge_0.35": 0.022
+  },
+  {
+   "h": 1,
+   "month": "2026-11",
+   "model": "AR12",
+   "mm_log_x100": 0.2455,
+   "mm_simple_pct": 0.2458,
+   "mm_80": [
+    0.14,
+    0.351
+   ],
+   "mm_90": [
+    0.11,
+    0.381
+   ],
+   "yoy_simple_pct": 3.282,
+   "yoy_80": [
+    3.127,
+    3.437
+   ],
+   "yoy_90": [
+    3.082,
+    3.482
+   ],
+   "t_df": 200.0,
+   "t_scale": 0.0821,
+   "p_mm_ge_0.25": 0.478,
+   "p_mm_ge_0.35": 0.102
+  },
+  {
+   "h": 2,
+   "month": "2026-12",
+   "model": "AR12",
+   "mm_log_x100": 0.2306,
+   "mm_simple_pct": 0.2309,
+   "mm_80": [
+    0.123,
+    0.338
+   ],
+   "mm_90": [
+    0.093,
+    0.369
+   ],
+   "yoy_simple_pct": 3.195,
+   "yoy_80": [
+    2.978,
+    3.412
+   ],
+   "yoy_90": [
+    2.916,
+    3.473
+   ],
+   "t_df": 200.0,
+   "t_scale": 0.0836,
+   "p_mm_ge_0.25": 0.409,
+   "p_mm_ge_0.35": 0.077
+  },
+  {
+   "h": 3,
+   "month": "2027-01",
+   "model": "AR12",
+   "mm_log_x100": 0.2309,
+   "mm_simple_pct": 0.2312,
+   "mm_80": [
+    0.124,
+    0.338
+   ],
+   "mm_90": [
+    0.093,
+    0.369
+   ],
+   "yoy_simple_pct": 3.026,
+   "yoy_80": [
+    2.756,
+    3.296
+   ],
+   "yoy_90": [
+    2.679,
+    3.373
+   ],
+   "t_df": 200.0,
+   "t_scale": 0.0835,
+   "p_mm_ge_0.25": 0.41,
+   "p_mm_ge_0.35": 0.078
+  }
+ ],
+ "consensus_as_given": {
+  "source": "as given in the user brief (web sources, 2026-11-25); not scraped, not verified point-in-time",
+  "core_pce_oct_2026_mm_pct": 0.3,
+  "core_pce_oct_2026_yoy_pct": 3.2,
+  "real_gdp_q3_2026_second_saar_pct": 3.5
+ },
+ "real_gdp_q3_2026_second_estimate": {
+  "quarter": "2026-07-01",
+  "advance_saar_pct": 3.37,
+  "advance_known": "2026-10-30T00:00:00+00:00",
+  "second_median": 3.473,
+  "80": [
+   2.682,
+   4.263
+  ],
+  "90": [
+   2.424,
+   4.521
+  ],
+  "revision_mean_fit": 0.103,
+  "revision_sd_fit": 0.654,
+  "n_fit": 93,
+  "t_df": 9.03,
+  "t_scale": 0.572,
+  "test_2015_2025_ex_covid": {
+   "n": 36,
+   "rmse_vs_advance_plus_mean": 0.39163437934288065,
+   "cov80": 0.9166666666666666,
+   "cov90": 0.9444444444444444,
+   "pit_hist10": [
+    2,
+    1,
+    3,
+    5,
+    9,
+    4,
+    8,
+    3,
+    0,
+    1
+   ],
+   "pit_ks_p": 0.0537424621378616
+  }
+ }
+}
