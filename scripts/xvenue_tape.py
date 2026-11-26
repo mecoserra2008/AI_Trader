@@ -50,6 +50,8 @@ UA = "Mozilla/5.0 (AI_Trader research; public market data)"
 CTX = ssl.create_default_context()
 POLL_S = 10                       # target; measured 15-17 s per cycle from this host (~0.4 s RTT x ~55 requests / 2 threads)
 BUF_MS = 60 * 60 * 1000          # keep 60 min of prints
+STALE_RESET_S = 300              # no successful poll for 5 min (suspend, outage): drop the paging cursor
+RETRY_DISABLED_S = 600           # a rejected feed is probed again after 10 min (40 min if it never worked)
 WINDOWS = {"1m": 60_000, "5m": 300_000, "15m": 900_000}
 VENUES = ["by", "bn", "bs", "ok", "cb", "hl", "db", "up"]
 SAMPLED = {"hl"}                  # partial coverage: never used to trigger flow alerts
@@ -129,6 +131,15 @@ class Buf:
         self.polls = 0
         self.ok = True                         # symbol listed on the venue
         self.err = ""
+        self.last_ok_ts = 0.0                  # wall clock of the last successful poll
+        self.retry_at = 0.0                    # when a disabled feed is probed again
+
+    def reset_cursor(self) -> None:
+        """Forget paging state (after a suspend or a long outage the old cursor is rejected or pages forever)."""
+        self.last_id = None
+        self.seen.clear()
+        self.seen_set.clear()
+        self.polls = 0
 
     def seen_add(self, k) -> bool:
         if k in self.seen_set:
@@ -338,8 +349,16 @@ class Venues:
 
     def fetch(self, h: Http, v: str, s: str) -> None:
         b = self.buf[(v, s)]
+        now = time.time()
         if not b.ok:
-            return
+            # a feed that worked before (or any feed, slowly) is probed again: a 400 after a PC suspend or an outage
+            # usually means a stale paging cursor, not a delisting (2026-11-26: Binance stayed dead until a restart)
+            if b.err == "not listed" or now < b.retry_at:
+                return
+            b.ok = True
+            b.reset_cursor()
+        elif b.last_ok_ts and now - b.last_ok_ts > STALE_RESET_S:
+            b.reset_cursor()                   # resume from the latest trades, not from a cursor hours old
         f = {"by": self.bybit, "bn": self.binance_perp, "bs": self.binance_spot, "ok": self.okx, "cb": self.coinbase,
              "hl": self.hyperliquid, "db": self.deribit, "up": self.upbit}[v]
         t0 = time.time()
@@ -347,9 +366,12 @@ class Venues:
             f(h, s, b)
             b.polls += 1
             b.err = ""
+            b.last_ok_ts = time.time()
         except BadSymbol as e:
             b.ok = False
-            b.err = f"not listed: {str(e)[:80]}"
+            b.err = f"rejected (retry in {RETRY_DISABLED_S // 60} min): {str(e)[:70]}"
+            b.retry_at = time.time() + (RETRY_DISABLED_S if b.last_ok_ts else 4 * RETRY_DISABLED_S)
+            b.reset_cursor()
         except RateLimited as e:
             b.err = f"429 {e}"
         except Exception as e:  # noqa: BLE001 - one venue failing must not stop the tracker
