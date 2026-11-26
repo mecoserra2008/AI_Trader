@@ -76,8 +76,11 @@ def write_report(out: dict, path: Path) -> None:
         tag = "*" if (r.get("unit") or {}).get("data_generated") else ""
         rows.append([f"{u}{tag}", f"**{r.get('verdict')}**", f(b.get("n")) if b.get("n") else "0",
                      f"{f(b.get('mean'))} [{f(b.get('lo'))}, {f(b.get('hi'))}]" if b.get("n") else "-",
-                     mm(sg.get("llm_in_sample"), True), mm(sg.get("clean_holdout"), True), "; ".join(r.get("fired") or []) or "-"])
-    L.append(table(["unit", "verdict", "n", "base mean R [95% CI]", "llm_in_sample (n)", "clean_holdout (n)", "rules fired"], rows) + "\n")
+                     mm(sg.get("llm_in_sample"), True), mm(sg.get("clean_holdout"), True), "; ".join(r.get("fired") or []) or "-",
+                     f"{(r.get('open_at_end') or {}).get('n', 0)}, {f((r.get('open_at_end') or {}).get('sum_R'), 1)}",
+                     f"{(r.get('closed_only') or {}).get('verdict', '-')} ({mm((r.get('closed_only') or {}).get('holdout'))})"])
+    L.append(table(["unit", "verdict", "n", "base mean R [95% CI]", "llm_in_sample (n)", "clean_holdout (n)", "rules fired",
+                    "open at data end: n, sum R", "closed trades only: verdict (holdout mean)"], rows) + "\n")
 
     L.append("### Costs, fills and latency (mean net R per trade)\n")
     rows = []

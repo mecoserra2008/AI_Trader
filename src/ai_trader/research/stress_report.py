@@ -264,6 +264,15 @@ def analyse(record: bool = False) -> dict:
         v, fired = S.verdict({"base": R["base"], "fees15": R["costs"]["fees_x1.5"], "slip5": R["costs"]["slip+5"], "lat5": R["exec"]["lat5"],
                               "holdout": R["segments"]["clean_holdout"], "cliff": R["perturb"].get("cliff"), "crisis_engine_min": R["crisis_engine_min"]})
         R["verdict"], R["fired"] = v, fired
+        # sensitivity: closed trades only (positions still open at the data end, marked to the last close, removed)
+        cl = pl.col("why") != "end"
+        tbc = tb.filter(cl)
+        R["open_at_end"] = {"n": int((tb["why"] == "end").sum()), "sum_R": float(r0[(tb["why"] == "end").to_numpy()].sum())}
+        bc = _m(tbc, ci=True)
+        vc, fc = S.verdict({"base": bc, "fees15": _m(tbc, costs=S.Costs(fee_mult=1.5)), "slip5": _m(tbc, costs=S.Costs(extra_bps=5.0)),
+                            "lat5": _m(_sel(T, name, "lat5").filter(cl)), "holdout": _m(tbc.filter(pl.col("seg") == "clean_holdout")),
+                            "cliff": R["perturb"].get("cliff"), "crisis_engine_min": R["crisis_engine_min"]})
+        R["closed_only"] = {"base": bc, "holdout": _m(tbc.filter(pl.col("seg") == "clean_holdout")), "verdict": vc, "fired": fc}
         # in-sample-only verdict (H-STRESS10)
         tis = tb.filter(pl.col("seg") == "llm_in_sample")
         acc_is, _, _ = _engine(tis, gate=True)
