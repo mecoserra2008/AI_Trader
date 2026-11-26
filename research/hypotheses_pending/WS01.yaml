@@ -1,0 +1,70 @@
+# WS01 AUDIT (specification program 2026-11-27): testable claims about the research record itself.
+# Registered before any registry-wide FDR, power or decline statistic was computed. Unit = a row of
+# research/hypotheses_results.jsonl as of the freeze (rows appended by other workstreams after the freeze are excluded).
+# Primary statistic per row is extracted by the frozen rules in src/ai_trader/research/audit_ws01.py (diary "WS01 design
+# frozen before results"); rows with no extractable statistic enter every FDR family with p = 1 (conservative, m counts
+# every recorded test). "Effect-claim supports" = verdict supports on hypotheses whose claim is an effect, not a null /
+# bound / equivalence claim (those are classified by the frozen rule and audited for power instead).
+H-WS01-1:
+  title: "Fewer than half of the registry's effect-claim supports survive Benjamini-Yekutieli at 10%"
+  statement: "Over the registry-wide family (every result row, one primary two-sided p per row, p = 1 where none is extractable), BY at q = 0.10 rejects fewer than 50% of the rows that carry verdict supports on effect-claim hypotheses."
+  rationale: "Most holdout supports are sign agreements on small samples (verdicts.py requires only the sign in the holdout) and the registry holds ~600 tests; BY pays a ln(m) ~ 7 factor for arbitrary dependence."
+  test: "BY step-up at q = 0.10 over all rows; share of effect-claim supports rows rejected."
+  success: "Supports iff the share < 0.50; contradicts iff >= 0.50."
+  prior: 0.70
+  family: audit
+  status: proposed
+H-WS01-2:
+  title: "Fewer than 70% of effect-claim supports survive Benjamini-Hochberg at 10%"
+  statement: "Same family and rows as H-WS01-1 with BH (valid under independence / PRDS) at q = 0.10."
+  rationale: "BH is the lenient bound; if even BH removes a large share, the registry's 'supports' are a weak signal."
+  test: "BH step-up at q = 0.10 over all rows; share of effect-claim supports rows rejected."
+  success: "Supports iff the share < 0.70; contradicts iff >= 0.70."
+  prior: 0.55
+  family: audit
+  status: proposed
+H-WS01-3:
+  title: "Holdout supports are mostly sign agreements, not significant replications"
+  statement: "Among clean_holdout rows with verdict supports on effect-claim hypotheses that carry an extractable statistic, more than 40% have two-sided p > 0.10."
+  rationale: "verdicts.py and most study scripts judge the holdout on sign only; under a zero effect the sign agrees half of the time."
+  test: "Share of such rows with p > 0.10."
+  success: "Supports iff share > 0.40; contradicts iff <= 0.40."
+  prior: 0.70
+  family: audit
+  status: proposed
+H-WS01-4:
+  title: "Holdout tests are underpowered for the in-sample effect"
+  statement: "For hypotheses with an in-sample (llm_in_sample) supports row and a clean_holdout row that both report t and the same sample-count key, the median power of the holdout test to detect the in-sample standardised effect (expected holdout t = t_in * sqrt(n_hold / n_in), one-sided 5%) is below 0.50."
+  rationale: "Holdouts are 4-5 months against years in-sample; in-sample t is also inflated by selection, so this power is an upper bound."
+  test: "Median over hypotheses of 1 - Phi(1.645 - |t_in| sqrt(n_hold/n_in))."
+  success: "Supports iff median < 0.50; contradicts iff >= 0.50; inconclusive if fewer than 8 hypotheses qualify."
+  prior: 0.60
+  family: audit
+  status: proposed
+H-WS01-5:
+  title: "In-sample supports that survive BY replicate in the holdout more often than those that do not"
+  statement: "Among effect-claim hypotheses with an llm_in_sample supports row and a clean_holdout row, the share whose latest holdout verdict is supports is higher when the in-sample row survives BY at q = 0.10 in the discovery family (llm_in_sample rows, plus pooled rows of hypotheses without an llm_in_sample row) than when it does not."
+  rationale: "If registry significance carries information, surviving discoveries should replicate more; if not, the verdict machinery is mostly noise."
+  test: "One-sided Fisher exact test on the 2x2 table (BY-survives x holdout supports)."
+  success: "Supports iff Fisher one-sided p < 0.10; contradicts iff the surviving group's holdout support share is <= the non-surviving group's; else inconclusive (also if either group has fewer than 5 hypotheses)."
+  prior: 0.55
+  family: audit
+  status: proposed
+H-WS01-6:
+  title: "There is an excess of test statistics just above the significance threshold (caliper test)"
+  statement: "Among all extracted two-sided p-values converted to |z| = Phi^-1(1 - p/2), the count with |z| in [1.96, 2.156) exceeds the count in [1.764, 1.96) (10% caliper, Gerber-Malhotra)."
+  rationale: "Selection after results and threshold-hunting leave a bump just past the threshold. The registry's own threshold is often t >= 2, so the same test at 2.0 (+-0.2) is reported as a secondary."
+  test: "One-sided binomial test of over vs under at p = 0.5."
+  success: "Supports iff binomial one-sided p < 0.10; contradicts iff count over <= count under; else inconclusive."
+  prior: 0.25
+  family: audit
+  status: proposed
+H-WS01-7:
+  title: "Effects decline from the in-sample to the holdout (winner's curse)"
+  statement: "For hypotheses with an llm_in_sample supports row and a clean_holdout row that both report t and the same sample-count key, the standardised effect ratio (t_hold / sqrt(n_hold)) / (t_in / sqrt(n_in)) has median < 1."
+  rationale: "Effects selected on in-sample significance shrink out of sample (regression to the mean, adaptive design)."
+  test: "Median ratio; one-sided sign test of ratio < 1."
+  success: "Supports iff median < 1 and sign-test one-sided p < 0.10; contradicts iff median >= 1; else inconclusive (also if fewer than 8 qualify)."
+  prior: 0.75
+  family: audit
+  status: proposed

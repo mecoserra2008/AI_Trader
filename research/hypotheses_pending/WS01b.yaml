@@ -1,0 +1,10 @@
+# WS01 extra trial (registered after H-WS01-4 / H-WS01-7 qualified only 2 pairs under the strict t-and-same-key rule).
+H-WS01-8:
+  title: "Extra trial of H-WS01-4: holdout tests are underpowered for the in-sample effect (z from p, count key from the row)"
+  statement: "For effect-claim hypotheses with a latest llm_in_sample supports row and a latest clean_holdout row whose primary p came from a raw p, t/z or a CI (not adjusted-only, Simes-combined, manual or none) and that both carry the same sample-count key (first of N_KEYS in the statistic's scope, else at the top level of metrics), the median holdout power 1 - Phi(1.645 - |z_in| sqrt(n_hold / n_in)), with |z_in| = Phi^-1(1 - p_in / 2), is below 0.50."
+  rationale: "H-WS01-4's rule needed an explicit t in both rows; most rows report p. Counted as an additional trial of the same question."
+  test: "Median power over qualifying hypotheses; also required holdout n for 80% one-sided 5% power, n_req = n_in (2.486 / |z_in|)^2."
+  success: "Supports iff median < 0.50; contradicts iff >= 0.50; inconclusive if fewer than 8 hypotheses qualify."
+  prior: 0.60
+  family: audit
+  status: proposed
