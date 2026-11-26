@@ -3582,3 +3582,140 @@ hypotheses:
     prior: 0.45
     family: stress
     status: proposed
+  H-PART9:
+    title: "Forward: the taker-type mix (no HMM) improves 5-min realised-volatility forecasts beyond lagged RV"
+    statement: >-
+      With the frozen H-PART1 GMM (k = 7, data/research/participants/taxonomy/gmm.pkl) and the H-PART4 OLS fitted once on all 62
+      PART days (2025-08-31 .. 2026-11-24) using P_vol minus the HMM columns, the out-of-sample dR2 of ln RV over (t, t + 5 min)
+      vs B_vol on forward days from 2026-11-25 (same 5 perps, same reductions) is > 0.
+    rationale: "Post hoc ablation (diary 2026-11-26): type mix alone gave HELD dR2 +0.00125 [0.00065, 0.00190] and positive FIT-CV in both segments; registered so that it is decided only on new days."
+    test: "Forward only, once >= 20 new days are reduced; day-block bootstrap (2000) CI of dR2."
+    success: "Supports iff dR2 > 0 with the 95% CI lower bound > 0; contradicts iff dR2 <= 0; else inconclusive."
+    segment: "forward (clean_holdout)"
+    prior: 0.40
+    family: participants
+    status: proposed
+  # ---------------------------------------------------------------- TVTP block (agent TVTP, 2026-11-26)
+  # The user's TVTP Markov-switching VAR (tvtp_msvar.py, reviewed copy src/ai_trader/research/tvtp_msvar.py, fixes F1..F13).
+  # Frozen design (diary 2026-11-26 "TVTP design frozen before results"), registered before any real-data fit.
+  # Common: y = log return / EWMA sigma_{t|t-1}, model input clipped at |y| <= 8 (P&L unclipped); l2 = 1.0, cov_prior = 2,
+  # 3 random starts + warm start per refit, max_iter 200, tol 1e-6; every forecast comes from the causal filter with
+  # parameters fit on rows < origin (walk_forward), regimes aligned across refits (Hungarian). Segments split at
+  # research.knowledge_cutoff. Spec (K in {2,3}, p in {1,2}, Gaussian or Student-t nu=5) chosen once, on the data before
+  # the first origin, by validation one-step log score (70/30 chronological split), never by BIC alone.
+  # Datasets. M1h: Bybit XAUUSDT / XAGUSDT 1h last, 2026-03-09..2026-11-25, EWMA halflife 24, burn 168 rows; X_extra = ect
+  # (log XAU on log XAG, rolling 336-row OLS known at t, z-scored by its rolling sd); z = [ect, rv] with rv = gold log
+  # EWMA vol minus its trailing 336-row mean over trailing sd; first origin 2026-05-01, refit every 336 rows, expanding.
+  # M1h-macro: M1h plus z += [d5 DFII10, d5 log DTWEXBGS, d5 T10YIE] (daily FRED, value with known_ts <= t, z-scored on an
+  # expanding window since 2003). M1d: Bybit 1d, EWMA halflife 10, burn 20, ect expanding (min 20 rows), z = [d5 DFII10,
+  # d5 log DTWEXBGS, d5 T10YIE, ect, rv], K=2 p=1 Gaussian fixed, first origin 2026-07-01, refit every 14 rows.
+  # Baselines: CTP = same spec with z dropped; VAR = K=1 same p, expanding; RVAR = K=1 rolling (720 rows 1h, 60 rows 1d,
+  # 1440 rows 1m). All keep the ect block where the dataset has one.
+  H-TVTP0:
+    title: "The TVTP MS-VAR recovers a known DGP (synthetic Monte Carlo)"
+    statement: "On the user's synthetic DGP (K=2) and a K=3 extension, 50 replications at T=4000: filtered out-of-sample regime accuracy >= 0.85, sign of every true nonzero TVTP z-coefficient recovered in >= 90% of replications, max |CCF error| at lags -3..3 median <= 0.05."
+    rationale: "A methodology check before any real-data claim: identification, label degeneracy and the TVTP coefficients."
+    test: "tvtp_study mc: T in {1000, 4000}, K in {2, 3}, 50 reps each; truth-aligned (Hungarian) bias / RMSE of A, Sigma, W; filtered (in-sample and on 1000 fresh rows with frozen params) vs smoothed accuracy; Wald coverage of W; init blocks vs dirichlet on a subset."
+    success: "Supports iff all three T=4000 criteria hold for K=2 and K=3; contradicts iff any fails for K=2; else inconclusive."
+    prior: 0.75
+    family: tvtp
+    status: proposed
+  H-TVTP1:
+    title: "TVTP MS-VAR one-step predictive log score beats CTP, VAR and rolling VAR on held-out gold/silver hourly data"
+    statement: "On M1h walk-forward rows, the mean per-row log score difference TVTP minus baseline is > 0 vs CTP, VAR and RVAR."
+    rationale: "The user's claim: context z drives leadership switches, so time-varying transitions should forecast better than constant ones and than single-regime VARs."
+    test: "Diebold-Mariano on per-row log score differences, Newey-West HAC t, per segment."
+    success: "Supports iff in clean_holdout the mean difference > 0 with HAC t >= 2 vs all three baselines and > 0 vs all three in llm_in_sample; contradicts iff in clean_holdout the difference vs CTP is <= 0, or vs VAR or RVAR it is < 0 with t <= -2; else inconclusive."
+    prior: 0.30
+    family: tvtp
+    status: proposed
+  H-TVTP1d:
+    title: "Same as H-TVTP1 on daily gold/silver (M1d, macro drivers) - underpowered"
+    statement: "On M1d walk-forward rows (all clean_holdout, about 145 rows), mean log score difference TVTP minus baseline > 0 vs CTP, VAR and RVAR."
+    rationale: "Daily is the intended frequency for macro drivers, but the lake has Bybit metals only since 2026-03 and the cTrader MCP was unreachable; registered so the result is not dropped."
+    test: "As H-TVTP1."
+    success: "As H-TVTP1 (clean_holdout only; no llm_in_sample test rows)."
+    prior: 0.15
+    family: tvtp
+    status: proposed
+  H-TVTP2:
+    title: "TVTP one-step covariance / correlation forecast beats rolling, EWMA and DCC on held-out gold/silver hourly data"
+    statement: "On M1h walk-forward rows, TVTP mixture covariance has lower mean QLIKE than rolling (120 rows), EWMA (lambda 0.97) and DCC(1,1) (QMLE on fit data at each refit)."
+    rationale: "Regime mixtures with z-driven weights should anticipate correlation shifts."
+    test: "QLIKE = log det H_t + y_t' H_t^-1 y_t (primary); MSE of the covariance element H_gs vs y_g*y_s (secondary, Patton-robust proxy). DM HAC on loss differences per segment."
+    success: "Supports iff in clean_holdout TVTP mean QLIKE is lower than all three with DM HAC t <= -2 and lower than all three in llm_in_sample; contradicts iff in clean_holdout TVTP QLIKE is higher than both rolling and EWMA, or higher than the best baseline with t >= 2; else inconclusive."
+    prior: 0.30
+    family: tvtp
+    status: proposed
+  H-TVTP3:
+    title: "Filtered-regime lead-lag rule on gold/silver 1h earns positive net R after costs"
+    statement: "Per fold, regimes with the largest positive (negative) first-lag CCF asymmetry corr(s_{t+1},g_t) - corr(g_{t+1},s_t) are gold-leads (silver-leads). At each bar close t, if the one-step predictive probability of a leader regime j exceeds theta, hold the lagger for one bar in direction sign(A_j[lagger, leader] * y_leader,t); theta in {0.5,0.6,0.7,0.8,0.9} chosen per fold on fit data (max net mean R, >= 30 trades, flat if none > 0; last fit row purged). Net R = sign * y_{t+1} - cost / sigma_{t+1|t}."
+    rationale: "The trading use of the regimes; costs: desk model = entry pegged 2.0 + 1.3 bp, exit taker 5.5 bp + half measured spread (config/risk.yaml paper_entry); all-taker and all-pegged reported."
+    test: "Walk-forward on M1h; comparators: regime-free lead-lag from the pooled VAR (lagger = larger |cross coefficient|, |y_leader| threshold in {0,0.5,1,1.5,2} chosen the same way) and random signs at the same entry times (2000 draws). Deflated Sharpe with n_trials = 40 (5 thresholds x 8 specs)."
+    success: "Supports iff in clean_holdout (>= 30 trades) mean net R/trade > 0 with HAC t >= 2 under desk costs, above the regime-free mean, random-sign p < 0.05, DSR >= 0.95, and llm_in_sample mean > 0; contradicts iff clean_holdout mean net R/trade <= 0 under desk costs; else inconclusive."
+    prior: 0.08
+    family: tvtp
+    status: proposed
+  H-TVTP3b:
+    title: "Exploratory: the H-TVTP3 rule on gold/silver 1m bars from flow_3s (19 days) earns positive net R"
+    statement: "Same rule at 1m (spec grid K in {2,3}, p in {1,2}, Gaussian, chosen on the first 3 days; rolling 3-day fit window, daily refits, z = [ect, rv] built at 1m with 1440-row windows), entry and exit at the 3 s candle mid about 3 s after the bar close."
+    rationale: "Lead-lag between the metals, if any, lives at minutes, not hours."
+    test: "Single segment (clean_holdout), costs as H-TVTP3 with the per-bar measured spread."
+    success: "Supports iff mean net R/trade > 0 with HAC t >= 2 under desk costs and above the regime-free comparator; contradicts iff mean net R/trade <= 0 under desk costs; else inconclusive."
+    prior: 0.05
+    family: tvtp
+    status: proposed
+  H-TVTP4:
+    title: "Real-yield and dollar effects on the leadership-switch hazard are significant and stable across subperiods"
+    statement: "On M1h-macro fit separately on the llm_in_sample rows (2026-03..06) and clean_holdout rows (2026-07..11), for d5 DFII10 or d5 log DTWEXBGS the average marginal effect on the leave hazard 1 - P_ii of some regime i has a 95% parametric-bootstrap CI (30 reps) excluding 0 in both subperiods with the same sign (regimes aligned to the first subperiod)."
+    rationale: "The user's driver-attribution output; stable effects are what would make the drivers usable."
+    test: "Selected spec, AME averaged over observed z; bootstrap simulates from each fitted model holding the observed z and ect paths."
+    success: "Supports iff the condition holds for at least one of the two drivers; contradicts iff in clean_holdout every CI for both drivers (all regimes) includes 0, or a driver's CIs exclude 0 with opposite signs; else inconclusive."
+    prior: 0.15
+    family: tvtp
+    status: proposed
+  H-TVTP4d:
+    title: "Exploratory: daily macro drivers (M1d) have significant effects on the switching hazard, full sample"
+    statement: "On M1d (K=2, p=1) fit on all rows, the AME of d5 DFII10 or d5 log DTWEXBGS on the leave hazard has a 95% bootstrap CI (30 reps) excluding 0."
+    rationale: "Daily is the natural frequency for the macro drivers; sample is about 240 rows, so this is descriptive."
+    test: "Pooled segment."
+    success: "Supports iff some CI excludes 0; contradicts iff all include 0; (never more than weak evidence)."
+    prior: 0.15
+    family: tvtp
+    status: proposed
+  H-TVTP5:
+    title: "Out-of-sample CUSUM on TVTP log scores flags known episodes earlier than a rolling-correlation detector without more false alarms"
+    statement: "Episodes = scheduled CPI, NFP and FOMC decisions in the M1h test rows, window [ts, ts + 24h). CUSUM (burn 168, halflife 168, kappa 0.5, h 5, refractory 24) on walk-forward TVTP log scores vs a detector |fisher_z(corr_24) - fisher_z(corr_168)| / sqrt(1/21 + 1/165) > 3 (refractory 24)."
+    rationale: "The user's break detector, run causally."
+    test: "Hit rate, median delay from the scheduled time to the first alarm in the window, false alarms per 1000 rows outside windows, and a binomial test of hits against each detector's unconditional alarm rate; per segment."
+    success: "Supports iff in clean_holdout CUSUM hit rate >= detector's, false-alarm rate <= detector's, median delay <= detector's (when both hit), and the CUSUM hit rate beats its chance rate with binomial p < 0.05; contradicts iff CUSUM hit rate < detector's with false-alarm rate >= detector's, or CUSUM binomial p >= 0.5; else inconclusive."
+    prior: 0.35
+    family: tvtp
+    status: proposed
+  H-TVTP6a:
+    title: "Crypto 1m: TVTP MS-VAR log score beats CTP, VAR and rolling VAR for BTC -> ETH / SOL / DOGE"
+    statement: "Bybit linear flow_3s rolled to 1m mids, 2026-11-07..11-25 (clean_holdout only); pairs [BTC, alt]; EWMA halflife 60, burn 240; z = [BTC rv state (1440-row trailing z-score of log EWMA vol), alt funding (latest known, expanding z), alt OI 1h log change (latest known)]; rolling 4320-row fit window, daily refits; spec per pair on the first window (K in {2,3}, p in {1,2}, Gaussian); VAR uses the same rolling window, RVAR 1440 rows."
+    rationale: "Same machinery, a market where lead-lag is documented at seconds to minutes."
+    test: "DM HAC per pair."
+    success: "Supports iff mean difference > 0 with t >= 2 vs all three baselines on >= 2 of 3 pairs; contradicts iff difference vs CTP <= 0 on >= 2 of 3 pairs; else inconclusive."
+    prior: 0.25
+    family: tvtp
+    status: proposed
+  H-TVTP6b:
+    title: "Crypto 1m: the filtered-regime BTC -> alt lead-lag rule is net positive after latency and costs"
+    statement: "Rule as H-TVTP3 with BTC the leader and the alt the lagger; entry / exit at the mid of the 3 s candle after the bar close (about 3 s: more conservative than 150-300 ms) plus half the measured spread; taker 5.5 bp per side (primary), maker 2.0 bp per side with fills assumed (optimistic bound), zero-latency gross reported."
+    rationale: "Expect costs to dominate a 1m lead-lag edge."
+    test: "Per pair, net R/trade with HAC t."
+    success: "Supports iff net R/trade > 0 with t >= 2 under taker costs on >= 2 of 3 pairs; contradicts iff net R/trade <= 0 under taker costs on all 3 pairs; else inconclusive."
+    prior: 0.03
+    family: tvtp
+    status: proposed
+  H-TVTP6c:
+    title: "Exploratory: cross-venue BTC (Bybit vs Binance) leadership regimes improve the log score"
+    statement: "xvenue journal BTC mids resampled to a 3-minute grid (2026-11-15..11-25), y = [bybit, binance], z = [BTC rv state, funding bybit - binance (expanding z), bybit OI 60-min log change]; rolling 1440-row window, refit every 480 rows; TVTP vs CTP, VAR, RVAR (480 rows)."
+    rationale: "Leadership between venues may switch with vol and positioning; snapshots are coarse, so this is exploratory."
+    test: "DM HAC."
+    success: "Supports iff > 0 with t >= 2 vs all three; contradicts iff <= 0 vs CTP; else inconclusive."
+    prior: 0.15
+    family: tvtp
+    status: proposed
