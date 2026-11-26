@@ -17,3 +17,7 @@ bin/
 *.key
 keys/
 *.p12
+
+# per-workstream virtualenvs (specification program)
+.venvs/
+data/run/

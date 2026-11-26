@@ -77,3 +77,9 @@ research/reports/<ws_id_lowercase>_2026-11-27.md: plain-words verdicts first (wh
 use and what to stop using), then the dossiers, then caveats, then method. Final reply to the orchestrator: the verdicts with
 numbers and tests, which specs to trust, what is still unknown, data used, storage before/after, runtime and governor waits,
 and everything that went wrong. Do not substitute a different design silently.
+
+## 8. Packages
+- Never modify pyproject.toml or uv.lock. Use the main env (`uv run`, `uv run --extra ml` for torch, `--extra viz` for
+  lightgbm/plots). If you need a package that is not installed, create your own venv under .venvs/<ws_id> (git-ignored,
+  outside the data/ budget): `uv venv .venvs/<ws_id> && uv pip install --python .venvs/<ws_id>/Scripts/python.exe <pkgs>`,
+  installed through the governor (--mb 1500). Prefer CPU wheels.
