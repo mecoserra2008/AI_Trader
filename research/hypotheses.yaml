@@ -3719,3 +3719,12 @@ hypotheses:
     prior: 0.15
     family: tvtp
     status: proposed
+  H-TVTP1s:
+    title: "Post hoc (registered after seeing H-TVTP1): the TVTP gain survives a session-aware baseline"
+    statement: "On M1h walk-forward rows, TVTP (same fits) beats SVAR = a K=1 Student-t (nu=5) VAR(p) on y divided by hour-of-week scale factors s_h (sqrt of mean y^2 per hour-of-week bucket on each fold's fit rows, shrunk 50/50 to 1), log score Jacobian-adjusted (- sum log s_h); and the TVTP minus CTP gain is > 0 on weekday rows (Mon 00:00 - Fri 21:00 UTC) alone."
+    rationale: "M1h regime 0 (vol about 0.16 of the EWMA scale, about 80 h duration, about 24% occupancy) is the weekend; the large MS-VAR gain over single-regime VARs may be calendar seasonality a deterministic baseline gets for free. Counted as an additional trial."
+    test: "DM HAC per segment, same rows as H-TVTP1."
+    success: "Supports iff in clean_holdout TVTP minus SVAR > 0 with t >= 2 and the weekday-only TVTP minus CTP mean > 0; contradicts iff TVTP minus SVAR <= 0 in clean_holdout; else inconclusive."
+    prior: 0.40
+    family: tvtp
+    status: proposed

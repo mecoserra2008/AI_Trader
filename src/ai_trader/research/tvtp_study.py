@@ -306,6 +306,8 @@ def pair_1m_dataset(lead: str, lag: str, kind: str) -> dict[str, Any]:
         fu = lake_series("funding", lag, "rate", {"venue": "bybit"})
         fu = fu.with_columns(pl.Series("fz", expanding_z(fu["rate"].to_numpy() * 1e4, 10)))
         oi = lake_series("open_interest", lag, "open_interest", {"venue": "bybit", "interval": "1h"})
+        if oi.height < 100:                                  # alts carry only 4h OI in the lake (deviation, diary)
+            oi = lake_series("open_interest", lag, "open_interest", {"venue": "bybit", "interval": "4h"})
         oiv = np.log(oi["open_interest"].to_numpy())
         oi = oi.with_columns(pl.Series("oiz", expanding_z(np.r_[np.nan, np.diff(oiv)], 24)))
         j = attach_asof(pl.DataFrame({"ts": ts}), fu.select("known_ts", "fz"))
@@ -1133,7 +1135,7 @@ def run_pair_1m(ds: dict[str, Any], primary: str, fixed_lead: int | None, grid: 
 
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["m1h", "m1h_macro", "m1d", "ame", "m1m", "crypto", "xvenue"])
+    ap.add_argument("cmd", choices=["m1h", "m1h_macro", "m1d", "ame", "m1m", "crypto", "xvenue", "record", "record_dry", "svar"])
     ap.add_argument("--reps", type=int, default=30)
     ap.add_argument("--alts", default="ETHUSDT,SOLUSDT,DOGEUSDT")
     a = ap.parse_args(argv)
@@ -1161,6 +1163,12 @@ def main(argv: list[str] | None = None) -> None:
             ds = pair_1m_dataset("BTCUSDT", alt, "crypto")
             r = run_pair_1m(ds, "taker", 0, grid_1m)
             print(json.dumps({k: r.get(k) for k in ("spec", "logscore_verdict", "trading_verdict")}, default=_js, indent=1))
+    elif a.cmd == "svar":
+        r = run_svar_diag()
+        print(json.dumps({k: r[k] for k in ("verdict", "clean_holdout")}, default=_js, indent=1))
+    elif a.cmd in ("record", "record_dry"):
+        for r in record_all(dry=a.cmd == "record_dry"):
+            print(r["id"], r["segment"], r["verdict"])
     elif a.cmd == "xvenue":
         ds = xvenue_dataset()
         r = run_pair_1m_xv(ds)
@@ -1182,6 +1190,178 @@ def run_pair_1m_xv(ds: dict[str, Any]) -> dict[str, Any]:
     out["regimes"] = regime_report(ds, res, spec["K"], spec["p"], spec["nu"])
     out["runtime_sec"] = time.time() - t0
     save("xvenue_btc_results.json", out)
+    return out
+
+
+# ====================================================================== H-TVTP1s and diagnostics (post hoc, registered)
+
+
+def how_bucket(ts: np.ndarray, bar_s: int = 3600) -> np.ndarray:
+    """Hour-of-week of the bar start (0 = Monday 00:00 UTC)."""
+    start = ts_seconds(ts) - bar_s
+    days = (start // 86400 + 3) % 7                                      # 1970-01-01 was a Thursday
+    return (days * 24 + (start % 86400) // 3600).astype(int)
+
+
+def run_svar_diag() -> dict[str, Any]:
+    ds = metals_dataset("1h", False)
+    r = json.loads((out_dir() / "m1h_results.json").read_text(encoding="utf-8"))
+    K, p, nu = r["spec"]["K"], r["spec"]["p"], r["spec"]["nu"]
+    wf = np.load(out_dir() / "m1h_walkforward.npz")
+    d = designs(ds, p)
+    rows = d["rows"]
+    assert np.array_equal(rows, wf["rows"])
+    hb = how_bucket(ds["ts"])
+    n = 2
+    folds = [f["origin"] for f in r["fits"]] + [len(rows)]
+    pll_s = np.full(len(rows), np.nan)
+    for o, o2 in zip(folds[:-1], folds[1:]):
+        fit_rows = rows[:o]
+        sfac = np.ones((168, n))
+        yy = ds["y"][fit_rows]
+        for h in range(168):
+            mk = hb[fit_rows] == h
+            if mk.sum() >= 5:
+                sfac[h] = 0.5 * np.sqrt((yy[mk] ** 2).mean(0)) + 0.5
+        S_all = sfac[hb]                                                 # per original row
+        Ys = ds["y"] / S_all
+        Ytd, Xd, Zcd, rr = build_design(Ys, None, ds["Xe"], ds["seg"], p)
+        assert np.array_equal(rr, rows)
+        m = factory(1, p, nu)().fit_design(Ytd[:o], Xd[:o], Zcd[:o])
+        f = m.filter_design(Ytd[:o2], Xd[:o2], Zcd[:o2])
+        pll_s[o:o2] = f["pll"][o:o2] - np.log(S_all[rows[o:o2]]).sum(1)
+    test = np.isfinite(wf["tvtp_pll"])
+    wd = hb[rows] < 4 * 24 + 21
+    out: dict[str, Any] = {"note": "SVAR = K=1 t5 VAR on hour-of-week rescaled y, Jacobian-adjusted"}
+    for seg, msk in seg_masks(ds, rows, test).items():
+        o: dict[str, Any] = {"n": int(msk.sum()), "mean_logscore": {"tvtp": float(wf["tvtp_pll"][msk].mean()),
+                             "svar": float(pll_s[msk].mean()), "var": float(wf["var_pll"][msk].mean()),
+                             "ctp": float(wf["ctp_pll"][msk].mean())}}
+        o["tvtp_minus_svar"] = dm(wf["tvtp_pll"][msk] - pll_s[msk])
+        o["ctp_minus_svar"] = dm(wf["ctp_pll"][msk] - pll_s[msk])
+        o["svar_minus_var"] = dm(pll_s[msk] - wf["var_pll"][msk])
+        for lab, mm in (("weekday", msk & wd), ("weekend", msk & ~wd)):
+            o[f"tvtp_minus_ctp_{lab}"] = dm(wf["tvtp_pll"][mm] - wf["ctp_pll"][mm])
+            o[f"tvtp_minus_svar_{lab}"] = dm(wf["tvtp_pll"][mm] - pll_s[mm])
+        out[seg] = o
+    ho = out.get("clean_holdout", {})
+    ok = ho and ho["tvtp_minus_svar"]["mean"] > 0 and ho["tvtp_minus_svar"]["t_hac"] >= 2 and         ho["tvtp_minus_ctp_weekday"]["mean"] > 0
+    out["verdict"] = {"clean_holdout": "supports" if ok else ("contradicts" if ho and ho["tvtp_minus_svar"]["mean"] <= 0
+                                                             else "inconclusive")}
+    # trading diagnostics: gross and net per fixed theta, weekday vs weekend, with the fold roles of m1h_results
+    sel = r["trading"]["selection"]
+    nxt_ok = np.r_[rows[1:] == rows[:-1] + 1, False]
+    diag: dict[str, Any] = {}
+    cut = int(knowledge_cutoff().timestamp())
+    tsec = ts_seconds(ds["ts"])
+    for th in THETAS:
+        recs = []
+        for f, (o, o2) in enumerate(zip(folds[:-1], folds[1:])):
+            rl = sel[f]["roles"]
+            rl = {k: (tuple(v) if v is not None and k != "asym" else v) for k, v in rl.items()}
+            r_te = np.arange(max(o - 1, 0), o2 - 1)
+            r_te = r_te[nxt_ok[r_te] & np.isfinite(wf["tvtp_pll"][r_te + 1])]
+            a_, d_ = rule_positions(wf["tvtp_pred"][r_te + 1], d["Yt"][r_te], rl, th)
+            Rn, G = trade_R(ds, rows[r_te + 1], a_, d_, "desk")
+            recs.append(np.c_[rows[r_te + 1], Rn, G, a_])
+        M = np.vstack(recs)
+        M = M[np.isfinite(M[:, 1])]
+        wdm = hb[M[:, 0].astype(int)] < 4 * 24 + 21
+        hold = tsec[M[:, 0].astype(int)] >= cut
+        diag[str(th)] = {lab: {"net": summ(M[mk, 1]), "gross": summ(M[mk, 2])} for lab, mk in
+                         (("holdout_all", hold), ("holdout_weekday", hold & wdm), ("holdout_weekend", hold & ~wdm),
+                          ("insample_all", ~hold))}
+    out["trading_fixed_theta"] = diag
+    save("m1h_svar_diag.json", out)
+    return out
+
+
+# ====================================================================== recording
+
+
+def _load(name: str) -> dict[str, Any] | None:
+    f = out_dir() / name
+    return json.loads(f.read_text(encoding="utf-8")) if f.is_file() else None
+
+
+def record_all(dry: bool = False) -> list[dict[str, Any]]:
+    """Append every available TVTP result to research/hypotheses_results.jsonl (failures included)."""
+    from ai_trader.research.hypotheses import record
+    rows: list[tuple] = []
+    mc = _load("mc_summary.json")
+    if mc:
+        rows.append(("H-TVTP0", "pooled", mc["h0"]["verdict"], {"criteria": mc["h0"]["criteria"],
+                     **{k: {kk: v[kk] for kk in ("acc_filtered_oos", "acc_smoothed", "slope_sign_rate_min",
+                                                  "ccf_maxerr_median", "slope_wald95_coverage", "degenerate_share")}
+                        for k, v in mc["summary"].items()}}, "synthetic Monte Carlo (tvtp_mc)", "synthetic"))
+    m = _load("m1h_results.json")
+    if m:
+        data = "bybit 1h last XAUUSDT, XAGUSDT 2026-03-09..2026-11-25"
+        for seg, v in m["logscore_verdict"].items():
+            rows.append(("H-TVTP1", seg, v, m["logscore"][seg] | {"spec": m["spec"]}, "walk-forward log scores", data))
+        for seg, v in m.get("covariance_verdict", {}).items():
+            rows.append(("H-TVTP2", seg, v, m["covariance"][seg], "QLIKE primary, cov-element MSE secondary", data))
+        for seg, v in m.get("trading_verdict", {}).items():
+            rows.append(("H-TVTP3", seg, v, m["trading"][seg], "desk costs primary", data))
+        for seg, v in m.get("cusum_verdict", {}).items():
+            rows.append(("H-TVTP5", seg, v, m["cusum"][seg], "CPI/NFP/FOMC 24h windows", data))
+    d = _load("m1d_results.json")
+    if d:
+        data = "bybit 1d last XAUUSDT, XAGUSDT + FRED DFII10, DTWEXBGS, T10YIE"
+        for seg, v in d["logscore_verdict"].items():
+            rows.append(("H-TVTP1d", seg, v, d["logscore"][seg], "underpowered (about 145 test rows)", data))
+        rows.append(("H-TVTP4d", "pooled", d["ame_verdict"], d["ame"]["pooled"] | {"z_names": d["z_names"]},
+                     "full-sample fit, 30 parametric bootstrap reps", data))
+    a = _load("m1h_macro_ame.json")
+    if a:
+        rows.append(("H-TVTP4", "clean_holdout", a["verdict"].get("clean_holdout", "inconclusive"),
+                     {"z_names": a["z_names"], "llm_in_sample": a.get("llm_in_sample"), "clean_holdout": a.get("clean_holdout")},
+                     "separate fits per subperiod, regimes aligned to the first", "M1h-macro"))
+    mm = _load("metals_XAGUSDT_results.json")
+    if mm:
+        rows.append(("H-TVTP3b", "clean_holdout", mm["trading_verdict"].get("clean_holdout", "inconclusive"),
+                     mm["trading"]["clean_holdout"] | {"logscore": mm["logscore"]}, "flow_3s 1m, 3 s latency",
+                     "bybit flow_3s XAUUSDT, XAGUSDT 2026-11-07..11-25"))
+    pairs = {alt: _load(f"crypto_{alt}_results.json") for alt in ("ETHUSDT", "SOLUSDT", "DOGEUSDT")}
+    pairs = {k: v for k, v in pairs.items() if v}
+    if pairs:
+        data = "bybit flow_3s 1m mids BTCUSDT vs " + ", ".join(pairs)
+        win, lose = 0, 0
+        for alt, r in pairs.items():
+            h = r["logscore"].get("clean_holdout", {})
+            if h and all(h[f"tvtp_minus_{b}"]["mean"] > 0 and h[f"tvtp_minus_{b}"]["t_hac"] >= 2 for b in ("ctp", "var", "rvar")):
+                win += 1
+            if h and h["tvtp_minus_ctp"]["mean"] <= 0:
+                lose += 1
+        v6a = "supports" if win >= 2 else ("contradicts" if lose >= 2 else "inconclusive")
+        rows.append(("H-TVTP6a", "clean_holdout", v6a, {alt: r["logscore"] for alt, r in pairs.items()} |
+                     {"pairs_beating_all": win, "pairs_not_beating_ctp": lose}, "per-pair DM HAC", data))
+        pos, nonpos = 0, 0
+        for alt, r in pairs.items():
+            t = r["trading"]["clean_holdout"].get("taker", {})
+            if t.get("mean", -1) > 0 and t.get("t_hac", 0) >= 2:
+                pos += 1
+            if t.get("mean", -1) <= 0:
+                nonpos += 1
+        v6b = "supports" if pos >= 2 else ("contradicts" if nonpos == len(pairs) == 3 else "inconclusive")
+        rows.append(("H-TVTP6b", "clean_holdout", v6b, {alt: {c: r["trading"]["clean_holdout"].get(c) for c in
+                     ("taker", "maker", "desk", "zero_latency")} for alt, r in pairs.items()}, "taker primary", data))
+    sv = _load("m1h_svar_diag.json")
+    if sv:
+        rows.append(("H-TVTP1s", "clean_holdout", sv["verdict"]["clean_holdout"],
+                     {k: sv[k] for k in ("llm_in_sample", "clean_holdout") if k in sv},
+                     "post hoc, registered after H-TVTP1; session-aware VAR baseline", "M1h"))
+    x = _load("xvenue_btc_results.json")
+    if x:
+        for seg, v in x["logscore_verdict"].items():
+            rows.append(("H-TVTP6c", seg, v, x["logscore"][seg], "3-minute grid of journal snapshots",
+                         "data/journal/xvenue BTC bybit vs binance mids"))
+    out = []
+    for hid, seg, verdict, metrics, note, data in rows:
+        if dry:
+            out.append({"id": hid, "segment": seg, "verdict": verdict})
+        else:
+            out.append(record(hid, seg, verdict, json.loads(json.dumps(metrics, default=_js)), note=note, data=data))
     return out
 
 

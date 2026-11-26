@@ -21,7 +21,7 @@ from typing import Any
 import numpy as np
 
 from ai_trader.core.config import load
-from ai_trader.research.tvtp_msvar import TVTPMSVAR, companion_ccf, cusum, simulate_msvar
+from ai_trader.research.tvtp_msvar import TVTPMSVAR, companion_ccf, cusum, kim_smoother, log_trans, simulate_msvar
 
 OUT = "data/research/tvtp"
 
@@ -214,6 +214,34 @@ def run_cusum_synth(reps: int) -> dict[str, Any]:
     return res
 
 
+def run_oracle(reps: int, Ks: list[int], Ts: list[int]) -> dict[str, Any]:
+    """Benchmark for the accuracy numbers: the same simulated paths (same seeds as `mc`), filtered / smoothed with the TRUE
+    parameters. The gap between this and the fitted model is estimation error; the oracle itself is the intrinsic
+    difficulty of classifying regimes from the data."""
+    out: dict[str, Any] = {}
+    for K in Ks:
+        for T in Ts:
+            acc_f, acc_s, acc_o = [], [], []
+            for s in range(reps):
+                rng = np.random.default_rng(1000 * K + 10 * T + s)
+                par = dgp(K)
+                z = sim_z(T + 1000, rng)
+                y, st = simulate_msvar(par, T + 1000, z[:, None], None, rng)
+                m = TVTPMSVAR(K=K, p=1)
+                m.B, m.S, m.W, m.logxi0, m.n = par["B"], par["S"], par["W"], par["logxi0"], 2
+                Yt, X, Zc = m.design(y, z[:, None])
+                f = m.filter_design(Yt, X, Zc)
+                P = np.exp(log_trans(Zc[:T - 1], m.W))
+                sm, _ = kim_smoother(f["pred"][:T - 1], f["filt"][:T - 1], P)
+                acc_f.append(accuracy(f["filt"][:T - 1], st[1:T]))
+                acc_s.append(accuracy(sm, st[1:T]))
+                acc_o.append(accuracy(f["filt"][T - 1:], st[T:]))
+            out[f"K{K}_T{T}"] = {"oracle_acc_filtered": float(np.mean(acc_f)), "oracle_acc_smoothed": float(np.mean(acc_s)),
+                                 "oracle_acc_filtered_oos": float(np.mean(acc_o)), "reps": reps}
+    (out_dir() / "mc_oracle.json").write_text(json.dumps(out, indent=1), encoding="utf-8")
+    return out
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -222,12 +250,16 @@ def main(argv: list[str] | None = None) -> None:
     a.add_argument("--K", default="2,3")
     a.add_argument("--T", default="1000,4000")
     a.add_argument("--init-reps", type=int, default=10)
+    o = sub.add_parser("oracle")
+    o.add_argument("--reps", type=int, default=50)
     c = sub.add_parser("cusum")
     c.add_argument("--reps", type=int, default=30)
     args = ap.parse_args(argv)
     if args.cmd == "mc":
         res = run_mc(args.reps, [int(x) for x in args.K.split(",")], [int(x) for x in args.T.split(",")], args.init_reps)
         print(json.dumps(res["h0"], indent=1))
+    elif args.cmd == "oracle":
+        print(json.dumps(run_oracle(args.reps, [2, 3], [1000, 4000]), indent=1))
     else:
         print(json.dumps(run_cusum_synth(args.reps)["result"], indent=1))
 
