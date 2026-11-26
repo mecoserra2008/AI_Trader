@@ -801,8 +801,9 @@ def trading_study(ds: dict[str, Any], res: dict[str, Any], K: int, p: int, nu: f
         pn = res["tvtp"]["pred"][r_te + 1]
         for th in THETAS:
             a_, d_ = rule_positions(pn, d["Yt"][r_te], rl, th)
-            R, _ = trade_R(ds, rows[r_te + 1], a_, d_, primary)
-            fixed[th].append(np.c_[rows[r_te + 1], R])
+            R, G = trade_R(ds, rows[r_te + 1], a_, d_, primary)
+            _, G0 = trade_R(ds, rows[r_te + 1], a_, d_, "zero_latency")
+            fixed[th].append(np.c_[rows[r_te + 1], R, G, G0])
         if best_th is not None:
             a_, d_ = rule_positions(pn, d["Yt"][r_te], rl, best_th)
             for c in costs:
@@ -836,11 +837,11 @@ def trading_study(ds: dict[str, Any], res: dict[str, Any], K: int, p: int, nu: f
         so["regime_free"] = summ(F[:, 1])
         srs = []
         for th in THETAS:
-            X = cat(fixed[th], 2)
+            X = cat(fixed[th], 4)
             X = X[np.isfinite(X[:, 1])]
             tx = tsec[X[:, 0].astype(int)] if len(X) else np.zeros(0)
             X = X[(tx < cut) if seg == "llm_in_sample" else (tx >= cut)]
-            s_ = summ(X[:, 1])
+            s_ = summ(X[:, 1]) | {"gross": summ(X[:, 2]), "gross_zero_latency": summ(X[:, 3])}
             so[f"fixed_theta_{th}"] = s_
             srs.append(s_.get("sr", np.nan))
         if len(prim) >= 10:
@@ -1302,7 +1303,9 @@ def record_all(dry: bool = False) -> list[dict[str, Any]]:
         for seg, v in m.get("covariance_verdict", {}).items():
             rows.append(("H-TVTP2", seg, v, m["covariance"][seg], "QLIKE primary, cov-element MSE secondary", data))
         for seg, v in m.get("trading_verdict", {}).items():
-            rows.append(("H-TVTP3", seg, v, m["trading"][seg], "desk costs primary", data))
+            rows.append(("H-TVTP3", seg, v, m["trading"][seg] | {"fixed_theta_gross": (_load("m1h_svar_diag.json") or {}).get(
+                "trading_fixed_theta")}, "desk costs primary; selected rule took no trades (no threshold net positive on "
+                "fit data in any fold); fixed thresholds all net negative", data))
         for seg, v in m.get("cusum_verdict", {}).items():
             rows.append(("H-TVTP5", seg, v, m["cusum"][seg], "CPI/NFP/FOMC 24h windows", data))
     d = _load("m1d_results.json")
@@ -1341,17 +1344,26 @@ def record_all(dry: bool = False) -> list[dict[str, Any]]:
             t = r["trading"]["clean_holdout"].get("taker", {})
             if t.get("mean", -1) > 0 and t.get("t_hac", 0) >= 2:
                 pos += 1
-            if t.get("mean", -1) <= 0:
+            if t.get("n", 0) >= 10 and t.get("mean", 1) <= 0:          # a pair with no selected trades is not evidence
                 nonpos += 1
         v6b = "supports" if pos >= 2 else ("contradicts" if nonpos == len(pairs) == 3 else "inconclusive")
         rows.append(("H-TVTP6b", "clean_holdout", v6b, {alt: {c: r["trading"]["clean_holdout"].get(c) for c in
-                     ("taker", "maker", "desk", "zero_latency")} for alt, r in pairs.items()}, "taker primary", data))
+                     ("taker", "maker", "desk", "zero_latency", "fixed_theta_0.5", "fixed_theta_0.7", "fixed_theta_0.9")}
+                     for alt, r in pairs.items()},
+                     "taker primary; the selected rule took no trades on any pair (no threshold net positive on fit data); "
+                     "fixed-threshold variants are reported", data))
     sv = _load("m1h_svar_diag.json")
     if sv:
         rows.append(("H-TVTP1s", "clean_holdout", sv["verdict"]["clean_holdout"],
                      {k: sv[k] for k in ("llm_in_sample", "clean_holdout") if k in sv},
                      "post hoc, registered after H-TVTP1; session-aware VAR baseline", "M1h"))
     x = _load("xvenue_btc_results.json")
+    if x and not x["logscore_verdict"]:
+        rows.append(("H-TVTP6c", "clean_holdout", "inconclusive",
+                     {"n_grid_bins": 4851, "bins_with_valid_returns": 1224, "valid_rows_after_burn": x["n_valid_rows"],
+                      "design_rows_p1": 877, "test_rows": 0, "spec_selection": x["spec_selection"]["table"]},
+                     "not testable as registered: journal snapshots too irregular for a 3-minute grid (no test rows after "
+                     "the 1440-row first window); no substitute design run", "data/journal/xvenue BTC bybit vs binance mids"))
     if x:
         for seg, v in x["logscore_verdict"].items():
             rows.append(("H-TVTP6c", seg, v, x["logscore"][seg], "3-minute grid of journal snapshots",
