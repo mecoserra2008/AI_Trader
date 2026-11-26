@@ -123,3 +123,18 @@ decides what is withdrawn.
   WS20 reviews as reports land; WS17 uses WS10 when available).
 - The orchestrator (main session) keeps the desk running, watches storage and the governor log, relays decisions to the
   user, and writes the synthesis when the workstreams report.
+
+## Compaction (2026-11-26 ~23:40 UTC, user: "compact the 20 agents into 10 ... until 3:10 am")
+Ten agents were stopped and their scopes folded, trimmed, into the survivors; all agents work lean (highest decision-value
+questions first), commit a partial report by 02:45 UTC, and use private scratch folders.
+- WS01 AUDIT + REFINE (top ~5 debts: power, redesign, cheapest re-tests) + REDTEAM (stress, geometry, participants, TVTP reports)
+- WS02 DATA (unchanged; gap map and PIT checks first)
+- WS04 VOL + DIST (innovation distributions, Student-t df, 4-sigma cap probability, VaR/ES of the risk unit)
+- WS05 JUMPS + DEPEND ("tail risk": co-jumps, tail dependence, DCC vs EWMA, effective bets, co-stopping, live limits)
+- WS07 REGIME (unchanged; usefulness of filtered regimes first)
+- WS08 PREDICT + XSECT (one cross-sectional test, alt selection in the trend sleeve) + MACRO (time-varying betas, DVOL/skew)
+- WS10 MICRO + COSTS (cost distribution validated on real fills; re-price zoo_ensemble, trend_4h, H-RB2)
+- WS12 DEEP + FOUNDATION (Chronos-Bolt zero-shot after its cutoff) + TREES (LightGBM meta-labelling of trend trades)
+- WS14 INTERP (live PNN surrogate and invariance tests first)
+- WS16 TREND + GENERATIVE (correct block bootstrap + one parametric generator for the synthetic stress)
+Stopped: WS03, WS06, WS09, WS11, WS13, WS15, WS17, WS18, WS19, WS20 (they had only read files; no jobs left running).
