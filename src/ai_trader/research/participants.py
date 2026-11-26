@@ -445,11 +445,40 @@ def raw_paths(d: str, sym: str) -> tuple[Path, Path]:
     return RAW / d / f"{sym}.csv.gz", RAW / d / f"{sym}_ob200.zip"
 
 
-def download_day(d: str, guard: bool = False) -> dict[str, Any]:
-    """Download the day's raw files; with guard=True (prefetch) wait before each file while raw >= RAW_CAP_GB - 0.35."""
+def download(url: str, dest: Path, tries: int = 6) -> dict[str, Any]:
+    """curl with a stall guard (abort below 300 kB/s for 30 s, then retry); 404 -> 'missing'. urllib could hang on a
+    trickling connection for many minutes (seen 2026-11-25 23:40)."""
+    import subprocess
     import time
 
-    from ai_trader.research.micro_days import download, du_bytes
+    if dest.exists() and dest.stat().st_size > 0:
+        return {"status": "ok", "bytes": dest.stat().st_size, "cached": True}
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(dest.suffix + ".part")
+    last = ""
+    for attempt in range(tries):
+        r = subprocess.run(["curl", "-sS", "-L", "-A", "Mozilla/5.0 (AI_Trader research; public archives)", "--connect-timeout", "20",
+                            "--speed-limit", "300000", "--speed-time", "30", "-o", str(tmp), "-w", "%{http_code}", url],
+                           capture_output=True, text=True)
+        code = r.stdout.strip()[-3:]
+        if code == "404":
+            tmp.unlink(missing_ok=True)
+            return {"status": "missing", "bytes": 0}
+        if r.returncode == 0 and code == "200" and tmp.exists() and tmp.stat().st_size > 0:
+            tmp.replace(dest)
+            return {"status": "ok", "bytes": dest.stat().st_size, "attempts": attempt + 1}
+        last = f"curl rc={r.returncode} http={code} {r.stderr.strip()[:200]}"
+        tmp.unlink(missing_ok=True)
+        time.sleep(5 * (attempt + 1))
+    return {"status": "failed", "bytes": 0, "error": last}
+
+
+def download_day(d: str, guard: bool = False, urgent: Any = None) -> dict[str, Any]:
+    """Download the day's raw files; with guard=True (prefetch) wait before each file while raw >= RAW_CAP_GB - 0.35,
+    until `urgent` (a threading.Event) is set: the day became the current one, so it must not wait any more."""
+    import time
+
+    from ai_trader.research.micro_days import du_bytes
 
     out = {}
     for sym in SYMBOLS:
@@ -458,7 +487,7 @@ def download_day(d: str, guard: bool = False) -> dict[str, Any]:
                                      (f"book:{sym}", OB_URL.format(s=sym, d=d), bp, OUT / "days" / d / "book_1s" / f"{sym}.parquet")):
             if done.exists():
                 continue
-            while guard and not dest.exists() and du_bytes(RAW) / 1024 ** 3 >= RAW_CAP_GB - 0.35:
+            while guard and not (urgent is not None and urgent.is_set()) and not dest.exists() and du_bytes(RAW) / 1024 ** 3 >= RAW_CAP_GB - 0.35:
                 time.sleep(5)
             out[key] = download(url, dest)
     return out
@@ -508,8 +537,10 @@ def run_reduce(days: Sequence[str] | None = None, workers: int = 2) -> None:
     pre: dict[str, threading.Thread] = {}
     res: dict[str, dict] = {}
 
+    urgent: dict[str, threading.Event] = {}
+
     def fetch(d, guard=False):
-        res[d] = download_day(d, guard)
+        res[d] = download_day(d, guard, urgent.setdefault(d, threading.Event()))
 
     with ProcessPoolExecutor(max_workers=workers) as ex:
         for i, d in enumerate(todo):
@@ -520,6 +551,7 @@ def run_reduce(days: Sequence[str] | None = None, workers: int = 2) -> None:
             if d not in pre:
                 pre[d] = threading.Thread(target=fetch, args=(d,))
                 pre[d].start()
+            urgent.setdefault(d, threading.Event()).set()
             pre[d].join()
             dl = res.pop(d, {})
             bad = {k: v for k, v in dl.items() if v.get("status") != "ok"}
@@ -933,11 +965,14 @@ def run_assign() -> dict[str, Any]:
     """Assign types to every order of every complete day; per (date, symbol, type) descriptors; minute panels."""
     gmm, order, tx = load_gmm()
     k, scalers = tx["k"], tx["scalers"]
-    desc_rows = []
-    trait_rows = []
-    rng = np.random.default_rng(SEED + 1)
     (OUT / "minute_raw").mkdir(parents=True, exist_ok=True)
+    pdir = TAX / "per_day"
+    pdir.mkdir(parents=True, exist_ok=True)
     for d in complete_days():
+        if (OUT / "minute_raw" / f"{d}.parquet").exists() and (pdir / f"desc_{d}.parquet").exists():
+            continue
+        desc_rows, trait_rows = [], []
+        rng = np.random.default_rng(SEED + 1 + all_days().index(d))
         panels = []
         for sym in SYMBOLS:
             book = load_book(d, sym)
@@ -964,10 +999,11 @@ def run_assign() -> dict[str, Any]:
                                                *ORDER_FEATURES, "mm_60s", "as_60s"]).with_columns(pl.lit(d).alias("date"), pl.lit(sym).alias("symbol")))
             panels.append(minute_panel(d, sym, o, lab, book, k))
         pl.concat(panels, how="vertical_relaxed").write_parquet(OUT / "minute_raw" / f"{d}.parquet", compression="zstd")
+        pl.DataFrame(desc_rows).write_parquet(pdir / f"desc_{d}.parquet")
+        pl.concat(trait_rows, how="vertical_relaxed").write_parquet(pdir / f"trait_{d}.parquet")
         _log(f"assign {d} done")
-    desc = pl.DataFrame(desc_rows)
-    desc.write_parquet(TAX / "type_day_stats.parquet")
-    pl.concat(trait_rows, how="vertical_relaxed").write_parquet(TAX / "trait_sample.parquet")
+    pl.concat([pl.read_parquet(f) for f in sorted(pdir.glob("desc_*.parquet"))], how="vertical_relaxed").write_parquet(TAX / "type_day_stats.parquet")
+    pl.concat([pl.read_parquet(f) for f in sorted(pdir.glob("trait_*.parquet"))], how="vertical_relaxed").write_parquet(TAX / "trait_sample.parquet")
     return {"k": k, "days": len(complete_days())}
 
 
@@ -1175,9 +1211,16 @@ def feature_sets(k: int, K: int) -> dict[str, dict[str, list[str]]]:
 TARGETS = {"y_r1": "ret", "y_r5": "ret", "y_r60": "ret", "y_rv5": "vol", "y_rv60": "vol", "y_as10": "as", "y_as60": "as"}
 
 
-def load_panel() -> pl.DataFrame:
+def load_panel(cols: Sequence[str] | None = None) -> pl.DataFrame:
+    """Rows from 01:00 UTC of every state_1m day; only `cols` (+ ids) to keep memory low (float32 features)."""
+    ids = ["date", "symbol", "minute", "ts", "split", "segment"]
     fs = sorted((OUT / "state_1m").glob("*.parquet"))
-    return pl.concat([pl.read_parquet(f).filter(pl.col("minute") >= FIRST_ROW_MIN) for f in fs], how="vertical_relaxed")
+    parts = []
+    for f in fs:
+        g = pl.read_parquet(f, columns=None if cols is None else list(dict.fromkeys(ids + list(cols))))
+        g = g.filter(pl.col("minute") >= FIRST_ROW_MIN)
+        parts.append(g.with_columns([pl.col(c).cast(pl.Float64) for c in g.columns if c not in ids]))
+    return pl.concat(parts, how="vertical_relaxed")
 
 
 def per_day_sse(df: pl.DataFrame, y: np.ndarray, pb: np.ndarray, pp: np.ndarray, center: float) -> dict[str, tuple[float, float, float]]:
@@ -1319,7 +1362,8 @@ def run_supervised() -> dict[str, Any]:
     tx = json.loads((TAX / "taxonomy.json").read_text(encoding="utf-8"))
     hm = json.loads((HMM_DIR / "hmm.json").read_text(encoding="utf-8"))
     fs = feature_sets(tx["k"], hm["K"])
-    panel = load_panel()
+    need = sorted({c for fam in fs.values() for c in fam["P"]} | set(TARGETS))
+    panel = load_panel(need)
     out: dict[str, Any] = {"k": tx["k"], "K": hm["K"], "feature_sets": fs, "n_rows": panel.height}
     preds = {}
     for tgt, fam in TARGETS.items():
@@ -1494,6 +1538,107 @@ def run_exec() -> dict[str, Any]:
     return res
 
 
+def describe_types() -> dict[str, Any]:
+    """Descriptive table per type (FIT and HELD): shares, traits in natural units, timing, markouts."""
+    tr = pl.read_parquet(TAX / "trait_sample.parquet")
+    st = pl.read_parquet(TAX / "type_day_stats.parquet")
+    k = int(json.loads((TAX / "taxonomy.json").read_text(encoding="utf-8"))["k"])
+    out: dict[str, Any] = {}
+    for split, filt in (("FIT", pl.col("date") < HELD_FIRST), ("HELD", pl.col("date") >= HELD_FIRST)):
+        s = st.filter(filt)
+        tot_n, tot_v = float(s["n"].sum()), float(s["notional"].sum())
+        t_ = tr.filter(filt)
+        # notional relative to the symbol-day median order notional (scale-free across symbols)
+        t_ = t_.with_columns((pl.col("notional") / pl.col("notional").median().over(["date", "symbol"])).alias("rel_notional"))
+        rows = {}
+        for t in range(-1, k):
+            g, gt = s.filter(pl.col("type") == t), t_.filter(pl.col("type") == t)
+            if g.height == 0:
+                continue
+            hours = np.array([float(g[f"h{h:02d}"].sum()) for h in range(24)])
+            row = {"share_orders": float(g["n"].sum()) / tot_n, "share_notional": float(g["notional"].sum()) / tot_v,
+                   "buy_share": float((g["buy_share"] * g["n"]).sum() / g["n"].sum()),
+                   "mm60_bp": float(g["sum_mm_60s"].sum() / max(g["cnt_mm_60s"].sum(), 1)),
+                   "mm10_bp": float(g["sum_mm_10s"].sum() / max(g["cnt_mm_60s"].sum(), 1)),
+                   "as60_bp": float(g["sum_as_60s"].sum() / max(g["cnt_as_60s"].sum(), 1)),
+                   "hour_share_peak": int(np.argmax(hours)), "share_08_16utc": float(hours[8:16].sum() / max(hours.sum(), 1)),
+                   "share_by_symbol": {sym: float(g.filter(pl.col("symbol") == sym)["n"].sum() / max(s.filter(pl.col("symbol") == sym)["n"].sum(), 1)) for sym in SYMBOLS}}
+            if gt.height:
+                row.update({
+                    "median_usd": {sym: float(gt.filter(pl.col("symbol") == sym)["notional"].median() or np.nan) for sym in SYMBOLS},
+                    "median_rel_notional": float(gt["rel_notional"].median()),
+                    "p90_rel_notional": float(gt["rel_notional"].quantile(0.9)),
+                    "median_ticks": float(np.expm1(gt["ticks"].median())), "share_multi_level": float((gt["ticks"] > 0).mean()),
+                    "median_prints": float(gt["n_prints"].median()), "median_dt_any_ms": float(np.expm1(gt["dt_any"].median())),
+                    "median_dt_same_ms": float(np.expm1(gt["dt_same"].median())),
+                    "median_n1s": float(np.expm1(gt["n1s"].median())), "share_clipped": float((gt["clip20"] > 0).mean()),
+                    "median_sigdig": float(gt["sigdig"].median()), "median_rel_l1": float(np.exp(gt["rel_l1"].median())),
+                    "median_sweep_bp": float(gt["sweep_bp"].median()), "n_sample": gt.height})
+            rows[str(t)] = row
+        out[split] = rows
+    (TAX / "type_description.json").write_text(json.dumps(out, indent=1, default=float), encoding="utf-8")
+    return out
+
+
+def run_export() -> dict[str, Any]:
+    """Reusable point-in-time participant-state feature set: data/research/participants/features_1m/<date>.parquet,
+    one row per (symbol, minute), `known_ts` = minute end (epoch ms UTC). No forward-looking columns."""
+    tx = json.loads((TAX / "taxonomy.json").read_text(encoding="utf-8"))
+    hm = json.loads((HMM_DIR / "hmm.json").read_text(encoding="utf-8"))
+    k, K = tx["k"], hm["K"]
+    keep = (["known_ts", "symbol", "minute", "split", "segment", "mid", "sigma", "buy", "sell", "n_orders", "ofi", "l1", "spread",
+             "n_updates", "add", "rem", "refill", "rv", "ofi1", "ofi5", "imb1", "imb5", "rl1", "rl5", "rl60", "lrv5", "lrv60", "lnot5",
+             "lspread", "as10_l", "as60_l"]
+            + [f"{p}{t}" for t in range(k) for p in ("b", "s", "n")]
+            + [f"{p}{t}_{w}" for t in range(k) for p, w in (("sg", 1), ("sg", 5), ("sh", 5), ("cs", 5))]
+            + list(HMM_FEATURES) + [f"hp{s_}" for s_ in range(K)] + ["hstate", "hchg"])
+    odir = OUT / "features_1m"
+    odir.mkdir(parents=True, exist_ok=True)
+    n = 0
+    for f in sorted((OUT / "state_1m").glob("*.parquet")):
+        g = pl.read_parquet(f).rename({"ts": "known_ts"})
+        assert not [c for c in keep if c.startswith("y_")]
+        g.select(keep).write_parquet(odir / f.name, compression="zstd")
+        n += 1
+    return {"days": n, "columns": keep}
+
+
+def run_liq_check(tol_ms: int = 100) -> dict[str, Any]:
+    """Descriptive (not a hypothesis): type mix of taker orders matched to lake liquidation events (same symbol, same
+    taker side: long liquidated -> sell, |dt| <= tol_ms), 2026-11-08 .. 2026-11-24 (lake coverage)."""
+    import duckdb
+
+    con = duckdb.connect()
+    con.execute("SET threads TO 1")
+    glob = (ROOT / "data" / "lake" / "liquidations" / "venue=bybit" / "**" / "*.parquet").as_posix()
+    liq = con.sql(f"SELECT symbol, epoch_ms(event_ts) AS ms, side FROM read_parquet('{glob}', hive_partitioning=true) "
+                  f"WHERE symbol IN {tuple(SYMBOLS)}").pl()
+    k = int(json.loads((TAX / "taxonomy.json").read_text(encoding="utf-8"))["k"])
+    base, hit, n_liq, n_match = np.zeros(k), np.zeros(k), 0, 0
+    for d in [x for x in post_days() if "2026-11-08" <= x <= "2026-11-24"]:
+        d0 = day0_ms(d)
+        for sym in SYMBOLS:
+            ty = pl.read_parquet(OUT / "days" / d / "types" / f"{sym}.parquet")
+            side = pl.read_parquet(OUT / "days" / d / "orders" / f"{sym}.parquet")["side"].to_numpy()
+            ms, lab = ty["ms"].to_numpy(), ty["type"].to_numpy().astype(int)
+            ok = lab >= 0
+            base += np.bincount(lab[ok], minlength=k)
+            lq = liq.filter((pl.col("symbol") == sym) & (pl.col("ms") >= d0) & (pl.col("ms") < d0 + DAY_MS))
+            for lm, ls in zip(lq["ms"].to_numpy(), lq["side"].to_numpy()):
+                n_liq += 1
+                want = -1 if ls == "long" else 1
+                lo_i, hi_i = np.searchsorted(ms, lm - tol_ms), np.searchsorted(ms, lm + tol_ms, side="right")
+                cand = [i for i in range(lo_i, hi_i) if side[i] == want and lab[i] >= 0]
+                if cand:
+                    i = min(cand, key=lambda i: abs(ms[i] - lm))
+                    hit[lab[i]] += 1
+                    n_match += 1
+    res = {"n_liquidations": n_liq, "n_matched": n_match, "tol_ms": tol_ms, "share_matched": (hit / max(hit.sum(), 1)).tolist(),
+           "share_base": (base / base.sum()).tolist(), "ratio": (hit / max(hit.sum(), 1) / (base / base.sum())).tolist()}
+    (TAX / "liquidation_mix.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
+    return res
+
+
 XV_FIT = ("2026-11-15", "2026-11-16", "2026-11-17", "2026-11-18", "2026-11-19")
 XV_TEST = ("2026-11-20", "2026-11-21", "2026-11-22", "2026-11-23", "2026-11-24")
 XV_VENUES = ("bn", "ok", "cb")
@@ -1648,11 +1793,11 @@ def _cli(argv: Sequence[str] | None = None) -> None:
     r = sub.add_parser("reduce")
     r.add_argument("--days", nargs="*")
     r.add_argument("--workers", type=int, default=2)
-    for name in ("taxonomy", "assign", "hmm", "states", "supervised", "informedness", "exec", "xvenue", "tape"):
+    for name in ("taxonomy", "assign", "describe", "hmm", "states", "supervised", "informedness", "exec", "xvenue", "tape", "export", "liq"):
         sub.add_parser(name)
     a = ap.parse_args(argv)
-    fns = {"taxonomy": run_taxonomy, "assign": run_assign, "hmm": run_hmm, "states": run_state_features,
-           "supervised": run_supervised, "informedness": run_informedness, "exec": run_exec, "xvenue": run_xvenue, "tape": run_tape}
+    fns = {"taxonomy": run_taxonomy, "assign": run_assign, "describe": describe_types, "hmm": run_hmm, "states": run_state_features,
+           "supervised": run_supervised, "informedness": run_informedness, "exec": run_exec, "xvenue": run_xvenue, "tape": run_tape, "export": run_export, "liq": run_liq_check}
     if a.cmd == "reduce":
         run_reduce(a.days, a.workers)
     else:
