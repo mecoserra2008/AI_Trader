@@ -20,10 +20,15 @@ Pieces
   symbol, stop before target inside a bar.
 * Latency: a fill `m` minutes after a decision is the Brownian-bridge conditional mean between the decision price and
   the close of the path bar containing decision + m (log-linear in elapsed time); `Path.lat` can carry exact prices.
-* R: (d (x - e) - c_in e - c_out x) / (|e - stop| + e (c_in_base + c_out_base)): the at-risk sizing budget, so a cost
-  shock changes only the numerator (`r_net`).
-* Metrics (`metrics`): n, mean R with a stationary day bootstrap CI, hit, PF, max DD, CVaR5% per trade and per day,
-  time under water, top-5 share.
+* R: (d (x - e) - c_in e - c_out x - f e) / (|e - stop| + e (c_in_base + c_out_base)): the at-risk sizing budget, so a
+  cost shock changes only the numerator (`r_net`); f = side x the funding settled in (entry, exit] (column `funding`,
+  WS10's estimate: a long pays positive rates; 0 where unknown).
+* Metrics (`metrics`): n, mean R with a stationary day bootstrap CI, one-sided P(mean <= 0), hit, PF, max DD, CVaR5% per
+  trade and per day, time under water, top-5 share.
+* D7b (2026-11-27, user-approved; red team RT-STRESS-1/2, WS10): statistics are on CLOSED trades by default (positions
+  still open at the data end, why == "end", are marked to the last close and are reported separately as `open_end`);
+  the bootstrap mean block is max(BLOCK_DAYS, p90 holding period of the trades) (`block_days`); funding is in net R.
+  Pass closed_only=False / block=... / funding=False for the old behaviour.
 * Live engine (`live_engine`): live_small limits on a pooled chronological trade stream, USD per trade.
 * Scenarios S0..S9, verdict rules F1/F2, G1..G7 (`verdict`).
 
@@ -65,7 +70,8 @@ SYNTH_SOURCES = ("BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT", "LINKUS
 PERTURB_FACTORS = (0.5, 0.8, 1.2, 1.5)
 N_JOINT = 30
 N_BOOT = 2000
-BLOCK_DAYS = 5.0
+BLOCK_DAYS = 5.0          # floor of the stationary-bootstrap mean block (days); the block is max(floor, p90 holding) (D7b)
+BLOCK_Q = 0.9             # holding-period quantile that sets the block
 PRIOR_EDGE = {"shock_desk": 0.05, "hs2_fade_blackout": 0.05, "trend_4h": 0.03}
 
 # NYSE full-day closures 2020-2026 (calendar.py does not model holidays).
@@ -160,8 +166,12 @@ def base_budget(kind: np.ndarray, c: Costs | None = None) -> np.ndarray:
     return (np.where(kind == "peg", c.maker_bps + c.peg_slip_bps, c.taker_bps + c.slip_bps) + c.taker_bps + c.slip_bps) / 1e4
 
 
-def r_net(t: pl.DataFrame, c: Costs | None = None, base: Costs | None = None) -> np.ndarray:
-    """Net R per trade under cost scenario c; the denominator is the base sizing budget (at-risk)."""
+def r_net(t: pl.DataFrame, c: Costs | None = None, base: Costs | None = None, funding: bool | np.ndarray = True) -> np.ndarray:
+    """Net R per trade under cost scenario c; the denominator is the base sizing budget (at-risk).
+
+    funding: True (default) subtracts the table's `funding` column when present (side-signed share of the entry
+    notional paid over the hold; tables written before 2026-11-27 have none and are unchanged), an array gives it per
+    trade, False ignores it."""
     c = c or Costs()
     if t.height == 0:
         return np.zeros(0)
@@ -169,7 +179,56 @@ def r_net(t: pl.DataFrame, c: Costs | None = None, base: Costs | None = None) ->
     e, s, x, d = (t[k].to_numpy().astype(float) for k in ("entry", "stop", "exit", "side"))
     c_in, c_out = leg_costs(kind, why, tier, c)
     den = np.abs(e - s) + e * base_budget(kind, base or Costs(c.maker_bps, c.taker_bps, c.slip_bps, c.peg_slip_bps))
-    return (d * (x - e) - c_in * e - c_out * x) / den
+    if isinstance(funding, np.ndarray):
+        f = np.nan_to_num(np.asarray(funding, dtype=float))
+    elif funding is True and "funding" in t.columns:
+        f = np.nan_to_num(t["funding"].cast(pl.Float64).fill_null(float("nan")).to_numpy())
+    else:
+        f = 0.0
+    return (d * (x - e) - c_in * e - c_out * x - f * e) / den
+
+
+# ---------------------------------------------------------------------- funding paid per trade (D7b, WS10's estimate)
+def funding_index(f: pl.DataFrame | None) -> tuple[np.ndarray, np.ndarray] | None:
+    """(settlement epoch ms, cumulative rate with a leading 0) from a funding table (event_ts = settlement, rate)."""
+    if f is None or f.height == 0 or "rate" not in f.columns:
+        return None
+    g = f.select(pl.col("event_ts"), pl.col("rate").cast(pl.Float64)).unique("event_ts", keep="last").sort("event_ts")
+    return _ms(g["event_ts"]), np.concatenate([[0.0], np.cumsum(np.nan_to_num(g["rate"].to_numpy()))])
+
+
+def funding_paid(side: np.ndarray, entry_ms: np.ndarray, exit_ms: np.ndarray, index: tuple[np.ndarray, np.ndarray] | None) -> np.ndarray:
+    """Side-signed funding paid as a share of the entry notional: side x sum of the rates settled in (entry, exit]
+    (a long pays a positive rate, a short receives it). NaN when the symbol has no funding index."""
+    side = np.asarray(side, dtype=float)
+    if index is None:
+        return np.full(len(side), np.nan)
+    ts, cr = index
+    a = np.searchsorted(ts, np.asarray(entry_ms, dtype=np.int64), "right")
+    b = np.searchsorted(ts, np.asarray(exit_ms, dtype=np.int64), "right")
+    return side * (cr[b] - cr[a])
+
+
+def with_funding(t: pl.DataFrame, as_of: datetime | None = None, venue: str = "bybit") -> pl.DataFrame:
+    """Add the `funding` column to a stored trade table that lacks it (lake funding settlements, point in time at as_of)."""
+    if t.height == 0 or "funding" in t.columns:
+        return t
+    from ai_trader.core.time import now
+    from ai_trader.storage.lake import Lake
+
+    lake, as_of = Lake(), as_of or now()
+    fund = np.full(t.height, np.nan)
+    syms = t["symbol"].to_numpy()
+    side = t["side"].to_numpy().astype(float)
+    ems, xms = _ms(t["entry_ts"]), _ms(t["exit_ts"])
+    for sym in np.unique(syms):
+        try:
+            idx = funding_index(lake.read_asof("funding", as_of, symbols=[str(sym)], filters={"venue": venue}))
+        except Exception:  # noqa: BLE001 - a symbol without a funding table keeps NaN (r_net treats it as 0)
+            idx = None
+        m = syms == sym
+        fund[m] = funding_paid(side[m], ems[m], xms[m], idx)
+    return t.with_columns(pl.Series("funding", fund))
 
 
 # ====================================================================== price paths and fills
@@ -500,6 +559,7 @@ class Ctx:
     f15: pl.DataFrame | None = None
     path15: Path | None = None
     har: dict | None = None   # date -> daily sigma forecast for the next day
+    funding: tuple[np.ndarray, np.ndarray] | None = None   # funding_index of the symbol's settlements (D7b)
 
 
 def load_ctx(sym: str, as_of: datetime, *, venue: str = "bybit", need_rb: bool = True, need_15m: bool = False, need_flow: bool = False) -> Ctx | None:
@@ -515,6 +575,8 @@ def load_ctx(sym: str, as_of: datetime, *, venue: str = "bybit", need_rb: bool =
     f1 = label(f1, 1.0)
     f4 = market_frame(sym, "4h", as_of, lake=lake, venue=venue, funding=False, oi=False, burn_in=byb) if byb else _agg_frame(f1, 4)
     ctx = Ctx(sym, f1, f4, Path.from_frame(f1, 60.0))
+    if byb:
+        ctx.funding = funding_index(lake.read_asof("funding", as_of, symbols=[sym], filters={"venue": venue}))
     if need_flow:
         ctx.f1_flow = market_frame(sym, "1h", as_of, lake=lake, flow=True)
     if need_rb and byb:
@@ -828,7 +890,9 @@ def annotate(tr: list[dict], ctx: Ctx, unit: str, variant: str) -> pl.DataFrame:
     ny = df["entry_ts"].dt.convert_time_zone("America/New_York").dt.date().to_list()
     r8 = (df["entry_ms"].to_numpy() % (8 * H_MS))
     k = knowledge_cutoff()
+    fund = funding_paid(df["side"].to_numpy(), df["entry_ms"].to_numpy(), df["exit_ms"].to_numpy(), getattr(ctx, "funding", None))
     return df.with_columns(
+        pl.Series("funding", fund, dtype=pl.Float64),
         cal["tradfi_weekend"].alias("weekend"),
         pl.Series("holiday", [d in NYSE_HOLIDAYS for d in ny]),
         pl.Series("funding_win", np.minimum(r8, 8 * H_MS - r8) <= H_MS),
@@ -838,14 +902,15 @@ def annotate(tr: list[dict], ctx: Ctx, unit: str, variant: str) -> pl.DataFrame:
 
 
 TRADE_COLS = ("unit", "variant", "symbol", "side", "entry_ts", "exit_ts", "entry", "stop", "exit", "why", "gap", "kind", "ev",
-              "cell", "seg", "weekend", "holiday", "funding_win", "tier")
+              "cell", "seg", "weekend", "holiday", "funding_win", "tier", "funding")
 
 
 def _norm(df: pl.DataFrame) -> pl.DataFrame:
     if df.height == 0:
         return df
     return df.select([pl.col(c) for c in TRADE_COLS]).with_columns(pl.col("side").cast(pl.Int8), pl.col("ev").cast(pl.Float64),
-                                                                    pl.col("cell").cast(pl.Utf8), pl.col("gap").cast(pl.Boolean))
+                                                                    pl.col("cell").cast(pl.Utf8), pl.col("gap").cast(pl.Boolean),
+                                                                    pl.col("funding").cast(pl.Float64))
 
 
 def run_symbol(sym: str, as_of_iso: str, unit_names: list[str] | None = None, perturbations: bool = False, out_dir: str | None = None) -> dict:
@@ -902,19 +967,59 @@ def daily(t: pl.DataFrame, r: np.ndarray, by: str = "entry_ts") -> pl.DataFrame:
     return span.join(d, on="d", how="left").fill_null(0).sort("d")
 
 
-def mean_ci(t: pl.DataFrame, r: np.ndarray, n_boot: int = N_BOOT, seed: int = SEED) -> tuple[float, float, float]:
-    """Mean R per trade with a 95% CI from a stationary bootstrap of entry days (mean block 5 days)."""
+def closed_mask(t: pl.DataFrame) -> np.ndarray:
+    """True for trades that closed inside the data (why != "end"); all True for tables without a `why` column."""
+    if t.height == 0 or "why" not in t.columns:
+        return np.ones(t.height, dtype=bool)
+    return (t["why"] != "end").to_numpy()
+
+
+def holding_days(t: pl.DataFrame) -> np.ndarray:
+    if t.height == 0:
+        return np.zeros(0)
+    return (t["exit_ts"] - t["entry_ts"]).dt.total_seconds().to_numpy().astype(float) / 86400.0
+
+
+def block_days(t: pl.DataFrame, q: float = BLOCK_Q, floor: float = BLOCK_DAYS) -> float:
+    """Stationary-bootstrap mean block for trade statistics: max(floor, the q-quantile of the holding period in days)
+    (RT-STRESS-1: a 5-day block under-states the dependence of trades held for weeks)."""
+    h = holding_days(t)
+    h = h[np.isfinite(h)]
+    return float(max(floor, np.quantile(h, q))) if len(h) >= 5 else float(floor)
+
+
+def boot_mean(t: pl.DataFrame, r: np.ndarray, n_boot: int = N_BOOT, seed: int = SEED, block: float | None = None) -> dict:
+    """Mean R per trade, 95% CI and one-sided P(mean <= 0) from a stationary bootstrap of entry days with mean block
+    `block` (default `block_days(t)`)."""
+    b = block_days(t) if block is None else float(block)
+    out = {"mean": float(np.mean(r)) if len(r) else float("nan"), "lo": float("nan"), "hi": float("nan"), "p_le0": float("nan"), "block_days": b}
     if len(r) == 0:
-        return float("nan"), float("nan"), float("nan")
+        return out
     dd = daily(t, r)
     n, s = dd["n"].to_numpy().astype(float), dd["R"].to_numpy().astype(float)
     if len(n) < 3:
-        return float(np.mean(r)), float("nan"), float("nan")
+        return out
     rng = np.random.default_rng(seed)
-    idx = stationary_boot_idx(len(n), n_boot, BLOCK_DAYS, rng)
+    idx = stationary_boot_idx(len(n), n_boot, b, rng)
     ns, ss = n[idx].sum(axis=1), s[idx].sum(axis=1)
     m = ss[ns > 0] / ns[ns > 0]
-    return float(np.mean(r)), float(np.quantile(m, 0.025)), float(np.quantile(m, 0.975))
+    out.update(lo=float(np.quantile(m, 0.025)), hi=float(np.quantile(m, 0.975)), p_le0=float((m <= 0).mean()))
+    return out
+
+
+def mean_ci(t: pl.DataFrame, r: np.ndarray, n_boot: int = N_BOOT, seed: int = SEED, block: float | None = None) -> tuple[float, float, float]:
+    """Mean R per trade with a 95% CI from a stationary bootstrap of entry days; mean block max(5 d, p90 holding period)
+    unless `block` is given (D7b; it was a fixed 5 days)."""
+    b = boot_mean(t, r, n_boot, seed, block)
+    return b["mean"], b["lo"], b["hi"]
+
+
+def _open_end(t: pl.DataFrame, r: np.ndarray) -> tuple[pl.DataFrame, np.ndarray, dict]:
+    """Split off positions still open at the data end: (closed trades, their R, summary of the open ones)."""
+    m = closed_mask(t)
+    ro = r[~m]
+    info = {"n": int((~m).sum()), "sum_R": float(ro.sum()) if len(ro) else 0.0, "mean_R": float(ro.mean()) if len(ro) else float("nan")}
+    return (t, r, info) if m.all() else (t.filter(pl.Series(m)), r[m], info)
 
 
 def drawdown_stats(t: pl.DataFrame, r: np.ndarray) -> dict:
@@ -939,11 +1044,18 @@ def drawdown_stats(t: pl.DataFrame, r: np.ndarray) -> dict:
             "longest_uw_days": int(max(runs) if runs else 0)}
 
 
-def metrics(t: pl.DataFrame, r: np.ndarray, ci: bool = True) -> dict:
+def metrics(t: pl.DataFrame, r: np.ndarray, ci: bool = True, closed_only: bool = True, block: float | None = None) -> dict:
+    """Trade statistics. closed_only (default, D7b): positions open at the data end are excluded and summarised in
+    `open_end`; the CI uses `block` or max(5 d, p90 holding)."""
+    open_info = {"n": 0, "sum_R": 0.0, "mean_R": float("nan")}
+    if closed_only:
+        t, r, open_info = _open_end(t, r)
     n = len(r)
     if n == 0:
-        return {"n": 0}
-    m, lo, hi = mean_ci(t, r) if ci else (float(np.mean(r)), float("nan"), float("nan"))
+        return {"n": 0, "open_end": open_info}
+    b = boot_mean(t, r, block=block) if ci else {"mean": float(np.mean(r)), "lo": float("nan"), "hi": float("nan"), "p_le0": float("nan"),
+                                                  "block_days": float("nan")}
+    m, lo, hi = b["mean"], b["lo"], b["hi"]
     pos, neg = r[r > 0].sum(), -r[r < 0].sum()
     q = max(1, int(math.ceil(0.05 * n)))
     srt = np.sort(r)
@@ -951,7 +1063,8 @@ def metrics(t: pl.DataFrame, r: np.ndarray, ci: bool = True) -> dict:
     top5 = float(srt[-5:].sum()) if n >= 5 else float(srt.sum())
     out = {"n": n, "mean": m, "lo": lo, "hi": hi, "hit": float((r > 0).mean()), "pf": float(pos / neg) if neg > 0 else float("inf"),
            "total": total, "cvar5_trade": float(srt[:q].mean()), "worst": float(srt[0]), "best": float(srt[-1]),
-           "top5_share": float(top5 / total) if total > 0 else float("nan"), "total_ex_top5": total - top5}
+           "top5_share": float(top5 / total) if total > 0 else float("nan"), "total_ex_top5": total - top5,
+           "p_le0": b["p_le0"], "block_days": b["block_days"], "open_end": open_info}
     out.update(drawdown_stats(t, r))
     return out
 
@@ -983,7 +1096,9 @@ def crisis_windows(btc_1d: pl.DataFrame | None = None) -> dict[str, tuple[date, 
     return w
 
 
-def window_stats(t: pl.DataFrame, r: np.ndarray, a: date, b: date) -> dict:
+def window_stats(t: pl.DataFrame, r: np.ndarray, a: date, b: date, closed_only: bool = True) -> dict:
+    if closed_only:
+        t, r, _ = _open_end(t, r)
     if t.height == 0:
         return {"n": 0}
     m = ((t["entry_ts"].dt.date() >= a) & (t["entry_ts"].dt.date() <= b)).to_numpy()
@@ -1168,16 +1283,26 @@ def run_prob_loss_streak(n_trades: int, p_loss: float, k: int = 5) -> float:
     return float(hit)
 
 
-def engine_stats(acc: pl.DataFrame, info: dict, horizon_days: int = 91, n_boot: int = 5000, seed: int = SEED) -> dict:
+def engine_stats(acc: pl.DataFrame, info: dict, horizon_days: int = 91, n_boot: int = 5000, seed: int = SEED, closed_only: bool = True,
+                 block: float | None = None) -> dict:
+    """USD statistics of the accepted live-engine stream. closed_only (default, D7b): positions open at the data end
+    (they still held a slot in live_engine) are left out of the P&L statistics and reported as n_open_end /
+    usd_open_end; the day bootstrap uses `block` or max(5 d, p90 holding)."""
+    open_n, open_usd = 0, 0.0
+    if closed_only and acc.height:
+        m = closed_mask(acc)
+        open_n, open_usd = int((~m).sum()), float(acc["usd"].to_numpy()[~m].sum())
+        acc = acc.filter(pl.Series(m))
     if acc.height == 0:
-        return {"n": 0, "refused": info.get("refused", {})}
+        return {"n": 0, "refused": info.get("refused", {}), "n_open_end": open_n, "usd_open_end": open_usd}
     usd = acc["usd"].to_numpy()
     dly = daily(acc, usd, by="exit_ts")  # column R holds USD here
     dv = dly["R"].to_numpy()
     active = dly["n"].to_numpy() > 0
     n_days = len(dv)
     rng = np.random.default_rng(seed)
-    idx = stationary_boot_idx(n_days, n_boot, BLOCK_DAYS, rng)[:, :min(horizon_days, n_days)] if n_days >= 10 else None
+    blk = block_days(acc) if block is None else float(block)
+    idx = stationary_boot_idx(n_days, n_boot, blk, rng)[:, :min(horizon_days, n_days)] if n_days >= 10 else None
     ruin = {}
     if idx is not None:
         paths = np.cumsum(dv[idx], axis=1)
@@ -1227,7 +1352,8 @@ def engine_stats(acc: pl.DataFrame, info: dict, horizon_days: int = 91, n_boot: 
             "worst_day_usd": float(dv.min()), "max_loss_run": mx, "p5_losers_3m_empirical": win_hits / wins if wins else float("nan"),
             "p5_losers_3m_iid": run_prob_loss_streak(int(round(trades_per_3m)), float(loss.mean())),
             "mean_uw_spell_days": float(np.mean(spells)) if spells else 0.0, "max_uw_spell_days": int(max(spells) if spells else 0),
-            "underwater_share": float(uw.mean()), "refused": info.get("refused", {}), **ruin}
+            "underwater_share": float(uw.mean()), "refused": info.get("refused", {}), "block_days": blk, "n_open_end": open_n,
+            "usd_open_end": open_usd, **ruin}
 
 
 # ====================================================================== verdict rules (frozen, H-STRESS0)
@@ -1337,6 +1463,8 @@ def design_dict(as_of: str) -> dict:
     U = units()
     return {"as_of": as_of, "seed": SEED, "theta_in": THETA_IN, "stop_k": STOP_K, "min_sig": MIN_SIG, "D8": D8,
             "synth_sources": SYNTH_SOURCES, "perturb_factors": PERTURB_FACTORS, "n_joint": N_JOINT, "n_boot": N_BOOT, "block_days": BLOCK_DAYS,
+            "block_rule": "max(BLOCK_DAYS, p90 holding days) (D7b, 2026-11-27)", "trades": "closed only; open-at-end reported separately (D7b)",
+            "funding": "side x settled rates in (entry, exit] in net R (D7b)",
             "units": {k: asdict(v) for k, v in U.items()}, "base_params": {k: base_params(k) for k in U},
             "exec_variants": EXEC_VARIANTS, "cost_variants": COST_VARIANTS, "fixed_crises": FIXED_CRISES, "tiers": TIERS,
             "prior_edge": PRIOR_EDGE, "live_limits": asdict(LiveLimits.from_config()), "costs": asdict(Costs.live()),
@@ -1507,7 +1635,11 @@ def main(argv: list[str] | None = None) -> None:
 def stress_signal(fn: Callable[[pl.DataFrame], pl.Series], symbols: list[str], freq: str = "1h", name: str = "custom",
                   as_of: datetime | None = None, params: dict | None = None) -> dict:
     """Stress any causal signal function (frame -> Series in [-1, 1]) through the trade layer: S0, S3 cost / gap / no-stop
-    variants, S4 latency, S1 segments and cells, S9 live engine. Returns {scenario: metrics} plus the engine stats."""
+    variants, S4 latency, S1 segments and cells, S9 live engine. Returns {scenario: metrics} plus the engine stats.
+
+    Since D7b (2026-11-27) every statistic and the verdict are on closed trades (open-at-end positions in
+    out["open_end"]), the bootstrap block is max(5 d, p90 holding period) and net R includes funding (the Bybit
+    settlements in (entry, exit]); out["funding_R_mean"] is the funding part of the mean."""
     from ai_trader.core.time import now
 
     as_of = as_of or now()
@@ -1531,6 +1663,10 @@ def stress_signal(fn: Callable[[pl.DataFrame], pl.Series], symbols: list[str], f
     for k, t in tabs.items():
         out[k] = metrics(t, r_net(t)) if t.height else {"n": 0}
     if base.height:
+        cm = closed_mask(base)
+        rb = r_net(base)
+        out["open_end"] = {"n": int((~cm).sum()), "sum_R": float(rb[~cm].sum())}
+        out["funding_R_mean"] = float(np.mean((rb - r_net(base, funding=False))[cm])) if cm.any() else float("nan")
         for k, (fm, x, dr) in COST_VARIANTS.items():
             out[k] = metrics(base, r_net(base, Costs(fee_mult=fm, extra_bps=x, drought=dr)), ci=False)
         for seg in ("llm_in_sample", "clean_holdout"):

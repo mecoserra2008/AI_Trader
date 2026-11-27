@@ -1,0 +1,997 @@
+{
+ "as_of": "2026-11-27T22:37:23+00:00",
+ "rules_hash": "4505ed5a00",
+ "n_rules": 235,
+ "pairs": [
+  {
+   "type": "contradiction",
+   "a": "R-DS-4",
+   "b": "R-SP-3",
+   "grades": "C/C",
+   "why": "vol: ['up'] vs ['down'] under shared ['weekday']",
+   "rule_a": "WHEN the forecast day is Tuesday to Friday and the v0 trend state is up THEN expect next-day realised variance about 24% above the per-asset log-HAR forecast",
+   "rule_b": "WHEN the forecast day is Fri-Sun and the 7-day vol level is low THEN expect the ML vol forecast to sit below the vol-level baseline (the network's strongest units are calm-weekend dampers); treat this as an expectation, never as a reason to loosen risk",
+   "review": "real but narrow: both cover a Friday forecast day (R-DS-4 Tue-Fri up-trend +24%; R-SP-3 Fri-Sun calm discount); on a calm up-trend Friday they point opposite ways"
+  },
+  {
+   "type": "contradiction",
+   "a": "R-VOL-3",
+   "b": "R-FLOW-2",
+   "grades": "A/C",
+   "why": "vol: ['down'] vs ['up'] under shared ['event']",
+   "rule_a": "WHEN a volatility spike or jump has just happened THEN expect the excess variance to decay within hours (half-life about 2-3 hours at 1h) and prefer a jump-robust forecaster over plain EWMA",
+   "rule_b": "WHEN a liquidation cluster prints (1m liquidation notional > trailing-24h 99th percentile and >= 3 prints) THEN do not fade it, and expect that symbol's jump risk to stay elevated for about 2 hours, not 60 minutes",
+   "review": "not a conflict: both describe excess risk after a burst that decays within hours (R-VOL-3: variance half-life 2-3 h; R-FLOW-2: jump hazard elevated for about 2 h after a liquidation cluster)"
+  },
+  {
+   "type": "contradiction",
+   "a": "R-VOL-3",
+   "b": "R-MD-4",
+   "grades": "A/C",
+   "why": "vol: ['down'] vs ['up'] under shared ['event']",
+   "rule_a": "WHEN a volatility spike or jump has just happened THEN expect the excess variance to decay within hours (half-life about 2-3 hours at 1h) and prefer a jump-robust forecaster over plain EWMA",
+   "rule_b": "WHEN ETH or SOL volatility jumps THEN expect other crypto tokens' volatility to rise with it; ETH and SOL are net volatility transmitters on almost every day, more than BTC",
+   "review": ""
+  },
+  {
+   "type": "negation",
+   "a": "R-FLOW-2",
+   "b": "R-STRESS-4",
+   "grades": "C/C",
+   "why": "direction: one rule denies an effect the other sizes (['continue'] vs ['null']) under shared ['event']",
+   "rule_a": "WHEN a liquidation cluster prints (1m liquidation notional > trailing-24h 99th percentile and >= 3 prints) THEN do not fade it, and expect that symbol's jump risk to stay elevated for about 2 hours, not 60 minutes",
+   "rule_b": "WHEN the start-of-day v0 cell is R8 (trend down) or R9 (liquidation) THEN don't expect the shock sleeves (shock_regime, shock_desk) to pay there; a cell-specific claim (grade C)",
+   "review": "not a conflict: R-FLOW-2 forbids fading a liquidation cluster; R-STRESS-4 says the shock sleeves lose in R8 / R9 cells; both advise against counter-trend entries there"
+  },
+  {
+   "type": "negation",
+   "a": "R-VOL-9",
+   "b": "R-DS-2",
+   "grades": "C/C",
+   "why": "R-VOL-9 applies 'no blanket Monday multiplier' (H-DOW2: BTC Monday 1.3x in-sample, not in the holdout); R-DS-2 sizes one for crypto next-day vol (+34% vs log-HAR: +45% in-sample z 9.8, +25% holdout z 2.4)",
+   "rule_a": "WHEN it is the Monday US cash open for a TradFi perp, or the Sunday CME reopen for oil, THEN widen risk expectations, but apply no blanket Monday multiplier to TradFi",
+   "rule_b": "WHEN the forecast day is Monday THEN expect next-day realised variance about 34% above the per-asset log-HAR forecast",
+   "review": "curated (found on reading; the keyword pass misses it)"
+  },
+  {
+   "type": "negation",
+   "a": "R-VOL-9",
+   "b": "R-ML-1",
+   "grades": "C/B",
+   "why": "R-ML-1's central forecast multiplies log-HAR by a weekday factor with Monday about 1.3x; R-VOL-9 says no blanket Monday multiplier",
+   "rule_a": "WHEN it is the Monday US cash open for a TradFi perp, or the Sunday CME reopen for oil, THEN widen risk expectations, but apply no blanket Monday multiplier to TradFi",
+   "rule_b": "WHEN forecasting next-day variance for a crypto perp THEN start from the per-asset log-HAR level and adjust it for the forecast day's weekday before reading any other input",
+   "review": "curated (found on reading; the keyword pass misses it)"
+  },
+  {
+   "type": "negation",
+   "a": "R-VOL-9",
+   "b": "R-VOL-27",
+   "grades": "C/B",
+   "why": "vol: one rule denies an effect the other sizes (['null_up'] vs ['down', 'up']) under shared ['weekday', 'session']",
+   "rule_a": "WHEN it is the Monday US cash open for a TradFi perp, or the Sunday CME reopen for oil, THEN widen risk expectations, but apply no blanket Monday multiplier to TradFi",
+   "rule_b": "WHEN it is Sunday 22:00 to Monday 02:00 UTC or the US cash open hours (13:00-16:00 UTC) THEN expect hourly variance well above the weekly average, and WHEN it is Saturday 03:00-11:00 UTC THEN expect it well below",
+   "review": "not a conflict: R-VOL-27 is the hour-of-week profile (loud at the US open / Sunday reopen); R-VOL-9 denies a blanket daily Monday factor, and both widen at the open"
+  },
+  {
+   "type": "competing tools",
+   "a": "R-DS-5",
+   "b": "R-SP-1",
+   "grades": "C/B",
+   "why": "['LAT1 cell adjustment (weekday x vol tercile x v0 trend)', 'vol.har (per-asset log-HAR level)'] vs ['vol level: robust sigma or 7d mean log RV', 'vol.robust_bc (robust per-bar sigma)'] for the same ['day'] ['crypto'] vol decision",
+   "rule_a": "WHEN a central next-day variance expectation is needed and no validated nonlinear tool is available THEN apply the LAT1 cell adjustment to the per-asset log-HAR forecast",
+   "rule_b": "WHEN preparing next-day volatility context for a crypto perp THEN call the vol-level tool (robust sigma or 7-day mean log RV, with the 30/90-day level as anchor) and the calendar tool (weekend / TradFi-weekend hours of the forecast day) first; other inputs are optional for this target",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-ML-1",
+   "b": "R-ML-4",
+   "grades": "B/C",
+   "why": "['vol.har (per-asset log-HAR level)'] vs ['XGB daily vol tool (when validated)'] for the same ['day'] ['crypto'] vol decision",
+   "rule_a": "WHEN forecasting next-day variance for a crypto perp THEN start from the per-asset log-HAR level and adjust it for the forecast day's weekday before reading any other input",
+   "rule_b": "WHEN a central next-day variance expectation is needed for a crypto perp and a validated nonlinear tool exists THEN prefer gradient-boosted trees on the 52-feature panel over plain log-HAR, but only for central expectations, never for risk or stops",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-ML-1",
+   "b": "R-SP-1",
+   "grades": "B/B",
+   "why": "['vol.har (per-asset log-HAR level)'] vs ['vol level: robust sigma or 7d mean log RV', 'vol.robust_bc (robust per-bar sigma)'] for the same ['day'] ['crypto'] vol decision",
+   "rule_a": "WHEN forecasting next-day variance for a crypto perp THEN start from the per-asset log-HAR level and adjust it for the forecast day's weekday before reading any other input",
+   "rule_b": "WHEN preparing next-day volatility context for a crypto perp THEN call the vol-level tool (robust sigma or 7-day mean log RV, with the 30/90-day level as anchor) and the calendar tool (weekend / TradFi-weekend hours of the forecast day) first; other inputs are optional for this target",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-ML-10",
+   "b": "R-ROUGH-2",
+   "grades": "B/C",
+   "why": "['recent |r| (1-6h) + daily HAR level adjustment', 'vol.robust_bc (robust per-bar sigma)'] vs ['vol.har (per-asset log-HAR level)'] for the same ['hour'] ['crypto'] vol decision",
+   "rule_a": "WHEN forming a next-hour variance expectation for a crypto perp THEN adjust the robust sigma x hour-of-week forecast for the last 1-6 hours of absolute returns and the daily HAR level; ignore funding-hour and jump flags for this purpose",
+   "rule_b": "WHEN a median (log-scale) forecast of next-hour realised volatility is needed THEN a power-law rough kernel on deseasonalised log RV is slightly better than log-HAR; for the variance level the risk engine reads keep log-HAR",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-ML-10",
+   "b": "R-WS12-1",
+   "grades": "B/B",
+   "why": "['recent |r| (1-6h) + daily HAR level adjustment', 'vol.robust_bc (robust per-bar sigma)'] vs ['vol.har (per-asset log-HAR level)'] for the same ['hour'] ['crypto'] vol decision",
+   "rule_a": "WHEN forming a next-hour variance expectation for a crypto perp THEN adjust the robust sigma x hour-of-week forecast for the last 1-6 hours of absolute returns and the daily HAR level; ignore funding-hour and jump flags for this purpose",
+   "rule_b": "WHEN a next-hour return distribution or variance is needed for a liquid crypto perp THEN prefer log-HAR-t with Parkinson-range terms (harx) or a small network on the same inputs over plain log-HAR-t; a network adds at most about 0.2% pinball / 2.5% QLIKE on top of harx",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-ML-10",
+   "b": "R-XS-1",
+   "grades": "B/B",
+   "why": "['recent |r| (1-6h) + daily HAR level adjustment', 'vol.robust_bc (robust per-bar sigma)'] vs ['vol.har (per-asset log-HAR level)'] for the same ['hour'] ['crypto'] vol decision",
+   "rule_a": "WHEN forming a next-hour variance expectation for a crypto perp THEN adjust the robust sigma x hour-of-week forecast for the last 1-6 hours of absolute returns and the daily HAR level; ignore funding-hour and jump flags for this purpose",
+   "rule_b": "WHEN next-hour volatility bands are needed for a universe-L crypto perp THEN prefer the quantiles of a small shared panel network on the hourly vol features over panel log-HAR-t x hour-of-week; at 4h expect parity and at 24h keep log-HAR-t",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-ML-4",
+   "b": "R-DS-5",
+   "grades": "C/C",
+   "why": "['XGB daily vol tool (when validated)'] vs ['LAT1 cell adjustment (weekday x vol tercile x v0 trend)', 'vol.har (per-asset log-HAR level)'] for the same ['day'] ['crypto'] vol decision",
+   "rule_a": "WHEN a central next-day variance expectation is needed for a crypto perp and a validated nonlinear tool exists THEN prefer gradient-boosted trees on the 52-feature panel over plain log-HAR, but only for central expectations, never for risk or stops",
+   "rule_b": "WHEN a central next-day variance expectation is needed and no validated nonlinear tool is available THEN apply the LAT1 cell adjustment to the per-asset log-HAR forecast",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-ML-4",
+   "b": "R-SP-1",
+   "grades": "C/B",
+   "why": "['XGB daily vol tool (when validated)'] vs ['vol level: robust sigma or 7d mean log RV', 'vol.robust_bc (robust per-bar sigma)'] for the same ['day'] ['crypto'] vol decision",
+   "rule_a": "WHEN a central next-day variance expectation is needed for a crypto perp and a validated nonlinear tool exists THEN prefer gradient-boosted trees on the 52-feature panel over plain log-HAR, but only for central expectations, never for risk or stops",
+   "rule_b": "WHEN preparing next-day volatility context for a crypto perp THEN call the vol-level tool (robust sigma or 7-day mean log RV, with the 30/90-day level as anchor) and the calendar tool (weekend / TradFi-weekend hours of the forecast day) first; other inputs are optional for this target",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-ML-7",
+   "b": "R-ML-10",
+   "grades": "C/B",
+   "why": "['tools.vol_ml hourly XGB (when validated, H-NN10)'] vs ['recent |r| (1-6h) + daily HAR level adjustment', 'vol.robust_bc (robust per-bar sigma)'] for the same ['hour'] ['crypto'] vol decision",
+   "rule_a": "WHEN a central next-hour variance expectation is needed for a crypto perp and a validated hourly ML tool exists THEN prefer it over robust_bc x the hour-of-week factor, for expectations only, never for stops",
+   "rule_b": "WHEN forming a next-hour variance expectation for a crypto perp THEN adjust the robust sigma x hour-of-week forecast for the last 1-6 hours of absolute returns and the daily HAR level; ignore funding-hour and jump flags for this purpose",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-ML-7",
+   "b": "R-ROUGH-2",
+   "grades": "C/C",
+   "why": "['tools.vol_ml hourly XGB (when validated, H-NN10)'] vs ['vol.har (per-asset log-HAR level)'] for the same ['hour'] ['crypto'] vol decision",
+   "rule_a": "WHEN a central next-hour variance expectation is needed for a crypto perp and a validated hourly ML tool exists THEN prefer it over robust_bc x the hour-of-week factor, for expectations only, never for stops",
+   "rule_b": "WHEN a median (log-scale) forecast of next-hour realised volatility is needed THEN a power-law rough kernel on deseasonalised log RV is slightly better than log-HAR; for the variance level the risk engine reads keep log-HAR",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-ML-7",
+   "b": "R-WS12-1",
+   "grades": "C/B",
+   "why": "['tools.vol_ml hourly XGB (when validated, H-NN10)'] vs ['vol.har (per-asset log-HAR level)'] for the same ['hour'] ['crypto'] vol decision",
+   "rule_a": "WHEN a central next-hour variance expectation is needed for a crypto perp and a validated hourly ML tool exists THEN prefer it over robust_bc x the hour-of-week factor, for expectations only, never for stops",
+   "rule_b": "WHEN a next-hour return distribution or variance is needed for a liquid crypto perp THEN prefer log-HAR-t with Parkinson-range terms (harx) or a small network on the same inputs over plain log-HAR-t; a network adds at most about 0.2% pinball / 2.5% QLIKE on top of harx",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-ML-7",
+   "b": "R-XS-1",
+   "grades": "C/B",
+   "why": "['tools.vol_ml hourly XGB (when validated, H-NN10)'] vs ['vol.har (per-asset log-HAR level)'] for the same ['hour'] ['crypto'] vol decision",
+   "rule_a": "WHEN a central next-hour variance expectation is needed for a crypto perp and a validated hourly ML tool exists THEN prefer it over robust_bc x the hour-of-week factor, for expectations only, never for stops",
+   "rule_b": "WHEN next-hour volatility bands are needed for a universe-L crypto perp THEN prefer the quantiles of a small shared panel network on the hourly vol features over panel log-HAR-t x hour-of-week; at 4h expect parity and at 24h keep log-HAR-t",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-VOL-20",
+   "b": "R-DS-5",
+   "grades": "B/C",
+   "why": "['vol.robust_bc (robust per-bar sigma)'] vs ['LAT1 cell adjustment (weekday x vol tercile x v0 trend)'] for the same ['day'] ['crypto'] vol decision",
+   "rule_a": "WHEN forecasting next-day variance for a crypto perp with at least 180 days of history THEN prefer the per-asset log-HAR (vol.har) over robust_bc x 24 and EWMA; the GARCH family and SV tie with it at 1d, so keep log-HAR for simplicity",
+   "rule_b": "WHEN a central next-day variance expectation is needed and no validated nonlinear tool is available THEN apply the LAT1 cell adjustment to the per-asset log-HAR forecast",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-VOL-20",
+   "b": "R-ML-4",
+   "grades": "B/C",
+   "why": "['vol.har (per-asset log-HAR level)', 'vol.robust_bc (robust per-bar sigma)'] vs ['XGB daily vol tool (when validated)'] for the same ['day'] ['crypto'] vol decision",
+   "rule_a": "WHEN forecasting next-day variance for a crypto perp with at least 180 days of history THEN prefer the per-asset log-HAR (vol.har) over robust_bc x 24 and EWMA; the GARCH family and SV tie with it at 1d, so keep log-HAR for simplicity",
+   "rule_b": "WHEN a central next-day variance expectation is needed for a crypto perp and a validated nonlinear tool exists THEN prefer gradient-boosted trees on the 52-feature panel over plain log-HAR, but only for central expectations, never for risk or stops",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-VOL-20",
+   "b": "R-SP-1",
+   "grades": "B/B",
+   "why": "['vol.har (per-asset log-HAR level)'] vs ['vol level: robust sigma or 7d mean log RV'] for the same ['day'] ['crypto'] vol decision",
+   "rule_a": "WHEN forecasting next-day variance for a crypto perp with at least 180 days of history THEN prefer the per-asset log-HAR (vol.har) over robust_bc x 24 and EWMA; the GARCH family and SV tie with it at 1d, so keep log-HAR for simplicity",
+   "rule_b": "WHEN preparing next-day volatility context for a crypto perp THEN call the vol-level tool (robust sigma or 7-day mean log RV, with the 30/90-day level as anchor) and the calendar tool (weekend / TradFi-weekend hours of the forecast day) first; other inputs are optional for this target",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-VOL-4",
+   "b": "R-DS-5",
+   "grades": "A/C",
+   "why": "['vol.robust_bc (robust per-bar sigma)'] vs ['LAT1 cell adjustment (weekday x vol tercile x v0 trend)'] for the same ['day'] ['crypto'] vol decision",
+   "rule_a": "WHEN forecasting daily risk THEN prefer the multi-scale HAR (1d / 7d / 30d) over a single-lambda EWMA",
+   "rule_b": "WHEN a central next-day variance expectation is needed and no validated nonlinear tool is available THEN apply the LAT1 cell adjustment to the per-asset log-HAR forecast",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-VOL-4",
+   "b": "R-ML-4",
+   "grades": "A/C",
+   "why": "['vol.har (per-asset log-HAR level)', 'vol.robust_bc (robust per-bar sigma)'] vs ['XGB daily vol tool (when validated)'] for the same ['day'] ['crypto'] vol decision",
+   "rule_a": "WHEN forecasting daily risk THEN prefer the multi-scale HAR (1d / 7d / 30d) over a single-lambda EWMA",
+   "rule_b": "WHEN a central next-day variance expectation is needed for a crypto perp and a validated nonlinear tool exists THEN prefer gradient-boosted trees on the 52-feature panel over plain log-HAR, but only for central expectations, never for risk or stops",
+   "review": ""
+  },
+  {
+   "type": "competing tools",
+   "a": "R-VOL-4",
+   "b": "R-SP-1",
+   "grades": "A/B",
+   "why": "['vol.har (per-asset log-HAR level)'] vs ['vol level: robust sigma or 7d mean log RV'] for the same ['day'] ['crypto'] vol decision",
+   "rule_a": "WHEN forecasting daily risk THEN prefer the multi-scale HAR (1d / 7d / 30d) over a single-lambda EWMA",
+   "rule_b": "WHEN preparing next-day volatility context for a crypto perp THEN call the vol-level tool (robust sigma or 7-day mean log RV, with the 30/90-day level as anchor) and the calendar tool (weekend / TradFi-weekend hours of the forecast day) first; other inputs are optional for this target",
+   "review": ""
+  },
+  {
+   "type": "overlap (nested)",
+   "a": "R-DS-1",
+   "b": "R-SP-3",
+   "grades": "C/C",
+   "why": "vol: same claim ['down']; conditions {dir_state=down|range, weekday=sat} / {vol_state=low, weekday=fri|sat|sun}",
+   "rule_a": "WHEN the forecast day is Saturday and the v0 trend state is range or down THEN expect next-day realised variance about 54% below the per-asset log-HAR forecast",
+   "rule_b": "WHEN the forecast day is Fri-Sun and the 7-day vol level is low THEN expect the ML vol forecast to sit below the vol-level baseline (the network's strongest units are calm-weekend dampers); treat this as an expectation, never as a reason to loosen risk",
+   "review": ""
+  },
+  {
+   "type": "overlap (nested)",
+   "a": "R-DS-2",
+   "b": "R-DS-3",
+   "grades": "C/C",
+   "why": "vol: same claim ['up']; conditions {weekday=mon} / {dir_state=up, vol_state=high, weekday=mon}",
+   "rule_a": "WHEN the forecast day is Monday THEN expect next-day realised variance about 34% above the per-asset log-HAR forecast",
+   "rule_b": "WHEN the forecast day is Monday, vol is in the top third of its own 1-year range and the v0 trend state is up THEN expect next-day realised variance about 49% above the per-asset log-HAR forecast",
+   "review": ""
+  },
+  {
+   "type": "overlap (nested)",
+   "a": "R-FLOW-2",
+   "b": "R-MD-4",
+   "grades": "C/C",
+   "why": "vol: same claim ['up']; conditions {event=jump|liquidation} / {event=jump}",
+   "rule_a": "WHEN a liquidation cluster prints (1m liquidation notional > trailing-24h 99th percentile and >= 3 prints) THEN do not fade it, and expect that symbol's jump risk to stay elevated for about 2 hours, not 60 minutes",
+   "rule_b": "WHEN ETH or SOL volatility jumps THEN expect other crypto tokens' volatility to rise with it; ETH and SOL are net volatility transmitters on almost every day, more than BTC",
+   "review": ""
+  },
+  {
+   "type": "overlap (nested)",
+   "a": "R-ML-2",
+   "b": "R-DS-1",
+   "grades": "C/C",
+   "why": "vol: same claim ['down']; conditions {vol_state=high, weekday=sat|sun} / {dir_state=down|range, weekday=sat}",
+   "rule_a": "WHEN vol is already high (v0 high-vol state) THEN expect a smaller weekend discount in next-day variance than in calm markets",
+   "rule_b": "WHEN the forecast day is Saturday and the v0 trend state is range or down THEN expect next-day realised variance about 54% below the per-asset log-HAR forecast",
+   "review": ""
+  },
+  {
+   "type": "overlap (nested)",
+   "a": "R-VOL-1",
+   "b": "R-DS-1",
+   "grades": "A/C",
+   "why": "vol: same claim ['down']; conditions {weekday=sat|sun} / {dir_state=down|range, weekday=sat}",
+   "rule_a": "WHEN in the TradFi weekend window (Fri 17:00 ET to Sun 18:00 ET) THEN expect realised vol of about 0.6-0.8x the Friday sigma estimate",
+   "rule_b": "WHEN the forecast day is Saturday and the v0 trend state is range or down THEN expect next-day realised variance about 54% below the per-asset log-HAR forecast",
+   "review": ""
+  },
+  {
+   "type": "overlap (nested)",
+   "a": "R-VOL-1",
+   "b": "R-ML-2",
+   "grades": "A/C",
+   "why": "vol: same claim ['down']; conditions {weekday=sat|sun} / {vol_state=high, weekday=sat|sun}",
+   "rule_a": "WHEN in the TradFi weekend window (Fri 17:00 ET to Sun 18:00 ET) THEN expect realised vol of about 0.6-0.8x the Friday sigma estimate",
+   "rule_b": "WHEN vol is already high (v0 high-vol state) THEN expect a smaller weekend discount in next-day variance than in calm markets",
+   "review": ""
+  },
+  {
+   "type": "overlap (nested)",
+   "a": "R-VOL-1",
+   "b": "R-SP-3",
+   "grades": "A/C",
+   "why": "vol: same claim ['down']; conditions {weekday=sat|sun} / {vol_state=low, weekday=fri|sat|sun}",
+   "rule_a": "WHEN in the TradFi weekend window (Fri 17:00 ET to Sun 18:00 ET) THEN expect realised vol of about 0.6-0.8x the Friday sigma estimate",
+   "rule_b": "WHEN the forecast day is Fri-Sun and the 7-day vol level is low THEN expect the ML vol forecast to sit below the vol-level baseline (the network's strongest units are calm-weekend dampers); treat this as an expectation, never as a reason to loosen risk",
+   "review": ""
+  }
+ ],
+ "evidence": [
+  {
+   "type": "cross-check against",
+   "rule": "R-MS-11",
+   "grade": "C",
+   "hypothesis": "H-MD4",
+   "detail": "latest verdict 'contradicts' (the rule stands only if 'supports'); free-spread spread -> vol lead; H-MD4 (random days) and H-MS5b (forward days) test it"
+  },
+  {
+   "type": "cross-check against",
+   "rule": "R-MS-3",
+   "grade": "C",
+   "hypothesis": "H-MD3",
+   "detail": "latest verdict 'contradicts' (the rule stands only if 'supports'); R-MS-3 power-law sign memory; H-MD3 is its multi-day test"
+  },
+  {
+   "type": "cross-check against",
+   "rule": "R-SIM-10",
+   "grade": "C",
+   "hypothesis": "H-MD2",
+   "detail": "latest verdict 'contradicts' (the rule stands only if 'supports'); R-SIM-10 extrapolates activity scaling; H-MD2 is its multi-day test"
+  },
+  {
+   "type": "segment flip",
+   "rule": "R-AVOID-1",
+   "grade": "B",
+   "hypothesis": "H-P1, H-FU2, H-VC1, H-WS08-6",
+   "detail": "H-P1 (in-sample contradicts, holdout supports); H-FU2 (in-sample contradicts, holdout supports); H-VC1 (in-sample contradicts, holdout supports); H-WS08-6 (in-sample supports, holdout contradicts)"
+  },
+  {
+   "type": "segment flip",
+   "rule": "R-AVOID-2",
+   "grade": "B",
+   "hypothesis": "H-OPT2, H-OPT3",
+   "detail": "H-OPT2 (in-sample contradicts, holdout supports); H-OPT3 (in-sample contradicts, holdout supports)"
+  },
+  {
+   "type": "segment flip",
+   "rule": "R-EXIT-3",
+   "grade": "B",
+   "hypothesis": "H-PD6",
+   "detail": "H-PD6 (in-sample contradicts, holdout supports)"
+  },
+  {
+   "type": "segment flip",
+   "rule": "R-OPX-4",
+   "grade": "B",
+   "hypothesis": "H-PD6",
+   "detail": "H-PD6 (in-sample contradicts, holdout supports)"
+  },
+  {
+   "type": "segment flip",
+   "rule": "R-PD-1",
+   "grade": "B",
+   "hypothesis": "H-TR1",
+   "detail": "H-TR1 (in-sample supports, holdout contradicts)"
+  },
+  {
+   "type": "segment flip",
+   "rule": "R-PD-2",
+   "grade": "B",
+   "hypothesis": "H-TR1",
+   "detail": "H-TR1 (in-sample supports, holdout contradicts)"
+  },
+  {
+   "type": "segment flip",
+   "rule": "R-PX-3",
+   "grade": "B",
+   "hypothesis": "H-TR1, H-TR3, H-TR4",
+   "detail": "H-TR1 (in-sample supports, holdout contradicts); H-TR3 (in-sample contradicts, holdout supports); H-TR4 (in-sample contradicts, holdout supports)"
+  },
+  {
+   "type": "segment flip",
+   "rule": "R-PX-4",
+   "grade": "B",
+   "hypothesis": "H-VC2, H-W4",
+   "detail": "H-VC2 (in-sample contradicts, holdout supports); H-W4 (in-sample contradicts, holdout supports)"
+  },
+  {
+   "type": "segment flip",
+   "rule": "R-PX-5",
+   "grade": "B",
+   "hypothesis": "H-AU1, H-AU3",
+   "detail": "H-AU1 (in-sample contradicts, holdout supports); H-AU3 (in-sample contradicts, holdout supports)"
+  },
+  {
+   "type": "segment flip",
+   "rule": "R-PX-6",
+   "grade": "B",
+   "hypothesis": "H-RL1",
+   "detail": "H-RL1 (in-sample contradicts, holdout supports)"
+  },
+  {
+   "type": "segment flip",
+   "rule": "R-PX-9",
+   "grade": "B",
+   "hypothesis": "H-W2",
+   "detail": "H-W2 (in-sample contradicts, holdout supports)"
+  },
+  {
+   "type": "segment flip",
+   "rule": "R-SIG-2",
+   "grade": "B",
+   "hypothesis": "H-VB2",
+   "detail": "H-VB2 (in-sample contradicts, holdout supports)"
+  },
+  {
+   "type": "segment flip",
+   "rule": "R-SIG-3",
+   "grade": "B",
+   "hypothesis": "H-VB3",
+   "detail": "H-VB3 (in-sample contradicts, holdout supports)"
+  },
+  {
+   "type": "segment flip",
+   "rule": "R-TREND-1",
+   "grade": "B",
+   "hypothesis": "H-WS12-6",
+   "detail": "H-WS12-6 (in-sample contradicts, holdout supports)"
+  },
+  {
+   "type": "segment flip",
+   "rule": "R-VBOS-2",
+   "grade": "B",
+   "hypothesis": "H-VBOS2",
+   "detail": "H-VBOS2 (in-sample contradicts, holdout supports)"
+  },
+  {
+   "type": "no decisive evidence",
+   "rule": "R-MAP-1",
+   "grade": "B",
+   "hypothesis": "H-RC1, H-WS07-7",
+   "detail": "every cited result is inconclusive or missing"
+  },
+  {
+   "type": "no decisive evidence",
+   "rule": "R-MMR-1",
+   "grade": "B",
+   "hypothesis": "H-MMR1, H-MMR2",
+   "detail": "every cited result is inconclusive or missing"
+  },
+  {
+   "type": "no decisive evidence",
+   "rule": "R-MMR-3",
+   "grade": "B",
+   "hypothesis": "H-MMR2",
+   "detail": "every cited result is inconclusive or missing"
+  },
+  {
+   "type": "no decisive evidence",
+   "rule": "R-MMR-6",
+   "grade": "B",
+   "hypothesis": "H-MMR3, H-MMR1",
+   "detail": "every cited result is inconclusive or missing"
+  },
+  {
+   "type": "no decisive evidence",
+   "rule": "R-SIG-1",
+   "grade": "B",
+   "hypothesis": "H-VB1",
+   "detail": "every cited result is inconclusive or missing"
+  },
+  {
+   "type": "cross-check inconclusive",
+   "rule": "R-MM-1",
+   "grade": "C",
+   "hypothesis": "H-MM2",
+   "detail": "latest verdict 'inconclusive'; R-MM-1/2 rest on the live H-MM2 runs (10 run-days needed)"
+  },
+  {
+   "type": "cross-check inconclusive",
+   "rule": "R-MS-13",
+   "grade": "C",
+   "hypothesis": "H-MD5",
+   "detail": "latest verdict 'inconclusive'; R-MS-13 ETH/SOL transmit vol; H-MD5 is its multi-day test"
+  },
+  {
+   "type": "pending cross-check",
+   "rule": "R-SP-2",
+   "grade": "B",
+   "hypothesis": "H-SP4",
+   "detail": "no result yet; R-SP-2 cluster-level stability is H-SP4 (forward refits)"
+  },
+  {
+   "type": "pending cross-check",
+   "rule": "R-TF-1",
+   "grade": "B",
+   "hypothesis": "H-TP1b",
+   "detail": "no result yet; R-TF-1 review names H-TP1b (continuation, forward)"
+  },
+  {
+   "type": "pending cross-check",
+   "rule": "R-DS-1",
+   "grade": "C",
+   "hypothesis": "H-DS4",
+   "detail": "no result yet; R-DS-1, R-DS-2, R-DS-4 cells are H-DS4 (forward)"
+  },
+  {
+   "type": "pending cross-check",
+   "rule": "R-FLOW-1",
+   "grade": "C",
+   "hypothesis": "H-OF6",
+   "detail": "no result yet; R-FLOW-1 review names the selective detector H-OF6 (forward)"
+  },
+  {
+   "type": "pending cross-check",
+   "rule": "R-FLOW-2",
+   "grade": "C",
+   "hypothesis": "H-OF7",
+   "detail": "no result yet; R-FLOW-2 (don't fade liquidation clusters) rests on H-OF7 (forward continuation)"
+  },
+  {
+   "type": "pending cross-check",
+   "rule": "R-LEV-5",
+   "grade": "C",
+   "hypothesis": "H-LEV6",
+   "detail": "no result yet; R-LEV-5's 'mild upward tilt' clause rests on H-LEV6 (forward)"
+  },
+  {
+   "type": "pending cross-check",
+   "rule": "R-ML-2",
+   "grade": "C",
+   "hypothesis": "H-NN7",
+   "detail": "no result yet; R-ML-2 (smaller weekend discount in high vol) is H-NN7 (forward)"
+  },
+  {
+   "type": "pending cross-check",
+   "rule": "R-ML-7",
+   "grade": "C",
+   "hypothesis": "H-NN10",
+   "detail": "no result yet; R-ML-7 needs the frozen hourly tool to hold forward (H-NN10)"
+  },
+  {
+   "type": "pending cross-check",
+   "rule": "R-PD-7",
+   "grade": "C",
+   "hypothesis": "H-PD5",
+   "detail": "no result yet; R-PD-7's reversal mechanism is H-PD5 (forward)"
+  },
+  {
+   "type": "pending cross-check",
+   "rule": "R-VOL-22",
+   "grade": "C",
+   "hypothesis": "H-VM6",
+   "detail": "no result yet; R-VOL-22 review names H-VM6 (weekday-aware HAR) as its possible replacement"
+  }
+ ],
+ "reviews": [
+  {
+   "rule": "R-PX-1",
+   "trigger": "H-S2",
+   "state": "H-S2 is the rule's own evidence (no new result is a trigger yet)",
+   "fired": false
+  },
+  {
+   "rule": "R-PX-1",
+   "trigger": "H-S3",
+   "state": "waiting: H-S3 registered, no result yet",
+   "fired": false
+  },
+  {
+   "rule": "R-PX-1",
+   "trigger": "H-WS01",
+   "state": "H-WS01 named but not registered",
+   "fired": false
+  },
+  {
+   "rule": "R-MM-1",
+   "trigger": "H-MM2",
+   "state": "H-MM2 is the rule's own evidence (no new result is a trigger yet)",
+   "fired": false
+  },
+  {
+   "rule": "R-LEV-2",
+   "trigger": "250 days",
+   "state": "waiting: 149 holdout days vs 250",
+   "fired": false
+  },
+  {
+   "rule": "R-LEV-5",
+   "trigger": "registration requested",
+   "state": "done: registered as H-LEV6; waiting: H-LEV6 forward n 16/120 forward decision dates",
+   "fired": false
+  },
+  {
+   "rule": "R-VOL-22",
+   "trigger": "H-VM5",
+   "state": "fired: H-VM5 recorded 'inconclusive' (2026-11-10)",
+   "fired": true
+  },
+  {
+   "rule": "R-VOL-22",
+   "trigger": "H-VM6",
+   "state": "waiting: H-VM6 forward n 16/120 forward forecast dates (min of L, T)",
+   "fired": false
+  },
+  {
+   "rule": "R-SIG-5",
+   "trigger": "12 holdout months",
+   "state": "waiting: 4 holdout months vs 12",
+   "fired": false
+  },
+  {
+   "rule": "R-BUDGET-4",
+   "trigger": "H-IC3",
+   "state": "H-IC3 is the rule's own evidence (no new result is a trigger yet)",
+   "fired": false
+  },
+  {
+   "rule": "R-BUDGET-4",
+   "trigger": "H-S3",
+   "state": "waiting: H-S3 registered, no result yet",
+   "fired": false
+  },
+  {
+   "rule": "R-FLOW-1",
+   "trigger": "a month of flow_3s",
+   "state": "waiting: 20 flow days vs 30",
+   "fired": false
+  },
+  {
+   "rule": "R-MAP-2",
+   "trigger": "12 holdout months",
+   "state": "waiting: 4 holdout months vs 12",
+   "fired": false
+  },
+  {
+   "rule": "R-MAP-4",
+   "trigger": "12 months",
+   "state": "waiting: 4 holdout months vs 12",
+   "fired": false
+  },
+  {
+   "rule": "R-MAP-7",
+   "trigger": "H-S3",
+   "state": "waiting: H-S3 registered, no result yet",
+   "fired": false
+  },
+  {
+   "rule": "R-TF-2",
+   "trigger": "200 holdout sessions",
+   "state": "waiting: 102 holdout sessions vs 200",
+   "fired": false
+  },
+  {
+   "rule": "R-TF-5",
+   "trigger": "200 holdout sessions",
+   "state": "waiting: 102 holdout sessions vs 200",
+   "fired": false
+  },
+  {
+   "rule": "R-PX-12",
+   "trigger": "250 open days",
+   "state": "waiting: 102 holdout sessions vs 250",
+   "fired": false
+  },
+  {
+   "rule": "R-SYN-1",
+   "trigger": "12 holdout months",
+   "state": "waiting: 4 holdout months vs 12",
+   "fired": false
+  },
+  {
+   "rule": "R-SIM-2",
+   "trigger": "a month of flow_3s",
+   "state": "waiting: 20 flow days vs 30",
+   "fired": false
+  },
+  {
+   "rule": "R-SIM-3",
+   "trigger": "a month of flow_3s",
+   "state": "waiting: 20 flow days vs 30",
+   "fired": false
+  },
+  {
+   "rule": "R-SIM-5",
+   "trigger": "H-SIM2",
+   "state": "H-SIM2 is the rule's own evidence (no new result is a trigger yet)",
+   "fired": false
+  },
+  {
+   "rule": "R-SIM-6",
+   "trigger": "a month of flow_3s",
+   "state": "waiting: 20 flow days vs 30",
+   "fired": false
+  },
+  {
+   "rule": "R-SIM-7",
+   "trigger": "10 days",
+   "state": "fired: 31 micro days vs 10 (random micro days exist; multi-day re-tests H-MD1..H-MD6 registered)",
+   "fired": true
+  },
+  {
+   "rule": "R-MS-1",
+   "trigger": "a week of trades",
+   "state": "fired: 31 micro days vs 7 (random micro days exist; multi-day re-tests H-MD1..H-MD6 registered)",
+   "fired": true
+  },
+  {
+   "rule": "R-MS-3",
+   "trigger": "a week of trades",
+   "state": "fired: 31 micro days vs 7 (random micro days exist; multi-day re-tests H-MD1..H-MD6 registered)",
+   "fired": true
+  },
+  {
+   "rule": "R-MS-4",
+   "trigger": "more days",
+   "state": "fired: 31 micro days vs 3 (random micro days exist; multi-day re-tests H-MD1..H-MD6 registered)",
+   "fired": true
+  },
+  {
+   "rule": "R-MS-6",
+   "trigger": "a week of trades",
+   "state": "fired: 31 micro days vs 7 (random micro days exist; multi-day re-tests H-MD1..H-MD6 registered)",
+   "fired": true
+  },
+  {
+   "rule": "R-MS-7",
+   "trigger": "more days",
+   "state": "fired: 31 micro days vs 3 (random micro days exist; multi-day re-tests H-MD1..H-MD6 registered)",
+   "fired": true
+  },
+  {
+   "rule": "R-MS-11",
+   "trigger": "10 days",
+   "state": "fired: 31 micro days vs 10 (random micro days exist; multi-day re-tests H-MD1..H-MD6 registered)",
+   "fired": true
+  },
+  {
+   "rule": "R-MS-12",
+   "trigger": "3 days",
+   "state": "fired: 31 micro days vs 3 (random micro days exist; multi-day re-tests H-MD1..H-MD6 registered)",
+   "fired": true
+  },
+  {
+   "rule": "R-MS-13",
+   "trigger": "10 days",
+   "state": "fired: 31 micro days vs 10 (random micro days exist; multi-day re-tests H-MD1..H-MD6 registered)",
+   "fired": true
+  },
+  {
+   "rule": "R-SIM-10",
+   "trigger": "5 days",
+   "state": "fired: 31 micro days vs 5 (random micro days exist; multi-day re-tests H-MD1..H-MD6 registered)",
+   "fired": true
+  },
+  {
+   "rule": "R-SIM-12",
+   "trigger": "5 days",
+   "state": "fired: 31 micro days vs 5 (random micro days exist; multi-day re-tests H-MD1..H-MD6 registered)",
+   "fired": true
+  },
+  {
+   "rule": "R-SIM-14",
+   "trigger": "5 days",
+   "state": "fired: 31 micro days vs 5 (random micro days exist; multi-day re-tests H-MD1..H-MD6 registered)",
+   "fired": true
+  },
+  {
+   "rule": "R-ML-2",
+   "trigger": "registration requested",
+   "state": "done: registered as H-NN7; waiting: H-NN7 forward n 14/120 forward forecast dates",
+   "fired": false
+  },
+  {
+   "rule": "R-ML-4",
+   "trigger": "3 months",
+   "state": "waiting: 0 forward months vs 3",
+   "fired": false
+  },
+  {
+   "rule": "R-ML-7",
+   "trigger": "1 month",
+   "state": "waiting: 0 forward months vs 1",
+   "fired": false
+  },
+  {
+   "rule": "R-ML-11",
+   "trigger": "20 days",
+   "state": "fired: 31 micro days vs 20 (random micro days exist; multi-day re-tests H-MD1..H-MD6 registered)",
+   "fired": true
+  },
+  {
+   "rule": "R-ML-12",
+   "trigger": "20 days",
+   "state": "fired: 31 micro days vs 20 (random micro days exist; multi-day re-tests H-MD1..H-MD6 registered)",
+   "fired": true
+  },
+  {
+   "rule": "R-DS-1",
+   "trigger": "registration requested",
+   "state": "done: registered as H-DS4; waiting: H-DS4 forward n 14/120 forward forecast dates",
+   "fired": false
+  },
+  {
+   "rule": "R-DS-2",
+   "trigger": "registration requested",
+   "state": "done: registered as H-DS4; waiting: H-DS4 forward n 14/120 forward forecast dates",
+   "fired": false
+  },
+  {
+   "rule": "R-DS-3",
+   "trigger": "registration requested",
+   "state": "done: registered as H-DS4; waiting: H-DS4 forward n 14/120 forward forecast dates",
+   "fired": false
+  },
+  {
+   "rule": "R-DS-4",
+   "trigger": "registration requested",
+   "state": "done: registered as H-DS4; waiting: H-DS4 forward n 14/120 forward forecast dates",
+   "fired": false
+  },
+  {
+   "rule": "R-DS-5",
+   "trigger": "3 months",
+   "state": "waiting: 0 forward months vs 3",
+   "fired": false
+  },
+  {
+   "rule": "R-ML-20",
+   "trigger": "1 month",
+   "state": "waiting: 0 forward months vs 1",
+   "fired": false
+  },
+  {
+   "rule": "R-ML-24",
+   "trigger": "12 months",
+   "state": "waiting: 4 holdout months vs 12",
+   "fired": false
+  },
+  {
+   "rule": "R-EXIT-1",
+   "trigger": "180 days",
+   "state": "waiting: 31 micro days vs 180",
+   "fired": false
+  },
+  {
+   "rule": "R-EXIT-2",
+   "trigger": "180 days",
+   "state": "waiting: 31 micro days vs 180",
+   "fired": false
+  },
+  {
+   "rule": "R-MINE-3",
+   "trigger": "more days",
+   "state": "fired: 31 micro days vs 3 (random micro days exist; multi-day re-tests H-MD1..H-MD6 registered)",
+   "fired": true
+  },
+  {
+   "rule": "R-VBOS-1",
+   "trigger": "registration requested",
+   "state": "asks for a registration: none found",
+   "fired": false
+  },
+  {
+   "rule": "R-FLD-4",
+   "trigger": "180 days",
+   "state": "waiting: 149 holdout days vs 180",
+   "fired": false
+  },
+  {
+   "rule": "R-FLD-5",
+   "trigger": "180 days",
+   "state": "waiting: 149 holdout days vs 180",
+   "fired": false
+  },
+  {
+   "rule": "R-OPX-3",
+   "trigger": "30 days",
+   "state": "fired: 149 holdout days vs 30",
+   "fired": true
+  },
+  {
+   "rule": "R-OPX-5",
+   "trigger": "3 days",
+   "state": "fired: 149 holdout days vs 3",
+   "fired": true
+  },
+  {
+   "rule": "R-MMR-5",
+   "trigger": "H-MMR3",
+   "state": "H-MMR3 is the rule's own evidence (no new result is a trigger yet)",
+   "fired": false
+  },
+  {
+   "rule": "R-MAC-1",
+   "trigger": "H-MAC1",
+   "state": "H-MAC1 is the rule's own evidence (no new result is a trigger yet)",
+   "fired": false
+  },
+  {
+   "rule": "R-MAC-2",
+   "trigger": "date 2023-11-14",
+   "state": "date passed",
+   "fired": true
+  },
+  {
+   "rule": "R-BOS-2",
+   "trigger": "6 months",
+   "state": "waiting: 4 holdout months vs 6",
+   "fired": false
+  },
+  {
+   "rule": "R-BOS-3",
+   "trigger": "6 months",
+   "state": "waiting: 4 holdout months vs 6",
+   "fired": false
+  },
+  {
+   "rule": "R-BOS-4",
+   "trigger": "6 months",
+   "state": "waiting: 0 forward months vs 6",
+   "fired": false
+  },
+  {
+   "rule": "R-ROUGH-2",
+   "trigger": "60 days",
+   "state": "fired: 149 holdout days vs 60",
+   "fired": true
+  },
+  {
+   "rule": "R-KFD-4",
+   "trigger": "H-KFD3",
+   "state": "H-KFD3 is the rule's own evidence (no new result is a trigger yet)",
+   "fired": false
+  },
+  {
+   "rule": "R-XS-5",
+   "trigger": "H-XS4",
+   "state": "H-XS4 is the rule's own evidence (no new result is a trigger yet)",
+   "fired": false
+  },
+  {
+   "rule": "R-STRESS-4",
+   "trigger": "H-S3",
+   "state": "waiting: H-S3 registered, no result yet",
+   "fired": false
+  },
+  {
+   "rule": "R-STRESS-4",
+   "trigger": "H-WS01",
+   "state": "H-WS01 named but not registered",
+   "fired": false
+  },
+  {
+   "rule": "R-GEO-6",
+   "trigger": "H-GEO8",
+   "state": "H-GEO8 is the rule's own evidence (no new result is a trigger yet)",
+   "fired": false
+  },
+  {
+   "rule": "R-GEO-6",
+   "trigger": "60 days",
+   "state": "waiting: 31 micro days vs 60",
+   "fired": false
+  }
+ ],
+ "recommendations": [
+  "R-MS-11 (grade C): H-MD4 latest verdict 'contradicts' (the rule stands only if 'supports') -> downgrade or retire unless re-confirmed.",
+  "R-MS-3 (grade C): H-MD3 latest verdict 'contradicts' (the rule stands only if 'supports') -> downgrade or retire unless re-confirmed.",
+  "R-SIM-10 (grade C): H-MD2 latest verdict 'contradicts' (the rule stands only if 'supports') -> downgrade or retire unless re-confirmed.",
+  "Resolve contradiction R-DS-4 vs R-SP-3 (C/C): vol: ['up'] vs ['down'] under shared ['weekday'].",
+  "Resolve contradiction R-VOL-3 vs R-MD-4 (A/C): vol: ['down'] vs ['up'] under shared ['event'].",
+  "Resolve negation R-VOL-9 vs R-DS-2 (C/C): R-VOL-9 applies 'no blanket Monday multiplier' (H-DOW2: BTC Monday 1.3x in-sample, not in the holdout); R-DS-2 sizes one for crypto next-day vol (+34% vs log-HAR: +45% in-sample z 9.8, +25% holdout z 2.4).",
+  "Resolve negation R-VOL-9 vs R-ML-1 (C/B): R-ML-1's central forecast multiplies log-HAR by a weekday factor with Monday about 1.3x; R-VOL-9 says no blanket Monday multiplier.",
+  "Overlapping statements of one effect (R-DS-1, R-DS-2, R-DS-3, R-FLOW-2, R-MD-4, R-ML-2, R-SP-3, R-VOL-1): merge into one rule family with a single headline (the A rule) and the C cells as refinements, so a card never shows the same effect three times.",
+  "One decision, several preferred tools (R-DS-5, R-ML-1, R-ML-4, R-SP-1, R-VOL-20, R-VOL-4): state the order once (the playbook card does) and mark the superseded ones in their review field.",
+  "One decision, several preferred tools (R-ML-10, R-ML-7, R-ROUGH-2, R-WS12-1, R-XS-1): state the order once (the playbook card does) and mark the superseded ones in their review field.",
+  "Re-run or re-read the tests behind 20 provisional rules whose review trigger has fired: R-MAC-2, R-MINE-3, R-ML-11, R-ML-12, R-MS-1, R-MS-11, R-MS-12, R-MS-13, R-MS-3, R-MS-4, R-MS-6, R-MS-7, R-OPX-3, R-OPX-5, R-ROUGH-2, R-SIM-10, R-SIM-12, R-SIM-14, R-SIM-7, R-VOL-22."
+ ]
+}

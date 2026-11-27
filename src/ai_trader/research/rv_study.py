@@ -28,7 +28,8 @@ H-RV2 / H-RV3: s = ln A - ln B; spread_z(window=720, min_obs=720) (mean/std of t
     -> Sun 18:00 ET). "Revert faster": share of the deviation (s_t - mean_t) reverted after 4 h, weekend vs
     weekday (Welch t), reported; the verdict uses the registered success criterion only.
 Verdicts (verdicts._judge): in-sample supports if mean > 0 and t > 2, contradicts if mean <= 0, otherwise
-    inconclusive; holdout supports/contradicts on sign only (>= 8 observations). H-RV2's in-sample segment is
+    inconclusive; holdout (>= 8 observations): wrong sign contradicts, right sign supports only if the one-sided t test
+    passes at verdicts.HOLDOUT_ALPHA (D7a, 2026-11-27; before that: sign only). H-RV2's in-sample segment is
     recorded as inconclusive (the registry says it is too short for its own verdict); its verdict is pooled.
 
 Run:  uv run python -m ai_trader.research.rv_study insample|holdout|dry
@@ -47,7 +48,7 @@ from ai_trader.core.time import now
 from ai_trader.features.relative_value import factor_residuals, spread_z
 from ai_trader.research.calendar import add_calendar
 from ai_trader.research.evaluate import knowledge_cutoff, newey_west_t
-from ai_trader.research.verdicts import MIN_HOLDOUT, _judge
+from ai_trader.research.verdicts import MIN_HOLDOUT, _judge, p_one_sided_t
 from ai_trader.storage.lake import Lake
 
 UNIVERSE = (
@@ -255,7 +256,7 @@ def segments(df: pl.DataFrame) -> dict[str, pl.DataFrame]:
 
 def verdict_rv1(seg: str, s: dict) -> str:
     m, t, n = s["net"]["mean"], s["net"]["t_nw"], s["net"]["n_clusters"]
-    return _judge(seg, m > 0 and np.isfinite(t) and t > 2, m > 0, n)
+    return _judge(seg, m > 0 and np.isfinite(t) and t > 2, m > 0, n, p_one_sided_t(t, n, +1))
 
 
 def verdict_pair(hid: str, seg: str, s: dict) -> str:
@@ -267,7 +268,7 @@ def verdict_pair(hid: str, seg: str, s: dict) -> str:
         if n < 3:
             return "inconclusive"
         return "supports" if (m > 0 and t > 2) else ("contradicts" if m <= 0 else "inconclusive")
-    return _judge(seg, m > 0 and np.isfinite(t) and t > 2, m > 0, n)
+    return _judge(seg, m > 0 and np.isfinite(t) and t > 2, m > 0, n, p_one_sided_t(t, n, +1))
 
 
 def run(segs: tuple[str, ...], as_of: datetime | None = None, with_null: bool = True) -> dict:

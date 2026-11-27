@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import math
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 import numpy as np
@@ -175,8 +175,9 @@ def rule_candidates(res: dict) -> list[dict]:
 def analyse(record: bool = False) -> dict:
     design = json.loads((S.OUT / "design.json").read_text(encoding="utf-8"))
     U = S.units()
-    T = _load("trades")
-    P = _load("perturb")
+    as_of = datetime.fromisoformat(design["as_of"])
+    T = S.with_funding(_load("trades"), as_of)    # D7b: funding in net R (tables written before 2026-11-27 lack the column)
+    P = S.with_funding(_load("perturb"), as_of)
     Y = _load("synthetic")
     DER = pl.read_parquet(S.OUT / "deribit" / "BTC-PERPETUAL_2020H1.parquet") if (S.OUT / "deribit" / "BTC-PERPETUAL_2020H1.parquet").exists() else pl.DataFrame()
     st = pl.read_parquet(S.OUT / "btc_state.parquet").sort("ms")

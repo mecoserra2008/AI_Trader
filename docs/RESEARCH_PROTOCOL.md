@@ -13,7 +13,7 @@ So every result is reported in two segments, split at `research.knowledge_cutoff
 | `llm_in_sample` | before the cutoff: Claude may have read about this period | weak; necessary but not sufficient |
 | `clean_holdout` | after the cutoff: Claude cannot know what happened | strong; grows every day |
 
-A hypothesis is **supported** only if it holds in-sample *and* keeps its sign in the holdout. Holdout samples are small at first, so most early verdicts will be "inconclusive", and that's the honest answer.
+A hypothesis is **supported** only if it holds in-sample *and*, in the holdout, keeps its sign **and passes a declared one-sided test** of the registered direction at the registered level (5% unless the registration states another). The right sign without the test is "inconclusive". Holdout samples are small at first, so most early verdicts will be "inconclusive", and that's the honest answer. (Rule tightened 2026-11-27, D7a: earlier holdout verdicts were sign-only; research/reports/verdict_fix_diff_2026-11-27.md lists the recorded ones that would change. Recorded rows are never rewritten.)
 
 ## 2. Lifecycle
 

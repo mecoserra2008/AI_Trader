@@ -65,11 +65,12 @@ def mean_ci_b(t: pl.DataFrame, r: np.ndarray, block: float, n_boot: int = S.N_BO
     return float(np.mean(r)), float(np.quantile(m, 0.025)), float(np.quantile(m, 0.975)), float((m <= 0).mean())
 
 
-def m_(t: pl.DataFrame, sp: T.Spec | None, ci: bool = True, costs: S.Costs | None = None, block: float | None = None) -> dict:
+def m_(t: pl.DataFrame, sp: T.Spec | None, ci: bool = True, costs: S.Costs | None = None, block: float | None = None,
+       closed_only: bool = True) -> dict:
     if t.height == 0:
         return {"n": 0}
     r = r_of(t, sp, costs)
-    out = S.metrics(t, r, ci=False)
+    out = S.metrics(t, r, ci=False, closed_only=closed_only)   # stress.metrics drops open-at-end trades by default since D7b
     if ci:
         b = block if block is not None else hold_block(t)
         out["mean"], out["lo"], out["hi"], out["p_le0"] = mean_ci_b(t, r, b)
@@ -294,7 +295,7 @@ def analyse(record: bool = False) -> dict:
         ob = OPEN.filter(pl.col("variant") == name)
         ab = ALL_B.filter(pl.col("variant") == name)
         R["open_at_end"] = {"n": ob.height, "sum_R": float(r_of(ob, sp).sum()) if ob.height else 0.0,
-                            "incl_open": {g: m_(ab.filter(pl.col("seg") == g), sp, ci=False).get("mean") for g in SEGS}}
+                            "incl_open": {g: m_(ab.filter(pl.col("seg") == g), sp, ci=False, closed_only=False).get("mean") for g in SEGS}}
         R["costs"] = {k: m_(tb, sp, ci=False, costs=S.Costs(fee_mult=fm, extra_bps=x, drought=dr)) for k, (fm, x, dr) in S.COST_VARIANTS.items()}
         R["lat5"] = m_(L5.filter(pl.col("variant") == name), sp, ci=False)
         acc, es = engine(tb, sp)

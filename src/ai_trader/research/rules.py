@@ -36,8 +36,10 @@ KINDS = ("expect", "prefer", "avoid")
 GRADES = ("A", "B", "C")
 STATUSES = ("active", "provisional", "retired")
 REQUIRED = ("id", "kind", "rule", "when", "then", "scope", "effect", "confidence", "evidence", "review", "status")
-ID_RE = re.compile(r"^R-[A-Z]+-\d+$")
-H_RE = re.compile(r"^H-[A-Z]+\d+[a-z]?$")
+# Rule ids: R-<AREA>-<n>; an area may carry a workstream number (R-WS04-1, specification program 2026-11-27).
+ID_RE = re.compile(r"^R-[A-Z]+\d*-\d+$")
+# Hypothesis ids: H-W1, H-V1b, H-STRESS10 (block + number) or H-WS05-11b (workstream block, AGENT_RULES §4).
+H_RE = re.compile(r"^H-[A-Z]+(\d+[a-z]?|\d*-\d+[a-z]?)$")
 # Sizing belongs to the risk engine (CLAUDE.md principle 4): rules may not prescribe it.
 SIZING_RE = re.compile(r"position size|size the|sizing|risk per trade|% of (equity|capital|the account)|\blots?\b|\bnotional of\b", re.I)
 
@@ -114,7 +116,9 @@ def render_md(rules: list[dict[str, Any]]) -> str:
         areas.setdefault(r["id"].split("-")[1], []).append(r)
     names = {"VOL": "Volatility", "LEV": "Asymmetry and leverage", "PX": "Price behaviour", "FLOW": "Order flow",
              "SIG": "Signals", "EXEC": "Execution", "MM": "Market making", "CARRY": "Carry", "AVOID": "Don't spend capital on",
-             "BUDGET": "Decision budget"}
+             "BUDGET": "Decision budget", "STRESS": "Stress screens (live trade layer)", "GEO": "Intraday geometry",
+             "TREND": "Trend sleeve", "TVTP": "Regime-switching VAR (metals, lead-lag)", "WS04": "Volatility specification (WS04)",
+             "WS05": "Jumps and joint tails (WS05)", "WS12": "ML benchmark (WS12)", "WS14": "Live network interpretation (WS14)"}
     for area, rs in areas.items():
         lines += [f"## {names.get(area, area)}", "", "| id | grade | rule | effect | evidence | status |", "|---|---|---|---|---|---|"]
         for r in rs:

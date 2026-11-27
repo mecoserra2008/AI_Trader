@@ -34,7 +34,7 @@ from ai_trader.core.time import now
 from ai_trader.features.vol_models_x import har_forecast_x, iv_to_daily_var, qlike
 from ai_trader.research.evaluate import knowledge_cutoff, newey_west_t
 from ai_trader.research.frame import market_frame
-from ai_trader.research.verdicts import MIN_HOLDOUT, _judge
+from ai_trader.research.verdicts import MIN_HOLDOUT, _judge, p_one_sided_ci, p_one_sided_t
 from ai_trader.storage.lake import Lake
 
 UNIVERSE = (
@@ -371,7 +371,7 @@ def summarise(seg: str, P: dict[str, pl.DataFrame], books: dict[str, pl.DataFram
         d = split(P[hid])[seg]
         m = _paired(d, "q_har", "q_x")
         ok = m["dqlike"] < 0 and m["t"] < -2
-        res[hid] = (_judge(seg, ok, m["dqlike"] < 0, m["n_origins"]), m)
+        res[hid] = (_judge(seg, ok, m["dqlike"] < 0, m["n_origins"], p_one_sided_t(m["t"], m["n_origins"], -1)), m)
 
     d = split(P["H-VCL4"])[seg]
     m4 = {}
@@ -379,7 +379,8 @@ def summarise(seg: str, P: dict[str, pl.DataFrame], books: dict[str, pl.DataFram
         dk = d.filter(pl.col(f"q_{k}").is_not_nan() & pl.col("q_har").is_not_nan())
         m4[k] = _paired(dk, "q_har", f"q_{k}")
     ok = m4["dvol"]["dqlike"] < 0 and m4["dvol"]["t"] < -2
-    res["H-VCL4"] = (_judge(seg, ok, m4["dvol"]["dqlike"] < 0, m4["dvol"]["n_origins"]), {"primary": "dvol", **m4})
+    res["H-VCL4"] = (_judge(seg, ok, m4["dvol"]["dqlike"] < 0, m4["dvol"]["n_origins"], p_one_sided_t(m4["dvol"]["t"], m4["dvol"]["n_origins"], -1)),
+                     {"primary": "dvol", **m4})
 
     d = split(P["H-VCL5"])[seg]
     ev_ = d.filter(pl.col("event"))
@@ -392,7 +393,7 @@ def summarise(seg: str, P: dict[str, pl.DataFrame], books: dict[str, pl.DataFram
           "mean_log_ratio_all": float(np.log(d["ratio"]).mean()) if d.height else float("nan"),
           "n_events": ev_.height, "n_event_dates": nr, "mean_ret5": mr, "t_ret5": tr}
     ok = med > 1.1 and lo > 1 and np.isfinite(tr) and abs(tr) < 2
-    res["H-VCL5"] = (_judge(seg, ok, med > 1, nr), m5)
+    res["H-VCL5"] = (_judge(seg, ok, med > 1, nr, p_one_sided_ci(med, lo, hi, 1.0, +1, log=True)), m5)
 
     for hid, ycols in (("H-FU1", ("btc", "ew")), ("H-FU2", ("btc",))):
         d = split(P[hid])[seg]
@@ -401,14 +402,15 @@ def summarise(seg: str, P: dict[str, pl.DataFrame], books: dict[str, pl.DataFram
         ok = m["btc"]["slope"] > 0 and m["btc"]["t"] > 2
         if hid == "H-FU1":
             ok = ok and m["ew"]["slope"] > 0
-        res[hid] = (_judge(seg, ok, m["btc"]["slope"] > 0, m["btc"]["n"]), m)
+        res[hid] = (_judge(seg, ok, m["btc"]["slope"] > 0, m["btc"]["n"], p_one_sided_t(m["btc"]["t"], m["btc"]["n"], +1)), m)
 
     w = split(books["conditional"])[seg]
     s = carry_stats(w)
     s["by_year"] = carry_by_year(w)
     s["context_always_on"] = {k: v for k, v in carry_stats(split(books["always_on"])[seg]).items() if k in ("gross", "net")}
     if seg == "clean_holdout":
-        verdict = "inconclusive" if w.height < MIN_HOLDOUT else ("supports" if s["net"]["ann_return"] > 0 else "contradicts")
+        # D7a: the right sign must also pass the one-sided NW t test (was sign only)
+        verdict = _judge(seg, False, s["net"]["ann_return"] > 0, w.height, p_one_sided_t(s["net"].get("nw_t"), w.height, +1))
     else:
         verdict = "supports" if s["net"]["sharpe"] > 1 else ("contradicts" if s["net"]["ann_return"] <= 0 else "inconclusive")
     res["H-C1"] = (verdict, s)

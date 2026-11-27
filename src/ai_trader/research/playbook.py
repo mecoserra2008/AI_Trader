@@ -728,14 +728,23 @@ CURATED_PAIRS: list[tuple[str, str, str, str]] = [
      "R-DS-2 sizes one for crypto next-day vol (+34% vs log-HAR: +45% in-sample z 9.8, +25% holdout z 2.4)"),
     ("R-VOL-9", "R-ML-1", "negation", "R-ML-1's central forecast multiplies log-HAR by a weekday factor with Monday about 1.3x; R-VOL-9 says "
      "no blanket Monday multiplier"),
-    ("R-PX-1", "R-PX-2", "contradiction", "a |z| >= 4 hourly shock in a high-vol state is also a >= 2 sigma deviation from trend: R-PX-1 "
-     "expects reversal (fade), R-PX-2 says never fade such moves; H-S3 (forward) is the arbiter"),
+    # R-PX-1 vs R-PX-2 (the shock fade) was resolved in the D6 merge of 27 Nov 2026: R-PX-1 no longer expects a tradable
+    # reversal and R-STRESS-2 retires the fade (stress harness: hs2_fade_blackout and shock_desk FAIL).
 ]
 REVIEWED: dict[tuple[str, str], str] = {
     ("R-VOL-9", "R-VOL-27"): "not a conflict: R-VOL-27 is the hour-of-week profile (loud at the US open / Sunday reopen); R-VOL-9 denies "
                              "a blanket daily Monday factor, and both widen at the open",
     ("R-DS-4", "R-SP-3"): "real but narrow: both cover a Friday forecast day (R-DS-4 Tue-Fri up-trend +24%; R-SP-3 Fri-Sun calm discount); "
                           "on a calm up-trend Friday they point opposite ways",
+    # D6 merge (27 Nov 2026)
+    ("R-VOL-3", "R-FLOW-2"): "not a conflict: both describe excess risk after a burst that decays within hours (R-VOL-3: variance half-life "
+                             "2-3 h; R-FLOW-2: jump hazard elevated for about 2 h after a liquidation cluster)",
+    ("R-FLOW-2", "R-VOL-3"): "not a conflict: both describe excess risk after a burst that decays within hours (R-VOL-3: variance half-life "
+                             "2-3 h; R-FLOW-2: jump hazard elevated for about 2 h after a liquidation cluster)",
+    ("R-FLOW-2", "R-STRESS-4"): "not a conflict: R-FLOW-2 forbids fading a liquidation cluster; R-STRESS-4 says the shock sleeves lose in R8 / "
+                                "R9 cells; both advise against counter-trend entries there",
+    ("R-STRESS-4", "R-FLOW-2"): "not a conflict: R-FLOW-2 forbids fading a liquidation cluster; R-STRESS-4 says the shock sleeves lose in R8 / "
+                                "R9 cells; both advise against counter-trend entries there",
 }
 
 

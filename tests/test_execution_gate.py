@@ -97,8 +97,9 @@ def test_gate_other_machine_rules():
     # R-PX-2: a long entry against a -2.5 sigma deviation is a fade; with the deviation it is not
     assert "R-PX-2" in g.check(make_event("rsi_reversion", "mean_reversion", "long"), ctx("R5", dev=-2.5), None).blocked_by
     assert g.check(make_event("tsmom", "trend", "long"), ctx("R2", dev=2.5), None).decision == "pass"
-    # R-MAP-4: 1h trend in a range cell
-    assert "R-MAP-4" in g.check(make_event("tsmom", "trend"), ctx("R6"), None).blocked_by
+    # R-MAP-4: 1h trend in a range cell (a grade-C cell claim since the D6 rules merge: the gate warns; A/B would block)
+    r6 = g.check(make_event("tsmom", "trend"), ctx("R6"), None)
+    assert "R-MAP-4" in (r6.blocked_by if g.book.severity("R-MAP-4") == "block" else r6.warnings)
     # R-AVOID-1: failed families are always blocked
     assert "R-AVOID-1" in g.check(make_event("funding_contrarian", "positioning"), ctx("R2"), None).blocked_by
     assert "R-AVOID-1" in g.check(make_event("geo_struct", "trend"), ctx("R2"), None).blocked_by
