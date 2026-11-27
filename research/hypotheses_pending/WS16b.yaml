@@ -1,0 +1,30 @@
+# ---------------------------------------------------------------- WS16 forward-test hypotheses (registered 2026-11-27 ~07:50 UTC, before any forward data)
+# Forward paper test of the two WS16 trend specs (research/reports/ws16_2026-11-27.md, "Recommended specs"). Scored only on trades
+# entered after registration. Unconstrained paper stream = every signal on the 23-symbol universe L (no slot limits); engine stream = live_small.
+H-WS16-15:
+  title: "Forward: zoo_ew (spec A) keeps a positive mean net R per closed trade"
+  statement: "On the unconstrained paper stream, spec A's mean net R per closed trade (entries after 2026-11-27 08:00 UTC) is > 0."
+  rationale: "History +0.317 R [-0.004, +0.701] (closed, p90-holding blocks), holdout +0.10 on 131 trades, 2025-26 flat; only the forward record is clean evidence."
+  test: "Checkpoints at 100, 300 and 1000 closed trades; stationary bootstrap of entry days with block max(5, p90 holding days); one-sided."
+  success: "Supports iff at 1000 trades the mean > 0 with the one-sided 95% bound > 0; contradicts iff at any checkpoint >= 300 trades the one-sided 95% upper bound < 0, or at 100 trades the mean < -0.30 R; else inconclusive (expected at 100 and 300: the MDE at 300 trades is ~0.6 R)."
+  prior: 0.45
+  family: ws16_trend
+  status: proposed
+H-WS16-16:
+  title: "Forward: the short side of spec A does not pay (data-informed)"
+  statement: "Spec A's short trades have mean net R <= 0 over the first 150 closed forward short trades on the unconstrained stream."
+  rationale: "Seen in WS16 data (not registered there): in-sample longs +0.64 R vs shorts +0.05; holdout shorts -0.81 on 53. If true, a long-only sleeve halves the trade count without losing edge; crypto drift and survivorship may explain it."
+  test: "Mean net R of closed short trades at 150 trades, day bootstrap."
+  success: "Supports iff mean <= 0; contradicts iff mean > +0.15 R; else inconclusive."
+  prior: 0.55
+  family: ws16_trend
+  status: proposed
+H-WS16-17:
+  title: "Forward: tsmom_30d (spec B) and zoo_ew agree within noise"
+  statement: "On matched forward periods the paired difference (spec B - spec A) in mean net R per closed trade is within +-0.15 R."
+  rationale: "Both are medium-horizon trend (zoo_ew correlates 0.7-0.9 with its members); WS16 could not rank them (in-sample -0.032 R, n.s.)."
+  test: "Paired day-bootstrap difference at 300 closed trades of each."
+  success: "Supports iff the difference is inside +-0.15 R; contradicts iff the 95% CI excludes the interval; else inconclusive."
+  prior: 0.70
+  family: ws16_trend
+  status: proposed
