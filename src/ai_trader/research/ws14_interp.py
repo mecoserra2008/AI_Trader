@@ -1112,6 +1112,70 @@ def cmd_xs_inv4() -> dict:
     return r
 
 
+# ------------------------------------------------------------------ WS12 deep models (H-WS14-12, 13)
+
+
+def ws12_surrogate_X(pn: dict, rows: np.ndarray, which: str) -> np.ndarray:
+    from ai_trader.research import ws12_deep as wd
+
+    S = pn["S"][rows].astype(float)
+    si = {c: i for i, c in enumerate(wd.STATIC_FEATURES)}
+    if which == "1h":
+        lfacn = pn["P"][rows - 1, wd.STEP_FEATURES.index("lfacn")].astype(float)
+        lu = np.stack([pn["P"][rows - k, wd.STEP_FEATURES.index("lu")] for k in range(1, 7)], axis=1).astype(float)
+        return np.c_[S[:, [si["lsig_rel1y"], si["har_d"], si["har_w"], si["har_m"]]], lfacn, lu]
+    return S[:, [si["har_w"], si["lfac_n24"], si["lsig_rel1y"]]]
+
+
+def cmd_ws12() -> dict:
+    import torch
+
+    from ai_trader.research import ws12_deep as wd
+
+    base = out_dir().parent / "ws12"
+    pn = wd.panel()
+    out: dict = {}
+    for arch in ("gru", "tcn"):
+        for refit in ("R1", "R2"):
+            lg = base / "logs" / f"train_{arch}_{refit}.json"
+            if not lg.is_file():
+                out[f"{arch}_{refit}"] = "not trained yet"
+                continue
+            lr = json.loads(lg.read_text(encoding="utf-8"))["chosen_lr"]
+            rows = wd.split_rows(pn, refit)
+            te = np.load(base / "preds" / f"rows_{refit}.npy")
+            fi = np.sort(np.random.default_rng(0).choice(rows["fit"], min(20000, len(rows["fit"])), replace=False))
+            pf, pt = [], []
+            for s in wd.SEEDS:
+                name = f"{arch}_{refit}_lr{lr:g}_s{s}"
+                meta = json.loads((base / "models" / f"{name}.json").read_text(encoding="utf-8"))
+                net = wd.make_net(arch, len(wd.STEP_FEATURES), len(wd.STATIC_FEATURES), pn["M"].shape[1])
+                net.load_state_dict(torch.load(base / "models" / f"{name}.pt", weights_only=False))
+                net.eval()
+                bat = wd.Batcher.__new__(wd.Batcher)
+                bat.pn, bat.arch = pn, arch
+                for k, v in meta["standardiser"].items():
+                    setattr(bat, k, np.asarray(v, dtype=np.float32))
+                pf.append(wd.predict(net, bat, fi))
+                pt.append(np.load(base / "preds" / f"{name}.npy"))
+            pf, pt = np.mean(pf, 0), np.mean(pt, 0)
+            day = pn["T"][te].astype("datetime64[D]")
+            res = {"chosen_lr": lr, "fit_rows": len(fi), "test_rows": len(te), "test_first": str(pn["T"][te].min()), "test_last": str(pn["T"][te].max())}
+            for which, hk in (("1h", 0), ("24h", 2)):
+                Xf, Xt = ws12_surrogate_X(pn, fi, which), ws12_surrogate_X(pn, te, which)
+                b = _ols(Xf, pf[:, hk, 3])
+                f = _pred(b, Xt)
+                binary = np.zeros(Xf.shape[1], bool)
+                g = _spline_fit(Xf, pf[:, hk, 3], binary)(Xt)
+                res[which] = {"r2_linear": r2(pt[:, hk, 3], f), "r2_linear_ci": r2_boot(pt[:, hk, 3], f, day), "coef": b.tolist(),
+                              "r2_spline_descriptive": r2(pt[:, hk, 3], g),
+                              "df_corr_with_logF": float(np.corrcoef(pt[:, hk, 2], pt[:, hk, 3])[0, 1])}
+            out[f"{arch}_{refit}"] = res
+            print(arch, refit, json.dumps(_json(res))[:600], flush=True)
+    save("ws12_pickup", out)
+    return out
+
+
 def cmd_xs() -> dict:
     t0 = time.time()
     res = {"v3_2026Q4": xs_analyse("v3", "2026Q4"), "v3_2025Q2": xs_analyse("v3", "2025Q2")}
@@ -1165,7 +1229,7 @@ def main(argv: list[str] | None = None) -> None:
 
     torch.set_num_threads(int(os.environ.get("TORCH_NUM_THREADS", 2)))
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["core", "probe", "failure", "xs", "xs_inv4", "report"])
+    ap.add_argument("cmd", choices=["core", "probe", "failure", "xs", "xs_inv4", "ws12", "report"])
     a = ap.parse_args(argv)
     if a.cmd == "core":
         cmd_core()
