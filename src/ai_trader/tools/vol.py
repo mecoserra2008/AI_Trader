@@ -98,7 +98,9 @@ def robust_bc(symbol: str, freq: str, *, as_of: datetime, horizon: int = 24, lak
     from ai_trader.research.calendar import add_calendar
     from ai_trader.research.frame import market_frame
 
-    f = market_frame(symbol, freq, as_of, lake=lake, funding=False, oi=False)
+    from ai_trader.risk.sigma import pin_base
+
+    f = pin_base(market_frame(symbol, freq, as_of, lake=lake, funding=False, oi=False))   # this tool IS robust_bc
     if f.height < 200:
         raise ValueError(f"{symbol} {freq}: not enough bars at {as_of}")
     last = f.tail(1).row(0, named=True)

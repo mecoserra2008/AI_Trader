@@ -102,6 +102,21 @@ regimes:
     vol_low_quantile: 0.33
     vol_high_quantile: 0.67
 
+# Stop / sizing / EV-gate sigma (decision D1, user-approved 2026-11-27; src/ai_trader/risk/sigma.py is the one entry point
+# and feeds every market frame's sigma_risk_next). Specs: robust_bc | loghar_cr | loghar_cr_range (1h / 4h; both use
+# vol.har at 1d). Shadow first: scripts/sigma_shadow.py logs spec and shadow hourly, scripts/sigma_shadow_score.py scores
+# them. From switch_on (UTC date) the shadow becomes the spec iff the registered gate (H-SIGMA-1) passed in its one decision
+# (data/journal/sigma_shadow/gate.jsonl; switch_gate: none = switch on the date unconditionally). To switch by hand now:
+# spec: loghar_cr_range. Trained models / calibrated features stay on robust_bc (sigma_rbc_next) whatever this says.
+risk_sigma:
+  spec: robust_bc
+  shadow: loghar_cr_range
+  switch_on: "2026-12-11"
+  switch_gate: score
+  nu: {1h: 3.80, 4h: 3.53, 1d: 3.57}   # Student-t innovations per horizon (WS04 R-WS04-2)
+  symbols: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, DOGEUSDT, ADAUSDT, LINKUSDT, LTCUSDT, BCHUSDT, AVAXUSDT, DOTUSDT, BNBUSDT,
+            TRXUSDT, NEARUSDT, ATOMUSDT, ETCUSDT, FILUSDT, UNIUSDT, AAVEUSDT, XLMUSDT, SUIUSDT, ENAUSDT, HYPEUSDT]   # universe L
+
 research:
   knowledge_cutoff: "2026-07-01"   # LLM training cutoff: data on/after this date is a clean holdout for LLM-generated hypotheses
   min_episodes_per_cell: 10

@@ -7,7 +7,8 @@ tools:
   vol.ewma:          {family: vol, impl: [rust, python], cadence: bar, status: active}
   vol.range:         {family: vol, impl: [rust], cadence: bar, status: active, notes: "Parkinson, Garman-Klass, Yang-Zhang"}
   vol.garch_t:       {family: vol, impl: {fit: python, filter: rust}, cadence: {fit: weekly, filter: bar}, status: active}
-  vol.robust_bc:     {family: vol, impl: [rust, python], cadence: bar, status: active, notes: "winsorised + slow bias-corrected EWMA; H-V1b supported (QLIKE -0.05 IS / -0.04 holdout vs plain). sigma_risk_next: use for stops/sizing"}
+  vol.robust_bc:     {family: vol, impl: [rust, python], cadence: bar, status: active, notes: "winsorised + slow bias-corrected EWMA; H-V1b supported (QLIKE -0.05 IS / -0.04 holdout vs plain). Frame column sigma_rbc_next (always) = the base of trained models / calibrated features; the stop sigma sigma_risk_next is chosen by risk.sigma (D1)"}
+  risk.sigma:        {family: vol, impl: [python], cadence: bar, status: probation, notes: "D1 stop/sizing/EV-gate sigma, one entry point (src/ai_trader/risk/sigma.py, settings risk_sigma): robust_bc until switch_on + the H-SIGMA-1 gate, then loghar_cr_range at 1h/4h (WS04 clock log-HAR on 5m RV + release dummy + WS12 range terms), vol.har at 1d; weekend never shrinks it (R-VOL-2); Student-t nu 3.8/3.5/3.6. Shadow: scripts/sigma_shadow.py, scored by scripts/sigma_shadow_score.py"}
   vol.weekend_m:     {family: vol, impl: [rust, python], cadence: weekly, status: active, notes: "causal weekend multiplier (prior 0.6, shrunk). CENTRAL estimates only (first passage); H-V2 failed on QLIKE: do not shrink stops/sizing"}
   vol.har:           {family: vol, impl: [python], cadence: daily, status: active, notes: "HAR on log daily RV; H-VCL1 supported (QLIKE -0.08 vs robust_bc at 24h, both segments). Use for daily-horizon risk"}
   vol.regime_pct:    {family: vol, impl: [python], cadence: bar, status: planned}

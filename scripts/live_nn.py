@@ -41,6 +41,11 @@ except RuntimeError:  # already set
     pass
 
 from ai_trader.live import hourly, nn, nn_v2  # noqa: E402
+from ai_trader.risk.sigma import pin_process_base  # noqa: E402
+
+# The frozen networks (v1, v2, xs_v3) were trained on robust_bc units: frames in this process never follow the D1
+# stop-sigma switch (risk.sigma; their modules are code-hash guarded, so the pin lives here). No effect before a switch.
+pin_process_base()
 
 
 def _ts(s: str) -> datetime:

@@ -45,7 +45,9 @@ def inputs_hash(model_id: str, symbol: str, forecast_for: str, x: np.ndarray) ->
 
 
 def _next_bar_row(f: pl.DataFrame) -> tuple[pl.DataFrame, datetime]:
-    f = f.select("event_ts", "ret", "sigma_risk_next").sort("event_ts")
+    from ai_trader.risk.sigma import pin_base
+
+    f = pin_base(f).select("event_ts", "ret", "sigma_risk_next").sort("event_ts")   # robust_bc base (risk.sigma roles)
     nxt = f["event_ts"][-1] + timedelta(hours=1)
     ph = pl.DataFrame({"event_ts": [nxt], "ret": [None], "sigma_risk_next": [None]}, schema=f.schema)
     h = symbol_hourly(pl.concat([f, ph]))

@@ -585,6 +585,9 @@ def state_card(symbol: str, as_of: datetime, *, lake: Lake | None = None, flow: 
             late = launch is not None and f2["event_ts"][0] >= utc(launch) + timedelta(days=rs["burn_in_days_new"])
             flags.append("burn_in_skipped:history_starts_after_listing" if late else "burn_in_skipped:inside_listing_burn_in")
             f = f2
+    from ai_trader.risk.sigma import pin_base
+
+    f = pin_base(f)   # the card's vol / ret_sigma / jump fields are robust_bc by definition (risk.sigma roles)
     if f.height < 50:
         flags.append("no_1h_bars" if f.height == 0 else "too_few_1h_bars")
         card.update({"price": None, "flags": flags, "data_max_ts": None, "history_days": _f(f.height / 24, 1)})

@@ -43,7 +43,9 @@ ALL_COLUMNS = ("er_14d", *FEATURES)
 
 def _grid(frame: pl.DataFrame) -> pl.DataFrame:
     """Reindex onto a regular 4h event_ts grid (missing bars -> null close) and recompute returns on the grid."""
-    f = frame.sort("event_ts").unique("event_ts", keep="last", maintain_order=True)
+    from ai_trader.risk.sigma import pin_base
+
+    f = pin_base(frame).sort("event_ts").unique("event_ts", keep="last", maintain_order=True)   # robust_bc vol percentile
     cols = ["event_ts", "close"] + [c for c in ("sigma_risk_next", "known_ts") if c in f.columns]
     f = f.select(cols)
     t0, t1 = f["event_ts"].min(), f["event_ts"].max()

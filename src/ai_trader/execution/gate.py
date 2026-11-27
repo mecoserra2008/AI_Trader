@@ -22,8 +22,9 @@ Machine-checkable rules (entries only; exits always pass, a gate must never trap
   provisional (grade C) avoid rules only warn; a rule whose scope assets exclude the symbol's class is not applied.
 
 Placement and expectations (every entry):
-  sigma_risk  robust_bc risk sigma sigma_risk_next (no weekend shrink: R-VOL-2, R-VOL-3) per bar of the strategy's
-              frequency = sigma.per_bar. The contract's stop unit (L's check) is |ln(entry/stop)| / sigma.per_bar
+  sigma_risk  the frame's stop sigma sigma_risk_next (ai_trader.risk.sigma: robust_bc until the D1 switch, then the clock
+              log-HAR; never weekend-shrunk: R-VOL-2, R-VOL-3) per bar of the strategy's frequency = sigma.per_bar.
+              The contract's stop unit (L's check) is |ln(entry/stop)| / sigma.per_bar
   stop        STOP_K = 1.5 daily risk sigmas (the H-JD4 bracket behind R-EXEC-2; agent.session's trend sleeve) = 1.5 sqrt(bars
               per day) per-bar sigmas, clamped to [min_stop_distance_sigma, max_stop_distance_sigma] per-bar sigmas and to
               max_stop_distance_pct (config/risk.yaml). With max 4 that is 4 sigma_1h (~0.8 daily sigma) for the 1h strategies
@@ -223,12 +224,14 @@ class SymbolState:
     f4_sig_risk: np.ndarray | None = None
     jump_cache: dict = field(default_factory=dict)
     r_1h: np.ndarray | None = None
+    sig_base: np.ndarray | None = None   # robust_bc base (risk.sigma roles): the vol percentile never follows a switch
     event_ts: list | None = None
 
     @classmethod
     def build(cls, sf: SymbolFrames) -> SymbolState:
         from ai_trader.research.calendar import add_calendar
         from ai_trader.research.regimes import label
+        from ai_trader.risk.sigma import base_values
         from ai_trader.strategies.trend import ema, rstd, safe_div
 
         f = label(sf.f1, 1.0)
@@ -245,6 +248,7 @@ class SymbolState:
                  f["sigma_rb_next"].to_numpy().astype(float), nxt, _daily_loghar(sf.f1))
         st.r_1h = np.nan_to_num(st.ret, nan=0.0)
         st.event_ts = f["event_ts"].to_list()
+        st.sig_base = base_values(f).astype(float)
         if sf.f4 is not None and sf.f4.height:
             st.f4_known = sf.f4["known_ts"].to_numpy()
             st.f4_sig_risk = sf.f4["sigma_risk_next"].to_numpy().astype(float)
@@ -264,10 +268,11 @@ class SymbolState:
 
     def vol_pctile(self, i: int) -> float | None:
         """1-year percentile of the current robust risk sigma vs its own hourly history (as tools.market_state)."""
+        sb = self.sig_base if self.sig_base is not None else self.sig_risk
         lo = max(0, i - 24 * 365 + 1)
-        w = self.sig_risk[lo:i + 1]
+        w = sb[lo:i + 1]
         w = w[np.isfinite(w)]
-        s = self.sig_risk[i]
+        s = sb[i]
         if len(w) < 24 * 30 or not np.isfinite(s):
             return None
         return float((w < s).mean() + 0.5 * (w == s).mean())

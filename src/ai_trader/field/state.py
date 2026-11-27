@@ -80,12 +80,13 @@ def load_frame(as_of: datetime, *, lake: Lake | None = None, start: datetime | N
     """BTC 1h market frame (bars, ret, sigma_risk_next, dir_score) known at as_of, with point-in-time funding / OI."""
     from ai_trader.research.frame import market_frame
     from ai_trader.research.regimes import label
+    from ai_trader.risk.sigma import pin_base
 
     lake = lake or Lake()
     f = market_frame(SYMBOL, "1h", as_of, lake=lake, start=start, funding=False, oi=False)
     if f.height == 0:
         return f
-    f = label(f, 1.0)
+    f = pin_base(label(f, 1.0))   # the frozen field was fitted on robust_bc z (risk.sigma roles)
     keep = ["event_ts", "close_ts", "known_ts", "open", "high", "low", "close", "volume", "ret", "sigma_risk_next", "dir_score", "cell"]
     f = f.select([c for c in keep if c in f.columns]).sort("event_ts")
     fu = lake.read_asof("funding", as_of, symbols=[SYMBOL], start=start, filters={"venue": "bybit"})

@@ -125,7 +125,9 @@ def session_flags(ts: pl.Series, symbol: str) -> dict[str, np.ndarray]:
 
 def _grid_r_s2(f: pl.DataFrame) -> tuple[pl.Series, np.ndarray, np.ndarray]:
     """Regular hourly grid of one symbol (as ml.symbol_hourly): event_ts, gap-safe r, s2 = sigma_risk_next[t-1]^2."""
-    f = f.sort("event_ts").unique("event_ts", keep="last", maintain_order=True).select("event_ts", "ret", "sigma_risk_next")
+    from ai_trader.risk.sigma import pin_base
+
+    f = pin_base(f).sort("event_ts").unique("event_ts", keep="last", maintain_order=True).select("event_ts", "ret", "sigma_risk_next")
     f = f.with_columns(pl.col("event_ts").cast(pl.Datetime("us", "UTC")))
     grid = pl.DataFrame({"event_ts": pl.datetime_range(f["event_ts"].min(), f["event_ts"].max(), "1h", eager=True)}).with_columns(
         pl.col("event_ts").cast(pl.Datetime("us", "UTC")))

@@ -5138,3 +5138,51 @@ hypotheses:
     prior: 0.70
     family: ws16_trend
     status: proposed
+
+  # ==== SIGMA (agent A1, 2026-11-27 ~22:30 UTC): decision D1 rollout, shadow first. Registered BEFORE any shadow line exists
+  # and BEFORE any score of the joint spec. Code: src/ai_trader/risk/sigma.py (estimator, switch), risk/sigma_store.py (5m
+  # RV store), scripts/sigma_shadow.py (hourly logger), scripts/sigma_shadow_score.py (scorer + switch gate).
+  # Specs: robust_bc (the live sigma_risk_next), loghar_cr (WS04 pick, reproduced to 3e-16 on the WS04 grids), loghar_cr_range
+  # (loghar_cr + clock-deflated Parkinson range terms over 1/6/24 bars at 1h and 1/6 bars at 4h: NEW, never scored as such).
+  # Stop version = clock factor floored at the Mon-Thu same-hour mean on bars touching the TradFi weekend (R-VOL-2);
+  # central = unfloored. 1d: robust_bc vs vol.har. Target = the bar's 5m realised variance (store, same rule as WS04).
+  # Forward scoring: first line per symbol x horizon x bar start, lines made <= 15 min after the bar open, symbols with both
+  # specs present; pooled = cross-symbol mean loss per bar start; DM = Newey-West HAC with the HLN correction. Shadow universe =
+  # universe L (23 perps). All forward data is clean_holdout (after research.knowledge_cutoff). Student-t VaR: unit-variance t,
+  # nu 3.80 / 3.53 / 3.57 (WS04 R-WS04-2), 1% lower tail.
+  H-SIGMA-1:
+    title: "The D1 stop sigma (loghar_cr_range) beats robust_bc forward at 1h and 4h (the switch gate)"
+    statement: "On the forward shadow, pooled over the shadow universe, the stop version of loghar_cr_range has lower QLIKE against the bar's 5m realised variance than robust_bc at 1h and at 4h, and its 1h lower-tail 1% Student-t VaR is not breached more than 2% of the time."
+    rationale: "WS04: loghar_cr beats robust_bc by 31-35% (1h) and 38-44% (4h) QLIKE on history (t -4.6 to -8.8); WS12: range terms add ~5% QLIKE to a log-HAR-t at 1h. The weekend floor costs a little QLIKE on weekend bars only."
+    test: "per-bar-start pooled QLIKE differences (loghar_cr_range stop - robust_bc), DM-HLN t, at 1h and 4h; 1h lower 1% VaR exceedance rate of the stop sigma (Kupiec POF reported)."
+    success: "at the first scorer run on/after risk_sigma.switch_on, with >= 168 pooled 1h bar starts and >= 42 pooled 4h bar starts (each with >= 5 symbols): 1h mean diff < 0 with DM-HLN t < -2; 4h mean diff < 0; 1h lower 1% VaR exceedance <= 2.0%. Pass = the gate opens and the spec switches (latched); fail or too few data = stays robust_bc."
+    prior: 0.85
+    family: vol_model
+    status: proposed
+  H-SIGMA-2:
+    title: "The high-low range terms add to the clock log-HAR at 1h (forward)"
+    statement: "loghar_cr_range has lower 1h QLIKE than loghar_cr (both central, i.e. unfloored) on the forward shadow, pooled."
+    rationale: "WS12: Parkinson range terms carry most of what small networks add over a log-HAR-t on 1h bars (-4.6% QLIKE); with 5m RV already in the model the extra information in the range should be smaller but positive (intrabar path beyond 5m closes)."
+    test: "per-bar-start pooled QLIKE differences, DM-HLN t; 4h reported alongside."
+    success: "1h mean diff < 0 with DM-HLN t < -2 after >= 336 pooled 1h bar starts (two weeks); a positive diff with t > 2 contradicts."
+    prior: 0.5
+    family: vol_model
+    status: proposed
+  H-SIGMA-3:
+    title: "The weekend floor keeps the stop sigma's weekend lower tail covered (forward)"
+    statement: "On 1h forecast bars touching the TradFi weekend, the lower 1% Student-t VaR of the floored stop sigma (loghar_cr_range) is breached <= 2% of the time and no more often than with the unfloored central sigma."
+    rationale: "H-WS04-5: the hour-of-week-shrunk sigma under-covers the weekend lower tail in the holdout (1.44% at 1%, Kupiec p 0.003); R-VOL-2 forbids the weekend shrink in the stop sigma."
+    test: "exceedance counts on weekend 1h bars (pooled symbols), Kupiec POF vs 1%; floored vs central counts; QLIKE cost of the floor (stop - central) on weekend bars."
+    success: "after >= 4 weekends: floored exceedance <= 2.0% and <= the central's; a floored rate > 2% with Kupiec p < 0.05 contradicts."
+    prior: 0.7
+    family: vol_model
+    status: proposed
+  H-SIGMA-4:
+    title: "Historical check of the joint spec: loghar_cr_range vs loghar_cr vs robust_bc on the 23 universe-L perps"
+    statement: "On the 5m RV store (2022-01 .. 2026-11-27; monthly walk-forward refits from a year after each symbol's first bar), pooled over symbols, the stop version of loghar_cr_range has lower QLIKE than robust_bc (computed on the same grid's close-to-close returns, as WS04) and than the stop version of loghar_cr, at 1h and at 4h."
+    rationale: "Disclosure: WS04 already scored loghar_cr vs robust_bc on 5 of these assets over the same period (re-measurement there); the range terms and the 18 other alts are new. WS12 scored range terms on a different base."
+    test: "pooled per-bar-start QLIKE differences, DM-HLN t, segments llm_in_sample (< 2026-07-01) and clean_holdout; per-symbol share with diff < 0."
+    success: "vs robust_bc: diff < 0 with t < -2 in llm_in_sample and same sign in clean_holdout at 1h and 4h; vs loghar_cr (range terms): diff < 0 with t < -2 in llm_in_sample and same sign in clean_holdout at 1h (4h reported)."
+    prior: 0.6
+    family: vol_model
+    status: proposed
