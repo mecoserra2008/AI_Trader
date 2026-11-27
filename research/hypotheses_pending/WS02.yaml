@@ -1,0 +1,114 @@
+# WS02 DATA (specification program 2026-11-27): testable claims about the lake's point-in-time correctness,
+# completeness and duplicates. Registered 2026-11-26 ~23:45 UTC, before any row-level check was run (only directory
+# listings and the Windows power log had been read). Code: src/ai_trader/research/data_quality.py. Segment: pooled
+# (data-integrity claims have no llm_in_sample / clean_holdout meaning; flow data is all post-cutoff anyway).
+# "Machine-down" windows = Windows Power-Troubleshooter sleep->wake intervals and Kernel-General shutdown->boot
+# intervals (System event log), each extended by 10 minutes after the wake for collector restart / reconnect.
+H-WS02-1:
+  title: "bars: no point-in-time violation and exact UTC grid alignment"
+  statement: "Every row of bars (all venues, price types, freqs) has known_ts >= close_ts, close_ts - event_ts equal to the freq duration, and event_ts on the UTC freq grid (1d bars at 00:00 UTC)."
+  rationale: "known_ts = close + 2 s by construction (at-bybit lake.rs); other writers (binance, deribit bars) may not follow it."
+  test: "Count violations per (venue, price_type, freq)."
+  success: "Supports iff 0 violations; contradicts iff >= 1 violation."
+  prior: 0.85
+  family: data_quality
+  status: proposed
+H-WS02-2:
+  title: "bars: no bar was written before it closed"
+  statement: "For every bars row in a file named part-<written_ms>-*, written_ms >= close_ts (no incomplete bar stored under a close-time known_ts)."
+  rationale: "MarketData::klines filters open_ts + dur <= now; a writer without that filter would store a partial bar that later reads treat as final."
+  test: "Count rows with written_ms < close_ts; files without a parsable write time are excluded and counted."
+  success: "Supports iff 0 such rows; contradicts iff >= 1."
+  prior: 0.85
+  family: data_quality
+  status: proposed
+H-WS02-3:
+  title: "flow_3s: no point-in-time violation"
+  statement: "Every flow_3s row has event_ts on the 3 s grid, known_ts >= event_ts + 3000 ms, and (where the part file name carries a write time) written_ms >= known_ts."
+  rationale: "candle.rs clamps known_ts to the candle end; a flush can never precede finalisation."
+  test: "Count violations per category and day."
+  success: "Supports iff 0 violations; contradicts iff >= 1."
+  prior: 0.9
+  family: data_quality
+  status: proposed
+H-WS02-4:
+  title: "Other tables: known_ts never precedes the information"
+  statement: "funding known_ts >= event_ts; open_interest and ls_ratio known_ts >= event_ts + period; liquidations and trades_raw known_ts >= event_ts; flow_bars known_ts >= close_ts; alt_series known_ts >= event_ts, FRED rows known_ts >= max(vintage, event_ts) + 1 day, Deribit DVOL known_ts >= candle close; instruments known_ts >= event_ts."
+  rationale: "Writer rules in at-bybit lake.rs, at-alt and at-flow collector.rs; Python-side writers (deribit_svi, binance, research loaders) are unverified."
+  test: "Count violations per table / source."
+  success: "Supports iff 0 violations in every table; contradicts iff >= 1 violation in any table."
+  prior: 0.7
+  family: data_quality
+  status: proposed
+H-WS02-5:
+  title: "No conflicting duplicates in the lake"
+  statement: "No primary key in any lake table carries two rows with the same known_ts and different values (a non-deterministic as-of read). Exact duplicates and revisions (different known_ts) are counted, not violations."
+  rationale: "The 2026-11-07 audit found 1,037 exact duplicates and 0 conflicting ones in bars; live writers append overlapping windows (updater backfill_days = 3)."
+  test: "Per table, group by primary key + known_ts, count groups with > 1 distinct value tuple."
+  success: "Supports iff 0 conflicting groups in every table; contradicts iff >= 1."
+  prior: 0.6
+  family: data_quality
+  status: proposed
+H-WS02-6:
+  title: "REST-fed bars have no holes after the PC suspends (the updater repairs them)"
+  statement: "For every crypto symbol in live.symbols, bybit last 1h / 4h / 1d and mark 1h bars have no missing bar between 2026-11-07 00:00 and 2026-11-26 00:00 UTC (or the symbol's first bar if later)."
+  rationale: "The updater restarts with a cursor and backfill_days = 3 after each wake; suspends lasted at most ~57 h (11-21 08:18 -> 11-23 16:55)."
+  test: "Expected grid minus present event_ts per (symbol, price_type, freq); TradFi perps reported separately (session closures)."
+  success: "Supports iff 0 missing crypto bars; contradicts iff >= 1 missing crypto bar."
+  prior: 0.75
+  family: data_quality
+  status: proposed
+H-WS02-7:
+  title: "flow_3s is complete while the machine is awake"
+  statement: "For linear crypto streams, outside machine-down windows, at least 99% of the expected 3 s candles are present on at least 95% of stream-days (2026-11-08..11-25 with at least 6 awake hours)."
+  rationale: "The collector auto-restarts and fills sub-10-minute reconnect gaps with empty candles; outages should be machine-level only."
+  test: "Present / expected candles per stream-day over awake time."
+  success: "Supports iff the 95% share condition holds; contradicts iff fewer than 90% of stream-days reach 99%; else inconclusive."
+  prior: 0.6
+  family: data_quality
+  status: proposed
+H-WS02-8:
+  title: "flow_3s taker volume matches Bybit 1h kline volume on fully covered hours"
+  statement: "On linear crypto symbol-hours with all 1200 candles present and no empty-candle run of >= 20 candles (60 s) with book_cov = 0, sum(buy_vol + sell_vol) is within 0.5% of the bybit last 1h kline volume for >= 99% of symbol-hours, and the last traded price equals the kline close for >= 99%."
+  rationale: "Tests collector completeness, exchange-time bucketing and UTC alignment against an independent REST source at once."
+  test: "Join hourly rollups to bars 1h."
+  success: "Supports iff both shares >= 99%; contradicts iff the volume share < 95%; else inconclusive."
+  prior: 0.6
+  family: data_quality
+  status: proposed
+H-WS02-9:
+  title: "public.bybit.com trade archives reproduce flow_3s trade fields (valid gap fill)"
+  statement: "On fully covered windows of days that also have an archive file, 3 s candles rebuilt from the archive trades match flow_3s exactly in n_buy + n_sell on >= 98% of candles and in buy_vol and sell_vol within 1e-6 relative on >= 98%."
+  rationale: "Same matching-engine prints; differences can come only from websocket drops or timestamp rounding."
+  test: "Candle-by-candle comparison for BTCUSDT and ETHUSDT on one overlap day each."
+  success: "Supports iff both shares >= 98%; contradicts iff either share < 95%; else inconclusive."
+  prior: 0.7
+  family: data_quality
+  status: proposed
+H-WS02-10:
+  title: "The research bars universe is survivor-only"
+  statement: "At least one linear USDT perp that is Trading in the earliest instruments snapshot is missing or not Trading in the latest Bybit instruments list, and the bars table holds no rows for any such symbol."
+  rationale: "bars were backfilled from today's survivors (data_audit_2026-11-07 #10)."
+  test: "Earliest lake snapshot vs a fresh public instruments-info listing; bars symbol set."
+  success: "Supports iff both conditions hold; contradicts iff no delisted symbol exists or bars contain delisted symbols."
+  prior: 0.8
+  family: data_quality
+  status: proposed
+H-WS02-11:
+  title: "FRED rows are true vintages and as-of reads return the first release"
+  statement: "Every source=fred row has a non-null vintage and pit_quality = vintage; at least one series holds >= 2 vintages for some observation; and for every revised observation, Lake.read_asof one day after the first vintage's known_ts returns the first-release value, not the latest."
+  rationale: "fred.rs stores every ALFRED revision as its own row; if only the latest vintage was fetched, macro studies carry look-ahead."
+  test: "Vintage counts per series; as-of read for every revised observation (or a 200-row random sample if more)."
+  success: "Supports iff all three conditions hold; contradicts iff any fails."
+  prior: 0.6
+  family: data_quality
+  status: proposed
+H-WS02-12:
+  title: "Funding settlements are complete and on the interval grid"
+  statement: "For every crypto symbol in live.symbols, funding event_ts lie on the symbol's settlement grid (multiples of the local interval in {1, 2, 4, 8} h, UTC) and no settlement is missing between the symbol's first row and 2026-11-26 00:00 UTC, allowing interval changes."
+  rationale: "Funding is fetched from a complete REST history; gaps would bias carry studies."
+  test: "Per symbol, modal local interval from consecutive differences; count misaligned stamps and missing settlements."
+  success: "Supports iff 0 misaligned and 0 missing; contradicts iff >= 1 missing settlement in any crypto symbol."
+  prior: 0.7
+  family: data_quality
+  status: proposed

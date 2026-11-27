@@ -1,0 +1,933 @@
+{
+ "source": "Windows System log: Power-Troubleshooter 1 (sleep), Kernel-General 12/13 (reboot), Kernel-Power 506/507 (Modern Standby)",
+ "reconnect_margin_ms": 600000,
+ "windows": [
+  {
+   "kind": "modern_standby",
+   "down_start": 1793528705243,
+   "down_end": 1793537842079,
+   "margin_end": 1793538442079,
+   "start_utc": "2026-11-01 10:25:05",
+   "end_utc": "2026-11-01 12:57:22",
+   "hours": 2.54
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793537842081,
+   "down_end": 1793543118393,
+   "margin_end": 1793543718393,
+   "start_utc": "2026-11-01 12:57:22",
+   "end_utc": "2026-11-01 14:25:18",
+   "hours": 1.47
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1793543118391,
+   "down_end": 1793569765185,
+   "margin_end": 1793570365185,
+   "start_utc": "2026-11-01 14:25:18",
+   "end_utc": "2026-11-01 21:49:25",
+   "hours": 7.4
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793571942179,
+   "down_end": 1793582471775,
+   "margin_end": 1793583071775,
+   "start_utc": "2026-11-01 22:25:42",
+   "end_utc": "2026-11-02 01:21:11",
+   "hours": 2.92
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1793582471775,
+   "down_end": 1793665049115,
+   "margin_end": 1793665649115,
+   "start_utc": "2026-11-02 01:21:11",
+   "end_utc": "2026-11-03 00:17:29",
+   "hours": 22.94
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793668221880,
+   "down_end": 1793681531954,
+   "margin_end": 1793682131954,
+   "start_utc": "2026-11-03 01:10:21",
+   "end_utc": "2026-11-03 04:52:11",
+   "hours": 3.7
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793681531955,
+   "down_end": 1793684813494,
+   "margin_end": 1793685413494,
+   "start_utc": "2026-11-03 04:52:11",
+   "end_utc": "2026-11-03 05:46:53",
+   "hours": 0.91
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1793684813492,
+   "down_end": 1793706960150,
+   "margin_end": 1793707560150,
+   "start_utc": "2026-11-03 05:46:53",
+   "end_utc": "2026-11-03 11:56:00",
+   "hours": 6.15
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793708593524,
+   "down_end": 1793723877122,
+   "margin_end": 1793724477122,
+   "start_utc": "2026-11-03 12:23:13",
+   "end_utc": "2026-11-03 16:37:57",
+   "hours": 4.25
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793731674965,
+   "down_end": 1793741539299,
+   "margin_end": 1793742139299,
+   "start_utc": "2026-11-03 18:47:54",
+   "end_utc": "2026-11-03 21:32:19",
+   "hours": 2.74
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793741539300,
+   "down_end": 1793746715294,
+   "margin_end": 1793747315294,
+   "start_utc": "2026-11-03 21:32:19",
+   "end_utc": "2026-11-03 22:58:35",
+   "hours": 1.44
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1793746715294,
+   "down_end": 1793797814098,
+   "margin_end": 1793798414098,
+   "start_utc": "2026-11-03 22:58:35",
+   "end_utc": "2026-11-04 13:10:14",
+   "hours": 14.19
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793800513542,
+   "down_end": 1793800641730,
+   "margin_end": 1793801241730,
+   "start_utc": "2026-11-04 13:55:13",
+   "end_utc": "2026-11-04 13:57:21",
+   "hours": 0.04
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1793800641728,
+   "down_end": 1793803429028,
+   "margin_end": 1793804029028,
+   "start_utc": "2026-11-04 13:57:21",
+   "end_utc": "2026-11-04 14:43:49",
+   "hours": 0.77
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793818898624,
+   "down_end": 1793829106524,
+   "margin_end": 1793829706524,
+   "start_utc": "2026-11-04 19:01:38",
+   "end_utc": "2026-11-04 21:51:46",
+   "hours": 2.84
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793829106526,
+   "down_end": 1793829486329,
+   "margin_end": 1793830086329,
+   "start_utc": "2026-11-04 21:51:46",
+   "end_utc": "2026-11-04 21:58:06",
+   "hours": 0.11
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793832919341,
+   "down_end": 1793834174015,
+   "margin_end": 1793834774015,
+   "start_utc": "2026-11-04 22:55:19",
+   "end_utc": "2026-11-04 23:16:14",
+   "hours": 0.35
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793834174017,
+   "down_end": 1793843653261,
+   "margin_end": 1793844253261,
+   "start_utc": "2026-11-04 23:16:14",
+   "end_utc": "2026-11-05 01:54:13",
+   "hours": 2.63
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1793843653259,
+   "down_end": 1793919459182,
+   "margin_end": 1793920059182,
+   "start_utc": "2026-11-05 01:54:13",
+   "end_utc": "2026-11-05 22:57:39",
+   "hours": 21.06
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793953332336,
+   "down_end": 1793956510738,
+   "margin_end": 1793957110738,
+   "start_utc": "2026-11-06 08:22:12",
+   "end_utc": "2026-11-06 09:15:10",
+   "hours": 0.88
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793956510739,
+   "down_end": 1793957956972,
+   "margin_end": 1793958556972,
+   "start_utc": "2026-11-06 09:15:10",
+   "end_utc": "2026-11-06 09:39:16",
+   "hours": 0.4
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1793957956969,
+   "down_end": 1793968623279,
+   "margin_end": 1793969223279,
+   "start_utc": "2026-11-06 09:39:16",
+   "end_utc": "2026-11-06 12:37:03",
+   "hours": 2.96
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1793968653262,
+   "down_end": 1793971912055,
+   "margin_end": 1793972512055,
+   "start_utc": "2026-11-06 12:37:33",
+   "end_utc": "2026-11-06 13:31:52",
+   "hours": 0.91
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793974708814,
+   "down_end": 1793974862305,
+   "margin_end": 1793975462305,
+   "start_utc": "2026-11-06 14:18:28",
+   "end_utc": "2026-11-06 14:21:02",
+   "hours": 0.04
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1793974862301,
+   "down_end": 1793975451832,
+   "margin_end": 1793976051832,
+   "start_utc": "2026-11-06 14:21:02",
+   "end_utc": "2026-11-06 14:30:51",
+   "hours": 0.16
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793990302725,
+   "down_end": 1793997323529,
+   "margin_end": 1793997923529,
+   "start_utc": "2026-11-06 18:38:22",
+   "end_utc": "2026-11-06 20:35:23",
+   "hours": 1.95
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1793997323531,
+   "down_end": 1794002829359,
+   "margin_end": 1794003429359,
+   "start_utc": "2026-11-06 20:35:23",
+   "end_utc": "2026-11-06 22:07:09",
+   "hours": 1.53
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794146426516,
+   "down_end": 1794150649506,
+   "margin_end": 1794151249506,
+   "start_utc": "2026-11-08 14:00:26",
+   "end_utc": "2026-11-08 15:10:49",
+   "hours": 1.17
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794151685880,
+   "down_end": 1794151768505,
+   "margin_end": 1794152368505,
+   "start_utc": "2026-11-08 15:28:05",
+   "end_utc": "2026-11-08 15:29:28",
+   "hours": 0.02
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794151768507,
+   "down_end": 1794152370096,
+   "margin_end": 1794152970096,
+   "start_utc": "2026-11-08 15:29:28",
+   "end_utc": "2026-11-08 15:39:30",
+   "hours": 0.17
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794158486764,
+   "down_end": 1794160399647,
+   "margin_end": 1794160999647,
+   "start_utc": "2026-11-08 17:21:26",
+   "end_utc": "2026-11-08 17:53:19",
+   "hours": 0.53
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794160399650,
+   "down_end": 1794167189845,
+   "margin_end": 1794167789845,
+   "start_utc": "2026-11-08 17:53:19",
+   "end_utc": "2026-11-08 19:46:29",
+   "hours": 1.89
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794212470501,
+   "down_end": 1794221543613,
+   "margin_end": 1794222143613,
+   "start_utc": "2026-11-09 08:21:10",
+   "end_utc": "2026-11-09 10:52:23",
+   "hours": 2.52
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794221543617,
+   "down_end": 1794226388593,
+   "margin_end": 1794226988593,
+   "start_utc": "2026-11-09 10:52:23",
+   "end_utc": "2026-11-09 12:13:08",
+   "hours": 1.35
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1794226388592,
+   "down_end": 1794231519349,
+   "margin_end": 1794232119349,
+   "start_utc": "2026-11-09 12:13:08",
+   "end_utc": "2026-11-09 13:38:39",
+   "hours": 1.43
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794247185397,
+   "down_end": 1794254723385,
+   "margin_end": 1794255323385,
+   "start_utc": "2026-11-09 17:59:45",
+   "end_utc": "2026-11-09 20:05:23",
+   "hours": 2.09
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794254723386,
+   "down_end": 1794259607750,
+   "margin_end": 1794260207750,
+   "start_utc": "2026-11-09 20:05:23",
+   "end_utc": "2026-11-09 21:26:47",
+   "hours": 1.36
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1794259607748,
+   "down_end": 1794263692419,
+   "margin_end": 1794264292419,
+   "start_utc": "2026-11-09 21:26:47",
+   "end_utc": "2026-11-09 22:34:52",
+   "hours": 1.13
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794265652712,
+   "down_end": 1794275185665,
+   "margin_end": 1794275785665,
+   "start_utc": "2026-11-09 23:07:32",
+   "end_utc": "2026-11-10 01:46:25",
+   "hours": 2.65
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1794275185664,
+   "down_end": 1794312737142,
+   "margin_end": 1794313337142,
+   "start_utc": "2026-11-10 01:46:25",
+   "end_utc": "2026-11-10 12:12:17",
+   "hours": 10.43
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794330600864,
+   "down_end": 1794330754393,
+   "margin_end": 1794331354393,
+   "start_utc": "2026-11-10 17:10:00",
+   "end_utc": "2026-11-10 17:12:34",
+   "hours": 0.04
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1794330754385,
+   "down_end": 1794339094255,
+   "margin_end": 1794339694255,
+   "start_utc": "2026-11-10 17:12:34",
+   "end_utc": "2026-11-10 19:31:34",
+   "hours": 2.32
+  },
+  {
+   "kind": "reboot",
+   "down_start": 1794365359579,
+   "down_end": 1794365381436,
+   "margin_end": 1794365981436,
+   "start_utc": "2026-11-11 02:49:19",
+   "end_utc": "2026-11-11 02:49:41",
+   "hours": 0.01
+  },
+  {
+   "kind": "reboot",
+   "down_start": 1794365451135,
+   "down_end": 1794365470112,
+   "margin_end": 1794366070112,
+   "start_utc": "2026-11-11 02:50:51",
+   "end_utc": "2026-11-11 02:51:10",
+   "hours": 0.01
+  },
+  {
+   "kind": "reboot",
+   "down_start": 1794365497229,
+   "down_end": 1794365507089,
+   "margin_end": 1794366107089,
+   "start_utc": "2026-11-11 02:51:37",
+   "end_utc": "2026-11-11 02:51:47",
+   "hours": 0.0
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794369634033,
+   "down_end": 1794382150617,
+   "margin_end": 1794382750617,
+   "start_utc": "2026-11-11 04:00:34",
+   "end_utc": "2026-11-11 07:29:10",
+   "hours": 3.48
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794384620016,
+   "down_end": 1794390999789,
+   "margin_end": 1794391599789,
+   "start_utc": "2026-11-11 08:10:20",
+   "end_utc": "2026-11-11 09:56:39",
+   "hours": 1.77
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794401153106,
+   "down_end": 1794404586096,
+   "margin_end": 1794405186096,
+   "start_utc": "2026-11-11 12:45:53",
+   "end_utc": "2026-11-11 13:43:06",
+   "hours": 0.95
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794411434729,
+   "down_end": 1794412128025,
+   "margin_end": 1794412728025,
+   "start_utc": "2026-11-11 15:37:14",
+   "end_utc": "2026-11-11 15:48:48",
+   "hours": 0.19
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794420444722,
+   "down_end": 1794420666544,
+   "margin_end": 1794421266544,
+   "start_utc": "2026-11-11 18:07:24",
+   "end_utc": "2026-11-11 18:11:06",
+   "hours": 0.06
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794420666545,
+   "down_end": 1794429082068,
+   "margin_end": 1794429682068,
+   "start_utc": "2026-11-11 18:11:06",
+   "end_utc": "2026-11-11 20:31:22",
+   "hours": 2.34
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794470564212,
+   "down_end": 1794479589202,
+   "margin_end": 1794480189202,
+   "start_utc": "2026-11-12 08:02:44",
+   "end_utc": "2026-11-12 10:33:09",
+   "hours": 2.51
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794479708015,
+   "down_end": 1794480619375,
+   "margin_end": 1794481219375,
+   "start_utc": "2026-11-12 10:35:08",
+   "end_utc": "2026-11-12 10:50:19",
+   "hours": 0.25
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794493282583,
+   "down_end": 1794497787639,
+   "margin_end": 1794498387639,
+   "start_utc": "2026-11-12 14:21:22",
+   "end_utc": "2026-11-12 15:36:27",
+   "hours": 1.25
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794504024757,
+   "down_end": 1794508697320,
+   "margin_end": 1794509297320,
+   "start_utc": "2026-11-12 17:20:24",
+   "end_utc": "2026-11-12 18:38:17",
+   "hours": 1.3
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794508697321,
+   "down_end": 1794518226723,
+   "margin_end": 1794518826723,
+   "start_utc": "2026-11-12 18:38:17",
+   "end_utc": "2026-11-12 21:17:06",
+   "hours": 2.65
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794518226724,
+   "down_end": 1794521759575,
+   "margin_end": 1794522359575,
+   "start_utc": "2026-11-12 21:17:06",
+   "end_utc": "2026-11-12 22:15:59",
+   "hours": 0.98
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794558057579,
+   "down_end": 1794564186107,
+   "margin_end": 1794564786107,
+   "start_utc": "2026-11-13 08:20:57",
+   "end_utc": "2026-11-13 10:03:06",
+   "hours": 1.7
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794564186108,
+   "down_end": 1794567926865,
+   "margin_end": 1794568526865,
+   "start_utc": "2026-11-13 10:03:06",
+   "end_utc": "2026-11-13 11:05:26",
+   "hours": 1.04
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1794567926864,
+   "down_end": 1794573576313,
+   "margin_end": 1794574176313,
+   "start_utc": "2026-11-13 11:05:26",
+   "end_utc": "2026-11-13 12:39:36",
+   "hours": 1.57
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794575861346,
+   "down_end": 1794575926310,
+   "margin_end": 1794576526310,
+   "start_utc": "2026-11-13 13:17:41",
+   "end_utc": "2026-11-13 13:18:46",
+   "hours": 0.02
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794595334552,
+   "down_end": 1794599005350,
+   "margin_end": 1794599605350,
+   "start_utc": "2026-11-13 18:42:14",
+   "end_utc": "2026-11-13 19:43:25",
+   "hours": 1.02
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794599005351,
+   "down_end": 1794600959337,
+   "margin_end": 1794601559337,
+   "start_utc": "2026-11-13 19:43:25",
+   "end_utc": "2026-11-13 20:15:59",
+   "hours": 0.54
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794600959338,
+   "down_end": 1794601020815,
+   "margin_end": 1794601620815,
+   "start_utc": "2026-11-13 20:15:59",
+   "end_utc": "2026-11-13 20:17:00",
+   "hours": 0.02
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794817410561,
+   "down_end": 1794824793685,
+   "margin_end": 1794825393685,
+   "start_utc": "2026-11-16 08:23:30",
+   "end_utc": "2026-11-16 10:26:33",
+   "hours": 2.05
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794824793686,
+   "down_end": 1794825020541,
+   "margin_end": 1794825620541,
+   "start_utc": "2026-11-16 10:26:33",
+   "end_utc": "2026-11-16 10:30:20",
+   "hours": 0.06
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1794825020540,
+   "down_end": 1794841469140,
+   "margin_end": 1794842069140,
+   "start_utc": "2026-11-16 10:30:20",
+   "end_utc": "2026-11-16 15:04:29",
+   "hours": 4.57
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794843843754,
+   "down_end": 1794844798328,
+   "margin_end": 1794845398328,
+   "start_utc": "2026-11-16 15:44:03",
+   "end_utc": "2026-11-16 15:59:58",
+   "hours": 0.27
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794854246962,
+   "down_end": 1794858049088,
+   "margin_end": 1794858649088,
+   "start_utc": "2026-11-16 18:37:26",
+   "end_utc": "2026-11-16 19:40:49",
+   "hours": 1.06
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794858049090,
+   "down_end": 1794863208690,
+   "margin_end": 1794863808690,
+   "start_utc": "2026-11-16 19:40:49",
+   "end_utc": "2026-11-16 21:06:48",
+   "hours": 1.43
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1794863208689,
+   "down_end": 1794865843322,
+   "margin_end": 1794866443322,
+   "start_utc": "2026-11-16 21:06:48",
+   "end_utc": "2026-11-16 21:50:43",
+   "hours": 0.73
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794903512820,
+   "down_end": 1794913315231,
+   "margin_end": 1794913915231,
+   "start_utc": "2026-11-17 08:18:32",
+   "end_utc": "2026-11-17 11:01:55",
+   "hours": 2.72
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794913315233,
+   "down_end": 1794918814677,
+   "margin_end": 1794919414677,
+   "start_utc": "2026-11-17 11:01:55",
+   "end_utc": "2026-11-17 12:33:34",
+   "hours": 1.53
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1794918814677,
+   "down_end": 1794945611352,
+   "margin_end": 1794946211352,
+   "start_utc": "2026-11-17 12:33:34",
+   "end_utc": "2026-11-17 20:00:11",
+   "hours": 7.44
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794989603054,
+   "down_end": 1794998158577,
+   "margin_end": 1794998758577,
+   "start_utc": "2026-11-18 08:13:23",
+   "end_utc": "2026-11-18 10:35:58",
+   "hours": 2.38
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1794998158590,
+   "down_end": 1795003302897,
+   "margin_end": 1795003902897,
+   "start_utc": "2026-11-18 10:35:58",
+   "end_utc": "2026-11-18 12:01:42",
+   "hours": 1.43
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1795003302896,
+   "down_end": 1795006519096,
+   "margin_end": 1795007119096,
+   "start_utc": "2026-11-18 12:01:42",
+   "end_utc": "2026-11-18 12:55:19",
+   "hours": 0.89
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795021503415,
+   "down_end": 1795028646902,
+   "margin_end": 1795029246902,
+   "start_utc": "2026-11-18 17:05:03",
+   "end_utc": "2026-11-18 19:04:06",
+   "hours": 1.98
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795028646903,
+   "down_end": 1795035743068,
+   "margin_end": 1795036343068,
+   "start_utc": "2026-11-18 19:04:06",
+   "end_utc": "2026-11-18 21:02:23",
+   "hours": 1.97
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795035743069,
+   "down_end": 1795037703514,
+   "margin_end": 1795038303514,
+   "start_utc": "2026-11-18 21:02:23",
+   "end_utc": "2026-11-18 21:35:03",
+   "hours": 0.54
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795076578316,
+   "down_end": 1795082978709,
+   "margin_end": 1795083578709,
+   "start_utc": "2026-11-19 08:22:58",
+   "end_utc": "2026-11-19 10:09:38",
+   "hours": 1.78
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795082978710,
+   "down_end": 1795083191223,
+   "margin_end": 1795083791223,
+   "start_utc": "2026-11-19 10:09:38",
+   "end_utc": "2026-11-19 10:13:11",
+   "hours": 0.06
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1795083191222,
+   "down_end": 1795125646237,
+   "margin_end": 1795126246237,
+   "start_utc": "2026-11-19 10:13:11",
+   "end_utc": "2026-11-19 22:00:46",
+   "hours": 11.79
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795162592642,
+   "down_end": 1795165542481,
+   "margin_end": 1795166142481,
+   "start_utc": "2026-11-20 08:16:32",
+   "end_utc": "2026-11-20 09:05:42",
+   "hours": 0.82
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795165542483,
+   "down_end": 1795171106535,
+   "margin_end": 1795171706535,
+   "start_utc": "2026-11-20 09:05:42",
+   "end_utc": "2026-11-20 10:38:26",
+   "hours": 1.55
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1795171106534,
+   "down_end": 1795211795105,
+   "margin_end": 1795212395105,
+   "start_utc": "2026-11-20 10:38:26",
+   "end_utc": "2026-11-20 21:56:35",
+   "hours": 11.3
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795235098741,
+   "down_end": 1795243677958,
+   "margin_end": 1795244277958,
+   "start_utc": "2026-11-21 04:24:58",
+   "end_utc": "2026-11-21 06:47:57",
+   "hours": 2.38
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795243677961,
+   "down_end": 1795249076789,
+   "margin_end": 1795249676789,
+   "start_utc": "2026-11-21 06:47:57",
+   "end_utc": "2026-11-21 08:17:56",
+   "hours": 1.5
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1795249076787,
+   "down_end": 1795452910285,
+   "margin_end": 1795453510285,
+   "start_utc": "2026-11-21 08:17:56",
+   "end_utc": "2026-11-23 16:55:10",
+   "hours": 56.62
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795453314910,
+   "down_end": 1795453509328,
+   "margin_end": 1795454109328,
+   "start_utc": "2026-11-23 17:01:54",
+   "end_utc": "2026-11-23 17:05:09",
+   "hours": 0.05
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795453509329,
+   "down_end": 1795463229878,
+   "margin_end": 1795463829878,
+   "start_utc": "2026-11-23 17:05:09",
+   "end_utc": "2026-11-23 19:47:09",
+   "hours": 2.7
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795507928633,
+   "down_end": 1795517366751,
+   "margin_end": 1795517966751,
+   "start_utc": "2026-11-24 08:12:08",
+   "end_utc": "2026-11-24 10:49:26",
+   "hours": 2.62
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795517366753,
+   "down_end": 1795522765315,
+   "margin_end": 1795523365315,
+   "start_utc": "2026-11-24 10:49:26",
+   "end_utc": "2026-11-24 12:19:25",
+   "hours": 1.5
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1795522765313,
+   "down_end": 1795553758094,
+   "margin_end": 1795554358094,
+   "start_utc": "2026-11-24 12:19:25",
+   "end_utc": "2026-11-24 20:55:58",
+   "hours": 8.61
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795594855672,
+   "down_end": 1795604871852,
+   "margin_end": 1795605471852,
+   "start_utc": "2026-11-25 08:20:55",
+   "end_utc": "2026-11-25 11:07:51",
+   "hours": 2.78
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795604871855,
+   "down_end": 1795610171198,
+   "margin_end": 1795610771198,
+   "start_utc": "2026-11-25 11:07:51",
+   "end_utc": "2026-11-25 12:36:11",
+   "hours": 1.47
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1795610171196,
+   "down_end": 1795640999659,
+   "margin_end": 1795641599659,
+   "start_utc": "2026-11-25 12:36:11",
+   "end_utc": "2026-11-25 21:09:59",
+   "hours": 8.56
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795680944032,
+   "down_end": 1795688337962,
+   "margin_end": 1795688937962,
+   "start_utc": "2026-11-26 08:15:44",
+   "end_utc": "2026-11-26 10:18:57",
+   "hours": 2.05
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795688337963,
+   "down_end": 1795693696750,
+   "margin_end": 1795694296750,
+   "start_utc": "2026-11-26 10:18:57",
+   "end_utc": "2026-11-26 11:48:16",
+   "hours": 1.49
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1795693696748,
+   "down_end": 1795704739114,
+   "margin_end": 1795705339114,
+   "start_utc": "2026-11-26 11:48:16",
+   "end_utc": "2026-11-26 14:52:19",
+   "hours": 3.07
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795706318232,
+   "down_end": 1795707018511,
+   "margin_end": 1795707618511,
+   "start_utc": "2026-11-26 15:18:38",
+   "end_utc": "2026-11-26 15:30:18",
+   "hours": 0.19
+  },
+  {
+   "kind": "modern_standby",
+   "down_start": 1795719151421,
+   "down_end": 1795724106996,
+   "margin_end": 1795724706996,
+   "start_utc": "2026-11-26 18:52:31",
+   "end_utc": "2026-11-26 20:15:06",
+   "hours": 1.38
+  },
+  {
+   "kind": "sleep",
+   "down_start": 1795724106995,
+   "down_end": 1795731232073,
+   "margin_end": 1795731832073,
+   "start_utc": "2026-11-26 20:15:06",
+   "end_utc": "2026-11-26 22:13:52",
+   "hours": 1.98
+  }
+ ]
+}
