@@ -1,0 +1,91 @@
+# WS12 ML BENCHMARK (specification program 2026-11-27; scope trimmed by the orchestrator 2026-11-26 23:40 UTC: WS12 deep
+# models + the core of WS13 trees; the WS11 foundation-model part is blocked, see the report). Registered BEFORE any fit on
+# the data that tests them. Design: src/ai_trader/research/ws12_deep.py and ws12_meta.py docstrings, diary "WS12 design
+# frozen before results".
+# Deep part. Assets BTC, ETH, SOL, XRP, DOGE, BNB (Bybit 1h perps, pooled training, vol-standardised inputs, no asset id).
+# Decision time = open of bar t; targets for h in {1h, 4h, 24h}: y_h = r_{t..t+h-1} / sqrt(h s2_t) (s2_t = robust_bc base
+# variance known at the open) and v_h = sum r^2 / (h s2_t). Models: gru, tcn (deep sequence, 72 h window), mlp (feature
+# MLP on the H-NN8 hourly features: the non-sequence reference), each with a Student-t head (learned df > 2) per horizon
+# and a QLIKE log-RV head per horizon; 3 seeds. Classical: log-HAR-t per asset (OLS log-HAR with the causal hour-of-week
+# factor, QLIKE bias constant, Student-t on standardised returns, MLE), base-t (robust sigma x hour-of-week, Student-t),
+# empirical quantiles (trailing standardised returns: 720 hourly / 180 4h / 365 daily origins). Refits R1 = 2025-07-01 (tests 2025-07-01..2026-06-30 =
+# llm_in_sample), R2 = 2026-07-01 (tests 2026-07-01..2026-11-25 = clean_holdout); expanding training, label_end <= refit -
+# 1 day; inner validation = last 90 days of training (purged 1 day) for early stopping and the lr choice {1e-3, 3e-3}
+# (seed 0); seeds 1-2 with the chosen lr. D* = the sequence arch (gru / tcn) with the lower R1 inner-validation loss,
+# fixed before any test row is scored. Scores in vol-standardised units on non-overlapping origins (1h every hour, 4h at
+# 00/04/../20 UTC, 24h at 00 UTC): pinball over taus 0.05,0.1,0.25,0.5,0.75,0.9,0.95, log score, CRPS, QLIKE (v/F + log F).
+# Tests: per-UTC-date mean loss difference pooled over assets, Newey-West t with the Harvey-Leybourne-Newbold correction;
+# MCS (Tmax, 10-day blocks) over all models per horizon x metric x segment; Holm over H-WS12-1..3 per segment.
+# Segment verdict: supports iff diff < 0 with t < -2 (Holm p < 0.05 for 1..3); contradicts iff diff >= 0; else
+# inconclusive. Pooled: supports iff both segments support; contradicts iff llm_in_sample contradicts or both contradict.
+H-WS12-1:
+  title: "A small deep sequence model beats log-HAR-t on next-hour return quantiles (6 crypto perps)"
+  statement: "D* (the 3-seed ensemble of the dev-chosen GRU or TCN with a Student-t head) has lower mean pinball loss than per-asset log-HAR-t for the next 1h vol-standardised return, pooled over BTC, ETH, SOL, XRP, DOGE, BNB, in both segments."
+  rationale: "H-PNN1 / R-PNN-1 (BTC, ~500-parameter quantile networks beat log-HAR-t by 0.4-0.6% at 1h) and H-NN8; the question is whether a sequence encoder on raw hourly inputs carries that over to a pooled alt panel."
+  test: "per-date mean pinball difference D* - log-HAR-t, NW t with HLN correction; Holm over H-WS12-1..3 per segment."
+  success: "difference < 0 with t < -2 (Holm p < 0.05) in both segments."
+  prior: 0.45
+  family: ml_models
+  status: proposed
+H-WS12-2:
+  title: "A small deep sequence model beats log-HAR-t on next-day return quantiles"
+  statement: "D* has lower mean pinball than log-HAR-t for the next 24h vol-standardised return (00 UTC origins), pooled over the 6 perps, in both segments."
+  rationale: "H-PNN1 / R-PNN-2: at 1d nothing beat log-HAR-t on BTC; pooling 6 assets gives the network 6x the daily rows, which is the one thing that could change the verdict."
+  test: "as H-WS12-1 at 24h origins."
+  success: "difference < 0 with t < -2 (Holm p < 0.05) in both segments."
+  prior: 0.15
+  family: ml_models
+  status: proposed
+H-WS12-3:
+  title: "A small deep sequence model beats log-HAR on next-hour realised variance (QLIKE)"
+  statement: "D*'s RV head has lower QLIKE than per-asset log-HAR (hour-of-week, QLIKE bias constant) for the next 1h squared return in base units, pooled over the 6 perps, in both segments."
+  rationale: "H-NN8 supported (XGB -0.040 / -0.065 QLIKE vs robust sigma x hour-of-week); the xs_v3/v4 vol heads beat panel log-HAR at 1h (R-XS-1)."
+  test: "per-date mean QLIKE difference D* - log-HAR, NW t with HLN correction; Holm as above."
+  success: "difference < 0 with t < -2 (Holm p < 0.05) in both segments."
+  prior: 0.45
+  family: ml_models
+  status: proposed
+H-WS12-4:
+  title: "The sequence encoder adds nothing over a feature MLP on the same targets (stated as the null)"
+  statement: "D* does NOT beat the feature MLP (same Student-t and RV heads, same protocol and seeds, inputs = the 19 H-NN8 hourly features + the same static covariates) on 1h pinball and 1h QLIKE: neither difference D* - mlp has t < -2 in both segments."
+  rationale: "The networks' 1h gains so far come from the hour-of-week factor and recent |returns| (H-PNN1 extraction), which hand-made lag features already carry; a 72-step recurrent / convolutional encoder should only re-learn them."
+  test: "per-date mean differences D* - mlp, NW t with HLN correction."
+  success: "supports iff neither metric has difference < 0 with t < -2 in both segments; contradicts iff both metrics do."
+  prior: 0.70
+  family: ml_models
+  status: proposed
+H-WS12-5:
+  title: "Single-seed deep results are reliable: seed spread is small next to the gap to log-HAR-t"
+  statement: "For D* at 1h, every one of the 3 seeds has the same sign of the pinball difference to log-HAR-t as the ensemble in each segment, and the seed standard deviation of the mean pinball is below half of the |ensemble - log-HAR-t| difference."
+  rationale: "Deep models on noisy returns can rank differently by seed (seed lottery); a conclusion that depends on the seed is not a conclusion."
+  test: "per-seed mean pinball on the test origins; sd over seeds; sign agreement."
+  success: "both conditions in both segments; contradicts iff the sign flips for any seed in both segments."
+  prior: 0.55
+  family: ml_models
+  status: proposed
+# Trees part (WS13 core). Trades = data/research/stress/trades base variant of zoo_ensemble and trend_4h (all symbols),
+# net R by stress.r_net (base costs). Features at entry (bars closed before entry_ts only): side-signed 24h / 72h / 240h
+# vol-standardised returns of the symbol and of BTC, log vol level vs its 1-year mean, HAR daily / weekly / monthly levels,
+# funding (side-signed, bp), 24h OI change (side-signed), stop distance in sigma units, hour of day, weekday, weekend /
+# holiday / funding-window flags, tier, unit. Label 1{R_net > 0}. LightGBM (depth 3, 200 trees, lr 0.05, min 40 leaf rows,
+# monotone constraints none), expanding walk-forward by entry quarter from 2023Q1, purged (exit_ts of training trades <
+# test start - 1 day), 3 seeds (bagging_seed / feature_fraction_seed). Rule fixed now: take a trade iff p_hat >= the
+# training-fold base rate. Segment by entry_ts vs the knowledge cutoff.
+H-WS12-6:
+  title: "A LightGBM meta-label filter improves the 4h trend trades out of sample"
+  statement: "On zoo_ensemble and trend_4h trades (pooled), the trades the walk-forward LightGBM meta-label filter rejects have mean net R < 0, so removing them raises net R per candidate trade, out of sample."
+  rationale: "Meta-labelling (Lopez de Prado 2018) asks whether conditions at entry separate losing trend trades; the stress report shows trend trades lose on TradFi weekends and in drought states, which is the kind of structure a shallow tree could pick up."
+  test: "mean net R of rejected trades, trade-level t clustered by entry date (NW over the per-date sums); segments; also accepted - all and the deflated Sharpe of the filtered stream with 3 seeds x 2 units as trials."
+  success: "mean R(rejected) < 0 with t < -2 in llm_in_sample and < 0 in clean_holdout."
+  prior: 0.20
+  family: ml_models
+  status: proposed
+H-WS12-7:
+  title: "The meta-label model's top SHAP features are stable across folds and seeds"
+  statement: "The top-5 features by mean |TreeSHAP| on each walk-forward fold's test trades have mean pairwise Jaccard >= 0.5 across folds x seeds."
+  rationale: "A filter whose important inputs change from quarter to quarter is fitting noise; stable attributions are the precondition for a rule."
+  test: "lightgbm pred_contrib on out-of-sample trades per fold and seed; Jaccard of top-5 sets over all pairs."
+  success: "supports iff mean Jaccard >= 0.5; contradicts iff < 0.3; else inconclusive."
+  prior: 0.45
+  family: ml_interpretability
+  status: proposed
