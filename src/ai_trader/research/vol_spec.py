@@ -1449,7 +1449,7 @@ def report(out_name: str = "ws04_2026-11-27.md") -> Path:
     """Assemble research/reports/<out_name> from the prose templates in data/research/ws04/tmp (report_head.txt,
     report_static.txt, report_tail.txt) and the generated tables (tables.md)."""
     t = root() / "tmp"
-    parts = [t / "report_head.txt", t / "report_static.txt", root() / "tables.md", t / "report_tail.txt"]
+    parts = [t / "report_head.txt", t / "report_extras.txt", t / "report_static.txt", root() / "tables.md", t / "report_tail.txt"]
     txt = []
     for q in parts:
         if q.exists():
@@ -1462,9 +1462,79 @@ def report(out_name: str = "ws04_2026-11-27.md") -> Path:
     return out
 
 
+def extras() -> dict:
+    """Dossier sections 4, 6 and 7 for the decision: (a) minimum detectable effect (80% power, 5% two-sided) of the key
+    pooled DM tests; (b) Ljung-Box Q(20) on z and z^2 per spec (does the spec absorb the clustering?), in-sample, per asset;
+    (c) the stop-distance change sigma_pick / sigma_rbc by session / weekend (1h) and by 4h block; (d) the weekend 1%
+    VaR of the t for the 1d clock log-HAR (needed by H-WS04-5, reported descriptively after the verdict)."""
+    from statsmodels.stats.diagnostic import acorr_ljungbox
+
+    ev = json.loads((root() / "eval.json").read_text())
+    sel = ev["selection"]
+    out: dict = {"mde": {}, "ljung_box": {}, "stop_ratio": {}}
+    for g in GRIDS:
+        for sg in ("llm_in_sample", "clean_holdout", "fresh"):
+            for k, d in ev["pairs"].get(f"crypto_{g}", {}).get(sg, {}).items():
+                if d and d.get("t_hln") and math.isfinite(d["t_hln"]) and d["t_hln"] != 0:
+                    se = abs(d["mean"] / d["t_hln"])
+                    base = d["mean"] / d["rel"] if d.get("rel") else float("nan")
+                    out["mde"][f"{g}|{sg}|{k}"] = {"se": se, "mde_abs": 2.8 * se, "mde_rel": 2.8 * se / abs(base) if base else None, "n": d["n"]}
+    c = cutoff()
+    for s_ in CRYPTO:
+        for g in GRIDS:
+            f = load_fc(s_, g).filter(pl.col("event_ts") < c)
+            row = {}
+            for sp in ("rbc", sel[g]["pick"], "loghar_c", "garch_t", "gjr_tc"):
+                if sp not in f.columns:
+                    continue
+                ff = f.filter(pl.col(sp).is_finite() & (pl.col(sp) > 0) & pl.col("ret").is_finite())
+                z = (ff["ret"] / ff[sp].sqrt()).to_numpy()
+                lb = acorr_ljungbox(z, lags=[20], return_df=True)
+                lb2 = acorr_ljungbox(z ** 2, lags=[20], return_df=True)
+                row[sp] = {"q20_z": float(lb["lb_stat"].iloc[0]), "q20_z2": float(lb2["lb_stat"].iloc[0]), "p_z2": float(lb2["lb_pvalue"].iloc[0]), "n": len(z)}
+            out["ljung_box"][f"{s_}_{g}"] = row
+    # stop-distance ratio: sqrt(F_pick / F_rbc), pooled crypto, by calendar split
+    for g in ("1h", "4h"):
+        pk = sel[g]["pick"]
+        parts = []
+        for s_ in CRYPTO:
+            f = load_fc(s_, g).filter(pl.col(pk).is_finite() & pl.col("rbc").is_finite() & (pl.col("rbc") > 0))
+            parts.append(f.select("event_ts", "weekend", (pl.col(pk) / pl.col("rbc")).sqrt().alias("ratio")))
+        R = pl.concat(parts).with_columns(pl.col("event_ts").dt.hour().alias("h"))
+        res = {"all": R["ratio"].quantile(0.5), "p10": R["ratio"].quantile(0.1), "p90": R["ratio"].quantile(0.9)}
+        if g == "1h":
+            for sess, (h0, h1) in (("asia", (0, 8)), ("europe", (8, 13)), ("us", (13, 20)), ("late", (20, 24))):
+                x = R.filter((pl.col("h") >= h0) & (pl.col("h") < h1) & ~pl.col("weekend"))["ratio"]
+                res[f"weekday_{sess}"] = {"median": x.quantile(0.5), "p10": x.quantile(0.1), "p90": x.quantile(0.9)}
+            for hh in (6, 14, 15):
+                x = R.filter((pl.col("h") == hh) & ~pl.col("weekend"))["ratio"]
+                res[f"weekday_{hh:02d}utc"] = {"median": x.quantile(0.5), "p10": x.quantile(0.1), "p90": x.quantile(0.9)}
+        else:
+            for b in range(0, 24, 4):
+                x = R.filter((pl.col("h") == b) & ~pl.col("weekend"))["ratio"]
+                res[f"weekday_{b:02d}"] = {"median": x.quantile(0.5), "p10": x.quantile(0.1), "p90": x.quantile(0.9)}
+        x = R.filter(pl.col("weekend"))["ratio"]
+        res["weekend"] = {"median": x.quantile(0.5), "p10": x.quantile(0.1), "p90": x.quantile(0.9)}
+        out["stop_ratio"][g] = res
+    # 1d clock spec weekend VaR (extra, descriptive)
+    pool_in, pool_ho = [], []
+    for s_ in CRYPTO:
+        f = load_fc(s_, "1d").filter(pl.col("loghar_c").is_finite() & pl.col("ret").is_finite())
+        z = (f["ret"] / f["loghar_c"].sqrt()).to_numpy()
+        wk = (f["event_ts"].dt.weekday() >= 6).to_numpy()
+        tin = (f["event_ts"] < c).to_numpy()
+        pool_in.append((z[tin], wk[tin]))
+        pool_ho.append((z[~tin], wk[~tin]))
+    d = dist_block(np.concatenate([a for a, _ in pool_in]), np.concatenate([a for a, _ in pool_ho]),
+                   np.concatenate([b for _, b in pool_in]), np.concatenate([b for _, b in pool_ho]))
+    out["crypto_1d_loghar_c"] = {"weekend_var_t": d["weekend_var_t"], "nu": d["params"]["t"]["nu"], "p4": {k: d[k] for k in ("p4_lo_emp", "p4_hi_emp")}}
+    (root() / "extras.json").write_text(json.dumps(out, indent=1, default=float))
+    return out
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("stage", choices=["download", "build", "forecast", "evaluate", "dist", "passage", "tables", "verdicts", "record", "properties", "report"])
+    ap.add_argument("stage", choices=["download", "build", "forecast", "evaluate", "dist", "passage", "tables", "verdicts", "record", "properties", "report", "extras"])
     ap.add_argument("--symbols", default="")
     ap.add_argument("--grids", default="1h,4h,1d")
     ap.add_argument("--spec", default="")
@@ -1499,6 +1569,9 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps({h: {sg: v[0] for sg, v in segs.items()} for h, segs in verdicts().items()}, indent=1))
     elif a.stage == "record":
         record_verdicts()
+    elif a.stage == "extras":
+        o = extras()
+        print(json.dumps({k: v for k, v in o.items() if k != "mde"}, indent=1, default=float)[:6000])
     elif a.stage == "report":
         print(report())
     elif a.stage == "properties":
