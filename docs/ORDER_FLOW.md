@@ -15,7 +15,7 @@ Raw order-book deltas run to tens of GB per day for a broad universe, far beyond
 | quality | book_span_bps, book_cov, book_updates | span = how deep the received book reaches (bands beyond it are truncated); cov = share of the candle with a valid book |
 
 Everything else is a **deterministic function of this base**, recomputed on read:
-- `flow_1m`: an exact rollup (sums; coverage-weighted means; OHLC);
+- `flow_1m`: an exact rollup (sums; coverage-weighted means; OHLC); `known_ts = max(latest 3 s known_ts, minute end)`, so a partial minute at the edge of an outage is never known before it ends;
 - SMA, EMA and **EMA-of-SMA stacks** for every feature over any set of windows (`flow.derive`);
 - vol- and depth-standardised z-scores;
 - cross-asset aggregates (sector or market flow).

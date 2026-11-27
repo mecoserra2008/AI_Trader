@@ -4,8 +4,9 @@ Every repair rewrites ONE leaf partition (a directory of part-*.parquet files):
   1. snapshot its part files: only those are touched (a file a writer adds meanwhile stays where it is);
   2. write the repaired rows next to them as `part-<newest written_ms>-<tag>-<run>.parquet.tmp`, typed by
      config/schema.yaml (ms timestamps, f32 columns stay f32);
-  3. verify the written file against the intended result as multisets (both EXCEPT ALL directions empty) and that
-     it holds no exact duplicates; report rows in / distinct in / dropped / added / out;
+  3. verify the written file against the intended result as multisets (both EXCEPT ALL directions empty; above
+     300k rows an equivalent streamed checksum: count, sum and xor of 64-bit row hashes) and that it holds no exact
+     duplicates; report rows in / distinct in / dropped / added / out;
   4. swap: rename the tmp file into place, then move the old files to data/lake_backup/<run>/<lake path>/ (a reader
      can see exact duplicates for a moment, never a hole);
   5. append one line to data/lake_backup/<run>/manifest.jsonl (files moved, counts, sha256 of the new file, dropped
@@ -44,6 +45,7 @@ import pyarrow.parquet as pq
 from ai_trader.core.config import load
 from ai_trader.storage.lake import _ARROW
 
+EXACT_VERIFY_ROWS = 300_000  # above this, verification uses the streamed hash checksum (memory bound)
 PERIOD_MS = {"5min": 300_000, "15min": 900_000, "30min": 1_800_000, "1h": 3_600_000, "4h": 14_400_000, "1d": 86_400_000}
 BYBIT = "https://api.bybit.com"
 
@@ -245,10 +247,21 @@ def rewrite_partition(lake_root: Path, d: Path, table: str, spec: dict[str, Any]
     con.execute(f"CREATE OR REPLACE TEMP VIEW written AS SELECT {sel} FROM read_parquet('{tmp.as_posix()}')")
     n_out = con.sql("SELECT count(*) FROM written").fetchall()[0][0]
     n_out_dist = con.sql("SELECT count(*) FROM (SELECT DISTINCT * FROM written)").fetchall()[0][0]
-    extra = con.sql("SELECT count(*) FROM (SELECT * FROM written EXCEPT ALL SELECT * FROM target)").fetchall()[0][0]
-    missing = con.sql("SELECT count(*) FROM (SELECT * FROM target EXCEPT ALL SELECT * FROM written)").fetchall()[0][0]
+    if line["rows_out"] <= EXACT_VERIFY_ROWS:
+        extra = con.sql("SELECT count(*) FROM (SELECT * FROM written EXCEPT ALL SELECT * FROM target)").fetchall()[0][0]
+        missing = con.sql("SELECT count(*) FROM (SELECT * FROM target EXCEPT ALL SELECT * FROM written)").fetchall()[0][0]
+        method = "except_all"
+    else:
+        # Large partitions (a flow_3s day is 1-3M rows): an order-independent multiset checksum, streamed, instead of
+        # two set differences that need the whole partition in memory. Equal counts + equal sums and xors of 64-bit
+        # row hashes; a mismatch aborts the swap.
+        hrow = "hash(" + ", ".join(_q(c) for c in cols) + ")"
+        agg = f"SELECT count(*), sum({hrow}::HUGEINT), bit_xor({hrow}) FROM "
+        a, b = con.sql(agg + "written").fetchall()[0], con.sql(agg + "target").fetchall()[0]
+        extra = missing = 0 if a == b else -1
+        method = "hash_checksum"
     ok = n_out == line["rows_out"] and n_out_dist == n_out and extra == 0 and missing == 0
-    line.update({"verify": {"rows_out": n_out, "distinct_out": n_out_dist, "extra_vs_target": extra, "missing_vs_target": missing, "ok": ok}})
+    line.update({"verify": {"method": method, "rows_out": n_out, "distinct_out": n_out_dist, "extra_vs_target": extra, "missing_vs_target": missing, "ok": ok}})
     if not ok:
         tmp.unlink(missing_ok=True)
         line["status"] = "aborted: verification failed"

@@ -56,7 +56,10 @@ def rollup(df3: pl.DataFrame, every: str = "1m") -> pl.DataFrame:
             pl.len().alias("_n"),
         )
     )
-    return out.with_columns(pl.col("vwap").fill_nan(None), *[pl.col(c).fill_nan(None) for c in TWA_COLS])
+    # A bar is never known before it ends, even a partial one at the edge of an outage (its last 3 s candle can be
+    # known mid-minute): known_ts = max(latest 3 s known_ts, bar end).
+    return out.with_columns(pl.col("vwap").fill_nan(None), *[pl.col(c).fill_nan(None) for c in TWA_COLS],
+                            pl.max_horizontal("known_ts", pl.col("event_ts").dt.offset_by(every)).alias("known_ts"))
 
 
 def _day_dirs(lake: Lake, table: str) -> dict[tuple[str, str, str], Path]:
@@ -170,7 +173,8 @@ def maintain(lake: Lake | None = None, dry_run: bool = False, today: date | None
     today = today or datetime.now(UTC).date()
     log: list[str] = []
     run = repair.new_run(lake.root, "flowmaintain", dry_run=dry_run)
-    con = repair._connect(run.dir / "duckdb_tmp", mem="1500MB")
+    # DuckDB spills to run.dir/duckdb_tmp past this; keep it well under the governor cap (Python + Arrow batches on top).
+    con = repair._connect(run.dir / "duckdb_tmp", mem="900MB")
     rolled = set(_day_dirs(lake, "flow_1m"))
     for key, d in sorted(_day_dirs(lake, "flow_3s").items()):
         if date.fromisoformat(key[2]) >= today:

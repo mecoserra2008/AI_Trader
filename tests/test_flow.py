@@ -100,3 +100,9 @@ def test_compact_keeps_rows_and_rollup_matches(tmp_path):
     ref = flow.rollup(before).drop("_n").sort("symbol", "event_ts")
     assert m.height == ref.height == 60
     assert (m["n_buy"] == ref["n_buy"]).all() and ((m["buy_vol"] - ref["buy_vol"]).abs() < 1e-3).all()
+
+def test_partial_minute_is_known_only_after_it_ends():
+    df3 = synth_3s(n=25).filter(pl.col("event_ts") < T0 + timedelta(seconds=36))  # collector stopped 36 s into minute 0
+    m = flow.rollup(df3)
+    assert (m["known_ts"] >= m["event_ts"] + timedelta(minutes=1)).all()
+    assert m.filter(pl.col("symbol") == "AAAUSDT")["_n"].item() == 12

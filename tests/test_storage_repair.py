@@ -142,3 +142,13 @@ def test_svi_rows_follow_the_import_convention():
     assert set(r["series_id"]) == {f"iv_{s}" for s in ds.SERIES if s != "atm_90"}
     assert (r["known_ts"] - r["event_ts"]).unique().to_list() == [timedelta(seconds=60)]
     assert r["event_ts"][0] == datetime(2026, 11, 26, 8, tzinfo=UTC) and r["vintage"][0] == "btf_svi_v2"
+
+
+def test_large_partition_checksum_path(lake, monkeypatch):
+    monkeypatch.setattr(repair, "EXACT_VERIFY_ROWS", 0)
+    lake.write("bars", bars())
+    lake.write("bars", bars())
+    run = repair.new_run(lake.root, "t")
+    log = repair.dedup(lake.root, run, ["bars"], hot=[], allow_hot=False, min_age_min=0)
+    man = json.loads((run.dir / "manifest.jsonl").read_text().splitlines()[0])
+    assert man["verify"]["method"] == "hash_checksum" and man["verify"]["ok"] and "3 exact duplicates removed" in log[0]
