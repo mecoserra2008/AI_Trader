@@ -1,0 +1,138 @@
+# ---------------------------------------------------------------- WS16 TREND (+ WS15 generative core), registered 2026-11-26 ~23:55 UTC
+# Specification program 2026-11-27. Code: src/ai_trader/research/trend_spec.py; outputs data/research/ws16/; design.json there.
+# Common design (frozen before any data run):
+#   universe L (23 crypto perps, trend_zoo_study.UNIVERSE), 4h bars, as_of 2026-11-26T23:00Z, segments split at 2026-07-01.
+#   Base trade layer = stress.walk_signal: enter at the 4h close when flat and |s| >= 0.3, exit at the first close with s*side <= 0,
+#   exchange stop 4.0 x sigma_risk_next (per 4h bar) from the fill walked on 1h bars, no re-entry after a stop until flat/flip,
+#   pegged entry 2.0 + 1.3 bp, taker exits 5.5 + 2.0 bp. R as in stress.r_net. Base signal = zoo_ew (trend_zoo.ensemble, the
+#   STRESS SURVIVES unit). "Paired difference" = (mean net R/trade of variant) - (base), 95% CI from a stationary bootstrap of
+#   entry days (block 5 d, 2000 draws, the same day draws for both). Romano-Wolf stepdown (max-t over the variant family) and
+#   Hansen SPA on the same bootstrap. Verdict rules = STRESS H-STRESS0 (F1, F2, G1..G7) plus G8 (below). Holdout already seen
+#   for zoo_ensemble / trend_4h / tsmom / ema_stack / donchian by STRESS and trend_zoo: selection uses llm_in_sample only;
+#   the holdout is read once per hypothesis; no variant is promoted on its holdout.
+H-WS16-1:
+  title: "TSMOM magnitude (tanh of the vol-scaled move) carries information beyond its sign"
+  statement: "In the pooled daily panel (4h close at 00:00 UTC, universe L), regressing the next-7-day standardised log return y = sum of the next 42 4h log returns / (sigma_4h sqrt 42) jointly on sign(z_k) and tanh(z_k), the tanh(z_k) coefficient is > 0."
+  rationale: "Moskowitz-Ooi-Pedersen use the sign; Baltas-Kosowski and the zoo use a scaled magnitude. If the magnitude carries nothing, sign signals are simpler and cheaper to trade."
+  test: "Pooled OLS, k in {7, 14, 30} days; SE from Newey-West (lag 7) on the daily cross-sectional sum of scores (Driscoll-Kraay). Per segment."
+  success: "Supports iff the tanh coefficient has t >= 2 for >= 2 of the 3 horizons in llm_in_sample and the same horizons keep a positive coefficient in clean_holdout; contradicts iff t < 1 for all 3 in llm_in_sample; else inconclusive."
+  prior: 0.30
+  family: ws16_trend
+  status: proposed
+H-WS16-2:
+  title: "Alternative zoo weightings do not beat the equal-weight ensemble (1/N)"
+  statement: "zoo_iv (inverse trailing variance of each variant's pooled per-bar P&L), zoo_shr (Ledoit-Wolf minimum-variance weights, non-negative, shrunk 50% toward 1/N), zoo_fam (equal weight per rule family) and zoo_vote (mean of signs) each have a paired difference vs zoo_ew below +0.05 R/trade or a CI that includes 0, in llm_in_sample."
+  rationale: "DeMiguel-Garlappi-Uppal: estimated weights rarely beat 1/N out of sample; the zoo has ~2 effective bets (trend_zoo 2026-11-08), so reweighting has little to work with. Weights are causal (monthly, trailing 365 d, pooled over symbols)."
+  test: "Base trade layer on each weighting; paired difference; Romano-Wolf over the 4 weightings."
+  success: "Supports iff no weighting beats zoo_ew by >= +0.05 R with RW-adjusted p < 0.05; contradicts iff at least one does; else inconclusive (never: the rule is binary)."
+  prior: 0.70
+  family: ws16_trend
+  status: proposed
+H-WS16-3:
+  title: "The adaptive LLT Kalman slope is not better than the 30-day regression slope"
+  statement: "kalman_llt (adaptive gain, q = 1e-3, tanh(slope / trailing 180 d sd); H-KF1 construction) has a paired difference vs slope_30d below +0.05 R/trade or a CI including 0, in llm_in_sample."
+  rationale: "H-KF1 found adaptive vs constant gain worth ~+0.1 Sharpe, unproven; a local-linear-trend slope is a near-linear filter of past returns like the OLS slope."
+  test: "Base trade layer; paired difference (variant = kalman_llt, base = slope_30d)."
+  success: "Supports iff the statement holds; contradicts iff kalman_llt beats slope_30d by >= +0.05 R with the CI excluding 0."
+  prior: 0.60
+  family: ws16_trend
+  status: proposed
+H-WS16-4:
+  title: "No exit variant beats the signal-flat exit for zoo_ew"
+  statement: "None of: hysteresis exit (s*side < -0.1), flip-only exit (s*side <= -0.3, i.e. stay in until the opposite entry), chandelier trail (stop ratchets to the best 4h close since entry x exp(-4 sigma_4h), plus the flat exit), 30-day time stop (plus the flat exit) beats the base by >= +0.05 R/trade with Romano-Wolf p < 0.05 in llm_in_sample."
+  rationale: "Trend P&L is a few large winners (hit 25-35%); trailing and time exits cut the right tail that pays for the losers."
+  test: "Paired differences, Romano-Wolf over the 4 exit variants."
+  success: "Supports iff none does; contradicts iff at least one does."
+  prior: 0.65
+  family: ws16_trend
+  status: proposed
+H-WS16-5:
+  title: "Stops beyond the prior-day extreme beat the 4-sigma stop (R-GEO-1)"
+  statement: "For zoo_ew, a structural stop beyond the prior UTC day's extreme on the adverse side (PDL for longs, PDH for shorts) by 0.5 sigma_4h, used when it lies between 1 and 4 sigma_4h from the fill, else beyond the prior week's extreme on the same terms, else 4 sigma_4h, has a higher mean net R/trade than the 4 sigma_4h stop."
+  rationale: "GEO: first touches of PDH/PDL/PWH/PWL extend (continuation), so a stop inside the extension zone is hit by the run; a stop just beyond the extreme is placed where the market's own stops sit, with a margin."
+  test: "Paired difference per segment."
+  success: "Supports iff the paired difference > 0 with CI excluding 0 in llm_in_sample and > 0 in clean_holdout; contradicts iff <= 0 in llm_in_sample; else inconclusive."
+  prior: 0.30
+  family: ws16_trend
+  status: proposed
+H-WS16-6:
+  title: "Not entering at the 12:00 UTC close (US-open vol peak ahead) helps"
+  statement: "zoo_ew with entries blocked at the 12:00 UTC 4h close (the next eligible close is 16:00, after the 13:30/14:30 UTC open) has a paired difference vs base >= +0.02 R/trade with CI excluding 0, in llm_in_sample."
+  rationale: "GEO: 14:00-16:00 UTC carries 1.6-2x average variance; a sigma-unit stop set at 12:00 with an average sigma is more often hit in the loudest bar. Under zero drift timing cannot change expected R except through such stop hits, so the prior is low."
+  test: "Paired difference; also reported: mean R by entry close hour (descriptive), a 1h entry delay and an offset (02/06/.. UTC) 4h grid as robustness."
+  success: "Supports iff the statement holds; contradicts iff the paired difference <= 0; else inconclusive."
+  prior: 0.20
+  family: ws16_trend
+  status: proposed
+H-WS16-7:
+  title: "Pegged entries fill for most trend signals, but the missed ones are the runners"
+  statement: "(a) A limit at the decision close for zoo_ew entries fills within 15 minutes (5m bars, 1 bp trade-through) for >= 50% of entries; (b) the mean net R of the unfilled entries (traded counterfactually with a taker at the close) exceeds that of the filled entries (difference > 0, CI excluding 0); (c) peg-then-chase (taker at +15 min if unfilled) has mean net R per signal >= taker-at-close."
+  rationale: "Adverse selection of passive orders: a long limit fills when price dips, i.e. when the trend pauses; runners leave the limit behind. The cost saving of a peg is ~4 bp, ~0.01 R at a 4-sigma 4h stop."
+  test: "Entries from 2022-01-01 (5m BOS cache + GEO extension); per segment; day bootstrap CIs."
+  success: "Reported per part (a), (b), (c); overall supports iff (a) and (b) hold in llm_in_sample; contradicts iff (a) fails or (b) has difference <= 0; else inconclusive."
+  prior: 0.45
+  family: ws16_trend
+  status: proposed
+H-WS16-8:
+  title: "Entering only in the a-priori trend regimes improves zoo_ew"
+  statement: "Entering zoo_ew only when the 1h v0 cell at entry is in {R1, R2, R7, R8} (TSMom / EMAStack expected_regimes, declared in StrategySpec before any test) raises mean net R/trade by >= +0.05 R with paired CI excluding 0 in llm_in_sample, and the clean_holdout paired difference is > 0."
+  rationale: "Trend should pay in persistent directional cells and not in range/whipsaw or liquidation cells. Coordinated with WS07 (v0 only here)."
+  test: "Paired difference per segment. Also reported (not a separate verdict): direction agreement filter (no long in R7-R9, no short in R1-R3), no entry in R6."
+  success: "Supports iff the statement holds; contradicts iff the in-sample paired difference <= 0; else inconclusive."
+  prior: 0.30
+  family: ws16_trend
+  status: proposed
+H-WS16-9:
+  title: "The TradFi-weekend entry block helps zoo_ew (confirmatory, data already seen)"
+  statement: "Blocking zoo_ew entries in the TradFi weekend (research.calendar tradfi_weekend at the decision time) raises mean net R/trade by >= +0.05 R with CI excluding 0 in llm_in_sample."
+  rationale: "S4 playbook rule, already applied to trend_4h. STRESS slices showed zoo_ensemble -0.09 R on weekend entries vs +0.49 on weekdays (pooled, both segments seen), so this is confirmatory on seen data; only the forward record is evidence."
+  test: "Paired difference per segment."
+  success: "Supports iff the statement holds; contradicts iff the paired difference <= 0; else inconclusive."
+  prior: 0.80
+  family: ws16_trend
+  status: proposed
+H-WS16-10:
+  title: "Conviction-scaled risk beats fixed risk per trade"
+  statement: "For zoo_ew trades, net R is increasing in |s_entry|: OLS slope of R on |s_entry| > 0 with day-clustered t >= 2 in llm_in_sample (so risk proportional to |s_entry|, normalised to a mean of 1R, raises mean R per unit risk)."
+  rationale: "If conviction is informative, a fixed 1R per trade wastes it; the desk's fixed risk unit is the null."
+  test: "Trade-level regression, day-clustered SE; report the conviction-scaled mean R per unit risk."
+  success: "Supports iff t >= 2 in llm_in_sample and the slope is > 0 in clean_holdout; contradicts iff the in-sample slope <= 0; else inconclusive."
+  prior: 0.35
+  family: ws16_trend
+  status: proposed
+H-WS16-11:
+  title: "Some WS16 trade-layer variant beats zoo_ew after multiplicity control"
+  statement: "Over all WS16 variants (signals, weightings, exits, stops, timing, order type, filters), Hansen's SPA test (consistent, studentised) of 'no variant has a higher mean net R/trade than zoo_ew' is rejected at 5% in llm_in_sample."
+  rationale: "Many small tweaks were tried; only a multiplicity-controlled improvement should change the spec."
+  test: "SPA on the paired day-bootstrap of mean R/trade differences; Romano-Wolf adjusted p per variant reported; deflated Sharpe of the selected spec's daily R with N = all trials (WS16 + STRESS 23 + trend_zoo 44); CSCV PBO (16 blocks) over the variant set."
+  success: "Supports iff SPA p < 0.05; contradicts iff SPA p >= 0.20; else inconclusive."
+  prior: 0.15
+  family: ws16_trend
+  status: proposed
+H-WS16-12:
+  title: "zoo_ew beats vol-clustering-only null paths (corrected synthetic stress; WS15 core)"
+  statement: "zoo_ew's real mean net R/trade (pooled over the 6 synthetic sources BTC ETH SOL XRP DOGE LINK, each on its full history) exceeds the 95th percentile of the same statistic on null paths of equal length from (a) a stationary block bootstrap of whole 1h bars with mean block min(Politis-White on |r|, 24 bars) and (b) a zero-drift GARCH(1,1)-t fitted per source (wicks resampled in sigma units)."
+  rationale: "H-STRESS8 used blocks capped at ~30 days, which keep month-long real trends inside the paths; a 1-day cap keeps intraday vol clustering and fat tails but destroys multi-day trend persistence, so it is a valid null for a multi-day trend edge. GARCH-t keeps vol clustering parametrically with no drift."
+  test: "100 replications per generator (6 paths each); one-sided Monte Carlo p = (1 + #null >= real) / (1 + 100). Stylised-fact check of each generator (excess kurtosis, Hill tail index, |r| ACF at 1/24/168, leverage, 1d kurtosis, 7d variance ratio) and a real-vs-synthetic logistic discriminator AUC on 30-day windows (5-fold CV; all features, vol-only, trend-only). New verdict rule G8 for every finalist: FRAGILE if the real mean <= the 95th null percentile under (a)."
+  success: "Supports iff MC p <= 0.05 under both (a) and (b); contradicts iff p > 0.20 under both; else inconclusive."
+  prior: 0.45
+  family: ws16_trend
+  status: proposed
+H-WS16-13:
+  title: "The recommended spec(s), chosen on llm_in_sample by the frozen rule, keep a positive clean-holdout mean on closed trades"
+  statement: "Selection rule (frozen): spec 1 = zoo_ew plus every single modification that beats it with Romano-Wolf p < 0.10 in llm_in_sample (combined and run once, one extra trial); spec 2 = the non-zoo_ew signal with the highest in-sample lower 95% CI bound of mean net R/trade among in-sample SURVIVES. Each has clean_holdout mean net R/trade > 0 on closed trades (open positions excluded)."
+  rationale: "RESEARCH_PROTOCOL 3b: select in-sample only, read the holdout once."
+  test: "clean_holdout, closed trades, base trade layer."
+  success: "Supports iff every recommended spec is > 0; contradicts iff all are <= 0; else inconclusive."
+  prior: 0.50
+  family: ws16_trend
+  status: proposed
+H-WS16-14:
+  title: "Capacity at 50-200 USD notional is not a constraint"
+  statement: "For every universe-L symbol, square-root-law impact Y sigma_d sqrt(Q / V_d) with Y = 1, Q = 200 USD and V_d = point-in-time trailing 30-day median daily turnover (5th percentile over the in-sample days) is < 1 bp."
+  rationale: "Even the smallest perps trade millions per day; 200 USD is ~1e-5 of daily volume."
+  test: "Per symbol, from 1h turnover in the lake."
+  success: "Supports iff < 1 bp for all symbols; contradicts iff > 3 bp for any; else inconclusive."
+  prior: 0.85
+  family: ws16_trend
+  status: proposed

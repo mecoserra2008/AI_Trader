@@ -1,0 +1,265 @@
+# ---- WS08 PREDICT (+ core of WS09 XSECT and WS18 MACRO), specification program 2026-11-27. Registered 2026-11-26 ~23:55 UTC
+# BEFORE any fit. Code: src/ai_trader/research/ws08_predict.py. Design: diary "WS08 design frozen before results".
+# Common design for H-WS08-1..14 (the predictor grid):
+#   targets BTC, ETH (Bybit perps) and ALT (equal-weight basket of the other 21 long-history universe-L perps), log returns
+#   over h in {1h, 4h} (hourly origins) and {1d, 7d, 30d} (daily origins at 00:00 UTC), divided by the ex-ante EWMA sigma
+#   x sqrt(h) (house rule: vol-standardised). Predictors as-of known_ts <= origin: funding (24h mean), funding percentile
+#   (trailing 365 d), perp-index basis, Deribit 30d term basis, OI 24h (4h) log change, long/short account ratio, Coinbase
+#   premium raw and USDT-adjusted, stablecoin 30d growth z, DVOL level, DVOL change, VRP = (DVOL/100)^2 - trailing 30d RV,
+#   25d risk reversal (30d), 5d change in 10y real yield, 5d dollar log change, last NDX daily return, Fear & Greed.
+#   Per cell: OLS slope per 1 sd of x, Newey-West t (lag h + auto), Hodrick (1992) 1B t, Stambaugh bias correction,
+#   IVX Wald (Kostakis-Magdalinos-Stamatogiannis 2015, long-horizon version for h > 1 base period), day-block bootstrap
+#   (60-day blocks, B = 999) and Romano-Wolf step-down over ALL grid cells jointly (FWER 5%). Fit segment llm_in_sample
+#   (origin < 2026-07-01 and target window closed before it); clean_holdout = origins >= 2026-07-01, read once.
+
+H-WS08-1:
+  title: "WS08 grid: at least one point-in-time predictor x target x horizon cell predicts vol-standardised returns after proper inference and multiplicity"
+  statement: >-
+    Among all registered predictor x {BTC, ETH, ALT} x {1h, 4h, 1d, 7d, 30d} cells, at least one has an in-sample slope with Romano-Wolf
+    adjusted p < 0.05 (day-block bootstrap, all cells jointly), IVX Wald p < 0.05, Hodrick |t| > 1.96 when h > 1 base period, and the
+    same slope sign in the clean holdout.
+  rationale: "Earlier positioning / fundamentals 'supports' (H-P1, H-FU2 holdout) used single-cell t-stats with overlapping 30d targets and persistent regressors; the correct inference has never been applied jointly."
+  test: "ws08_predict grid; RW step-down with bootstrap-standardised slopes; IVX; Hodrick 1B; holdout sign."
+  success: "supports iff >= 1 cell meets all four conditions; contradicts iff no cell has RW p < 0.10 in-sample; else inconclusive. Holdout: sign of each surviving cell's slope (inconclusive if < 30 non-overlapping obs)."
+  prior: 0.15
+  family: predict
+  status: proposed
+
+H-WS08-2:
+  title: "Funding level and its 365-day percentile predict lower subsequent returns (crowding unwinds) at 1d-30d"
+  statement: "Slope of the vol-standardised forward return on funding (24h mean) and on the funding percentile is negative for BTC, ETH and ALT at 1d, 7d and 30d."
+  rationale: "Crowded-long funding is the most quoted positioning signal; H-P1 (funding_contrarian strategy) contradicted in-sample and 'supported' in the holdout on sign only."
+  test: "grid cells fund / fund_pct; NW, Hodrick, IVX, RW."
+  success: "supports iff any of these cells has slope < 0 with RW p < 0.05 and IVX p < 0.05 and holdout sign < 0; contradicts iff all in-sample slopes have IVX p > 0.10 or the significant ones are positive; else inconclusive."
+  prior: 0.20
+  family: predict
+  status: proposed
+
+H-WS08-3:
+  title: "Perp-index basis and the Deribit 30d term basis predict lower subsequent returns"
+  statement: "Slope on the 24h mean perp premium ln(last/index) and on the annualised 30d futures basis implied by Deribit options is negative at 1h-30d (BTC, ETH; ALT uses BTC term basis)."
+  rationale: "Basis is the leverage-demand price; rich basis = crowded longs; overlaps funding, tested separately because it is observed continuously."
+  test: "grid cells basis / tbasis."
+  success: "as H-WS08-2 with these cells."
+  prior: 0.15
+  family: predict
+  status: proposed
+
+H-WS08-4:
+  title: "Open-interest change predicts the direction of subsequent returns (two-sided)"
+  statement: "Slope on the 24h (daily origins) or 4h (hourly origins) log change in open interest is non-zero at some horizon for BTC, ETH or ALT."
+  rationale: "H-P2 (oi_price_divergence) failed in both segments as a strategy; the raw predictive slope with persistent-regressor-robust inference has not been tested."
+  test: "grid cells doi."
+  success: "supports iff any doi cell has RW p < 0.05, IVX p < 0.05 and holdout sign kept; contradicts iff all doi cells have IVX p > 0.10; else inconclusive."
+  prior: 0.10
+  family: predict
+  status: proposed
+
+H-WS08-5:
+  title: "The Bybit long/short account ratio is a contrarian predictor"
+  statement: "Slope on log(long share / short share) (latest 4h print) is negative at 4h-7d."
+  rationale: "Retail account ratios are read as contrarian; available 2021-08 .. 2026-11-07 for the 23 long-history perps."
+  test: "grid cells ls."
+  success: "as H-WS08-2 with ls cells (sign < 0)."
+  prior: 0.15
+  family: predict
+  status: proposed
+
+H-WS08-6:
+  title: "The Coinbase premium (raw and USDT-adjusted) predicts positive subsequent BTC/ETH returns at 1h-1d"
+  statement: >-
+    premium = ln(Coinbase BTC-USD close / Binance spot BTCUSDT close), adjusted = premium - ln(Coinbase USDT-USD close), hourly closes,
+    24h mean for daily origins, last 1h for hourly origins; slope > 0 at 1h, 4h, 1d (ALT uses BTC premium).
+  rationale: "US-spot demand lore; H-XV2 (forward, 30-min trigger) is still collecting; this is the historical PIT version (public hourly candles)."
+  test: "grid cells cbp_raw / cbp_adj."
+  success: "supports iff any of these cells has slope > 0, RW p < 0.05, IVX p < 0.05 and holdout sign > 0; contradicts iff all have IVX p > 0.10 or the significant ones are negative; else inconclusive."
+  prior: 0.20
+  family: predict
+  status: proposed
+
+H-WS08-7:
+  title: "Stablecoin supply growth predicts positive subsequent returns (H-FU1 with persistent-regressor inference)"
+  statement: "Slope on the 30d log change of total stablecoin supply (z vs trailing 365 d) is positive at 7d and 30d."
+  rationale: "H-FU1 was inconclusive in-sample (t 1.63, NW only) and contradicted in the holdout; DefiLlama is revisable, so even a positive is weak."
+  test: "grid cells stable."
+  success: "as H-WS08-6 with stable cells at 7d/30d."
+  prior: 0.12
+  family: predict
+  status: proposed
+
+H-WS08-8:
+  title: "Implied-vol predictors: DVOL level and the variance risk premium predict positive returns; DVOL changes are two-sided"
+  statement: "Slope on DVOL level and on VRP = (DVOL/100)^2 - trailing 30d realised variance (annualised) is positive at 7d/30d; slope on the DVOL change is non-zero at some horizon."
+  rationale: "Bollerslev-Tauchen-Zhou VRP predicts equity returns; H-FU2 contradicted in-sample (t -1.52) and 'supported' on 14 holdout weeks."
+  test: "grid cells dvol / ddvol / vrp."
+  success: "supports iff a dvol or vrp cell has slope > 0 (or any ddvol cell) with RW p < 0.05, IVX p < 0.05 and holdout sign kept; contradicts iff all have IVX p > 0.10 or the significant dvol/vrp ones are negative; else inconclusive."
+  prior: 0.15
+  family: predict
+  status: proposed
+
+H-WS08-9:
+  title: "The 25-delta risk reversal (30d) predicts subsequent returns (two-sided)"
+  statement: "Slope on Deribit rr25_30 (daily 08:00 fit, PIT to the next origin) is non-zero at 1d-30d for BTC/ETH (ALT uses BTC)."
+  rationale: "Option skew as a sentiment / crash-demand gauge; data end 2026-10-09 so the holdout is about 3 months."
+  test: "grid cells skew."
+  success: "supports iff any skew cell has RW p < 0.05, IVX p < 0.05 and holdout sign kept; contradicts iff all have IVX p > 0.10; else inconclusive."
+  prior: 0.10
+  family: predict
+  status: proposed
+
+H-WS08-10:
+  title: "Macro predictors: rising real yields and a rising dollar predict lower, and a positive NDX day predicts higher, subsequent crypto returns"
+  statement: "Slope on the 5d change in DFII10 (< 0), the 5d log change in DTWEXBGS (< 0) and the last NDX daily log return (> 0) at 1d-30d, daily origins (macro known at obs_date + 1 day 00:00 UTC)."
+  rationale: "Cross-asset liquidity channel; TVTP found the macro drivers unstable; macro_narrative cells were inconclusive."
+  test: "grid cells ry / usd / ndx."
+  success: "supports iff any of these cells has the registered sign with RW p < 0.05, IVX p < 0.05 and holdout sign kept; contradicts iff all have IVX p > 0.10 or the significant ones have the wrong sign; else inconclusive."
+  prior: 0.12
+  family: predict
+  status: proposed
+
+H-WS08-11:
+  title: "Fear & Greed is a contrarian predictor at 7d-30d"
+  statement: "Slope on the alternative.me Fear & Greed index (value for day D known at D 01:00 UTC, so the D-1 value at the D 00:00 origin) is negative at 7d and 30d."
+  rationale: "Sentiment contrarian lore; H-NEWS4 found no next-day direction from news sentiment."
+  test: "grid cells fng."
+  success: "as H-WS08-2 with fng cells at 7d/30d."
+  prior: 0.12
+  family: predict
+  status: proposed
+
+H-WS08-12:
+  title: "Positioning and implied-vol predictors move the tails, not the median, of 1d and 7d returns"
+  statement: >-
+    In quantile regressions of vol-standardised 1d (all daily origins) and 7d (non-overlapping Monday origins) returns at tau 0.1, 0.5, 0.9,
+    for at least one predictor in {fund, fund_pct, basis, doi, dvol, vrp, skew} the tail-spread slope b(0.9) - b(0.1) differs from 0 while
+    b(0.5) does not.
+  rationale: "Crowding and implied vol may predict crash risk / dispersion rather than the mean; if so they are risk inputs, not direction signals."
+  test: "statsmodels QuantReg, kernel SE (non-overlapping samples); b(0.9)-b(0.1) SE from a 60-day block bootstrap (B = 299); Holm across predictor x target x horizon."
+  success: "supports iff some cell has Holm p < 0.05 for b(0.9)-b(0.1) and b(0.5) p > 0.10, with the same sign of b(0.9)-b(0.1) in the holdout; contradicts iff no cell has raw p < 0.05 for the tail spread; else inconclusive."
+  prior: 0.30
+  family: predict
+  status: proposed
+
+H-WS08-13:
+  title: "Some predictor beats the prevailing mean out of sample (Clark-West) and the conditional Giacomini-White test agrees"
+  statement: >-
+    Expanding-window (purged: only pairs whose target window closed before the origin) OLS forecasts beat the prevailing-mean benchmark:
+    OOS R^2 > 0 with Clark-West MSPE-adjusted NW t > 1.645 (one-sided), and the rolling-window (365 d / 90 d hourly) conditional GW test
+    (instruments 1, lagged loss difference) rejects equal predictive ability in favour of the predictor, for at least one cell after Holm.
+  rationale: "In-sample predictability with persistent regressors is often an artefact; OOS with the nested-model correction is the honest check (Welch-Goyal)."
+  test: "OOS from the 2nd year of each cell's data; llm_in_sample OOS block and clean_holdout OOS block reported separately; Holm over cells within each block."
+  success: "supports iff >= 1 cell passes CW (Holm) in the llm_in_sample OOS block and keeps OOS R^2 > 0 in the holdout; contradicts iff no cell has CW raw p < 0.05 in-sample OOS; else inconclusive."
+  prior: 0.15
+  family: predict
+  status: proposed
+
+H-WS08-14:
+  title: "A sign rule on the best grid cell pays after costs"
+  statement: >-
+    For each cell that passes H-WS08-1 (or, if none, the top 3 by in-sample bootstrap |t|, flagged as selected), the rule position =
+    sign(b_IS x (x_t - median_IS(x))), held h, non-overlapping, earns mean net return > 0 in vol units after taker 5.5 bp per side
+    (and a maker-entry variant 2.0 + 1.3 bp entry, 5.5 bp exit), in both segments.
+  rationale: "Statistical significance is not economic value; break-even correlations are about 0.27 at 1h, 0.14 at 4h, 0.05 at 1d for BTC."
+  test: "mean net signed return per trade in sigma_h units and bp; day-block bootstrap CI; deflated Sharpe with the grid trial count."
+  success: "supports iff net mean > 0 with 95% CI above 0 in-sample and net mean > 0 in the holdout for a cell that passed H-WS08-1; contradicts iff no such cell or net <= 0; else inconclusive."
+  prior: 0.08
+  family: predict
+  status: proposed
+
+# ---- XSECT core (WS09, folded into WS08): weekly cross-section of Bybit USDT crypto perps in the lake (TradFi perps excluded),
+# rebalanced Monday 00:00 UTC, liquidity filter trailing 30d median daily turnover >= 20 M USD known at t, listing burn-in;
+# characteristics MOM (log return t-30d .. t-1d), REV (t-7d .. t), CARRY (mean funding over the last 7 d), BETA (60 d daily beta to
+# BTC). Next-week returns: price log return and total (price + funding received by a long = - sum of funding rates). Tercile
+# long-short EW portfolios net of taker 5.5 bp x turnover; Fama-MacBeth on cross-sectional ranks (in [-0.5, 0.5]) of vol-scaled
+# next-week returns, NW t (lag 4); Shanken (1992) EIV correction for the raw-beta FM. Survivorship: the lake holds today's list
+# plus whatever delisted symbols it has; the bias is noted, not corrected.
+
+H-WS08-15:
+  title: "Cross-sectional momentum: past-30d winners outperform losers next week across Bybit perps"
+  statement: "FM slope on the MOM rank > 0, and the top-minus-bottom tercile portfolio earns > 0 net of costs."
+  rationale: "Crypto xs momentum (Liu-Tsyvinski-Wu 2022) is the main candidate for alt selection inside the trend sleeve."
+  test: "FM NW t, tercile L-S net mean with NW t; RW over the four xs characteristics (week-block bootstrap)."
+  success: "supports iff FM slope > 0 with NW t > 2 (RW p < 0.05 over the 4 characteristics) in-sample and L-S net > 0 and the same FM sign in the holdout; contradicts iff the in-sample FM slope <= 0; else inconclusive."
+  prior: 0.30
+  family: xsect
+  status: proposed
+
+H-WS08-16:
+  title: "Cross-sectional short-term reversal: last week's winners underperform next week"
+  statement: "FM slope on the REV rank < 0 and the bottom-minus-top tercile earns > 0 net."
+  rationale: "H-SEC2 (within-sector 7d reversal) supported in the holdout; this is the market-wide version with turnover costs."
+  test: "as H-WS08-15."
+  success: "as H-WS08-15 with the sign reversed."
+  prior: 0.30
+  family: xsect
+  status: proposed
+
+H-WS08-17:
+  title: "Funding carry: high-funding perps underperform in price, and short-high / long-low earns funding plus price net of costs"
+  statement: "FM slope on the CARRY rank for next-week price returns < 0; tercile low-minus-high total return (price + funding) > 0 net."
+  rationale: "H-PAN3 (within-sector funding crowding) and the carry premium H-C1; this is the perp-only cross-sectional version."
+  test: "as H-WS08-15 (price and total returns)."
+  success: "supports iff the FM price slope < 0 with t < -2 (RW p < 0.05) in-sample, low-minus-high total net > 0 in-sample and the same FM sign in the holdout; contradicts iff the FM slope >= 0; else inconclusive."
+  prior: 0.25
+  family: xsect
+  status: proposed
+
+H-WS08-18:
+  title: "The security market line is flat or inverted across perps (betting against beta)"
+  statement: "FM slope on BTC beta (raw beta with Shanken-corrected SE, and rank) is <= 0: high-beta perps do not earn more per unit of beta."
+  rationale: "Low-beta anomaly; decides whether alt selection should prefer low-beta names for a given trend signal."
+  test: "FM on raw beta (Shanken) and on beta rank."
+  success: "supports iff the FM rank slope < 0 with t < -2 (RW p < 0.05) in-sample and same sign holdout; contradicts iff the FM slope > 0 with t > 2; else inconclusive (a flat SML is inconclusive, not support)."
+  prior: 0.25
+  family: xsect
+  status: proposed
+
+H-WS08-19:
+  title: "Inside the 4h trend sleeve, the cross-sectional rank at entry improves alt selection"
+  statement: >-
+    Among the stress-harness zoo_ensemble and trend_4h base trades on alts (non-BTC/ETH), trade R (gross, side x (exit - entry) / |entry - stop|)
+    regressed on the trade-direction-signed MOM, CARRY and BETA ranks at entry: the MOM slope > 0 (trend in the direction of xs winners is
+    better), with week-clustered t > 2 in-sample and the same sign in the holdout; a rank filter (top half in the trade direction) raises mean R.
+  rationale: "The only surviving family is 4h trend; if xs rank helps choose which alts to trade it raises R per slot under the 3-open-slot limit."
+  test: "pooled OLS of R on signed ranks with week-clustered SE; filter mean R difference with week-block bootstrap CI."
+  success: "supports iff MOM slope > 0 with clustered t > 2 in-sample and > 0 in the holdout and the filtered mean R exceeds the unfiltered one in both; contradicts iff the in-sample slope <= 0; else inconclusive."
+  prior: 0.25
+  family: xsect
+  status: proposed
+
+# ---- MACRO core (WS18, folded into WS08): weekday UTC-day crypto log returns vs same-day NDX log return, change in DFII10,
+# log change in DTWEXBGS, change in HY OAS (BAMLH0A0HYM2, from 2023-11). Betas: constant (expanding OLS, PIT), rolling 90 trading
+# days, Kalman random-walk betas (state noise Q diagonal, MLE on llm_in_sample, then fixed). One-step conditional fit
+# r_t vs alpha + beta_{t|t-1}' x_t; squared error and Gaussian log score; DM with HAC + HLN correction.
+
+H-WS08-20:
+  title: "Crypto betas to macro are time-varying: Kalman betas beat constant and rolling betas in one-step conditional fit"
+  statement: "For BTC, ETH and ALT the Kalman random-walk-beta model has lower one-step squared error and higher log score than the expanding constant-beta and the rolling-90d models."
+  rationale: "TVTP and macro work found unstable macro links; whether the beta is a usable risk input depends on tracking it."
+  test: "DM (HAC, HLN) on squared-error and log-score differences; llm_in_sample OOS from 2022-01 and clean_holdout."
+  success: "supports iff Kalman beats both alternatives with DM t < -2 (MSE) for >= 2 of 3 targets in-sample and the same sign in the holdout; contradicts iff Kalman is worse than the constant beta (DM t > 2) for >= 2 targets; else inconclusive."
+  prior: 0.45
+  family: macro
+  status: proposed
+
+H-WS08-21:
+  title: "Down-day asymmetry: crypto's beta to NDX is larger on NDX down days than on up days"
+  statement: "In r_crypto = a + b_up max(r_NDX, 0) + b_dn min(r_NDX, 0) + controls (d DFII10, d log dollar), b_dn - b_up > 0."
+  rationale: "Correlations rise in sell-offs; decides whether macro risk gates should be asymmetric."
+  test: "OLS with HAC t on b_dn - b_up per target; Holm over the 3 targets."
+  success: "supports iff b_dn - b_up > 0 with Holm p < 0.05 for >= 1 target in-sample and the same sign in the holdout; contradicts iff the in-sample difference < 0 for all targets; else inconclusive."
+  prior: 0.45
+  family: macro
+  status: proposed
+
+H-WS08-22:
+  title: "DVOL improves 1d and 7d realised-variance forecasts beyond log-HAR; the 25d risk reversal adds nothing"
+  statement: >-
+    For BTC and ETH daily RV (sum of squared 1h log returns), log-HAR + log(DVOL^2/365) has lower QLIKE than log-HAR at h = 1d and 7d
+    (direct, expanding refit every 30 d); adding rr25_30 does not lower QLIKE further; the 90% MCS contains HAR+DVOL and not plain HAR.
+  rationale: "H-VCL4 found a small DVOL gain at 7d on weekly origins (t -1.44 in-sample); WS18 asks for the decision input sigma_risk."
+  test: "QLIKE DM (HAC lag h, HLN) per asset and horizon; MCS (Tmax, block bootstrap B = 999) over {HAR, HAR+DVOL, HAR+skew, HAR+DVOL+skew}."
+  success: "supports iff HAR+DVOL beats HAR with DM t < -2 for >= 3 of the 4 asset x horizon cells in-sample, the holdout sign agrees, and the skew increment is not significant (|t| < 2); contradicts iff HAR+DVOL is worse (t > 0) in >= 3 cells; else inconclusive."
+  prior: 0.55
+  family: macro
+  status: proposed

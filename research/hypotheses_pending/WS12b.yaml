@@ -1,0 +1,25 @@
+# WS12 extra trials (registered 2026-11-27 ~07:20 UTC AFTER the H-WS12-1..5 results, BEFORE these fits). Labelled extra
+# trials: H-WS12-4 contradicted, but the feature mlp lacked the range / turnover / funding / OI inputs the sequence models
+# see, and log-HAR-t had no range-based realised measure. Same rows, refits, origins, seeds, tests and segments as
+# H-WS12-1..5. Extra inputs at t (bars t-1 and earlier): xr1 = log Parkinson range variance of bar t-1 in units of s2_t,
+# xr6 / xr24 = log mean of that over bars t-6..t-1 / t-24..t-1, xturn = lturn of bar t-1, xfund = funding (bp) at t-1,
+# xdoi = 24 h OI change at t-1. harx = per-asset log-HAR-t with [xr1, xr6, xr24, xturn, |xfund|, |xdoi|] added (OLS, QLIKE
+# bias constant, Student-t). mlpx = the feature mlp with the 6 extra inputs (25 features), lr choice + 3 seeds as before.
+H-WS12-8:
+  title: "The deep sequence model still beats a log-HAR-t that sees the range and activity inputs"
+  statement: "D* (gru 3-seed ensemble) has lower 1h pinball AND lower 1h QLIKE than harx (log-HAR-t + Parkinson-range and activity terms), pooled over the 6 perps, in both segments."
+  rationale: "Complexity budget: the deep gain over log-HAR-t may come from the range-based realised measure, which a linear model can use too."
+  test: "per-date mean differences D* - harx, NW t with HLN correction."
+  success: "both differences < 0 with t < -2 in both segments; contradicts iff either difference >= 0 in both segments."
+  prior: 0.40
+  family: ml_models
+  status: proposed
+H-WS12-9:
+  title: "With the same inputs, the sequence encoder adds nothing over a feature MLP (null, extra trial for H-WS12-4)"
+  statement: "D* does NOT beat mlpx on 1h pinball and 1h QLIKE: neither difference D* - mlpx has t < -2 in both segments."
+  rationale: "Separates the architecture from the inputs in the H-WS12-4 contradiction."
+  test: "per-date mean differences D* - mlpx, NW t with HLN correction."
+  success: "supports iff neither metric has difference < 0 with t < -2 in both segments; contradicts iff both metrics do."
+  prior: 0.55
+  family: ml_models
+  status: proposed
