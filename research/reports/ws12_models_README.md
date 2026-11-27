@@ -11,7 +11,8 @@ arch, refit dates, lr, seed, epochs, training / validation loss curve, parameter
 per-step or mlp inputs, ms/ss for the static inputs), feature names, window length L, width d, horizons.
 
 - arch: `gru` (1-layer GRU, d 32), `tcn` (4 residual blocks of causal dilated convs, receptive field 61 h), `mlp`
-  (2 x Linear 32 on the 19 H-NN8 hourly features).
+  (2 x Linear 32 on the 19 H-NN8 hourly features), `mlpx` (the same on 25 features: the 19 + `ws12_deep.EXTRA_FEATURES`,
+  i.e. range variance of the last bar / 6 h / 24 h, turnover, funding, OI change; build with `n_mlp=25`).
 - refit `R1`: trained on rows with label end <= 2025-06-30 (tested 2025-07-01..2026-06-30); `R2`: label end <= 2026-06-30
   (tested 2026-07-01..2026-11-25, the clean holdout). For each (arch, refit): seed 0 at lr 1e-3 and 3e-3 (the lr with the
   lower inner-validation loss is the chosen one; see `../logs/train_<arch>_<refit>.json`), seeds 1 and 2 at the chosen lr.
@@ -46,3 +47,12 @@ log forecast of v_h = sum r^2 / (h s2_t), s2_t = robust_bc base variance known a
 Is the GRU/TCN a scaled HAR (distil logF onto lsig_rel1y, har_d/w/m, lfac_n*)? Which steps of the window matter
 (gradient x input by lag)? Does the learned df move with the vol state? Does the 24 h head use anything but the
 calendar and har_w?
+
+## Results that matter for interpretation (research/reports/ws12_2026-11-27.md)
+
+- gru / tcn beat log-HAR-t at 1h (pinball -0.8% / -1.0%, QLIKE -5% / -7%), but a linear log-HAR-t with the range terms
+  (harx) gets 98% / 78% of that, and `mlpx` equals the gru: the networks' 1h edge is mostly the Parkinson range input.
+- What is left for the networks: a state-dependent tail (the learned df falls when log F rises, corr -0.9 at 1h) and the
+  24h variance head (beats harx, QLIKE t -3.5 / -2.2). Good targets for probing: is logF a function of xr6 / xr24 / har_*
+  plus the calendar (distil onto harx's regressors), and is df a function of logF alone?
+- Chosen lr per arch and refit: see `../logs/train_<arch>_<refit>.json` (`chosen_lr`).

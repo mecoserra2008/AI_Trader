@@ -229,7 +229,37 @@ def panel() -> dict:
     winok[L:] = (cs[idx[L:]] - cs[idx[L:] - L]) == 0  # rows t-L..t-1 all finite
     ok = winok & np.isfinite(S).all(axis=1) & np.isfinite(M).all(axis=1) & np.isfinite(Y).all(axis=1) & np.isfinite(V).all(axis=1) & (A >= 0)
     hour = np.where(A >= 0, (T.astype("datetime64[h]").astype(np.int64) % 24), -1)
-    return {"P": P, "S": S, "M": M, "Y": Y, "V": V, "T": T, "A": A, "ok": ok, "hour": hour, "r": R, "s2": S2}
+    X6 = extra_feats(P, S2)
+    MX = np.hstack([M, X6]).astype(np.float32)
+    return {"P": P, "S": S, "M": M, "MX": MX, "X6": X6, "Y": Y, "V": V, "T": T, "A": A, "ok": ok, "hour": hour, "r": R, "s2": S2}
+
+
+EXTRA_FEATURES = ("xr1", "xr6", "xr24", "xturn", "xfund", "xdoi")
+
+
+def extra_feats(P: np.ndarray, s2: np.ndarray) -> np.ndarray:
+    """Extra trial H-WS12-8/9: range variance of bars t-1 / t-6..t-1 / t-24..t-1 in units of s2_t, and lturn, fund, doi of
+    bar t-1 (row t). Rows near an asset's start are NaN (the L-row NaN pad keeps windows inside one asset)."""
+    n = len(P)
+    ir = STEP_FEATURES.index("lrange")
+    with np.errstate(all="ignore"):
+        lrv = P[:, ir].astype(float) + np.log(s2)  # log range variance in return^2 units, bar j
+        rv = np.exp(lrv)
+        out = np.full((n, 6), np.nan)
+        ls2 = np.log(s2)
+        fin = np.isfinite(rv)
+        cs = np.r_[0.0, np.cumsum(np.where(fin, rv, 0.0))]
+        cn = np.r_[0, np.cumsum(fin)]
+        idx = np.arange(n)
+        out[1:, 0] = lrv[:-1] - ls2[1:]
+        for c, k in ((1, 6), (2, 24)):
+            m = np.full(n, np.nan)
+            full = (cn[idx[k:]] - cn[idx[k:] - k]) == k
+            m[k:] = np.where(full, (cs[idx[k:]] - cs[idx[k:] - k]) / k, np.nan)  # mean rv over rows t-k..t-1
+            out[:, c] = np.log(m) - ls2
+        for c, f in ((3, "lturn"), (4, "fund"), (5, "doi")):
+            out[1:, c] = P[:-1, STEP_FEATURES.index(f)]
+    return out.astype(np.float32)
 
 
 def _us(d: datetime) -> np.datetime64:
@@ -307,7 +337,7 @@ def make_net(arch: str, n_step: int, n_static: int, n_mlp: int, d: int = D):
         def __init__(self):
             super().__init__()
             self.arch = arch
-            self.enc = {"gru": GRU, "tcn": TCN, "mlp": MLP}[arch]()
+            self.enc = {"gru": GRU, "tcn": TCN, "mlp": MLP, "mlpx": MLP}[arch]()
             self.drop = nn.Dropout(0.1)
             self.head = nn.Sequential(nn.Linear(d + n_static, 32), nn.GELU(), nn.Linear(32, 4 * len(HS)))
 
@@ -330,15 +360,18 @@ def t_nll_torch(y, mu, scale, df):
              - (df + 1) / 2 * torch.log1p(zz * zz / df))
 
 
+MLP_MAT = {"mlp": "M", "mlpx": "MX"}
+
+
 class Batcher:
     """Builds (x, s, y, v) tensors from row indices of the panel with the fit-block standardiser."""
 
     def __init__(self, pn: dict, arch: str, fit_rows: np.ndarray, rng: np.random.Generator):
         self.pn, self.arch = pn, arch
-        k = 50000 if arch == "mlp" else 4000
+        k = 50000 if arch in ("mlp", "mlpx") else 4000
         sub = fit_rows if len(fit_rows) <= k else rng.choice(fit_rows, k, replace=False)
-        if arch == "mlp":
-            X = pn["M"][sub]
+        if arch in ("mlp", "mlpx"):
+            X = pn[MLP_MAT[arch]][sub]
         else:
             W = self._win(sub)
             X = W.reshape(-1, W.shape[2])
@@ -356,8 +389,8 @@ class Batcher:
 
     def __call__(self, rows: np.ndarray):
         torch = _torch()
-        if self.arch == "mlp":
-            X = (self.pn["M"][rows] - self.mx) / self.sx
+        if self.arch in ("mlp", "mlpx"):
+            X = (self.pn[MLP_MAT[self.arch]][rows] - self.mx) / self.sx
         else:
             X = (self._win(rows) - self.mx) / self.sx
         Sx = (self.pn["S"][rows] - self.ms) / self.ss
@@ -379,7 +412,7 @@ def train_one(pn: dict, rows: dict, arch: str, lr: float, seed: int) -> dict:
     torch.manual_seed(seed)
     rng = np.random.default_rng(seed)
     bat = Batcher(pn, arch, rows["fit"], rng)
-    net = make_net(arch, len(STEP_FEATURES), len(STATIC_FEATURES), pn["M"].shape[1])
+    net = make_net(arch, len(STEP_FEATURES), len(STATIC_FEATURES), pn[MLP_MAT.get(arch, "M")].shape[1])
     opt = torch.optim.AdamW(net.parameters(), lr=lr, weight_decay=1e-4)
     vrows = rows["val"] if len(rows["val"]) <= VAL_N else np.sort(np.random.default_rng(12345).choice(rows["val"], VAL_N, replace=False))
     vb = [bat(vrows[i:i + 4096]) for i in range(0, len(vrows), 4096)]
@@ -438,7 +471,7 @@ def cmd_train(arch: str, refit: str) -> None:
         torch.save(res["net"].state_dict(), md / f"{name}.pt")
         meta = {"arch": arch, "refit": refit, "lr": lr, "seed": seed, "val_loss": res["val_loss"], "epochs": res["epochs"],
                 "secs": res["secs"], "params": res["params"], "curve": res["curve"], "standardiser": res["bat"].state(),
-                "step_features": STEP_FEATURES, "static_features": STATIC_FEATURES, "L": L, "d": D, "horizons": HS,
+                "step_features": STEP_FEATURES, "static_features": STATIC_FEATURES, "extra_features": EXTRA_FEATURES, "L": L, "d": D, "horizons": HS,
                 "n_fit": int(len(rows["fit"])), "n_val": int(len(rows["val"])), "refit_dates": [d.isoformat() for d in REFITS[refit]]}
         (md / f"{name}.json").write_text(json.dumps(meta, default=float), encoding="utf-8")
         np.save(pd_ / f"{name}.npy", predict(res["net"], res["bat"], rows["test"]))
@@ -474,6 +507,7 @@ def t_fit(z: np.ndarray, seed: int = 0) -> tuple[float, float, float]:
 def cmd_classical() -> None:
     pn = panel()
     out = {}
+    (root() / "preds").mkdir(exist_ok=True)
     for refit in REFITS:
         rows = split_rows(pn, refit)
         te = rows["test"]
@@ -529,6 +563,40 @@ def cmd_classical() -> None:
         print(refit, len(te), flush=True)
 
 
+def cmd_classical_x() -> None:
+    """Extra trial H-WS12-8: per-asset log-HAR-t with range and activity terms (harx), same rows as cmd_classical."""
+    from ai_trader.ml.models import bias_const
+
+    pn = panel()
+    M, S, X6 = pn["M"], pn["S"], pn["X6"].astype(float)
+    for refit in REFITS:
+        rows = split_rows(pn, refit)
+        te = np.load(root() / "preds" / f"rows_{refit}.npy")
+        assert np.array_equal(te, rows["test"]) and np.isfinite(X6[te]).all()
+        res = np.full((len(te), 3, 4), np.nan, np.float32)
+        for a in range(len(SYMBOLS)):
+            tr = rows["train"][pn["A"][rows["train"]] == a]
+            tr = tr[np.isfinite(X6[tr]).all(axis=1)]
+            ti = np.flatnonzero(pn["A"][te] == a)
+            tei = te[ti]
+            for j, h in enumerate(HS):
+                col = None if h == 1 else STATIC_FEATURES.index(f"lfac_n{h}")
+
+                def X(rr, col=col):
+                    lf = M[rr, 1] if col is None else S[rr, col]
+                    return np.c_[np.ones(len(rr)), M[rr, 0], lf, M[rr, 14], M[rr, 15], M[rr, 16], X6[rr, :4], np.abs(X6[rr, 4:])]
+
+                y, v = pn["Y"][tr, j].astype(float), pn["V"][tr, j].astype(float)
+                b, *_ = np.linalg.lstsq(X(tr), np.log(np.maximum(v, 1e-6)), rcond=None)
+                xb = X(tr) @ b
+                c = bias_const(v, xb)
+                lF_tr, lF_te = xb + c, X(tei) @ b + c
+                df_, loc, sc = t_fit(y / np.exp(0.5 * lF_tr))
+                res[ti, j] = np.c_[loc * np.exp(0.5 * lF_te), sc * np.exp(0.5 * lF_te), np.full(len(ti), df_), lF_te]
+        np.save(root() / "preds" / f"harx_{refit}.npy", res)
+        print(refit, "harx", len(te), flush=True)
+
+
 # ------------------------------------------------------------------ scoring
 
 
@@ -558,6 +626,8 @@ def main(argv=None) -> None:
     tr.add_argument("--arch", required=True)
     tr.add_argument("--refit", required=True)
     sub.add_parser("classical")
+    sub.add_parser("classical_x")
+    sub.add_parser("evaluate_extra")
     ev = sub.add_parser("evaluate")
     ev.add_argument("--record", action="store_true")
     a = ap.parse_args(argv)
@@ -567,6 +637,12 @@ def main(argv=None) -> None:
         cmd_train(a.arch, a.refit)
     elif a.cmd == "classical":
         cmd_classical()
+    elif a.cmd == "classical_x":
+        cmd_classical_x()
+    elif a.cmd == "evaluate_extra":
+        from ai_trader.research.ws12_eval import evaluate_extra
+
+        evaluate_extra()
     else:
         from ai_trader.research.ws12_eval import evaluate
 

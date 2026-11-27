@@ -203,6 +203,11 @@ def evaluate(record: bool = False) -> dict:
             out_h[sg] = o_s
         res["horizons"][f"{h}h"] = out_h
     res["verdicts"] = verdicts(res)
+    try:
+        res["pbo"] = pbo_configs()
+    except Exception as e:  # noqa: BLE001
+        res["pbo"] = {"error": repr(e)}
+    res["learning"] = learning()
     p = wd.load().root / "research" / "reports" / f"ws12_{wd.TAG}.json"
     p.write_text(json.dumps(res, indent=1, default=float), encoding="utf-8")
     print(json.dumps(res["verdicts"], indent=1, default=float))
@@ -274,3 +279,187 @@ def do_record(res: dict) -> None:
 
 
 __all__ = ["dm", "evaluate", "verdicts"]
+
+
+def properties() -> dict:
+    """Dossier section 2: empirical properties of the targets per asset (fit data = rows before the R1 refit)."""
+    from scipy import stats
+    from statsmodels.stats.diagnostic import acorr_ljungbox
+    from statsmodels.tsa.stattools import adfuller, kpss
+
+    pn = wd.panel()
+    cut = wd._us(wd.REFITS["R1"][0])
+    out = {}
+    for ai, sym in enumerate(wd.SYMBOLS):
+        o = {}
+        for j, h in enumerate(wd.HS):
+            m = (pn["A"] == ai) & np.isfinite(pn["Y"][:, j]) & (pn["T"] < cut)
+            m &= np.ones_like(m) if h == 1 else ((pn["hour"] % 4 == 0) if h == 4 else (pn["hour"] == 0))
+            y = pn["Y"][m, j].astype(float)
+            lv = np.log(np.maximum(pn["V"][m, j].astype(float), 1e-6))
+            ys = y[-6000:]
+            lvs = lv[-6000:]
+            import warnings
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                adf_lv, kpss_lv = adfuller(lvs, autolag="AIC")[1], kpss(lvs, nlags="auto")[1]
+            lb = acorr_ljungbox(y, lags=[10], return_df=False) if False else acorr_ljungbox(y, lags=[10])
+            lb2 = acorr_ljungbox(y * y, lags=[10])
+            df_, loc, sc = stats.t.fit(ys)
+            o[f"{h}h"] = {"n": int(len(y)), "mean": float(y.mean()), "sd": float(y.std()), "skew": float(stats.skew(y)),
+                          "exkurt": float(stats.kurtosis(y)), "t_df": float(df_), "lb10_p": float(lb["lb_pvalue"].iloc[0]),
+                          "lb10_sq_p": float(lb2["lb_pvalue"].iloc[0]), "adf_p_logv": float(adf_lv), "kpss_p_logv": float(kpss_lv),
+                          "acf1_logv": float(np.corrcoef(lv[1:], lv[:-1])[0, 1])}
+        out[sym] = o
+    p = wd.load().root / "research" / "reports" / f"ws12_properties_{wd.TAG}.json"
+    p.write_text(json.dumps(out, indent=1), encoding="utf-8")
+    return out
+
+
+def pbo_configs() -> dict:
+    """CSCV PBO over the 6 seed-0 candidates (3 archs x 2 lr) on per-date 1h losses (test period, both refits)."""
+    pn = wd.panel()
+    out = {}
+    names = [f"{a}_lr{lr:g}" for a in ARCHS for lr in wd.LRS]
+    for k in ("pinball", "qlike"):
+        cols, days = [], None
+        for nm in names:
+            a, lr = nm.split("_lr")
+            parts_d, parts_l = [], []
+            for r in wd.REFITS:
+                te = np.load(wd.root() / "preds" / f"rows_{r}.npy")
+                P = np.load(wd.root() / "preds" / f"{a}_{r}_lr{lr}_s0.npy")[:, 0]
+                y, v = pn["Y"][te, 0].astype(float), pn["V"][te, 0].astype(float)
+                o = _scores_t(P, y, v)
+                l_ = _from_q(o["q"], y)["pinball"] if k == "pinball" else v / o["F"] + np.log(o["F"])
+                parts_d.append(pn["T"][te].astype("datetime64[D]"))
+                parts_l.append(l_)
+            dd, ll = np.concatenate(parts_d), np.concatenate(parts_l)
+            ud, inv = np.unique(dd, return_inverse=True)
+            cols.append(np.bincount(inv, weights=ll) / np.bincount(inv))
+            days = ud
+        perf = -np.column_stack(cols)
+        out[k] = {"configs": names, "n_dates": int(len(days)), **pbo_mean(perf, 16)}
+    return out
+
+
+def pbo_mean(perf: np.ndarray, n_blocks: int = 16) -> dict:
+    """CSCV PBO (Bailey et al. 2017) with the MEAN per-period performance as the selection criterion (losses, not P&L)."""
+    from itertools import combinations
+
+    t, n = perf.shape
+    Lb = t // n_blocks
+    xb = perf[: Lb * n_blocks].reshape(n_blocks, Lb, n).mean(axis=1)  # (S, N) block means
+    combos = list(combinations(range(n_blocks), n_blocks // 2))
+    lam, wins = [], np.zeros(n, int)
+    for c in combos:
+        m = np.zeros(n_blocks, bool)
+        m[list(c)] = True
+        is_, oos = xb[m].mean(axis=0), xb[~m].mean(axis=0)
+        b = int(np.argmax(is_))
+        wins[b] += 1
+        rank = (oos < oos[b]).sum() + 0.5 * ((oos == oos[b]).sum() - 1) + 1
+        w = rank / (n + 1)
+        lam.append(math.log(w / (1 - w)))
+    lam = np.array(lam)
+    return {"pbo": float(np.mean(lam <= 0)), "logit_median": float(np.median(lam)), "n_splits": len(combos), "is_winner_counts": wins.tolist()}
+
+
+def learning() -> dict:
+    """Learning-curve summary per run: epochs to the best validation loss, best val, train loss at that epoch."""
+    out = {}
+    for f in sorted((wd.root() / "models").glob("*.json")):
+        m = json.loads(f.read_text(encoding="utf-8"))
+        c = np.array(m["curve"])
+        b = int(np.argmin(c[:, 1]))
+        out[f.stem] = {"epochs_run": int(len(c)), "best_epoch": b + 1, "val_best": float(c[b, 1]), "train_at_best": float(c[b, 0]),
+                       "val_first": float(c[0, 1]), "secs": float(m["secs"]), "params": int(m["params"])}
+    return out
+
+
+def evaluate_extra() -> dict:
+    """Extra trials H-WS12-8 / H-WS12-9: D* vs harx and mlpx (and harx vs har, mlpx vs mlp), all horizons and metrics."""
+    from ai_trader.features.vol_panel import mcs
+
+    pn = wd.panel()
+    cut = _cut()
+    nets = ("gru", "tcn", "mlp", "mlpx")
+    logs = {(a, r): json.loads((wd.root() / "logs" / f"train_{a}_{r}.json").read_text(encoding="utf-8")) for a in nets for r in wd.REFITS}
+    out: dict = {"horizons": {}, "chosen_lr": {f"{a}_{r}": v["chosen_lr"] for (a, r), v in logs.items()}}
+    for j, h in enumerate(wd.HS):
+        L = {m: {k: [] for k in METRICS} for m in (*nets, "har", "harx")}
+        T_all = []
+        for r in wd.REFITS:
+            te = np.load(wd.root() / "preds" / f"rows_{r}.npy")
+            emp_q = np.load(wd.root() / "preds" / f"emp_q_{r}.npy")
+            emp_F = np.load(wd.root() / "preds" / f"emp_F_{r}.npy")
+            hr = pn["hour"][te]
+            sel = np.ones(len(te), bool) if h == 1 else ((hr % 4 == 0) if h == 4 else (hr == 0))
+            sel &= np.isfinite(emp_q[:, j, 0]) & np.isfinite(emp_F[:, j])  # the same rows as evaluate()
+            ii = np.flatnonzero(sel)
+            rows = te[ii]
+            y, v = pn["Y"][rows, j].astype(float), pn["V"][rows, j].astype(float)
+            T_all.append(pn["T"][rows])
+            for a in nets:
+                lr = logs[(a, r)]["chosen_lr"]
+                qs, lp, F = 0.0, [], 0.0
+                for s in wd.SEEDS:
+                    o = _scores_t(np.load(wd.root() / "preds" / f"{a}_{r}_lr{lr:g}_s{s}.npy")[ii, j], y, v)
+                    qs, F = qs + o["q"] / len(wd.SEEDS), F + o["F"] / len(wd.SEEDS)
+                    lp.append(o["lpdf"])
+                sc = _from_q(qs, y)
+                L[a]["pinball"].append(sc["pinball"])
+                L[a]["crps"].append(sc["crps"])
+                L[a]["logscore"].append(-(np.logaddexp.reduce(np.vstack(lp), axis=0) - math.log(len(lp))))
+                L[a]["qlike"].append(v / F + np.log(F))
+            for c in ("har", "harx"):
+                o = _scores_t(np.load(wd.root() / "preds" / f"{c}_{r}.npy")[ii, j], y, v)
+                sc = _from_q(o["q"], y)
+                L[c]["pinball"].append(sc["pinball"])
+                L[c]["crps"].append(sc["crps"])
+                L[c]["logscore"].append(-o["lpdf"])
+                L[c]["qlike"].append(v / o["F"] + np.log(o["F"]))
+        T = np.concatenate(T_all)
+        LL = {m: {k: np.concatenate(x) for k, x in d.items()} for m, d in L.items()}
+        seg = np.where(T < cut, "llm_in_sample", "clean_holdout")
+        day = T.astype("datetime64[D]")
+        oh = {}
+        for sg in ("llm_in_sample", "clean_holdout"):
+            msk = seg == sg
+            ud, inv = np.unique(day[msk], return_inverse=True)
+            cnt = np.bincount(inv, minlength=len(ud))
+            pdm = {m: {k: np.bincount(inv, weights=LL[m][k][msk], minlength=len(ud)) / cnt for k in METRICS} for m in LL}
+            pairs = (("gru", "harx"), ("gru", "mlpx"), ("harx", "har"), ("mlpx", "mlp"), ("mlpx", "harx"), ("tcn", "harx"))
+            o = {"mean": {m: {k: float(LL[m][k][msk].mean()) for k in METRICS} for m in LL},
+                 "dm": {f"{a}-{b}": {k: dm(pdm[a][k] - pdm[b][k]) for k in METRICS} for a, b in pairs}, "mcs": {}}
+            for k in METRICS:
+                ms = list(LL)
+                mm = mcs(np.column_stack([pdm[m][k] for m in ms]), alpha=0.10, block=10, B=1000, seed=0)
+                o["mcs"][k] = {m: {"in": bool(mm["included"][i]), "p": float(mm["pvalues"][i])} for i, m in enumerate(ms)}
+            oh[sg] = o
+        out["horizons"][f"{h}h"] = oh
+    v: dict = {"H-WS12-8": {}, "H-WS12-9": {}}
+    for sg in ("llm_in_sample", "clean_holdout"):
+        d8 = [out["horizons"]["1h"][sg]["dm"]["gru-harx"][k] for k in ("pinball", "qlike")]
+        d9 = [out["horizons"]["1h"][sg]["dm"]["gru-mlpx"][k] for k in ("pinball", "qlike")]
+        v["H-WS12-8"][sg] = {"pinball": d8[0], "qlike": d8[1], "beats": [x["mean"] < 0 and x["t"] < -2 for x in d8],
+                             "nonneg": [x["mean"] >= 0 for x in d8]}
+        v["H-WS12-9"][sg] = {"pinball": d9[0], "qlike": d9[1], "beats": [x["mean"] < 0 and x["t"] < -2 for x in d9]}
+        b8, b9 = v["H-WS12-8"][sg]["beats"], v["H-WS12-9"][sg]["beats"]
+        v["H-WS12-8"][sg]["verdict"] = "supports" if all(b8) else ("contradicts" if any(v["H-WS12-8"][sg]["nonneg"]) else "inconclusive")
+        v["H-WS12-9"][sg]["verdict"] = "supports" if not any(b9) else ("contradicts" if all(b9) else "inconclusive")
+    segs = ("llm_in_sample", "clean_holdout")
+    if all(all(v["H-WS12-8"][sg]["beats"]) for sg in segs):
+        v["H-WS12-8"]["pooled"] = "supports"
+    elif any(all(v["H-WS12-8"][sg]["nonneg"][i] for sg in segs) for i in range(2)):
+        v["H-WS12-8"]["pooled"] = "contradicts"
+    else:
+        v["H-WS12-8"]["pooled"] = "inconclusive"
+    per_metric = [all(v["H-WS12-9"][sg]["beats"][i] for sg in segs) for i in range(2)]
+    v["H-WS12-9"]["pooled"] = "contradicts" if all(per_metric) else ("supports" if not any(per_metric) else "inconclusive")
+    out["verdicts"] = v
+    p = wd.load().root / "research" / "reports" / f"ws12_extra_{wd.TAG}.json"
+    p.write_text(json.dumps(out, indent=1, default=float), encoding="utf-8")
+    print(json.dumps(v, indent=1, default=float))
+    return out
