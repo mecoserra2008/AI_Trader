@@ -64,5 +64,6 @@ defaults:
   known_ts_latency_ms:
     alternative_me_fng: 3600000  # value for day D is published shortly after D 00:00 UTC
     deribit_dvol: 2000           # after candle close
+    deribit_funding: 2000        # after the hour the funding entry covers (as in the 2026-11-10 import)
     defillama_stablecoins: 86400000
     fred_alfred: 86400000        # vintage date + 1 day (release times are intraday)

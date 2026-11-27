@@ -1,12 +1,16 @@
 //! Live market-data updater (`atx update`): keeps bars, funding, open interest, DVOL and
 //! Fear & Greed current in the lake between manual backfills. Config: `live:` in settings.yaml.
+//! Since 2026-11-27 (D8) it also runs the feeds that used to be one-off backfills and went stale on
+//! 2026-11-07..10: the daily instrument snapshot, DefiLlama stablecoins, Deribit perp funding and the
+//! `live.extra` streams (open interest at other intervals, long/short ratio, index bars).
 //!
 //! Each stream (e.g. `bars/last/1h/BTCUSDT`) has a cursor in `data/state/updater_cursor.json`:
 //! the event_ts of the newest row written. A stream is polled when its next item should exist
 //! (cursor + step + availability lag); only rows strictly newer than the cursor are written, and
 //! the cursor advances only after the lake write succeeded. New rows of one cycle are merged into
-//! one write per table (one Parquet file per partition, not one per stream). Without a cursor a stream starts at
-//! now - `backfill_days` (overlapping existing data is harmless: the reader de-duplicates).
+//! one write per table (one Parquet file per partition, not one per stream). Without a cursor a stream resumes
+//! from the newest row already in the lake for that stream (no duplicate rows, no hole after a long stop), else
+//! it starts at now - `backfill_days`.
 //! Per-stream errors are logged and retried with capped exponential backoff; the loop never stops.
 
 use std::collections::{BTreeMap, HashMap};
@@ -25,6 +29,10 @@ use serde_yaml::Value as Yaml;
 use tokio::sync::Notify;
 
 use crate::cmd::Ctx;
+
+/// The daily instrument snapshot is taken at 00:05 UTC.
+const INSTRUMENTS_AT: Ms = 5 * 60 * SECOND;
+const HOUR: Ms = 3_600 * SECOND;
 
 /// 23 long-history research symbols + 13 TradFi perps (flow.streams).
 pub const DEFAULT_SYMBOLS: [&str; 36] = [
@@ -54,6 +62,55 @@ pub struct LiveCfg {
     pub bar_grace_secs: u64,
     pub backfill_days: i64,
     pub cursor_file: PathBuf,
+    /// Daily linear instrument snapshot (survivorship, WS09).
+    pub instruments: bool,
+    /// DefiLlama total stablecoin supply, daily.
+    pub stablecoins: bool,
+    /// Deribit perpetual funding (hourly) for these currencies.
+    pub deribit_funding: Vec<String>,
+    /// Extra per-symbol streams beyond the per-symbol defaults.
+    pub extra: Vec<Extra>,
+}
+
+/// One `live.extra` entry: a stream kind at a given resolution for a list of symbols.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Extra {
+    Oi { interval: String, symbols: Vec<String> },
+    Lsr { period: String, symbols: Vec<String> },
+    Bars { pt: PriceType, freq: Freq, symbols: Vec<String> },
+}
+
+fn parse_extra(v: &Yaml) -> anyhow::Result<Vec<Extra>> {
+    let xs = match v {
+        Yaml::Null => return Ok(Vec::new()),
+        Yaml::Sequence(xs) => xs,
+        _ => bail!("live.extra: expected a list of {{kind: ..., symbols: [...]}}"),
+    };
+    let mut out = Vec::new();
+    for x in xs {
+        let symbols = dedup_upper(str_list(x.get("symbols").unwrap_or(&Yaml::Null), "extra.symbols")?);
+        anyhow::ensure!(!symbols.is_empty(), "live.extra: every entry needs symbols");
+        let field = |k: &str| x.get(k).and_then(Yaml::as_str).map(str::to_string);
+        out.push(match field("kind").as_deref() {
+            Some("open_interest") => {
+                let interval = field("interval").context("live.extra open_interest: interval missing")?;
+                period_ms(&interval).context("live.extra open_interest.interval")?;
+                Extra::Oi { interval, symbols }
+            }
+            Some("ls_ratio") => {
+                let period = field("period").context("live.extra ls_ratio: period missing")?;
+                period_ms(&period).context("live.extra ls_ratio.period")?;
+                Extra::Lsr { period, symbols }
+            }
+            Some("bars") => Extra::Bars {
+                pt: PriceType::parse(&field("price_type").unwrap_or_else(|| "last".into()))?,
+                freq: Freq::parse(&field("freq").context("live.extra bars: freq missing")?)?,
+                symbols,
+            },
+            k => bail!("live.extra: unknown kind {k:?} (open_interest | ls_ratio | bars)"),
+        });
+    }
+    Ok(out)
 }
 
 fn str_list(v: &Yaml, what: &str) -> anyhow::Result<Vec<String>> {
@@ -151,6 +208,10 @@ impl LiveCfg {
             bar_grace_secs: u64_or("bar_grace_secs", 5)?,
             backfill_days: u64_or("backfill_days", 3)? as i64,
             cursor_file,
+            instruments: bool_or("instruments", false)?,
+            stablecoins: bool_or("stablecoins", false)?,
+            deribit_funding: str_list(get("deribit_funding"), "deribit_funding")?.into_iter().map(|s| s.to_uppercase()).collect(),
+            extra: parse_extra(get("extra"))?,
         };
         Ok(cfg)
     }
@@ -262,8 +323,12 @@ enum Stream {
     Bars { sym: String, freq: Freq, pt: PriceType },
     Funding { sym: String },
     Oi { sym: String, interval: String, period: Ms },
+    Lsr { sym: String, period: String, period_ms: Ms },
     Dvol { cur: String },
     Fng,
+    Instruments,
+    Stablecoins,
+    DeribitFunding { cur: String },
 }
 
 impl Stream {
@@ -272,10 +337,90 @@ impl Stream {
             Stream::Bars { sym, freq, pt } => format!("bars/{}/{freq}/{sym}", pt.as_str()),
             Stream::Funding { sym } => format!("funding/{sym}"),
             Stream::Oi { sym, interval, .. } => format!("open_interest/{interval}/{sym}"),
+            Stream::Lsr { sym, period, .. } => format!("ls_ratio/{period}/{sym}"),
             Stream::Dvol { cur } => format!("dvol/{cur}"),
             Stream::Fng => "fng".to_string(),
+            Stream::Instruments => "instruments".to_string(),
+            Stream::Stablecoins => "stablecoins".to_string(),
+            Stream::DeribitFunding { cur } => format!("deribit_funding/{cur}"),
         }
     }
+
+    /// Where this stream's rows live in the lake: partition path under the lake root and the row
+    /// filters (file columns) that select it. Used to resume a stream that has no cursor.
+    fn lake_location(&self) -> (Vec<String>, Vec<(&'static str, String)>) {
+        let v = |s: &str| s.to_string();
+        match self {
+            Stream::Bars { sym, freq, pt } => (vec![v("bars"), v("venue=bybit"), format!("price_type={}", pt.as_str()), format!("freq={freq}")], vec![("symbol", sym.clone())]),
+            Stream::Funding { sym } => (vec![v("funding"), v("venue=bybit")], vec![("symbol", sym.clone())]),
+            Stream::Oi { sym, interval, .. } => (vec![v("open_interest"), v("venue=bybit"), format!("interval={interval}")], vec![("symbol", sym.clone())]),
+            Stream::Lsr { sym, period, .. } => (vec![v("ls_ratio"), v("venue=bybit"), format!("period={period}")], vec![("symbol", sym.clone())]),
+            Stream::Dvol { cur } => (vec![v("alt_series"), format!("source={}", alt::deribit::SOURCE)], vec![("series_id", v("dvol_close")), ("entity", cur.clone())]),
+            Stream::Fng => (vec![v("alt_series"), format!("source={}", alt::fng::SOURCE)], vec![]),
+            Stream::Instruments => (vec![v("instruments"), v("venue=bybit")], vec![]),
+            Stream::Stablecoins => (vec![v("alt_series"), format!("source={}", alt::defillama::SOURCE)], vec![("series_id", v("stablecoins_total_usd"))]),
+            Stream::DeribitFunding { cur } => (vec![v("alt_series"), format!("source={}", alt::deribit::SOURCE)], vec![("series_id", v("perp_funding_1h")), ("entity", cur.clone())]),
+        }
+    }
+}
+
+// ---------------------------------------------------------------- resume from the lake
+
+fn col_as(rb: &arrow::record_batch::RecordBatch, name: &str, ty: &arrow::datatypes::DataType) -> Option<arrow::array::ArrayRef> {
+    rb.column_by_name(name).and_then(|a| arrow::compute::cast(a, ty).ok())
+}
+
+/// Newest `event_ts` among the rows of one Parquet file that match `filters` (compared as strings).
+fn file_newest(path: &Path, filters: &[(&str, String)]) -> anyhow::Result<Option<Ms>> {
+    use arrow::array::{Array, Int64Array, StringArray};
+    use arrow::datatypes::DataType;
+    let f = std::fs::File::open(path)?;
+    let reader = parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder::try_new(f)?.build()?;
+    let mut best: Option<Ms> = None;
+    for rb in reader {
+        let rb = rb?;
+        let ev = col_as(&rb, "event_ts", &DataType::Int64).context("event_ts")?;
+        let ev = ev.as_any().downcast_ref::<Int64Array>().context("event_ts as i64")?;
+        let mut cols = Vec::new();
+        for (c, want) in filters {
+            let Some(a) = col_as(&rb, c, &DataType::Utf8) else { return Ok(None) };
+            cols.push((a, want));
+        }
+        for i in 0..rb.num_rows() {
+            let keep = cols.iter().all(|(a, want)| {
+                a.as_any().downcast_ref::<StringArray>().is_some_and(|c| !c.is_null(i) && c.value(i) == want.as_str())
+            });
+            if keep && !ev.is_null(i) {
+                best = Some(best.map_or(ev.value(i), |b: Ms| b.max(ev.value(i))));
+            }
+        }
+    }
+    Ok(best)
+}
+
+/// Newest `event_ts` of a stream already in the lake. Year partitions are scanned newest first; the
+/// first one with a matching row decides. `None` when the stream has no rows.
+pub fn lake_newest(root: &Path, parts: &[String], filters: &[(&str, String)]) -> anyhow::Result<Option<Ms>> {
+    let dir = parts.iter().fold(root.to_path_buf(), |d, p| d.join(p));
+    let Ok(rd) = std::fs::read_dir(&dir) else { return Ok(None) };
+    let parquet_in = |d: &Path| -> Vec<PathBuf> {
+        std::fs::read_dir(d).map(|rd| rd.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "parquet")).collect()).unwrap_or_default()
+    };
+    let mut years: Vec<PathBuf> = rd.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.is_dir() && p.file_name().is_some_and(|n| n.to_string_lossy().starts_with("year="))).collect();
+    years.sort();
+    let groups: Vec<Vec<PathBuf>> = if years.is_empty() { vec![parquet_in(&dir)] } else { years.iter().rev().map(|y| parquet_in(y)).collect() };
+    for g in groups {
+        let mut best: Option<Ms> = None;
+        for f in g {
+            if let Some(t) = file_newest(&f, filters).with_context(|| f.display().to_string())? {
+                best = Some(best.map_or(t, |b| b.max(t)));
+            }
+        }
+        if best.is_some() {
+            return Ok(best);
+        }
+    }
+    Ok(None)
 }
 
 /// Rows staged in one cycle: table -> (merged batch, (stream key, newest event_ts) per stream).
@@ -323,7 +468,20 @@ impl<'a> Updater<'a> {
             Stream::Oi { period, .. } => Some(Cadence { step: *period, lag: *period + grace }),
             Stream::Dvol { .. } => Some(Cadence { step: self.dvol_res_ms, lag: self.dvol_res_ms + self.ctx.alt_latency("deribit_dvol") + grace }),
             Stream::Fng => Some(Cadence { step: DAY, lag: self.ctx.alt_latency("alternative_me_fng") }),
+            Stream::Lsr { period_ms, .. } => Some(Cadence { step: *period_ms, lag: *period_ms + grace }),
+            Stream::Stablecoins => Some(Cadence { step: DAY, lag: self.ctx.alt_latency("defillama_stablecoins") + grace }),
+            Stream::DeribitFunding { .. } => Some(Cadence { step: HOUR, lag: HOUR + self.ctx.alt_latency("deribit_funding") + grace }),
+            // Daily snapshot at 00:05 UTC: see `due_at`.
+            Stream::Instruments => Some(Cadence { step: DAY, lag: 0 }),
             Stream::Funding { .. } => None,
+        }
+    }
+
+    /// When the stream's next item is due (None = polled on a timer, i.e. funding).
+    fn due_at(&self, s: &Stream, cursor: Option<Ms>) -> Option<Ms> {
+        match s {
+            Stream::Instruments => Some(instruments_due(cursor)),
+            _ => self.cadence(s).map(|c| c.next_due(cursor)),
         }
     }
 
@@ -331,8 +489,8 @@ impl<'a> Updater<'a> {
         if self.retry.get(key).is_some_and(|r| now < r.not_before) {
             return false;
         }
-        match self.cadence(s) {
-            Some(c) => now >= c.next_due(self.cursors.get(key)),
+        match self.due_at(s, self.cursors.get(key)) {
+            Some(t) => now >= t,
             None => self.last_poll.get(key).is_none_or(|&t| now - t >= self.cfg.funding_poll_secs as Ms * SECOND),
         }
     }
@@ -369,6 +527,31 @@ impl<'a> Updater<'a> {
                 let xs = self.md.open_interest(sym, interval, start, end).await?;
                 let (rows, newest) = plan_write(cursor, start, xs, |x| x.ts);
                 ("open_interest", bl::open_interest(sym, interval, *period, &rows, ctx.latency("open_interest")), newest)
+            }
+            Stream::Lsr { sym, period, period_ms } => {
+                // Complete periods only, as for open interest.
+                let end = (now - grace) - (now - grace).rem_euclid(*period_ms);
+                if start >= end {
+                    return Ok(None);
+                }
+                let xs = self.md.long_short_ratio(sym, period, start, end).await?;
+                let (rows, newest) = plan_write(cursor, start, xs, |x| x.ts);
+                ("ls_ratio", bl::ls_ratio(sym, period, *period_ms, &rows, ctx.latency("ls_ratio")), newest)
+            }
+            Stream::Instruments => {
+                let xs = self.md.instruments().await?;
+                let (rows, newest) = plan_write(cursor, start, xs, |_| now);
+                ("instruments", bl::instruments(ctx.category(), &rows, now), newest)
+            }
+            Stream::Stablecoins => {
+                let xs = alt::defillama::stablecoins_total(&self.http, ctx.alt_latency("defillama_stablecoins")).await?;
+                let (rows, newest) = plan_write(cursor, start, xs, |o| o.event_ts);
+                ("alt_series", alt::to_batch(alt::defillama::SOURCE, alt::defillama::PIT, &rows), newest)
+            }
+            Stream::DeribitFunding { cur } => {
+                let xs = alt::deribit::perp_funding(&self.http, cur, start, now, ctx.alt_latency("deribit_funding")).await?;
+                let (rows, newest) = plan_write(cursor, start, xs, |o| o.event_ts);
+                ("alt_series", alt::to_batch(alt::deribit::SOURCE, alt::deribit::PIT, &rows), newest)
             }
             Stream::Dvol { cur } => {
                 let xs = alt::deribit::dvol(&self.http, cur, &self.cfg.dvol_resolution, start, now, ctx.alt_latency("deribit_dvol")).await?;
@@ -483,12 +666,12 @@ impl<'a> Updater<'a> {
         let mut worst = (0, "-".to_string());
         let mut uninit = 0;
         for s in &self.streams {
-            let Some(c) = self.cadence(s) else { continue };
             let key = s.key();
+            let Some(due) = self.due_at(s, self.cursors.get(&key)) else { continue };
             match self.cursors.get(&key) {
                 None => uninit += 1,
-                Some(cur) => {
-                    let over = now - c.next_due(Some(cur));
+                Some(_) => {
+                    let over = now - due;
                     if over > worst.0 {
                         worst = (over, key);
                     }
@@ -497,6 +680,72 @@ impl<'a> Updater<'a> {
         }
         (worst.0, worst.1, uninit)
     }
+}
+
+/// 00:05 UTC of the day after the last snapshot (due at once without one).
+pub fn instruments_due(cursor: Option<Ms>) -> Ms {
+    cursor.map_or(Ms::MIN, |c| c - c.rem_euclid(DAY) + DAY + INSTRUMENTS_AT)
+}
+
+/// Streams from `live.instruments`, `live.stablecoins`, `live.deribit_funding` and `live.extra`, without
+/// duplicating a per-symbol default stream (same key).
+fn extra_streams(cfg: &LiveCfg) -> anyhow::Result<Vec<Stream>> {
+    let mut out = Vec::new();
+    if cfg.instruments {
+        out.push(Stream::Instruments);
+    }
+    if cfg.stablecoins {
+        out.push(Stream::Stablecoins);
+    }
+    out.extend(cfg.deribit_funding.iter().map(|c| Stream::DeribitFunding { cur: c.clone() }));
+    for x in &cfg.extra {
+        match x {
+            Extra::Oi { interval, symbols } => {
+                let period = period_ms(interval)?;
+                for s in symbols {
+                    if cfg.oi_interval.as_deref() == Some(interval.as_str()) && cfg.symbols.contains(s) {
+                        continue;
+                    }
+                    out.push(Stream::Oi { sym: s.clone(), interval: interval.clone(), period });
+                }
+            }
+            Extra::Lsr { period, symbols } => {
+                let pm = period_ms(period)?;
+                out.extend(symbols.iter().map(|s| Stream::Lsr { sym: s.clone(), period: period.clone(), period_ms: pm }));
+            }
+            Extra::Bars { pt, freq, symbols } => {
+                for s in symbols {
+                    if cfg.symbols.contains(s) && cfg.price_types.contains(pt) && cfg.bar_freqs.contains(freq) {
+                        continue;
+                    }
+                    out.push(Stream::Bars { sym: s.clone(), freq: *freq, pt: *pt });
+                }
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// Give every stream without a cursor the newest event_ts already in the lake. Returns how many were seeded.
+fn seed_cursors(cursors: &mut Cursors, streams: &[Stream], root: &Path) -> usize {
+    let mut n = 0;
+    for s in streams {
+        let key = s.key();
+        if cursors.get(&key).is_some() {
+            continue;
+        }
+        let (parts, filters) = s.lake_location();
+        match lake_newest(root, &parts, &filters) {
+            Ok(Some(t)) => {
+                cursors.advance(&key, t);
+                tracing::info!(stream = %key, newest = %to_datetime(t).to_rfc3339(), "resuming from the lake");
+                n += 1;
+            }
+            Ok(None) => {}
+            Err(e) => tracing::warn!(stream = %key, "could not read the lake to resume ({e:#}); starting from backfill_days"),
+        }
+    }
+    n
 }
 
 fn fmt_dur(ms: Ms) -> String {
@@ -540,7 +789,15 @@ pub async fn run(ctx: &Ctx, once: bool) -> anyhow::Result<()> {
     if cfg.fng {
         streams.push(Stream::Fng);
     }
-    let cursors = Cursors::load(&cfg.cursor_file);
+    streams.extend(extra_streams(&cfg)?);
+    let mut cursors = Cursors::load(&cfg.cursor_file);
+    let seeded = seed_cursors(&mut cursors, &streams, ctx.lake.root());
+    if seeded > 0 {
+        tracing::info!("{seeded} streams without a cursor resume from the newest lake row");
+        if let Err(e) = cursors.save(&cfg.cursor_file) {
+            tracing::error!("saving seeded cursors failed: {e:#}");
+        }
+    }
     tracing::info!(
         "updater: {} symbols, {} streams, {} cursors loaded from {}, poll {}s{}",
         cfg.symbols.len(),
@@ -739,6 +996,84 @@ mod tests {
             let y: Yaml = serde_yaml::from_str(bad).unwrap();
             assert!(LiveCfg::from_yaml(&y, Path::new(".")).is_err(), "{bad} should fail");
         }
+    }
+
+    #[test]
+    fn config_new_feeds_and_extra_streams() {
+        let cfg = LiveCfg::from_yaml(&Yaml::Null, Path::new(".")).unwrap();
+        assert!(!cfg.instruments && !cfg.stablecoins && cfg.deribit_funding.is_empty() && cfg.extra.is_empty(), "off unless configured");
+        let y: Yaml = serde_yaml::from_str(
+            "symbols: [BTCUSDT, ETHUSDT]\ninstruments: true\nstablecoins: true\nderibit_funding: [btc, ETH]\nextra:\n  - {kind: open_interest, interval: 1h, symbols: [BTCUSDT]}\n  - {kind: open_interest, interval: 4h, symbols: [BTCUSDT, SOLUSDT]}\n  - {kind: ls_ratio, period: 4h, symbols: [btcusdt, ETHUSDT]}\n  - {kind: bars, price_type: index, freq: 1h, symbols: [BTCUSDT]}\n  - {kind: bars, price_type: last, freq: 1h, symbols: [BTCUSDT]}\n",
+        )
+        .unwrap();
+        let cfg = LiveCfg::from_yaml(&y, Path::new(".")).unwrap();
+        assert!(cfg.instruments && cfg.stablecoins);
+        assert_eq!(cfg.deribit_funding, vec!["BTC", "ETH"]);
+        assert_eq!(cfg.extra[2], Extra::Lsr { period: "4h".into(), symbols: vec!["BTCUSDT".into(), "ETHUSDT".into()] });
+        let keys: Vec<String> = extra_streams(&cfg).unwrap().iter().map(Stream::key).collect();
+        assert_eq!(
+            keys,
+            vec![
+                "instruments",
+                "stablecoins",
+                "deribit_funding/BTC",
+                "deribit_funding/ETH",
+                "open_interest/1h/BTCUSDT",
+                // BTCUSDT 4h OI is already a default stream; SOLUSDT is not in live.symbols
+                "open_interest/4h/SOLUSDT",
+                "ls_ratio/4h/BTCUSDT",
+                "ls_ratio/4h/ETHUSDT",
+                // last 1h BTCUSDT is a default stream
+                "bars/index/1h/BTCUSDT",
+            ]
+        );
+        for bad in ["extra: [{kind: oi, symbols: [BTCUSDT]}]", "extra: [{kind: ls_ratio, period: 3h, symbols: [BTCUSDT]}]", "extra: [{kind: bars, freq: 1h}]", "extra: {kind: bars}"] {
+            let y: Yaml = serde_yaml::from_str(bad).unwrap();
+            assert!(LiveCfg::from_yaml(&y, Path::new(".")).is_err(), "{bad} should fail");
+        }
+    }
+
+    #[test]
+    fn instruments_snapshot_is_daily_at_0005() {
+        assert_eq!(instruments_due(None), Ms::MIN);
+        let day = 1_795_737_600_000; // 2026-11-27 00:00 UTC
+        assert_eq!(instruments_due(Some(day + 21 * 3_600_000)), day + DAY + INSTRUMENTS_AT);
+        assert_eq!(instruments_due(Some(day + INSTRUMENTS_AT + 1_234)), day + DAY + INSTRUMENTS_AT);
+    }
+
+    #[test]
+    fn lake_newest_resumes_each_stream_from_its_own_rows() {
+        use at_bybit::market::LongShortRatio;
+        let dir = std::env::temp_dir().join(format!("atx_lake_newest_{}", std::process::id()));
+        let schema = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../config/schema.yaml");
+        let lake = at_store::Lake::open(&dir, &schema).unwrap();
+        let h = 3_600_000;
+        let t0 = 1_762_473_600_000; // 2025-11-07
+        let t1 = 1_794_009_600_000; // 2026-11-07
+        let rows = |t: Ms| vec![LongShortRatio { ts: t, buy_ratio: 0.6, sell_ratio: 0.4 }, LongShortRatio { ts: t + 4 * h, buy_ratio: 0.5, sell_ratio: 0.5 }];
+        lake.write("ls_ratio", &bl::ls_ratio("BTCUSDT", "4h", 4 * h, &rows(t0), 2_000)).unwrap();
+        lake.write("ls_ratio", &bl::ls_ratio("BTCUSDT", "4h", 4 * h, &rows(t1), 2_000)).unwrap();
+        lake.write("ls_ratio", &bl::ls_ratio("ETHUSDT", "4h", 4 * h, &rows(t0), 2_000)).unwrap();
+        let obs = |series: &str, ent: &str, t: Ms| alt::Obs { series_id: series.into(), entity: ent.into(), event_ts: t, value: Some(1.0), vintage: None, known_ts: t + h };
+        lake.write("alt_series", &alt::to_batch("deribit", alt::PitQuality::Native, &[obs("perp_funding_1h", "BTC", t1), obs("perp_funding_8h", "BTC", t1 + h), obs("dvol_close", "BTC", t1 + 9 * h)])).unwrap();
+        let s = |sym: &str| Stream::Lsr { sym: sym.into(), period: "4h".into(), period_ms: 4 * h };
+        let newest = |st: &Stream| {
+            let (p, f) = st.lake_location();
+            lake_newest(&dir, &p, &f).unwrap()
+        };
+        assert_eq!(newest(&s("BTCUSDT")), Some(t1 + 4 * h), "newest year partition wins");
+        assert_eq!(newest(&s("ETHUSDT")), Some(t0 + 4 * h), "falls back to older years");
+        assert_eq!(newest(&s("SOLUSDT")), None);
+        assert_eq!(newest(&Stream::DeribitFunding { cur: "BTC".into() }), Some(t1), "series and entity filters");
+        assert_eq!(newest(&Stream::DeribitFunding { cur: "ETH".into() }), None);
+        assert_eq!(newest(&Stream::Dvol { cur: "BTC".into() }), Some(t1 + 9 * h));
+        let mut cs = Cursors::default();
+        cs.advance("ls_ratio/4h/ETHUSDT", t1);
+        assert_eq!(seed_cursors(&mut cs, &[s("BTCUSDT"), s("ETHUSDT"), s("SOLUSDT")], &dir), 1);
+        assert_eq!(cs.get("ls_ratio/4h/BTCUSDT"), Some(t1 + 4 * h));
+        assert_eq!(cs.get("ls_ratio/4h/ETHUSDT"), Some(t1), "an existing cursor is never replaced");
+        assert_eq!(cs.get("ls_ratio/4h/SOLUSDT"), None);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

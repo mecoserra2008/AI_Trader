@@ -4,9 +4,9 @@
 #
 #   powershell -ExecutionPolicy Bypass -File scripts\updater.ps1
 #
-# Persistent setup (survives logoff/reboot): Task Scheduler -> Create Task ->
-#   Trigger: At startup; Action: powershell.exe -ExecutionPolicy Bypass -File <repo>\scripts\updater.ps1
-#   Settings: "If the task fails, restart every 1 minute".
+# No Task Scheduler / Startup-folder entry (standing user constraint): the desk normally starts the updater with
+# `bash scripts/ops/desk_start.sh`, which must be run again after every reboot. Since D8 (2026-11-27) it also runs the
+# instrument snapshot, stablecoins, Deribit funding and live.extra (OI 1h, ls_ratio, index bars).
 # Check staleness any time: PYTHONIOENCODING=utf-8 uv run python scripts/freshness.py
 
 $ErrorActionPreference = "Continue"

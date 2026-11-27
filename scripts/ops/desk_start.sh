@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Start every desk process detached (survives session interrupts). PIDs -> logs/run/<name>.pid. Stop: scripts/ops/desk_stop.sh
+# Start every desk process detached (survives session interrupts). PIDs -> logs/run/<name>.pid. Stop: scripts/ops/desk_stop.sh. Usage: desk_start.sh [name ...]
+# No OS auto-start (no Task Scheduler / Startup-folder entry, a standing user constraint): run this script again after every reboot.
 cd "C:/Users/Asus/Desktop/AI_Trader"
-start() { name=$1; shift; nohup bash -c "$*" >/dev/null 2>&1 & echo $! > logs/run/$name.pid; echo "$name msys pid $!"; }
+ONLY=" $* "   # optional: names to start (e.g. `desk_start.sh daily_ops`); none = all
+start() { name=$1; shift; [ "$ONLY" != "  " ] && [[ "$ONLY" != *" $name "* ]] && return 0; nohup bash -c "$*" >/dev/null 2>&1 & echo $! > logs/run/$name.pid; echo "$name msys pid $!"; }
 export RUST_LOG=info PYTHONIOENCODING=utf-8
 start updater   'while true; do L=logs/updater_$(date -u +%Y%m%d).log; echo "### start $(date -u +%FT%TZ)" >> $L; ./bin/atx-updater.exe update --loop >> $L 2>&1; echo "### exited $?; restart in 10s" >> $L; sleep 10; done'
 start collector 'while true; do L=logs/collector_$(date -u +%Y%m%d).log; echo "### start $(date -u +%FT%TZ)" >> $L; ./bin/atx-collector.exe collect >> $L 2>&1; echo "### exited $?; restart in 10s" >> $L; sleep 10; done'
@@ -17,3 +19,7 @@ start xs_v4        'uv run --extra ml python scripts/live_xs_v4.py --loop >> dat
 # Plan time stops (intent context.time_stop_h): closes due BOT trades reduce-only, never opens anything. Runs from a copy
 # (bin/atx-live.exe) so builds don't hit a locked binary; refresh the copy after changing crates/atx/src/live.rs.
 start watchdog  'while true; do L=logs/watchdog_$(date -u +%Y%m%d).log; echo "### start $(date -u +%FT%TZ)" >> $L; AI_TRADER_ENVIRONMENT=mainnet AI_TRADER_ALLOW_MAINNET=1 ./bin/atx-live.exe live watchdog --interval 60 2>&1 | grep --line-buffered -v -iE "balance|equity|wallet|available" >> $L; echo "### exited; restart in 30s" >> $L; sleep 30; done'
+# D8 daily data jobs (ai_trader.storage.daily): cold flow_3s days compacted + rolled up to flow_1m (reversible), the last
+# 2 days of flow_bars from the trade archive, the 08:00 Deribit surface (deribit_svi). 08:20 UTC daily, wall-clock
+# polling every 60 s (suspend-safe), through the governor; atx runs from bin/atx-ops.exe (a copy, like the others).
+start daily_ops 'while true; do now=$(date -u +%s); next=$(( now/86400*86400 + 30000 )); if [ $now -ge $next ]; then next=$(( next + 86400 )); fi; while [ $(date -u +%s) -lt $next ]; do sleep 60; done; echo "### $(date -u +%FT%TZ)" >> logs/daily_ops.log; PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe scripts/ops/governor.py run --mb 2500 --slots heavy --name daily_ops -- .venv/Scripts/python.exe -m ai_trader.storage.daily >> logs/daily_ops.log 2>&1; echo "### exit $?" >> logs/daily_ops.log; done'

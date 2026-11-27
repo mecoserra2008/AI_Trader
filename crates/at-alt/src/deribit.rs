@@ -53,3 +53,37 @@ pub async fn dvol(http: &reqwest::Client, currency: &str, resolution: &str, star
     }
     Ok(out.into_values().collect())
 }
+
+/// Deribit perpetual funding, hourly (`get_funding_rate_history`, BTC-PERPETUAL / ETH-PERPETUAL).
+/// An entry stamped `timestamp` covers the hour ending then: `event_ts = timestamp - 1 h`,
+/// `known_ts = timestamp + latency`. Two series per hour, `perp_funding_1h` (interest_1h) and
+/// `perp_funding_8h` (interest_8h): the convention of the 2026-11-10 import (scripts/import_prior_projects.py).
+/// Rows have `event_ts` in `[start, end)` and are already known at fetch time.
+pub async fn perp_funding(http: &reqwest::Client, currency: &str, start: Ms, end: Ms, latency_ms: Ms) -> anyhow::Result<Vec<Obs>> {
+    const H: Ms = 3_600_000;
+    const CHUNK: Ms = 30 * 86_400_000;
+    let now = now_ms();
+    let mut out = std::collections::BTreeMap::new();
+    let (lo, hi) = (start + H, end.min(now) + H);
+    let mut s = lo;
+    while s < hi {
+        let e = (s + CHUNK).min(hi);
+        let url = format!("https://www.deribit.com/api/v2/public/get_funding_rate_history?instrument_name={currency}-PERPETUAL&start_timestamp={s}&end_timestamp={e}");
+        let v: Value = http.get(&url).send().await?.error_for_status()?.json().await?;
+        if let Some(err) = v.get("error") {
+            bail!("deribit error: {err}");
+        }
+        for r in v["result"].as_array().into_iter().flatten() {
+            let Some(ts) = r["timestamp"].as_i64() else { continue };
+            let (event, known) = (ts - H, ts + latency_ms);
+            if event < start || event >= end || known > now {
+                continue;
+            }
+            for (series, field) in [("perp_funding_1h", "interest_1h"), ("perp_funding_8h", "interest_8h")] {
+                out.insert((event, series), Obs { series_id: series.into(), entity: currency.to_string(), event_ts: event, value: r[field].as_f64(), vintage: None, known_ts: known });
+            }
+        }
+        s = e;
+    }
+    Ok(out.into_values().collect())
+}

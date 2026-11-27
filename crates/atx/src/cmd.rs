@@ -488,6 +488,9 @@ pub async fn collect(ctx: Ctx, minutes: Option<u64>, category: Option<String>, s
         streams,
         symbols_per_conn: f["symbols_per_conn"].as_u64().unwrap_or(25) as usize,
         grace_ms: f["grace_ms"].as_i64().unwrap_or(1500),
+        max_hold_ms: f["max_hold_ms"].as_i64().unwrap_or(30_000),
+        silence_ms: f["silence_secs"].as_i64().unwrap_or(30) * 1000,
+        heartbeat_secs: f["heartbeat_secs"].as_u64().unwrap_or(60),
         flush_secs: f["flush_secs"].as_u64().unwrap_or(300),
         run_for: minutes.map(|m| Duration::from_secs(m * 60)),
     };

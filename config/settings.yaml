@@ -132,6 +132,11 @@ llm:
 flow:
   ws_public_base: wss://stream.bybit.com/v5/public    # + /linear | /spot | /inverse
   grace_ms: 1500             # wall-clock grace before a quiet 3 s candle is closed
+  # D8 (2026-11-27): candles close on a trade + book watermark (both streams past the end), or on grace once the
+  # lagging streams are idle, or at max_hold_ms at the latest (crates/at-flow/src/candle.rs).
+  max_hold_ms: 30000         # hard cap a candle waits for a lagging trade / book stream
+  silence_secs: 30           # reconnect a websocket that delivered no data for this long (stalls, resume from standby)
+  heartbeat_secs: 60         # one `heartbeat` log line per connection
   flush_secs: 300            # buffer in memory, write one file per stream every 5 min
   symbols_per_conn: 25       # websocket connections are chunked (2 topics per symbol)
   # Tiers from research/reports/bybit_instruments_2026-11-07.md (7-day average turnover).
@@ -198,5 +203,21 @@ live:
   fng: true                  # Fear & Greed, daily
   poll_secs: 20              # cycle period
   bar_grace_secs: 5          # a bar is fetched only once it closed at least this long ago
-  backfill_days: 3           # start of a stream without a cursor (overlap with existing rows is harmless)
+  backfill_days: 3           # start of a stream without a cursor AND without rows in the lake (else: newest lake row)
   cursor_file: data/state/updater_cursor.json
+  # D8 (2026-11-27): feeds that were one-off backfills and went stale on 2026-11-07..10 now run live.
+  instruments: true          # daily linear instrument snapshot at 00:05 UTC (survivorship, WS09)
+  stablecoins: true          # DefiLlama total stablecoin supply, daily (revisable)
+  deribit_funding: [BTC, ETH]   # Deribit perp funding, hourly -> alt_series perp_funding_1h / perp_funding_8h
+  extra:                     # per-symbol streams beyond the defaults above (same symbols as the 2026-11-07 backfills)
+    - {kind: open_interest, interval: 1h, symbols: [BTCUSDT]}
+    - {kind: ls_ratio, period: 1h, symbols: [BTCUSDT]}
+    - kind: ls_ratio
+      period: 4h
+      symbols: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, DOGEUSDT, ADAUSDT, LINKUSDT, LTCUSDT, BCHUSDT, AVAXUSDT, DOTUSDT,
+                BNBUSDT, TRXUSDT, NEARUSDT, ATOMUSDT, ETCUSDT, FILUSDT, UNIUSDT, AAVEUSDT, XLMUSDT, SUIUSDT, ENAUSDT, HYPEUSDT]
+    - kind: bars
+      price_type: index
+      freq: 1h
+      symbols: [BTCUSDT, ETHUSDT, AAPLUSDT, BZUSDT, CLUSDT, GOOGLUSDT, INTCUSDT, MSTRUSDT, MUUSDT, NVDAUSDT, PAXGUSDT,
+                QQQUSDT, SOXLUSDT, SPCXUSDT, TSLAUSDT, XAGUSDT, XAUTUSDT, XAUUSDT]

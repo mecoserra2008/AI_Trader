@@ -2,7 +2,7 @@
 
 Base layer: flow_3s (written live by `atx collect`). From it:
   rollup()     exact 3 s -> 1 m candles (flow_1m, the long-term tier)
-  compact()    merge a day's 5-minute flush files into one file
+  compact()    merge a day's 5-minute flush files into one file (reversible, storage.repair)
   derive()     SMA/EMA feature stacks over many windows, computed on read and never stored
   enforce_budget()   prune the oldest rolled-up flow_3s days while the lake exceeds storage.budget_gb
 
@@ -20,6 +20,7 @@ from pathlib import Path
 import polars as pl
 
 from ai_trader.core.config import load
+from ai_trader.storage import repair
 from ai_trader.storage.lake import Lake
 
 SUM_COLS = ["buy_vol", "sell_vol", "buy_notional", "sell_notional", "n_buy", "n_sell", "book_updates"]
@@ -66,28 +67,43 @@ def _day_dirs(lake: Lake, table: str) -> dict[tuple[str, str, str], Path]:
     return out
 
 
-def compact(day_dir: Path) -> int:
-    """Merge all part files of one partition into a single file. Returns files removed."""
-    files = sorted(day_dir.glob("*.parquet"))
-    if len(files) <= 1:
-        return 0
-    df = pl.read_parquet(files)
-    tmp = day_dir / "compacted.parquet.tmp"
-    df.sort("symbol", "event_ts").write_parquet(tmp, compression="zstd", compression_level=6, statistics=True)
-    final = day_dir / f"part-compacted-{files[-1].stem.split('-')[1]}.parquet"
-    tmp.replace(final)
-    for f in files:
-        if f != final:
-            f.unlink()
-    return len(files) - 1
+def compact(lake: Lake, day_dir: Path, run: repair.Run, con=None) -> dict | None:
+    """Merge one day's flush files into one sorted zstd-6 file, dropping exact duplicate rows. Reversible: the old
+    files move to the run's backup (storage.repair). Returns the manifest line (None if already one file, no duplicates)."""
+    spec = lake.spec("flow_3s")
+    return repair.rewrite_partition(lake.root, day_dir, "flow_3s", spec, run, tag="compact", reason="daily flow_3s compaction",
+                                    order_by=["symbol", "event_ts"], always=True, compression_level=6, con=con)
 
 
-def rollup_day(lake: Lake, venue: str, category: str, day: str) -> int:
-    d0 = datetime.fromisoformat(day).replace(tzinfo=UTC)
-    df3 = lake.read_asof("flow_3s", datetime.now(UTC), start=d0, end=d0 + timedelta(days=1), filters={"venue": venue, "category": category})
-    if df3.height == 0:
+def rollup_day(lake: Lake, venue: str, category: str, day: str, con=None) -> int:
+    """flow_3s -> flow_1m for one day, one symbol at a time (memory: one symbol-day). Latest revision per 3 s key."""
+    d = lake.root / "flow_3s" / f"venue={venue}" / f"category={category}" / f"date={day}"
+    files = repair.part_files(d)
+    if not files:
         return 0
-    m = rollup(df3).drop("_n")
+    own = con is None
+    con = con or repair._connect(None, mem="1000MB")
+    cols = [c["name"] for c in repair.file_columns(lake.spec("flow_3s"))]
+    sel = ", ".join(f'"{c}"' for c in cols)
+    flist = "[" + ", ".join("'" + f.as_posix() + "'" for f in files) + "]"
+    src = f"read_parquet({flist}, hive_partitioning = false, union_by_name = true)"
+    symbols = [r[0] for r in con.sql(f"SELECT DISTINCT symbol FROM {src} ORDER BY 1").fetchall()]
+    outs = []
+    for sym in symbols:
+        # Filter first (row groups of a compacted, symbol-sorted file are pruned), then keep the latest revision per candle.
+        q = f"""SELECT * FROM (SELECT {sel} FROM {src} WHERE symbol = ?)
+                QUALIFY row_number() OVER (PARTITION BY event_ts ORDER BY known_ts DESC) = 1"""
+        df3 = pl.from_arrow(con.sql(q, params=[sym]).to_arrow_table())
+        if df3.height == 0:
+            continue
+        df3 = df3.with_columns(pl.lit(venue).alias("venue"), pl.lit(category).alias("category"),
+                               pl.col("event_ts", "known_ts").dt.cast_time_unit("ms").dt.convert_time_zone("UTC"))
+        outs.append(rollup(df3).drop("_n"))
+    if own:
+        con.close()
+    if not outs:
+        return 0
+    m = pl.concat(outs)
     lake.write("flow_1m", m)
     return m.height
 
@@ -144,25 +160,40 @@ def status(lake: Lake | None = None) -> pl.DataFrame:
     return pl.DataFrame(rows).sort("gb", descending=True) if rows else pl.DataFrame()
 
 
-def maintain(lake: Lake | None = None, dry_run: bool = False, today: date | None = None) -> list[str]:
-    """Daily job: compact + roll up every complete flow_3s day, then prune oldest rolled-up 3 s days
-    (never younger than flow_3s_min_days) until the lake fits storage.budget_gb."""
+def maintain(lake: Lake | None = None, dry_run: bool = False, today: date | None = None, min_age_min: float = 120.0) -> list[str]:
+    """Daily job: compact + roll up every COLD flow_3s day (before today UTC and no file written in the last
+    `min_age_min` minutes, so a flush after a resume from standby is never raced), then prune the oldest rolled-up
+    3 s days (never younger than flow_3s_min_days) until the lake fits storage.budget_gb. Compaction is reversible
+    (old files in data/lake_backup/<run>/, manifest.jsonl; `python -m ai_trader.storage.repair undo|purge --run R`)."""
     lake = lake or Lake()
     cfg = load().settings["storage"]
     today = today or datetime.now(UTC).date()
     log: list[str] = []
+    run = repair.new_run(lake.root, "flowmaintain", dry_run=dry_run)
+    con = repair._connect(run.dir / "duckdb_tmp", mem="1500MB")
     rolled = set(_day_dirs(lake, "flow_1m"))
     for key, d in sorted(_day_dirs(lake, "flow_3s").items()):
         if date.fromisoformat(key[2]) >= today:
             continue  # the current day is still being written
-        if key not in rolled:
-            if not dry_run:
-                n = compact(d)
-                rows = rollup_day(lake, *key)
-                log.append(f"rolled {key}: {rows} 1m rows (compacted {n} files)")
-            else:
-                log.append(f"would roll {key}")
+        why = repair.hot_reason(lake.root, d, [], min_age_min)
+        if why:
+            log.append(f"skip {key}: {why}")
+            continue
+        files = repair.part_files(d)
+        if dry_run:
+            log.append(f"would compact {key} ({len(files)} files)" + ("" if key in rolled else " and roll up"))
             rolled.add(key)
+            continue
+        ln = compact(lake, d, run, con=con) if len(files) > 1 else None
+        if ln:
+            log.append(f"compacted {key}: {len(ln['files_in'])} files -> 1, {ln['rows_out']} rows ({ln['exact_duplicates']} exact duplicates), "
+                       f"{ln['bytes_in'] / 1e6:.1f} -> {ln['bytes_out'] / 1e6:.1f} MB")
+        if key not in rolled:
+            rows = rollup_day(lake, *key, con=con)
+            log.append(f"rolled {key}: {rows} 1m rows")
+            rolled.add(key)
+    con.close()
+    shutil.rmtree(run.dir / "duckdb_tmp", ignore_errors=True)
     budget = cfg["budget_gb"] * 1e9
     total = dir_size(lake.root)
     min_keep = today - timedelta(days=cfg["flow_3s_min_days"])
@@ -178,6 +209,10 @@ def maintain(lake: Lake | None = None, dry_run: bool = False, today: date | None
         total -= sz
     if total > budget:
         log.append(f"WARNING: lake {total / 1e9:.1f} GB still above budget {cfg['budget_gb']} GB (nothing prunable)")
+    if run.lines and not dry_run:
+        log.append(f"manifest: {run.dir / 'manifest.jsonl'}")
+    if run.dir.is_dir() and not any(run.dir.iterdir()):
+        run.dir.rmdir()
     return log
 
 
@@ -187,12 +222,13 @@ def _cli(argv=None) -> None:
     sub.add_parser("status")
     m = sub.add_parser("maintain")
     m.add_argument("--dry-run", action="store_true")
+    m.add_argument("--min-age-min", type=float, default=120.0, help="skip a day with a file younger than this")
     a = ap.parse_args(argv)
     if a.cmd == "status":
         s = status()
         sys.stdout.write(f"{s}\ntotal {s['gb'].sum():.3f} GB of {load().settings['storage']['budget_gb']} GB\n")
     else:
-        for line in maintain(dry_run=a.dry_run):
+        for line in maintain(dry_run=a.dry_run, min_age_min=a.min_age_min):
             sys.stdout.write(line + "\n")
 
 

@@ -3,10 +3,9 @@
 #
 #   powershell -ExecutionPolicy Bypass -File scripts\collector.ps1
 #
-# Persistent setup (survives logoff/reboot): Task Scheduler -> Create Task ->
-#   Trigger: At startup; Action: powershell.exe -ExecutionPolicy Bypass -File <repo>\scripts\collector.ps1
-#   Settings: "If the task fails, restart every 1 minute". Add a second daily task for:
-#   uv run python -m ai_trader.storage.flow maintain     (rollup + compaction + budget, e.g. 00:20 UTC)
+# No Task Scheduler / Startup-folder entry (standing user constraint): the desk normally starts the collector with
+# `bash scripts/ops/desk_start.sh`, which must be run again after every reboot. The daily compaction + 1-minute rollup
+# runs there as the `daily_ops` loop (python -m ai_trader.storage.daily).
 
 $ErrorActionPreference = "Continue"
 $root = Split-Path -Parent $PSScriptRoot

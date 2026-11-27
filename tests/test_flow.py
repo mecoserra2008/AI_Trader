@@ -68,9 +68,35 @@ def test_maintain_rolls_up_then_prunes_within_budget(tmp_path, monkeypatch):
     cfg = flow.load().settings["storage"]
     monkeypatch.setitem(cfg, "budget_gb", 0.0)  # force pruning
     monkeypatch.setitem(cfg, "flow_3s_min_days", 1)
-    log = flow.maintain(lake, today=date(2026, 11, 4))
+    lake.write("flow_3s", synth_3s(start=T0, seed=0).head(50))  # a second flush file on day 1, with exact duplicates
+    before = lake.read_asof("flow_3s", datetime(2026, 11, 5, tzinfo=UTC), end=T0 + timedelta(days=1))
+    assert flow.maintain(lake, today=date(2026, 11, 4)) [0].startswith("skip"), "fresh files: a flush may still be landing"
+    log = flow.maintain(lake, today=date(2026, 11, 4), min_age_min=0)
     assert sum("rolled" in x for x in log) == 3
+    assert any("compacted" in x and "50 exact duplicates" in x for x in log), log
     assert lake.has_data("flow_1m")
     remaining = sorted(p.name for p in (lake.root / "flow_3s").rglob("date=*"))
     assert remaining == ["date=2026-11-03"], f"keeps the newest {cfg['flow_3s_min_days']} day(s): {remaining}"
     assert lake.read_asof("flow_1m", datetime(2026, 11, 5, tzinfo=UTC)).height == 3 * 2 * 30
+    # compaction was reversible: day 1's old files are in the backup, its rows are unchanged (until pruned)
+    backups = list((tmp_path / "lake_backup").rglob("manifest.jsonl"))
+    assert backups and "date=2026-11-01" in backups[0].read_text()
+    assert before.height == 2 * 600
+
+
+def test_compact_keeps_rows_and_rollup_matches(tmp_path):
+    lake = Lake(root=tmp_path / "lake")
+    df = synth_3s(start=T0)
+    lake.write("flow_3s", df.head(700))
+    lake.write("flow_3s", df.tail(500))
+    asof = datetime(2026, 11, 5, tzinfo=UTC)
+    before = lake.read_asof("flow_3s", asof)
+    log = flow.maintain(lake, today=date(2026, 11, 2), min_age_min=0)
+    assert any("compacted" in x for x in log) and any("rolled" in x for x in log)
+    d = lake.root / "flow_3s/venue=bybit/category=linear/date=2026-11-01"
+    assert len(list(d.glob("*.parquet"))) == 1
+    assert lake.read_asof("flow_3s", asof).equals(before)
+    m = lake.read_asof("flow_1m", asof).sort("symbol", "event_ts")
+    ref = flow.rollup(before).drop("_n").sort("symbol", "event_ts")
+    assert m.height == ref.height == 60
+    assert (m["n_buy"] == ref["n_buy"]).all() and ((m["buy_vol"] - ref["buy_vol"]).abs() < 1e-3).all()

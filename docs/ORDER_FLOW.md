@@ -28,8 +28,22 @@ Only the base is stored, never the derived views, so the stored size scales with
 - one websocket per 25 symbols, subscribed to `publicTrade` + `orderbook.{depth}` for every stream in `flow.streams`;
 - books are rebuilt from snapshot + deltas;
 - a reconnect invalidates only that connection's books, and coverage records the gap;
-- candles close on **exchange time**: when a later event arrives, or on wall clock + 1.5 s grace for quiet symbols;
-- `known_ts = max(local finalisation time, candle end)`, because Bybit's clock runs about 0.3 s ahead of ours;
+- candles are bucketed on **exchange time** and close on a **trade + book watermark** (since 2026-11-27, D8): once both
+  the trade stream and the book stream of the symbol have delivered an event past the candle end; or once the wall clock
+  is `grace_ms` (1.5 s) past the end and every stream that has not passed it has been silent for `grace_ms` (quiet
+  symbols); or at the latest `max_hold_ms` (30 s) past the end while a stream lags. Before, the first later book message
+  closed the candle and trades still in flight were booked one candle late (WS02, H-WS02-9: per-3 s trade counts matched
+  the public archive 57% of the time). A trade that arrives after its candle closed (lag > 30 s) goes into the oldest
+  open candle, so totals stay exact, and is counted (`late_trades` in the heartbeat). Rows before 2026-11-27 keep the old
+  timing: use the WS02 archive fills or minute aggregates for sub-minute trade timing on those days;
+- `known_ts = max(local finalisation time, candle end)`, because Bybit's clock runs 0.3-2.9 s ahead of ours;
+- a connection that delivers no data for `silence_secs` (30 s) is torn down and reconnected (websocket stalls, dead
+  TCP sessions after Modern Standby or sleep). Repeated silence right after a reconnect (a quiet market, e.g. TradFi
+  perps off hours) doubles the threshold, up to 8 min;
+- every `heartbeat_secs` (60 s) each connection logs one `heartbeat` line: messages, trades, book updates,
+  liquidations, symbols without a trade, mean / max trade lag (receive − exchange time), late trades, open candles,
+  reconnects. It warns `trade feed trickling` when trades fall below 20% of their trailing rate while book messages
+  keep flowing (the `trade_deficit` hours WS02 found after the fact);
 - rows are buffered and flushed to the lake every 5 minutes.
 
 **Book depth matters.** Measured 2026-11-07:
@@ -43,10 +57,16 @@ So the most liquid names use depth 1000 and the rest use 200. Any band wider tha
 
 ## 3. Storage lifecycle and the 30 GB budget
 
-`uv run python -m ai_trader.storage.flow maintain` (daily) does three things:
-1. compacts each finished day of `flow_3s` (288 flush files into one sorted zstd file);
-2. rolls it up exactly into `flow_1m`;
+`uv run python -m ai_trader.storage.flow maintain` (daily, part of `ai_trader.storage.daily`) does three things:
+1. compacts each **cold** day of `flow_3s` (before today UTC and no file written in the last 2 h, so a flush after a
+   resume from standby is never raced) from its flush files into one sorted zstd-6 file, dropping exact duplicate rows.
+   This is reversible: the old files move to `data/lake_backup/<run>/` with a `manifest.jsonl` (rows in / out, a
+   multiset check of the new file against the old rows, sha256); `python -m ai_trader.storage.repair undo|purge --run R`;
+2. rolls it up exactly into `flow_1m`, one symbol at a time (memory: one symbol-day);
 3. prunes the oldest **already-rolled-up** `flow_3s` days, never younger than `storage.flow_3s_min_days`, until the whole lake fits `storage.budget_gb`.
+
+It never ran before 2026-11-27 (it needed an OS scheduler entry, which the desk does not use; days had up to 1,734
+flush files). `scripts/ops/desk_start.sh` now runs it daily as the `daily_ops` loop.
 
 This gives two tiers:
 - a **rolling high-resolution window** (3 s, as many days as the budget allows), for microstructure and for training sequence models;
@@ -115,9 +135,15 @@ Collector load: 32 streams ≈ 200 websocket messages per second (~94% book upda
 
 ## 7. Operations
 
+The desk processes (collector, updater, daily_ops, ...) are started by `scripts/ops/desk_start.sh` and are NOT
+persisted in Task Scheduler or the Startup folder (a standing user constraint): **after a reboot, run
+`bash scripts/ops/desk_start.sh`** (the 2026-11-11 Windows-Update reboot cost 25 h of flow data). Watch the collector with
+`grep heartbeat logs/collector_$(date -u +%Y%m%d).log | tail`.
+
 ```bash
-powershell -ExecutionPolicy Bypass -File scripts\collector.ps1     # always-on collector, auto-restart, private binary copy
+powershell -ExecutionPolicy Bypass -File scripts\collector.ps1     # stand-alone alternative: collector with auto-restart, private binary copy
 uv run python -m ai_trader.storage.flow status                       # lake size per table vs budget
-uv run python -m ai_trader.storage.flow maintain [--dry-run]         # daily: compact + rollup + prune to budget
+uv run python -m ai_trader.storage.flow maintain [--dry-run]         # compact + rollup + prune to budget (cold days only)
+uv run python -m ai_trader.storage.daily [--dry-run]                 # the daily jobs: maintain + flow_bars + Deribit surface
 atx collect --minutes 2 --category spot --symbols BTCUSDT --depth 1000   # ad-hoc test run
 ```
