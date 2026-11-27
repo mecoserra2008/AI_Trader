@@ -1,0 +1,103 @@
+# WS07 REGIME (specification program 2026-11-27, agent WS07). Registered before any fit on the data that tests them.
+# Design frozen in the diary ("WS07 design frozen before results"). Module: src/ai_trader/research/regime_specs.py.
+# Common design: universe L (23 Bybit crypto perps), daily unit (UTC day d), state known at 00:00 UTC of d (filtered on
+# data through d-1; smoothed states never used in a test). Specs: v0_cell / v0_vol / v0_dir (research.regimes, 1h, as the
+# live gate), ghmm2 / ghmm3 (Gaussian HMM on daily log return), thmm3 (Student-t nu=5 HMM), msar2 (MS-AR(1) K=2),
+# msvar3 (MS-VAR(1) K=3 on [r, log RV]), tvtp3 (msvar3 with transitions driven by funding z and 7d OI change z),
+# bocpd (Adams-MacKay on log RV, hazard 1/30, vol tercile of the run-weighted level), pelt (online PELT on log RV,
+# BIC penalty, tercile of the last segment mean), kmeans9 / gmm3 (start-of-day vol percentile, v0 dir_score, funding z,
+# OI change z), msgarch2 optional (Haas MS-GARCH t, only if time allows). Walk-forward: expanding, origins every Jan 1 and
+# Jul 1 from 2022-01-01 to 2026-07-01 (the holdout is forecast only by fits on data before 2026-07-01), 1-day embargo,
+# >= 365 training days per symbol. Segments: llm_in_sample = OOS days before 2026-07-01, clean_holdout = on/after.
+# Pooled statistics average across symbols per date first (clustering by time); DM = Newey-West HAC t with the
+# Harvey-Leybourne-Newbold correction; MCS = Hansen-Lunde-Nason T_max, 10-day moving blocks, 2000 draws, alpha 0.10.
+H-WS07-1:
+  title: "Regime state adds to log-HAR for next-day variance"
+  statement: "For at least one regime spec, adding its start-of-day state (filtered probabilities or labels, ridge-shrunk intercept shifts, lambda 20) to the per-symbol log-HAR lowers next-day QLIKE out of sample versus the plain log-HAR."
+  rationale: "v0 vol states lag the EWMA, and HAR already carries vol persistence; LAT1 cells (v0 direction x weekday x vol tercile) helped HAR, so regime labels might carry level or asymmetry information HAR misses."
+  test: "Per spec: date-level mean of (QLIKE_cond - QLIKE_HAR) across symbols, DM-HAC (HLN) per segment; Holm across the specs within llm_in_sample."
+  success: "Supports for spec s iff mean diff < 0 with Holm-adjusted p < 0.05 in llm_in_sample and diff < 0 in clean_holdout; the hypothesis is supported iff at least one spec supports; contradicts iff no spec has diff < 0 with unadjusted p < 0.05 in llm_in_sample; else inconclusive."
+  prior: 0.45
+  family: regime_specs
+  status: proposed
+H-WS07-2:
+  title: "v0 is not the best regime conditioner for variance"
+  statement: "In the 90% Model Confidence Set over all next-day variance forecasts (EWMA, log-HAR, log-HAR conditioned on each spec, native regime-model forecasts) on llm_in_sample OOS days, the v0-conditioned log-HARs (v0_cell, v0_vol, v0_dir) are all excluded while at least one other regime-conditioned forecast is included."
+  rationale: "If a fitted regime model dominates v0 for the decision it most plausibly feeds (variance), v0 should be replaced there."
+  test: "MCS T_max on the date x model QLIKE matrix (intersection of rows), per segment."
+  success: "Supports iff the condition holds in llm_in_sample and the best alternative's QLIKE is below every v0-conditioned QLIKE in clean_holdout; contradicts iff a v0-conditioned forecast is in the llm_in_sample MCS; else inconclusive."
+  prior: 0.40
+  family: regime_specs
+  status: proposed
+H-WS07-3:
+  title: "A native regime-switching variance forecast beats log-HAR"
+  statement: "At least one native regime-model forecast of next-day variance (ghmm2/ghmm3/thmm3/msar2 mixture E[r^2], msvar3/tvtp3 mixture E[RV], bocpd predictive RV, msgarch2 if run) has lower QLIKE than the per-symbol log-HAR."
+  rationale: "Markov-switching variance models are the textbook alternative to HAR; HAR is hard to beat at 1 day."
+  test: "DM-HAC (HLN) of date-level QLIKE differences, per segment; Holm across the native forecasts in llm_in_sample."
+  success: "Supports iff some native forecast has diff < 0 with Holm p < 0.05 in llm_in_sample and diff < 0 in clean_holdout; contradicts iff every native forecast has diff > 0 in llm_in_sample; else inconclusive."
+  prior: 0.25
+  family: regime_specs
+  status: proposed
+H-WS07-4:
+  title: "Regime-based predictive densities improve the next-day log score"
+  statement: "For at least one spec, a regime-based predictive density of the next-day log return (the model's own filtered mixture density, or a Student-t with the regime-conditioned log-HAR scale) has a higher log score than the Student-t with the plain log-HAR scale (nu by MLE on training standardised returns, floor 3)."
+  rationale: "Mixtures of regime densities can fit tails and vol jumps better than one t with a HAR scale."
+  test: "Date-level mean log-score difference, DM-HAC (HLN) per segment; Holm across density variants in llm_in_sample; MCS over all densities."
+  success: "Supports iff some variant has diff > 0 with Holm p < 0.05 in llm_in_sample and diff > 0 in clean_holdout; contradicts iff no variant has diff > 0 with unadjusted p < 0.05 in llm_in_sample; else inconclusive."
+  prior: 0.40
+  family: regime_specs
+  status: proposed
+H-WS07-5:
+  title: "No regime spec carries next-day direction (R-PX-6 under every spec)"
+  statement: "Adding state-specific shrunk means (episode shrinkage kappa 10 toward 0) of the vol-standardised return to the regime-conditioned HAR-t density does not raise the next-day log score for any spec."
+  rationale: "R-PX-6 / H-RL1: v0 cells carry no direction; a fitted regime spec might, if v0's direction axis is just badly built."
+  test: "Date-level log-score difference (with means minus without), DM-HAC per spec and segment."
+  success: "Supports iff no spec has diff > 0 with t >= 2 in llm_in_sample; contradicts iff some spec has t >= 2 in llm_in_sample and t >= 1 in clean_holdout; else inconclusive."
+  prior: 0.85
+  family: regime_specs
+  status: proposed
+H-WS07-6:
+  title: "Regime gating improves the 4h trend sleeve (zoo_ensemble)"
+  statement: "Switching zoo_ensemble off on symbol-days whose start-of-day state of spec s had a training shrunk mean pnl_d <= 0 (kappa 10 episodes, walk-forward) raises its out-of-sample annualised Sharpe versus ungated, for at least one spec."
+  rationale: "The trend family is the only survivor; H-TR3/H-TR4 trend-vs-MR gates failed, but those used other features; a vol-regime gate is the natural remaining candidate."
+  test: "Daily sleeve P&L = mean over symbols of gate x pnl_d (data/priors/strategy_panel_daily.parquet, to 2026-11-09); Sharpe difference vs ungated with a 10-day moving-block bootstrap (2000); Romano-Wolf stepdown across specs; deflated Sharpe of the best gated variant with N = number of specs."
+  success: "Supports iff some spec has RW-adjusted p < 0.05 in llm_in_sample and Sharpe diff > 0 in clean_holdout; contradicts iff every spec has Sharpe diff <= 0 in llm_in_sample; else inconclusive."
+  prior: 0.20
+  family: regime_specs
+  status: proposed
+H-WS07-7:
+  title: "A fitted regime spec makes a better cell-conditional book than v0 (and v0 beats unconditional selection)"
+  statement: "The R-MAP-2-style book (per symbol-day, equal weight over the registered strategies whose training shrunk mean in the current state is > 0; walk-forward) built from spec s has a higher OOS annualised Sharpe than the same book built from v0 cells; and the v0 book beats the unconditional book (strategies with training pooled mean > 0)."
+  rationale: "R-MAP-2 found the v0-conditional book loses less than equal weight, but only marginally less than unconditional selection; the question is whether any regime spec carries the selection value, or none does."
+  test: "Daily book P&L on the 16 bar-runnable strategies (strategy panel, universe L); paired Sharpe differences, 10-day moving-block bootstrap (2000); Romano-Wolf across specs for the spec-vs-v0 comparisons."
+  success: "Part A (spec vs v0) supports for spec s iff RW p < 0.05 in llm_in_sample and diff > 0 in clean_holdout; contradicts iff every spec has diff <= 0 in llm_in_sample. Part B (v0 vs unconditional) supports iff bootstrap p < 0.05 in llm_in_sample and diff > 0 in clean_holdout; contradicts iff diff <= 0 in llm_in_sample; else inconclusive."
+  prior: 0.30
+  family: regime_specs
+  status: proposed
+H-WS07-8:
+  title: "R-MAP-3..7 cell effects survive controls for a fitted regime and for continuous vol / trend"
+  statement: "For each rule R-MAP-3..7, the effect of being in the rule's v0 cells on the named strategies' pnl_d (active symbol-days, relative to their other cells) keeps its negative sign with |t| >= 2 in llm_in_sample after adding (i) ghmm3 state dummies and (ii) continuous controls (start-of-day vol percentile, v0 dir_score, |dir_score|), and keeps its sign in clean_holdout."
+  rationale: "If the cell effect is only a coarse proxy for vol level or trend strength, it should be restated in those terms (or the regime spec that carries it); if it survives, the v0 cells carry their own information."
+  test: "Per rule: OLS of pnl_d on 1{cell in rule cells} (+ controls) with date-clustered SEs, per segment; effect with and without controls."
+  success: "Per rule: supports iff the controlled coefficient is < 0 with t <= -2 in llm_in_sample under both control sets and < 0 in clean_holdout; contradicts iff the controlled coefficient is >= 0 in llm_in_sample under either control set; else inconclusive."
+  prior: 0.40
+  family: regime_specs
+  status: proposed
+H-WS07-9:
+  title: "R-VOL-8 is a property of high vol, not of the v0 labeller, and HAR absorbs it"
+  statement: "(a) The high-minus-low vol-state contrast in log(RV_7d / (7 x EWMA daily variance)) is negative with t <= -2 for v0_vol, ghmm3 and bocpd states; (b) against the log-HAR 7-day forecast instead of EWMA, the v0 contrast has |t| < 2."
+  rationale: "R-VOL-8 says high v0 vol states over-forecast next-week vol vs EWMA; that is vol mean reversion, which any vol state and HAR should show or absorb."
+  test: "Daily rows, overlapping 7-day outcomes, date-level means of the state contrast, NW HAC with lag >= 7, per segment."
+  success: "(a) supports iff t <= -2 for all three specs in llm_in_sample and the sign holds in clean_holdout; contradicts iff any of them has contrast >= 0 in llm_in_sample. (b) supports iff |t| < 2 in llm_in_sample; contradicts iff t <= -2 in llm_in_sample; holdout reported."
+  prior: 0.65
+  family: regime_specs
+  status: proposed
+H-WS07-10:
+  title: "Fitted regime specs are stable across refits"
+  statement: "For each fitted spec, the median over symbols of the adjusted Rand index between the labels that consecutive refits assign to the same (earlier refit's) training days is >= 0.6."
+  rationale: "Gates built on labels that change meaning at each refit cannot be trusted; v0 is stable by construction (no fit)."
+  test: "Per spec, per symbol, per consecutive refit pair: ARI on the overlap; median over symbols and pairs."
+  success: "Per spec: supports iff median ARI >= 0.6; contradicts iff median ARI < 0.4; else inconclusive."
+  prior: 0.55
+  family: regime_specs
+  status: proposed
