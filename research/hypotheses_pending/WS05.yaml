@@ -1,0 +1,166 @@
+# WS05 TAIL RISK: jumps, clustering and joint tails (specification program 2026-11-27; owns the trimmed core of WS06 DEPEND).
+# Registered 2026-11-26 ~23:45 UTC BEFORE any fit or test statistic on the data that tests them. Code:
+# src/ai_trader/research/ws05_tails.py. Frozen definitions (diary "WS05 design frozen before results"):
+#   returns = log close-to-close; LM = Lee-Mykland 2008 at alpha 1% per day (Gumbel with n = bars per day), spot vol =
+#   bipower over the previous K = 1 day of periodicity-adjusted returns, periodicity = hour-of-day factor from past days
+#   only (robust, shrunk to 1 with 3 pseudo-days); BNS = Huang-Tauchen ratio-max statistic with tri-power quarticity,
+#   alpha 1% per day; ASJ = Ait-Sahalia-Jacod 2009 S(p=4, k=2) with truncated power variations (4 local sd), alpha 1%.
+#   J1(t) / J4(t) = at least one 5m LM jump in BTC in (t, t+1h] / (t, t+4h]. BTC 5m = Bybit lake 2020-04 .. 2026-09-27
+#   plus 5m built from flow_3s 2026-11-07 .. 2026-11-26; flow 1m pool = liquid Bybit USDT perps from flow_3s.
+#   Liquidation cluster = R-FLOW-2: 1m liquidation notional > trailing-24h 99th percentile and >= 3 prints.
+#   Segments split at research.knowledge_cutoff 2026-07-01; flow_3s / liquidation data exist only in clean_holdout.
+#   Walk-forward: monthly expanding refits from 2021-04; DM tests use the Harvey-Leybourne-Newbold correction with
+#   Newey-West variance (lag 24 for hourly origins).
+H-WS05-1:
+  title: "BTC 5m returns are not a pure diffusion: jump tests fire far above their false-positive rate"
+  statement: "On BTC 5m (both segments) the share of days with a detection is >= 5x the nominal 1% for each of LM, BNS and ASJ, and the mean daily jump share of quadratic variation max(RV - BV, 0) / RV is >= 5%."
+  rationale: "Crypto prints liquidation cascades and news repricings; if the SV-diffusion null held, the stop and blackout logic would not need a jump component at all."
+  test: "Daily detection rates per test and segment; mean jump share of QV; binomial CI."
+  success: "Supports iff every test's detection share >= 5% of days and mean jump share >= 0.05 in both segments; contradicts iff any test < 2% of days in llm_in_sample."
+  prior: 0.85
+  family: jumps
+  status: proposed
+H-WS05-2:
+  title: "Jump tests and sampling frequencies agree on which days had jumps"
+  statement: "Day-level Cohen's kappa >= 0.4 for each pair of (LM, BNS, ASJ) on BTC 5m in both segments, and kappa(1m vs 5m, same test, same days) >= 0.4 on the flow 1m pool (clean_holdout)."
+  rationale: "The literature (Dumitru-Urga 2012, Theodosiou-Zikes 2011) finds large disagreement between tests and frequencies; if they disagree, any jump-conditioned rule depends on an arbitrary choice."
+  test: "Cohen's kappa and Jaccard of day-level indicator sets; per pair and segment."
+  success: "Supports iff all kappas >= 0.4; contradicts iff any kappa < 0.2."
+  prior: 0.35
+  family: jumps
+  status: proposed
+H-WS05-3:
+  title: "A Kou jump-diffusion density beats the Student-t house default for 5m BTC returns"
+  statement: "For BTC 5m returns standardised by the jump-robust periodicity-adjusted spot vol, the Kou mixture (constant p, fit on llm_in_sample) has a higher mean out-of-sample log score than the Student-t (nu by MLE), with DM-HLN t > 2 in llm_in_sample (walk-forward by year) and diff > 0 in clean_holdout. Gaussian (SV pure diffusion) and Merton (normal jumps) are reported as further comparators."
+  rationale: "H-JD1 (1h, bipower sigma) found the Kou mixture LOSES to a t by 0.05 nats; at 5m the jump component is better identified."
+  test: "Per-bar log-score differences, HLN-DM with NW lag 288; segments."
+  success: "Supports iff Kou - t > 0 with t > 2 in llm_in_sample and > 0 in clean_holdout; contradicts iff Kou - t < 0 with t < -2 in llm_in_sample."
+  prior: 0.35
+  family: jumps
+  status: proposed
+H-WS05-4:
+  title: "BTC 5m jumps self-excite and a Hawkes intensity passes the time-rescaling test"
+  statement: "At the cutoff fit (data < 2026-07-01) the discrete-time Hawkes (cloglog Bernoulli per 5m bar, exponential kernel, baseline with hour-of-day factor and log spot vol) has alpha > 0 with LR p < 0.01 against the same baseline without excitation, and its discrete time-rescaling (Haslinger 2010) KS p-value is > 0.01 while the no-excitation baseline's is < 0.01."
+  rationale: "Jumps cluster (H-JD2 found alpha > 0 at 1h); goodness of fit decides whether the Hawkes is the right description or only a better wrong one."
+  test: "LR test; KS of rescaled times on the fit sample; Ljung-Box(10) of rescaled times."
+  success: "Supports iff both conditions hold; contradicts iff LR p > 0.05."
+  prior: 0.60
+  family: jumps
+  status: proposed
+H-WS05-5:
+  title: "A Hawkes forecast of P(jump next 1h / 4h) beats a constant rate out of sample"
+  statement: "Walk-forward Hawkes with vol baseline (M4) beats the expanding constant base rate (M0) on mean Bernoulli log score for J1 and J4, DM-HLN t > 2 in llm_in_sample and diff > 0 in clean_holdout."
+  rationale: "The desk needs a jump probability for blackouts and stops; a constant rate is the honest null."
+  test: "Hourly origins; log score and Brier; HLN-DM (NW lag 24 for J1, 48 for J4); reliability tables; MCS over all models."
+  success: "Supports iff both horizons pass in llm_in_sample and keep diff > 0 in clean_holdout; contradicts iff diff < 0 with t < -2 in llm_in_sample at either horizon."
+  prior: 0.60
+  family: jumps
+  status: proposed
+H-WS05-6:
+  title: "The desk's field P(jump) is calibrated for an observable high-frequency jump in the next hour"
+  statement: "Frozen cutoff field (data/models/field/btc_field_cutoff_2026-07-01.json) P(jump) against J1 in clean_holdout: |mean p - base rate| < 2 binomial SE, logistic calibration slope (logit y on logit p) in [0.5, 1.5], and log score >= the constant base rate."
+  rationale: "The desk prints 'jump probability 1.5-2%' and mm/execution gates threshold it; its jump is a latent mixture branch (mean >= 3 sd at 1h), not a detected event, so calibration for an observable event is not guaranteed."
+  test: "Calibration-in-the-large, Spiegelhalter z, calibration slope, reliability table; log score vs M0; also llm_in_sample (in-fit, labelled)."
+  success: "Supports iff all three hold in clean_holdout; contradicts iff any fails."
+  prior: 0.20
+  family: jumps
+  status: proposed
+H-WS05-7:
+  title: "The field P(jump) is calibrated for its own jump definition"
+  statement: "On clean_holdout the mean of p_t equals the mean posterior jump weight w_{t+1} of the realised 1h return within 2 SE (NW), and the field-implied P(|x_{t+1}| > 4 sqrt(vf_t)) matches the realised 4-sigma flag frequency within 2 SE."
+  rationale: "Separates 'mis-specified for observable jumps' from 'internally inconsistent out of sample'."
+  test: "Means with NW SE (lag 24); per segment."
+  success: "Supports iff both agree within 2 SE in clean_holdout; contradicts iff either is off by > 3 SE."
+  prior: 0.50
+  family: jumps
+  status: proposed
+H-WS05-8:
+  title: "The Hawkes jump forecast beats the field P(jump)"
+  statement: "M4 beats the field P(jump) (and its 4h version 1 - (1 - p)^4) on J1 and J4 mean log score with DM-HLN t > 2 in llm_in_sample and diff > 0 in clean_holdout."
+  rationale: "The field's jump intensity has one weak term (m24*dir); a Hawkes uses the jump history directly."
+  test: "As H-WS05-5 with the field as comparator."
+  success: "Supports iff both horizons pass; contradicts iff the field beats M4 with t > 2 in llm_in_sample."
+  prior: 0.65
+  family: jumps
+  status: proposed
+H-WS05-9:
+  title: "US release minutes are jump marks"
+  statement: "Scheduled CPI / NFP / FOMC times raise the BTC 5m jump intensity: in the Hawkes with a release kernel (bins from the release to +30 min) the release coefficient is > 0 with LR p < 0.01 at the cutoff fit, and the release model (M5) has a higher J1 mean log score than M4 in llm_in_sample (diff > 0)."
+  rationale: "Scheduled macro news is the canonical exogenous jump source (Andersen-Bollerslev-Diebold-Vega 2003); release minutes are known in advance, so the mark is point-in-time."
+  test: "LR test at the cutoff; walk-forward log-score difference; release-hour hit rates."
+  success: "Supports iff both hold; contradicts iff the coefficient is <= 0 or LR p > 0.05."
+  prior: 0.75
+  family: jumps
+  status: proposed
+H-WS05-10:
+  title: "Liquidation clusters excite further jumps beyond the jump they coincide with"
+  statement: "Flow 1m pool (clean_holdout): the same-symbol LM jump rate in (0, 60] min after an R-FLOW-2 liquidation cluster exceeds the matched baseline (same symbol, hour-of-day factor and spot-vol tercile) with rate ratio > 1 and cluster-bootstrap 95% CI above 1; in the marked Hawkes the liquidation-mark excitation gamma > 0 with LR p < 0.05 given the jump self-excitation."
+  rationale: "Cascades are forced flow; if they raise the jump hazard after the fact, a post-cascade blackout protects stops; if the excess is only the coinciding jump, a jump-based gate suffices."
+  test: "Event study with matched controls and cluster bootstrap; marked Hawkes LR test."
+  success: "Supports iff both hold; contradicts iff the (0, 60] ratio CI is below or includes 1 AND gamma LR p > 0.05."
+  prior: 0.55
+  family: jumps
+  status: proposed
+H-WS05-11:
+  title: "The 60-minute R-FLOW-2 blackout covers the post-cascade jump excess"
+  statement: "The post-cluster excess jump hazard is gone by 60 min: the rate ratio in (60, 120] min has a 95% CI that includes 1 or lies below it, and the fitted liquidation-kernel half-life is < 30 min."
+  rationale: "Tests the blackout length directly; too short leaves stops exposed, too long costs trades (stress test: hs2_fade_blackout leaves nothing to fade)."
+  test: "Rate ratios by lag bin (0-5, 5-15, 15-30, 30-60, 60-120, 120-240 min); kernel half-life with profile-likelihood CI."
+  success: "Supports iff both hold; contradicts iff the (60, 120] ratio CI is above 1."
+  prior: 0.50
+  family: jumps
+  status: proposed
+H-WS05-12:
+  title: "Crypto jumps are mostly co-jumps and BTC jumps excite the alts"
+  statement: "On the flow 1m pool >= 30% of BTC LM jump minutes coincide with an ETH jump in the same minute and >= 30% with jumps in >= 3 pool alts; in the 1m multivariate Hawkes (BTC, ETH, SOL, alt basket) the BTC -> alt-basket excitation is > 0 with LR p < 0.01."
+  rationale: "If jumps are common, a 2-3 position crypto book is one jump bet; the co-stopping risk is a jump risk."
+  test: "Co-jump shares with binomial CI and a shuffled-day placebo; LR test of the cross term."
+  success: "Supports iff both shares >= 0.30 and LR p < 0.01; contradicts iff either share < 0.15."
+  prior: 0.60
+  family: dependence
+  status: proposed
+H-WS05-13:
+  title: "Stops hit inside jumps slip far more than the live tier budgets"
+  statement: "flow_3s, stop-market exits at 4 x sigma_1h from hourly entries (fill = trigger 3s candle close, never better than the stop, minus half the 3s spread): the median slip of triggers in a jump minute (LM 1m jump against the position in the trigger or previous minute) is >= 3x the non-jump median, and >= 10% of jump-minute triggers exceed the tier budget (liquid 10 bp, mid 25 bp, illiquid 60 bp)."
+  rationale: "Links the 4 sigma cap (H-STOP1) and the 2 USD worst case to measured gap risk; the 1h stress test could not see gaps (0 gapped stops by construction)."
+  test: "Slip distributions by trigger type, k in {1, 2, 3, 4, 6}, tier; bootstrap by symbol-day."
+  success: "Supports iff both hold; contradicts iff the jump median < 1.5x non-jump or the exceedance share < 5%."
+  prior: 0.45
+  family: execution
+  status: proposed
+H-WS05-14:
+  title: "Crypto 1h returns have lower-tail dependence a Gaussian copula misses"
+  statement: "Focused set (BTC, ETH, SOL, XRP, DOGE, ADA, LINK, AVAX; 1h, EWMA-standardised): a t-copula (one nu) beats the Gaussian copula on out-of-sample copula log-likelihood (DM t > 2 in llm_in_sample, diff > 0 in clean_holdout), and the empirical lower-tail co-exceedance at q = 1% for BTC-alt pairs exceeds the Gaussian-copula implied value by >= 50% (pooled)."
+  rationale: "Co-stopping in sell-offs is a joint lower-tail event; a Gaussian copula understates it."
+  test: "Yearly walk-forward copula fits on pseudo-observations (ranks from the fit window); co-exceedance with block bootstrap."
+  success: "Supports iff both hold; contradicts iff the Gaussian copula wins with t > 2 in llm_in_sample."
+  prior: 0.70
+  family: dependence
+  status: proposed
+H-WS05-15:
+  title: "DCC correlation beats EWMA and rolling correlation for 1h and 4h covariance"
+  statement: "With the same univariate EWMA vols, DCC(1,1) correlation has a higher out-of-sample Gaussian log-likelihood per row than EWMA correlation (lambda 0.97) and a 30-day rolling correlation for the focused set at 1h and 4h, DM t > 2 in llm_in_sample and diff > 0 in clean_holdout."
+  rationale: "Correlation targets drive the same-side and cluster limits; if DCC adds nothing, EWMA is the simpler choice."
+  test: "Yearly refits (DCC by 2-step QML), per-row log-likelihood differences, HLN-DM."
+  success: "Supports iff DCC beats both at both horizons in llm_in_sample and keeps the sign in clean_holdout; contradicts iff EWMA beats DCC with t > 2 at both horizons."
+  prior: 0.45
+  family: dependence
+  status: proposed
+H-WS05-16:
+  title: "A 2-3 position same-side crypto trend book is about one bet and co-stops in stress regimes"
+  statement: "For same-side books of 2 and 3 names from the focused set opened together, the effective number of bets (ENB = (sum eig)^2 / sum eig^2 of the 30-day correlation at entry) has median < 1.5 (2 names) and < 2.0 (3 names), and the empirical P(all stops hit within the same 4h | at least one hit) with 2 x sigma_4h stops and a 72h cap is >= 2x higher when the BTC v0 cell at entry is R6 / R8 / R9 than when it is R1 / R4 / R5."
+  rationale: "Quantifies the 'one bet' problem (R-PD-1) and whether co-stopping is regime-dependent, which decides if same-side limits should tighten by regime."
+  test: "Every 4h entry, all pairs / triples, both sides; regime split; block bootstrap by day."
+  success: "Supports iff both hold; contradicts iff the ENB medians exceed the bounds or the regime ratio < 1.2."
+  prior: 0.55
+  family: dependence
+  status: proposed
+H-WS05-17:
+  title: "The live limits contain the measured joint tail"
+  statement: "Under the live_small limits (<= 2 same side, 3 open, 400 USD gross, 1.30 USD to the stop, 2 USD max per trade, 10 USD daily stop), the measured joint tail (flow_3s stop slips at the tier notional and empirical 1h co-stops) gives P(a trade's loss > 2 USD) < 1% of stopped trades and P(a same-side pair loses > 6 USD in one co-stop event) < 0.5% of pair co-stops."
+  rationale: "Answers whether 3 open / 2 same side / 400 gross match the joint tail or let a co-jump through two stops breach the per-trade and daily caps."
+  test: "Loss per stopped trade = 1.30 USD x (1 + slip / stop distance) + fees at the tier notional (capped); pair co-stop losses from same-hour co-stops with each leg's slip."
+  success: "Supports iff both probabilities are below the bounds; contradicts iff either exceeds 2x its bound."
+  prior: 0.65
+  family: dependence
+  status: proposed

@@ -1,0 +1,13 @@
+# WS05 post hoc extra trial (registered 2026-11-27 ~07:30 UTC AFTER the H-WS05-10/11 results were seen; labelled extra trial).
+# Reason: the matched baseline of H-WS05-11 (symbol x hour-factor tercile x spot-vol tercile) leaves slow regime effects in;
+# the jump-without-liquidation control is also elevated (2.3x at 60-120 min), so the registered ratio overstates the
+# cascade-specific excess. Variant: each episode's own pre-episode jump rate in (-240, -15] min as the baseline.
+H-WS05-11b:
+  title: "POST HOC: against its own pre-cascade jump rate, the post-cascade excess is gone after 60 minutes"
+  statement: "Flow 1m pool: the pooled ratio of LM 1m jumps in (60, 120] min after an R-FLOW-2 episode to the episode's own (-240, -15] min jump rate has an episode-bootstrap 95% CI that includes 1 or lies below it."
+  rationale: "Removes the slow regime component that a cell baseline cannot; extra trial, counts as an additional test."
+  test: "Pooled ratio estimator sum(obs) / sum(pre rate x valid minutes); 2000 episode-bootstrap draws; same bins as H-WS05-11."
+  success: "Supports iff the (60, 120] CI includes 1 or lies below it; contradicts iff it lies above 1."
+  prior: 0.50
+  family: jumps
+  status: proposed
