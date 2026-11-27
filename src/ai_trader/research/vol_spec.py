@@ -1211,9 +1211,260 @@ def tables() -> str:
     return txt
 
 
+def verdicts() -> dict:
+    """Mechanical verdicts of H-WS04-1..7 from the registered success rules (computed, not edited, after evaluation)."""
+    ev = json.loads((root() / "eval.json").read_text())
+    dd = json.loads((root() / "dist.json").read_text()) if (root() / "dist.json").exists() else {}
+    fp = json.loads((root() / "first_passage.json").read_text()) if (root() / "first_passage.json").exists() else {}
+    sel = ev.get("selection", {})
+    P = lambda g, sg, k: ev["pairs"].get(f"crypto_{g}", {}).get(sg, {}).get(k, {})  # noqa: E731
+    V: dict = {}
+
+    def seg_verdicts(parts_in: list[dict], parts_ho: list[dict]) -> tuple[str, str]:
+        ins = "supports" if all(d and d["mean"] < 0 and d["t_hln"] < -2 for d in parts_in) else (
+            "contradicts" if any(d and d["mean"] > 0 and d["t_hln"] > 2 for d in parts_in) else "inconclusive")
+        ho = "supports" if all(d and d["mean"] < 0 for d in parts_ho) else (
+            "contradicts" if any(d and d["mean"] > 0 and d["t_hln"] > 2 for d in parts_ho) else "inconclusive")
+        return ins, ho
+
+    def m(d):
+        return {k: d.get(k) for k in ("mean", "rel", "t_hln", "n")} if d else {}
+
+    # H-WS04-1
+    keys = [(g, k) for g in ("1h", "4h") for k in ("rbc_how-rbc", "loghar_c-loghar")]
+    ins, ho = seg_verdicts([P(g, "llm_in_sample", k) for g, k in keys], [P(g, "clean_holdout", k) for g, k in keys])
+    V["H-WS04-1"] = {"llm_in_sample": (ins, {f"{g}:{k}": m(P(g, "llm_in_sample", k)) for g, k in keys}),
+                     "clean_holdout": (ho, {f"{g}:{k}": m(P(g, "clean_holdout", k)) for g, k in keys})}
+    # H-WS04-2
+    for sg in ("llm_in_sample", "clean_holdout"):
+        ok_all, det = True, {}
+        for g in GRIDS:
+            b = ev["pooled"].get(f"crypto_{g}_qlike", {}).get(sg, {})
+            rows = {r["spec"]: r for r in b.get("rows", [])}
+            cand = [k for k in ("loghar_c", "loghar_cr") if k in rows]
+            if not cand:
+                ok_all = False
+                continue
+            best = min(cand, key=lambda k: rows[k]["loss"])
+            in_mcs = best in b["mcs"]
+            beats = {}
+            for gs in GARCH_SPECS:
+                if gs in rows:
+                    d = dm_pair_from_rows(ev, g, sg, gs, best)
+                    beats[gs] = d
+            garch_wins = [k for k, d in beats.items() if d is not None and d < -2]
+            det[g] = {"best_clock_har": best, "in_mcs": in_mcs, "garch_t_vs_best": beats, "garch_wins": garch_wins}
+            ok_all &= in_mcs and not garch_wins
+        V["H-WS04-2"] = V.get("H-WS04-2", {})
+        V["H-WS04-2"][sg] = ("supports" if ok_all else "contradicts", det)
+    # H-WS04-3
+    parts = {sg: [P(g, sg, f"{sel[g]['pick']}-rbc") if sel.get(g, {}).get("pick") != "rbc" else {} for g in GRIDS] for sg in ("llm_in_sample", "clean_holdout")}
+    for sg in parts:
+        for i, g in enumerate(GRIDS):
+            if not parts[sg][i] and sel.get(g, {}).get("pick") not in (None, "rbc"):
+                parts[sg][i] = pair_from_eval(ev, g, sg, sel[g]["pick"], "rbc")
+    ins, ho = seg_verdicts(parts["llm_in_sample"], parts["clean_holdout"])
+    V["H-WS04-3"] = {"llm_in_sample": (ins, {"picks": {g: sel.get(g, {}).get("pick") for g in GRIDS}, **{g: m(d) for g, d in zip(GRIDS, parts["llm_in_sample"])}}),
+                     "clean_holdout": (ho, {g: m(d) for g, d in zip(GRIDS, parts["clean_holdout"])})}
+    # H-WS04-4
+    out4 = {}
+    for sg in ("llm_in_sample", "clean_holdout"):
+        rel_ok, all_ok, det = True, True, {}
+        for g in ("1h", "4h"):
+            r = ev["release"].get(f"crypto_{g}_{sg}", {}).get("loghar_cr-loghar_c", {})
+            a = P(g, sg, "loghar_cr-loghar_c")
+            det[g] = {"release_windows": m(r), "all_windows": m(a)}
+            if sg == "llm_in_sample":
+                rel_ok &= bool(r) and r["mean"] < 0 and r["t_hln"] < -1.96
+            else:
+                rel_ok &= bool(r) and r["mean"] < 0
+            all_ok &= not (a and a["mean"] > 0 and a["t_hln"] > 2)
+        out4[sg] = ("supports" if rel_ok and all_ok else "contradicts" if (not all_ok) else "inconclusive", det)
+    V["H-WS04-4"] = out4
+    # H-WS04-5 (a) 1d clock log-HAR vs log-HAR (crypto); (b) weekend 1% VaR of the t under the clock spec
+    a_in, a_ho = P("1d", "llm_in_sample", "loghar_c-loghar"), P("1d", "clean_holdout", "loghar_c-loghar")
+    clock_spec = {g: ("loghar_c" if sel.get(g, {}).get("pick") not in ("loghar_c", "loghar_cr", "loghar_cny", "rbc_how") else sel[g]["pick"]) for g in GRIDS}
+    wk = {}
+    b_ok = {"llm_in_sample": True, "clean_holdout": True}
+    for g in GRIDS:
+        d = dd.get(f"crypto_{g}_{clock_spec[g]}", {}).get("weekend_var_t", {})
+        for sg in b_ok:
+            w = d.get(f"{sg}_weekend")
+            if not w:
+                b_ok[sg] = False
+                continue
+            okw = all(w[x]["rate"] <= 0.02 and w[x]["p"] > 0.05 for x in ("lo_0.01", "hi_0.01"))
+            wk[f"{g}_{sg}"] = {"spec": clock_spec[g], "lo": w["lo_0.01"], "hi": w["hi_0.01"], "ok": okw}
+            b_ok[sg] &= okw
+    va = "supports" if (a_in and a_in["mean"] < 0 and a_in["t_hln"] < -2) else ("contradicts" if a_in and a_in["mean"] > 0 and a_in["t_hln"] > 2 else "inconclusive")
+    vh = "supports" if (a_ho and a_ho["mean"] < 0) else ("contradicts" if a_ho and a_ho["t_hln"] > 2 else "inconclusive")
+    comb = lambda x, y: "supports" if x == "supports" and y else ("contradicts" if x == "contradicts" or not y else "inconclusive")  # noqa: E731
+    V["H-WS04-5"] = {"llm_in_sample": (comb(va, b_ok["llm_in_sample"]), {"a": m(a_in), "a_verdict": va, "b_ok": b_ok["llm_in_sample"], "weekend_var": {k: v for k, v in wk.items() if "llm" in k}}),
+                     "clean_holdout": (comb(vh, b_ok["clean_holdout"]), {"a": m(a_ho), "a_verdict": vh, "b_ok": b_ok["clean_holdout"], "weekend_var": {k: v for k, v in wk.items() if "clean" in k}})}
+    # H-WS04-6 (holdout test by construction: fit in-sample, score holdout)
+    ok6, det6, contra6 = True, {}, False
+    for g in GRIDS:
+        d = dd.get(f"crypto_{g}_{sel.get(g, {}).get('pick')}")
+        if not d:
+            ok6 = False
+            continue
+        tn, st = d["ls_t_minus_normal"], d["ls_skewt_minus_t"]
+        v = d["var"]["t"]
+        var_ok = all(v[x]["p"] > 0.05 and v[x]["p_cc"] > 0.05 for x in ("lo_0.01", "hi_0.01"))
+        det6[g] = {"nu": d["params"]["t"]["nu"], "t_minus_normal": m(tn), "skewt_minus_t": m(st), "var_t_1pct": {x: v[x] for x in ("lo_0.01", "hi_0.01")}, "var_ok": var_ok}
+        ok6 &= tn["t_hln"] > 2 and abs(st["t_hln"]) < 2 and var_ok
+        contra6 |= tn["t_hln"] < -2
+    V["H-WS04-6"] = {"clean_holdout": ("supports" if ok6 else ("contradicts" if contra6 else "inconclusive"), det6)}
+    # H-WS04-7
+    from scipy import stats
+
+    ok7, det7 = True, {}
+    for g in GRIDS:
+        d = dd.get(f"crypto_{g}_{sel.get(g, {}).get('pick')}")
+        if not d:
+            ok7 = False
+            continue
+        for side in ("lo", "hi"):
+            e = d[f"p4_{side}_emp"]
+            pm = d["var"]["t"][f"p4_{side}_model"]
+            lo_, hi_ = stats.binom.ppf(0.025, e["n"], pm) / e["n"], stats.binom.ppf(0.975, e["n"], pm) / e["n"]
+            inside = lo_ <= e["rate"] <= hi_
+            det7[f"{g}_{side}"] = {"emp": e["rate"], "x": e["x"], "n": e["n"], "model": pm, "interval": [lo_, hi_], "inside": inside}
+            ok7 &= inside
+    ratios = []
+    for s_ in CRYPTO:
+        d = fp.get(s_, {}).get("k4.0_H24_clean_holdout")
+        if d and d.get("model_t_sim"):
+            ratios.append((d["long_touch"] + d["short_touch"]) / 2 / d["model_t_sim"])
+    pooled_ratio = float(np.mean(ratios)) if ratios else float("nan")
+    det7["first_passage_24h_ratio_mean"] = pooled_ratio
+    det7["first_passage_ratios"] = ratios
+    ok7 &= 0.67 <= pooled_ratio <= 1.5 if ratios else False
+    V["H-WS04-7"] = {"clean_holdout": ("supports" if ok7 else "contradicts", det7)}
+    (root() / "verdicts.json").write_text(json.dumps(V, indent=1, default=float))
+    return V
+
+
+def pair_from_eval(ev: dict, g: str, sg: str, a: str, b: str) -> dict:
+    """Recompute a pooled pair that was not in the precomputed list."""
+    L, specs = pooled(list(CRYPTO), g, qlike)
+    m = segments(L["event_ts"])[sg]
+    return pair(L.filter(pl.Series(m)), a, b)
+
+
+def dm_pair_from_rows(ev: dict, g: str, sg: str, a: str, b: str) -> float | None:
+    k = f"{a}-{b}"
+    d = ev["pairs"].get(f"crypto_{g}", {}).get(sg, {}).get(k)
+    if d is None:
+        d = pair_from_eval(ev, g, sg, a, b)
+    return d.get("t_hln") if d else None
+
+
+def record_verdicts() -> None:
+    """Append the verdicts to research/hypotheses_results.jsonl (run under `governor.py lock results`)."""
+    from ai_trader.research.hypotheses import record
+
+    V = verdicts()
+    for hid, segs in V.items():
+        for sg, (verdict, metrics) in segs.items():
+            record(hid, sg, verdict, metrics, note="WS04 vol_spec (specification program 2026-11-27)", data="data/research/ws04/")
+    print(json.dumps({h: {sg: v[0] for sg, v in segs.items()} for h, segs in V.items()}, indent=1))
+
+
+def properties(symbols: list[str]) -> dict:
+    """Empirical properties of the targets per asset and grid (dossier section 2): ADF + KPSS on log RV, moments of
+    returns, Ljung-Box on returns and squared returns, ACF of log RV, missing share, jump share (1 - BV/RV), and the
+    stability of the clock log-HAR coefficients by calendar year (OLS with HAC SEs)."""
+    import warnings
+
+    from scipy import stats
+    from statsmodels.stats.diagnostic import acorr_ljungbox
+    from statsmodels.tsa.stattools import acf, adfuller, kpss
+
+    out: dict = {}
+    for s_ in symbols:
+        for g in GRIDS:
+            df = read_grid(s_, g)
+            y = df["rv"].to_numpy().astype(float)
+            r = df["ret"].to_numpy().astype(float)
+            bv = df["bv"].to_numpy().astype(float)
+            ok = np.isfinite(y) & (y > 0)
+            ly = np.log(y[ok])
+            rr = r[np.isfinite(r)]
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                adf_p = float(adfuller(ly, maxlag={"1h": 24, "4h": 6, "1d": 7}[g], autolag=None)[1])
+                kpss_p = float(kpss(ly, regression="c", nlags="auto")[1])
+            lags = {"1h": (1, 24, 168, 720), "4h": (1, 6, 42, 180), "1d": (1, 7, 30, 90)}[g]
+            ac = acf(ly, nlags=max(lags), fft=True)
+            lb_r = acorr_ljungbox(rr, lags=[20], return_df=True)
+            lb_r2 = acorr_ljungbox(rr ** 2, lags=[20], return_df=True)
+            zero_rv = float(np.mean(y[np.isfinite(y)] <= 0)) if np.isfinite(y).any() else float("nan")
+            jump = 1 - np.nansum(np.minimum(bv, y)) / np.nansum(y)
+            out[f"{s_}_{g}"] = {
+                "n": int(df.height), "missing_share": float(1 - np.isfinite(y).mean()), "zero_rv_share": zero_rv,
+                "logrv_adf_p": adf_p, "logrv_kpss_p": kpss_p, "logrv_acf": {str(k): float(ac[k]) for k in lags},
+                "ret_skew": float(stats.skew(rr)), "ret_exkurt": float(stats.kurtosis(rr)),
+                "lb20_ret_p": float(lb_r["lb_pvalue"].iloc[0]), "lb20_ret2_p": float(lb_r2["lb_pvalue"].iloc[0]),
+                "lb20_ret_stat": float(lb_r["lb_stat"].iloc[0]), "lb20_ret2_stat": float(lb_r2["lb_stat"].iloc[0]),
+                "jump_share": float(jump), "logrv_mean": float(ly.mean()), "logrv_sd": float(ly.std()),
+            }
+            # yearly stability of the clock log-HAR (clock factor estimated within the year; HAC SE)
+            if s_ in CRYPTO:
+                ts = df["event_ts"]
+                L = LAGS[g]
+                cell = cells(ts, g)
+                yrs = ts.dt.year().to_numpy()
+                rows = {}
+                for yr in sorted(set(yrs.tolist())):
+                    tr = yrs == yr
+                    if tr.sum() < (300 if g == "1d" else 2000):
+                        continue
+                    slow = trailing_mean(y, L[-1])
+                    f_cell = clock_factor(y, slow, cell, CELLS[g], tr, smooth=(g == "1h"))
+                    yd = y / f_cell[cell]
+                    floor = 0.01 * float(np.nanmedian(y[tr]))
+                    X = np.column_stack([np.ones(len(y))] + [np.log(np.maximum(trailing_mean(yd, w), floor)) for w in L])
+                    ly2 = np.log(np.maximum(yd, floor))
+                    m_ = tr & np.isfinite(X).all(axis=1) & np.isfinite(ly2)
+                    Xm, ym = X[m_], ly2[m_]
+                    b = ols(Xm, ym)
+                    e = ym - Xm @ b
+                    n = len(ym)
+                    lag = int(np.floor(4 * (n / 100) ** (2 / 9)))
+                    S = (Xm * e[:, None]).T @ (Xm * e[:, None]) / n
+                    for k in range(1, lag + 1):
+                        G = (Xm[k:] * e[k:, None]).T @ (Xm[:-k] * e[:-k, None]) / n
+                        S += (1 - k / (lag + 1)) * (G + G.T)
+                    Q = np.linalg.inv(Xm.T @ Xm / n)
+                    se = np.sqrt(np.diag(Q @ S @ Q / n))
+                    rows[str(yr)] = {"b": [float(x) for x in b], "se": [float(x) for x in se], "n": n,
+                                     "persistence": float(b[1:].sum()), "clock_range": [float(f_cell.min()), float(f_cell.max())]}
+                out[f"{s_}_{g}"]["loghar_c_by_year"] = rows
+    (root() / "properties.json").write_text(json.dumps(out, indent=1, default=float))
+    return out
+
+
+def report(out_name: str = "ws04_2026-11-27.md") -> Path:
+    """Assemble research/reports/<out_name> from the prose templates in data/research/ws04/tmp (report_head.txt,
+    report_static.txt, report_tail.txt) and the generated tables (tables.md)."""
+    t = root() / "tmp"
+    parts = [t / "report_head.txt", t / "report_static.txt", root() / "tables.md", t / "report_tail.txt"]
+    txt = []
+    for q in parts:
+        if q.exists():
+            body = q.read_text(encoding="utf-8")
+            if q.name == "tables.md":
+                body = "## Result tables (generated by `vol_spec tables`)\n" + body
+            txt.append(body.rstrip() + "\n")
+    out = load().root / "research" / "reports" / out_name
+    out.write_text("\n".join(txt), encoding="utf-8")
+    return out
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("stage", choices=["download", "build", "forecast", "evaluate", "dist", "passage", "tables"])
+    ap.add_argument("stage", choices=["download", "build", "forecast", "evaluate", "dist", "passage", "tables", "verdicts", "record", "properties", "report"])
     ap.add_argument("--symbols", default="")
     ap.add_argument("--grids", default="1h,4h,1d")
     ap.add_argument("--spec", default="")
@@ -1244,6 +1495,15 @@ def main(argv: list[str] | None = None) -> None:
         first_passage([s for s in syms if s in CRYPTO], spec, nu_1h=nu)
     elif a.stage == "tables":
         print(len(tables()))
+    elif a.stage == "verdicts":
+        print(json.dumps({h: {sg: v[0] for sg, v in segs.items()} for h, segs in verdicts().items()}, indent=1))
+    elif a.stage == "record":
+        record_verdicts()
+    elif a.stage == "report":
+        print(report())
+    elif a.stage == "properties":
+        o = properties(syms)
+        print(json.dumps({k: {kk: v[kk] for kk in ("logrv_adf_p", "logrv_kpss_p", "ret_exkurt", "jump_share")} for k, v in o.items()}, indent=0, default=float))
     print(f"done {a.stage} in {time.time() - t0:.0f}s", flush=True)
 
 
