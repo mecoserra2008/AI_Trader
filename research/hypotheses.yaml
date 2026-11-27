@@ -5067,3 +5067,43 @@ hypotheses:
     prior: 0.5
     family: ws14_interp
     status: proposed
+
+  # WS05 post hoc extra trial (registered 2026-11-27 ~07:30 UTC AFTER the H-WS05-10/11 results were seen; labelled extra trial).
+  # Reason: the matched baseline of H-WS05-11 (symbol x hour-factor tercile x spot-vol tercile) leaves slow regime effects in;
+  # the jump-without-liquidation control is also elevated (2.3x at 60-120 min), so the registered ratio overstates the
+  # cascade-specific excess. Variant: each episode's own pre-episode jump rate in (-240, -15] min as the baseline.
+  H-WS05-11b:
+    title: "POST HOC: against its own pre-cascade jump rate, the post-cascade excess is gone after 60 minutes"
+    statement: "Flow 1m pool: the pooled ratio of LM 1m jumps in (60, 120] min after an R-FLOW-2 episode to the episode's own (-240, -15] min jump rate has an episode-bootstrap 95% CI that includes 1 or lies below it."
+    rationale: "Removes the slow regime component that a cell baseline cannot; extra trial, counts as an additional test."
+    test: "Pooled ratio estimator sum(obs) / sum(pre rate x valid minutes); 2000 episode-bootstrap draws; same bins as H-WS05-11."
+    success: "Supports iff the (60, 120] CI includes 1 or lies below it; contradicts iff it lies above 1."
+    prior: 0.50
+    family: jumps
+    status: proposed
+
+  # WS12 extra trials (registered 2026-11-27 ~07:20 UTC AFTER the H-WS12-1..5 results, BEFORE these fits). Labelled extra
+  # trials: H-WS12-4 contradicted, but the feature mlp lacked the range / turnover / funding / OI inputs the sequence models
+  # see, and log-HAR-t had no range-based realised measure. Same rows, refits, origins, seeds, tests and segments as
+  # H-WS12-1..5. Extra inputs at t (bars t-1 and earlier): xr1 = log Parkinson range variance of bar t-1 in units of s2_t,
+  # xr6 / xr24 = log mean of that over bars t-6..t-1 / t-24..t-1, xturn = lturn of bar t-1, xfund = funding (bp) at t-1,
+  # xdoi = 24 h OI change at t-1. harx = per-asset log-HAR-t with [xr1, xr6, xr24, xturn, |xfund|, |xdoi|] added (OLS, QLIKE
+  # bias constant, Student-t). mlpx = the feature mlp with the 6 extra inputs (25 features), lr choice + 3 seeds as before.
+  H-WS12-8:
+    title: "The deep sequence model still beats a log-HAR-t that sees the range and activity inputs"
+    statement: "D* (gru 3-seed ensemble) has lower 1h pinball AND lower 1h QLIKE than harx (log-HAR-t + Parkinson-range and activity terms), pooled over the 6 perps, in both segments."
+    rationale: "Complexity budget: the deep gain over log-HAR-t may come from the range-based realised measure, which a linear model can use too."
+    test: "per-date mean differences D* - harx, NW t with HLN correction."
+    success: "both differences < 0 with t < -2 in both segments; contradicts iff either difference >= 0 in both segments."
+    prior: 0.40
+    family: ml_models
+    status: proposed
+  H-WS12-9:
+    title: "With the same inputs, the sequence encoder adds nothing over a feature MLP (null, extra trial for H-WS12-4)"
+    statement: "D* does NOT beat mlpx on 1h pinball and 1h QLIKE: neither difference D* - mlpx has t < -2 in both segments."
+    rationale: "Separates the architecture from the inputs in the H-WS12-4 contradiction."
+    test: "per-date mean differences D* - mlpx, NW t with HLN correction."
+    success: "supports iff neither metric has difference < 0 with t < -2 in both segments; contradicts iff both metrics do."
+    prior: 0.55
+    family: ml_models
+    status: proposed

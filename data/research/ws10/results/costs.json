@@ -1,0 +1,521 @@
+{
+ "notes": "costs in bp of the decision-time mid, fees included; clean_holdout days (FIT post-cutoff + TEST)",
+ "proxy_calibration": {
+  "peg": {
+   "a": 2.0431577334095135,
+   "b": 0.433011480774173,
+   "n": 1058,
+   "r": 0.5327735320568469,
+   "loso": {
+    "BTCUSDT": {
+     "bias": 0.30990411192306017,
+     "mae": 0.3632831040370555,
+     "ms_mean": 3.220181703567505,
+     "proxy_raw_mean": 3.258661854058856
+    },
+    "ETHUSDT": {
+     "bias": 0.24155129141940346,
+     "mae": 0.25906285465777273,
+     "ms_mean": 3.2689332962036133,
+     "proxy_raw_mean": 3.2672029716011637
+    },
+    "SOLUSDT": {
+     "bias": -0.2324699759433231,
+     "mae": 0.3530585742929527,
+     "ms_mean": 3.6370301246643066,
+     "proxy_raw_mean": 3.2771899883786477
+    },
+    "XRPUSDT": {
+     "bias": -0.12863123704572066,
+     "mae": 0.24880422003064842,
+     "ms_mean": 3.567406177520752,
+     "proxy_raw_mean": 3.2914791364231513
+    },
+    "DOGEUSDT": {
+     "bias": -0.25648062973963803,
+     "mae": 0.3436425035963517,
+     "ms_mean": 3.8873815536499023,
+     "proxy_raw_mean": 3.8723184122836476
+    }
+   }
+  },
+  "stop": {
+   "a": 1.127882113773081,
+   "b": 0.026628814678231083,
+   "n": 55,
+   "r": 0.29499409966315593,
+   "ms_mean": 1.2619397807146513,
+   "proxy_mean": 5.034308457265345
+  },
+  "drift_ratio": 1.2929884522585782
+ },
+ "alt_stop_model": {
+  "excess_mean": 0.5359747626250494,
+  "excess_q": {
+   "50": 0.25396087592488414,
+   "90": 2.680368817322807,
+   "95": 4.412655320363002,
+   "99": 12.690208627186557
+  },
+  "sig3_ref": 2.294333619599047
+ },
+ "n_rows": 3465,
+ "H-WS10-2": {
+  "test": {
+   "BTCUSDT": {
+    "gain": 2.3372722268104553,
+    "lo": 2.2257541021475427,
+    "hi": 2.4338699424496064,
+    "hours_pos": 1.0,
+    "n": 74256,
+    "peg_mean": 3.1700508659322235,
+    "taker_mean": 5.507323079997045,
+    "fill_60s": 0.9458764274940745,
+    "runaway_gain": 1.086634300866585
+   },
+   "ETHUSDT": {
+    "gain": 2.3195148339638343,
+    "lo": 2.272475221294623,
+    "hi": 2.365227209146206,
+    "hours_pos": 1.0,
+    "n": 74256,
+    "peg_mean": 3.2059166859100925,
+    "taker_mean": 5.525431518926017,
+    "fill_60s": 0.975611398405516,
+    "runaway_gain": 1.215164242248829
+   },
+   "SOLUSDT": {
+    "gain": 2.526189694037804,
+    "lo": 2.4595420385782534,
+    "hi": 2.58358200605099,
+    "hours_pos": 1.0,
+    "n": 74256,
+    "peg_mean": 3.5909075177917,
+    "taker_mean": 6.1170971973195485,
+    "fill_60s": 0.9602725705666882,
+    "runaway_gain": -0.04545071705095305
+   },
+   "XRPUSDT": {
+    "gain": 2.4492220878601074,
+    "lo": 2.393548698608692,
+    "hi": 2.498737083031581,
+    "hours_pos": 1.0,
+    "n": 74256,
+    "peg_mean": 3.520737834637184,
+    "taker_mean": 5.969959938223519,
+    "fill_60s": 0.965645873734109,
+    "runaway_gain": 0.26879201092547544
+   },
+   "DOGEUSDT": {
+    "gain": 2.4577598525927615,
+    "lo": 2.381597515023672,
+    "hi": 2.525068529523336,
+    "hours_pos": 1.0,
+    "n": 74256,
+    "peg_mean": 3.8126910380548336,
+    "taker_mean": 6.270450900215337,
+    "fill_60s": 0.9290427709545357,
+    "runaway_gain": -0.9149622760524672
+   }
+  },
+  "pre_gain": {
+   "BTCUSDT": 2.3378662793965788,
+   "ETHUSDT": 2.412201610224254,
+   "SOLUSDT": 2.5715240348255684,
+   "XRPUSDT": 2.468061551366464,
+   "DOGEUSDT": 2.416943265330377
+  }
+ },
+ "H-WS10-3": {
+  "BTCUSDT": {
+   "taker_slip": [
+    0.007323080064872136,
+    0.00701112805131393,
+    0.007671013907439863
+   ],
+   "stop_slip": [
+    0.7934713980442228,
+    0.6529117191970535,
+    0.9658436188161472
+   ],
+   "stop_p99": 15.714916019314495,
+   "stop_n": 1809,
+   "stop_by_k": {
+    "0.5": 0.6475590080002185,
+    "1.0": 0.8399979669349945,
+    "2.0": 0.9744125963747834
+   }
+  },
+  "ETHUSDT": {
+   "taker_slip": [
+    0.02543151880112978,
+    0.024277135686805614,
+    0.026700775864390798
+   ],
+   "stop_slip": [
+    0.8561910336256764,
+    0.6131703923909505,
+    1.163008295773233
+   ],
+   "stop_p99": 16.716779774634148,
+   "stop_n": 1790,
+   "stop_by_k": {
+    "0.5": 0.9332820764772478,
+    "1.0": 0.624620219042289,
+    "2.0": 1.057856543725902
+   }
+  },
+  "SOLUSDT": {
+   "taker_slip": [
+    0.6170971897932199,
+    0.5901117373544437,
+    0.6458994150734865
+   ],
+   "stop_slip": [
+    1.4833307746771505,
+    1.301957801039269,
+    1.686667479135946
+   ],
+   "stop_p99": 17.902017461335785,
+   "stop_n": 1822,
+   "stop_by_k": {
+    "0.5": 1.4418165267264271,
+    "1.0": 1.4574023607041349,
+    "2.0": 1.5908559130221096
+   }
+  },
+  "XRPUSDT": {
+   "taker_slip": [
+    0.46995993760915905,
+    0.44874048124139126,
+    0.49209070374759345
+   ],
+   "stop_slip": [
+    0.8776951920670503,
+    0.7497075070552124,
+    1.0132065972496709
+   ],
+   "stop_p99": 10.364112343176227,
+   "stop_n": 1844,
+   "stop_by_k": {
+    "0.5": 1.0214349764795159,
+    "1.0": 0.9481254294596477,
+    "2.0": 0.5370095692132246
+   }
+  },
+  "DOGEUSDT": {
+   "taker_slip": [
+    0.7704509038191575,
+    0.7365874758706643,
+    0.8083111407665106
+   ],
+   "stop_slip": [
+    1.5790506782212215,
+    1.3352782331018795,
+    1.8678453765673528
+   ],
+   "stop_p99": 15.286769465909275,
+   "stop_n": 1871,
+   "stop_by_k": {
+    "0.5": 1.388737604975992,
+    "1.0": 1.8156706785711418,
+    "2.0": 1.5617245146701249
+   }
+  }
+ },
+ "validation_fit_to_test": {
+  "BTCUSDT": {
+   "peg_cov90": 0.8966278819219996,
+   "peg_cov99": 0.9870717517776342,
+   "peg_mean_fit": 3.1315629482269287,
+   "peg_mean_test": 3.170050859451294,
+   "stop_cov90": 0.8524046434494196,
+   "stop_cov99": 0.9839690436705362
+  },
+  "ETHUSDT": {
+   "peg_cov90": 0.8753232062055591,
+   "peg_cov99": 0.9839743589743589,
+   "peg_mean_fit": 3.050900459289551,
+   "peg_mean_test": 3.2059166431427,
+   "stop_cov90": 0.8815642458100559,
+   "stop_cov99": 0.9905027932960894
+  },
+  "SOLUSDT": {
+   "peg_cov90": 0.8817873303167421,
+   "peg_cov99": 0.9831394096099978,
+   "peg_mean_fit": 3.4289753437042236,
+   "peg_mean_test": 3.590907573699951,
+   "stop_cov90": 0.8265642151481888,
+   "stop_cov99": 0.9681668496158068
+  },
+  "XRPUSDT": {
+   "peg_cov90": 0.8877531781943546,
+   "peg_cov99": 0.9862637362637363,
+   "peg_mean_fit": 3.4460675716400146,
+   "peg_mean_test": 3.520737886428833,
+   "stop_cov90": 0.8714750542299349,
+   "stop_cov99": 0.9859002169197397
+  },
+  "DOGEUSDT": {
+   "peg_cov90": 0.8917124542124543,
+   "peg_cov99": 0.9866677440206852,
+   "peg_mean_fit": 3.7877886295318604,
+   "peg_mean_test": 3.8126909732818604,
+   "stop_cov90": 0.8562266167824693,
+   "stop_cov99": 0.9716729021913415
+  }
+ },
+ "live_fills": {
+  "fills": [
+   {
+    "ts": "2026-11-15T20:09:59.899993+00:00",
+    "exec_id": "7da2c510-89b8-5971-b1f4-b33a977095d0",
+    "symbol": "BTCUSDT",
+    "leg": "entry",
+    "is_maker": true,
+    "slip_bps_vs_mid": 1.3190200375346681,
+    "time_to_fill_ms": 17749,
+    "slip_bps_vs_stop": null,
+    "exit_kind": null,
+    "fee_rate": 0.0002,
+    "side": "short",
+    "model_slip_pctile": 0.7546981399937438,
+    "model_tfill_pctile": 0.8320640535142809
+   },
+   {
+    "ts": "2026-11-15T21:44:39.964206+00:00",
+    "exec_id": "d51e5788-48e0-51f7-ab64-63736f5f8edf",
+    "symbol": "BTCUSDT",
+    "leg": "exit",
+    "is_maker": false,
+    "slip_bps_vs_mid": null,
+    "time_to_fill_ms": null,
+    "slip_bps_vs_stop": -86.30843402904875,
+    "exit_kind": "CreateByClosing",
+    "fee_rate": null,
+    "side": "short"
+   },
+   {
+    "ts": "2026-11-15T23:38:09.744092+00:00",
+    "exec_id": "dbb44fce-24da-5c87-bdf5-e69c261b6f1d",
+    "symbol": "ZECUSDT",
+    "leg": "entry",
+    "is_maker": true,
+    "slip_bps_vs_mid": 1.9260718589902783,
+    "time_to_fill_ms": 9419,
+    "slip_bps_vs_stop": null,
+    "exit_kind": null,
+    "fee_rate": 0.0002,
+    "side": "short"
+   },
+   {
+    "ts": "2026-11-15T23:41:25.316088+00:00",
+    "exec_id": "53a0fe9f-464d-5bb9-a8c0-34c4a0abda7b",
+    "symbol": "ZECUSDT",
+    "leg": "exit",
+    "is_maker": false,
+    "slip_bps_vs_mid": null,
+    "time_to_fill_ms": null,
+    "slip_bps_vs_stop": -246.31016042780718,
+    "exit_kind": "CreateByClosing",
+    "fee_rate": null,
+    "side": "short"
+   },
+   {
+    "ts": "2026-11-20T03:42:23.811383+00:00",
+    "exec_id": "627b9a93-b0f3-5dd3-b051-721b5ea85119",
+    "symbol": "BTCUSDT",
+    "leg": "entry",
+    "is_maker": true,
+    "slip_bps_vs_mid": 0.5724860002988071,
+    "time_to_fill_ms": 9215,
+    "slip_bps_vs_stop": null,
+    "exit_kind": null,
+    "fee_rate": 0.0002,
+    "side": "long",
+    "model_slip_pctile": 0.6391395365624775,
+    "model_tfill_pctile": 0.6949036309824587
+   },
+   {
+    "ts": "2026-11-20T21:58:04.281645+00:00",
+    "exec_id": "5cbc54eb-8cd5-5c2c-8027-eb993051102e",
+    "symbol": "BTCUSDT",
+    "leg": "exit",
+    "is_maker": false,
+    "slip_bps_vs_mid": null,
+    "time_to_fill_ms": null,
+    "slip_bps_vs_stop": 3.007518796992719,
+    "exit_kind": "StopLoss",
+    "fee_rate": null,
+    "side": "long",
+    "model_stop_pctile": 0.9385327164573695
+   }
+  ]
+ },
+ "paper_fills": {
+  "n": 4,
+  "by": [
+   {
+    "liquidity": "taker",
+    "reason": "target",
+    "len": 1,
+    "mean": -119.74424270963846,
+    "median": -119.74424270963846
+   },
+   {
+    "liquidity": "maker",
+    "reason": "entry",
+    "len": 2,
+    "mean": 1.309941181436014,
+    "median": 1.309941181436014
+   },
+   {
+    "liquidity": "taker",
+    "reason": "stop",
+    "len": 1,
+    "mean": 147.66676517622645,
+    "median": 147.66676517622645
+   }
+  ]
+ },
+ "funding": {
+  "AAVEUSDT": {
+   "mean_bp_per_settle": 0.2910192592592593,
+   "abs_p90": 1.0,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "ADAUSDT": {
+   "mean_bp_per_settle": 0.2641614814814815,
+   "abs_p90": 1.0,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "ATOMUSDT": {
+   "mean_bp_per_settle": -0.41481000000000007,
+   "abs_p90": 3.0203399999999996,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "AVAXUSDT": {
+   "mean_bp_per_settle": 0.10593259259259263,
+   "abs_p90": 1.0653,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "BCHUSDT": {
+   "mean_bp_per_settle": 0.1495988888888889,
+   "abs_p90": 1.0,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "BNBUSDT": {
+   "mean_bp_per_settle": 0.12974592592592593,
+   "abs_p90": 1.0,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "BTCUSDT": {
+   "mean_bp_per_settle": 0.4485225925925926,
+   "abs_p90": 0.9605999999999999,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "DOGEUSDT": {
+   "mean_bp_per_settle": 0.21464333333333332,
+   "abs_p90": 1.0,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "DOTUSDT": {
+   "mean_bp_per_settle": 0.4237351851851852,
+   "abs_p90": 1.0,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "ENAUSDT": {
+   "mean_bp_per_settle": 0.20505785582255087,
+   "abs_p90": 0.5563,
+   "n": 541,
+   "settles_per_day": 6.011111111111111
+  },
+  "ETCUSDT": {
+   "mean_bp_per_settle": 0.31532444444444446,
+   "abs_p90": 1.0,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "ETHUSDT": {
+   "mean_bp_per_settle": 0.31436333333333333,
+   "abs_p90": 0.9056099999999999,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "FILUSDT": {
+   "mean_bp_per_settle": 0.1301762962962963,
+   "abs_p90": 1.0,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "HYPEUSDT": {
+   "mean_bp_per_settle": 0.3805733333333333,
+   "abs_p90": 1.0,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "LINKUSDT": {
+   "mean_bp_per_settle": 0.34445259259259253,
+   "abs_p90": 1.0,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "LTCUSDT": {
+   "mean_bp_per_settle": 0.3471003703703704,
+   "abs_p90": 1.0,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "NEARUSDT": {
+   "mean_bp_per_settle": 0.33312592592592594,
+   "abs_p90": 1.02228,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "SOLUSDT": {
+   "mean_bp_per_settle": 0.13478444444444446,
+   "abs_p90": 1.0,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "SUIUSDT": {
+   "mean_bp_per_settle": 0.25894962962962964,
+   "abs_p90": 1.0,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "TRXUSDT": {
+   "mean_bp_per_settle": -1.5757507407407407,
+   "abs_p90": 3.8333,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "UNIUSDT": {
+   "mean_bp_per_settle": 0.33220962962962963,
+   "abs_p90": 1.0,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "XLMUSDT": {
+   "mean_bp_per_settle": 0.2705592592592592,
+   "abs_p90": 1.2474399999999997,
+   "n": 270,
+   "settles_per_day": 3.0
+  },
+  "XRPUSDT": {
+   "mean_bp_per_settle": 0.2535996296296297,
+   "abs_p90": 1.0,
+   "n": 270,
+   "settles_per_day": 3.0
+  }
+ }
+}

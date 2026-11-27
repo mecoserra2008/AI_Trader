@@ -1,0 +1,141 @@
+# WS10 MICRO + COSTS (specification program 2026-11-27). Registered before any fit or cost measurement.
+# Data: PART participant days (data/research/participants/days: 5 Bybit USDT perps BTC ETH SOL XRP DOGE; ms taker-order tape + 1 s book)
+#   FIT  = 12 pre-cutoff days + 2026-10-06..10-29 (36 days); TEST = 2026-10-30..11-24 (26 days, clean_holdout).
+#   llm_in_sample check = fit on 2026-10-06..10-29 only, score the 12 pre-cutoff days.
+# lake flow_3s 2026-11-07..11-26 (all clean_holdout) for the 23 stress perps; xvenue journal 2026-11-15..11-26.
+# Costs in bp of the decision-time mid; maker 2.0 bp, taker 5.5 bp; order sizes $50, $100, $200 (and $1k, $10k for scale).
+H-WS10-1:
+  title: "Own price impact of a $50-200 order is a negligible part of its cost"
+  statement: "For $50-200 orders on the 5 PART perps (TEST days) and the 23 stress perps (flow_3s), predicted own impact (best out-of-sample impact spec evaluated at Q) plus book walk is < 10% of the expected all-in taker cost (fee + half spread + walk + impact) in every symbol x UTC-hour cell."
+  rationale: "Our orders are 0.1-1% of L1 on the majors; if true, the cost model can ignore impact and model spread, fee, latency drift and stop slippage only."
+  test: "Per symbol x hour cell: impact_bp(Q) from the H-WS10-6..9 winner at 60 s (or the square-root fit) and walk from L1 / depth bands; ratio to the all-in taker cost."
+  success: "Supports iff the ratio < 10% in >= 95% of symbol-hour cells at Q = 200; contradicts iff < 80% of cells; else inconclusive."
+  prior: 0.85
+  family: ws10_costs
+  status: proposed
+H-WS10-2:
+  title: "A pegged $100 limit at the touch costs less than an immediate taker order, every hour"
+  statement: "A $100 PostOnly limit joining the touch at the decision time, re-pegged to the new touch each second the touch moves away, cancelled after 60 s and then crossed as taker, has a lower mean implementation shortfall vs the decision-time mid (fees included) than an immediate taker order (fill at the touch 1 s later, 5.5 bp), on BTC ETH SOL XRP DOGE, decision times every minute of the TEST days, pessimistic queue (only trades at or through our price advance us; no cancels ahead)."
+  rationale: "R-EXE-1/2 found +0.01 R for 0.7-8k orders on BTC/ETH/SOL; check it at our size on all 5 perps, by hour, including the no-fill fallback."
+  test: "Paired per decision (taker cost - pegged cost), day-clustered bootstrap 95% CI per symbol (2000 reps); by hour point estimates. Secondary: pro-rata queue; 'runaway' decisions (mid moves >= 1 sigma_60s in the trade direction within 60 s)."
+  success: "Supports iff the CI > 0 for every symbol and the point estimate > 0 in >= 90% of symbol-hours; contradicts iff the CI < 0 for >= 3 symbols; else inconclusive."
+  prior: 0.8
+  family: ws10_costs
+  status: proposed
+H-WS10-3:
+  title: "The stress harness's flat slippage assumptions are conservative for liquid perps"
+  statement: "On the 5 PART perps (TEST days), the mean taker slippage beyond the touch-mid (half spread + 1 s latency drift + walk) at $100 is <= 2.0 bp (stress slip_bps) and the mean stop-market slippage vs the stop level ($100, 300 ms latency, stops at 0.5/1/2 hourly sigma) is <= 10 bp (liquid-tier stop_slip) with the 99th percentile <= 25 bp."
+  rationale: "The harness charges 2 bp per side plus tier stop slippage; the live stop on 2026-11-20 slipped 3.0 bp. If the flat numbers are far off the measured distribution, every net-R number shifts."
+  test: "Empirical distributions from the ms tape: stop trigger = first print at or through the level; fill = touch on the exit side 300 ms later (tape), plus walk; per symbol, pooled over levels; day-clustered CI."
+  success: "Supports iff both means are below the harness values (CI upper bound) and the stop p99 <= 25 bp for every symbol; contradicts iff any mean CI lower bound exceeds the harness value; else inconclusive."
+  prior: 0.7
+  family: ws10_costs
+  status: proposed
+H-WS10-4:
+  title: "Funding over typical holds is too small to change a verdict"
+  statement: "Funding paid or received over the actual holds of zoo_ensemble, trend_4h and hrb2 trades (lake funding settlements between entry and exit, signed by side) averages less than 0.02 R per trade in absolute value for each unit, and adding it changes no stress verdict."
+  rationale: "The harness omits funding; trend trades hold days, and longs pay positive funding most of the time."
+  test: "Exact settlements per trade from data/lake/funding; R = funding cost / the harness at-risk denominator."
+  success: "Supports iff |mean| < 0.02 R for all three and no verdict changes; contradicts iff a verdict changes; else inconclusive."
+  prior: 0.6
+  family: ws10_costs
+  status: proposed
+H-WS10-5:
+  title: "Re-pricing with the calibrated cost model leaves the stress verdicts of zoo_ensemble, trend_4h and hrb2 unchanged"
+  statement: "Replacing the harness's flat costs by the calibrated model (per symbol x hour half spread, pegged entry cost with fill probability and taker fallback, exit taker cost, stop-slippage distribution, funding) on the saved stress trades keeps zoo_ensemble SURVIVES, trend_4h FRAGILE and hrb2 FRAGILE under the registered verdict rules F1/F2/G2/G4..G7 (G1 and G3 carried over from the stress run)."
+  rationale: "The decision link: whether our net-R numbers depend on the cost assumptions."
+  test: "stress.r_net-style R with the model costs (mean costs; and a pessimistic q90 cost case); stress.mean_ci; stress.verdict."
+  success: "Supports iff all three verdicts are unchanged under mean costs; contradicts iff any verdict changes under mean costs; the q90 case is reported, not scored."
+  prior: 0.7
+  family: ws10_costs
+  status: proposed
+H-WS10-6:
+  title: "Contemporaneous signed taker flow explains mid changes out of sample (linear Kyle lambda)"
+  statement: "On non-overlapping 60 s intervals, the constant-lambda spec dlog mid = lambda * signed taker notional (OLS without intercept, per symbol, fit on FIT) has out-of-sample R2 >= 0.05 on TEST for each of the 5 perps; reported also at 10 s and 300 s."
+  rationale: "The base impact spec; Kyle lambda is the cost of trading per dollar of flow."
+  test: "OOS R2 vs the zero (martingale) forecast; HAC t on lambda in FIT."
+  success: "Supports iff R2 >= 0.05 at 60 s for all 5 in clean_holdout and the lambda sign is positive in the llm_in_sample check; contradicts iff R2 <= 0 for >= 3 symbols; else inconclusive."
+  prior: 0.8
+  family: ws10_impact
+  status: proposed
+H-WS10-7:
+  title: "Scaling lambda by trailing vol / volume beats a constant lambda"
+  statement: "K2: dlog mid / sigma_hat = kappa * flow / V_hat (sigma_hat = trailing 60-min realized vol per sqrt interval, V_hat = trailing 60-min taker notional per interval, both point in time) beats K1 (constant lambda) on TEST MSE of dlog mid at 60 s."
+  rationale: "Kyle / square-root logic: impact per dollar scales with sigma / volume; a constant lambda should be unstable across days and hours."
+  test: "Diebold-Mariano on per-interval squared-error differences, Newey-West HAC (lag 10), Harvey-Leybourne-Newbold correction; pooled over symbols (per-timestamp average) and per symbol. Stability: day-level lambda / kappa coefficient of variation and a Chow-type F across FIT days."
+  success: "Supports iff pooled DM t >= 2 in favour of K2 and >= 4 of 5 symbols same sign in clean_holdout; contradicts iff pooled t <= -2; else inconclusive."
+  prior: 0.6
+  family: ws10_impact
+  status: proposed
+H-WS10-8:
+  title: "Aggregate impact is concave in signed flow"
+  statement: "K3: dlog mid / sigma_hat = kappa * sign(x) |x|^beta with x = flow / V_hat beats K2 (beta = 1) on TEST MSE at 60 s, and beta_hat < 1 (day-bootstrap CI excludes 1)."
+  rationale: "Concave aggregate impact is a robust empirical fact (Plerou, Gabaix); it implies costs grow slower than linearly with size."
+  test: "beta by NLS on FIT (per symbol); DM HAC as H-WS10-7."
+  success: "Supports iff pooled DM t >= 2 for K3 and beta CI < 1 for >= 4 of 5 symbols; contradicts iff beta CI includes or exceeds 1 for >= 3 symbols; else inconclusive."
+  prior: 0.6
+  family: ws10_impact
+  status: proposed
+H-WS10-9:
+  title: "Book order-flow imbalance explains mid changes better than trade flow (Cont-Kukanov-Stoikov)"
+  statement: "K4: dlog mid = beta * OFI / D_hat (L1 OFI summed over the interval, D_hat = trailing 60-min mean L1 notional) beats K2 on TEST MSE at 10 s and at 60 s."
+  rationale: "CKS 2014: OFI explains ~65% of short-horizon price changes, trades much less; tells us which state variable an impact / fair-value model should use."
+  test: "DM HAC as H-WS10-7 at both horizons."
+  success: "Supports iff pooled DM t >= 2 for K4 at both horizons; contradicts iff pooled t <= -2 at both; else inconclusive."
+  prior: 0.6
+  family: ws10_impact
+  status: proposed
+H-WS10-10:
+  title: "Square-root law on reconstructed metaorders"
+  statement: "Metaorders = maximal runs of same-side taker orders with identical size, PART type 2 or 3, gap <= 10 s between children, >= 4 children. Peak impact I = side * dlog(mid just after the last child vs mid before the first) / sigma_d with sigma_d, V_d = trailing 4 h realized vol (scaled to 1 day) and taker notional (scaled to 1 day). In I = Y (Q / V_d)^delta, the free delta has a day-cluster bootstrap 95% CI containing 0.5 and excluding 1, and the square-root spec beats the linear spec on TEST MSE (DM, clustered by day)."
+  rationale: "The square-root law is the standard cost model for larger orders; it scales the cost table to $1k-10k orders."
+  test: "Huber-robust NLS on individual metaorders (FIT), binned-mean check; TEST MSE and pinball (0.5, 0.9) of I; DM with day-clustered variance."
+  success: "Supports iff both conditions hold in clean_holdout; contradicts iff the delta CI excludes 0.5 and the linear spec wins; else inconclusive."
+  prior: 0.45
+  family: ws10_impact
+  status: proposed
+H-WS10-11:
+  title: "Trade signs have long memory and impact is transient (propagator)"
+  statement: "Taker-order signs have C(l) ~ l^-gamma with gamma in (0, 1) (lags 10-1000 orders, day-bootstrap CI excludes 1) for every perp, and a transient-impact kernel (free 200-lag propagator, solved on FIT by the Toeplitz system) predicts next-order mid changes on TEST better than the permanent-only sign model (dm_n = theta * eps_n) by DM with HAC on per-minute aggregated loss differences, pooled and for >= 4 of 5 perps."
+  rationale: "Bouchaud et al.: long-memory signs plus decaying impact keep prices diffusive; if impact is transient, a cost model must not treat short-horizon markouts as permanent."
+  test: "Event time = taker orders; pre-trade mid proxy = first print - eps * tick / 2 (1-tick books); power-law and exponential kernels reported as well; efficiency check beta ~ (1 - gamma) / 2 descriptive."
+  success: "Supports iff both parts hold in clean_holdout; contradicts iff gamma CI includes 1 for >= 3 perps or the permanent model wins (t <= -2) pooled; else inconclusive."
+  prior: 0.6
+  family: ws10_impact
+  status: proposed
+H-WS10-12:
+  title: "Bybit perp leads Bybit spot in price discovery (BTC, ETH)"
+  statement: "On lake flow_3s 3 s mids (perp vs spot, log prices, cointegrating vector (1, -1)), a VECM per day gives a Hasbrouck information-share midpoint (average of the two Cholesky orderings) > 0.5 for the perp and a Gonzalo-Granger component share > 0.5 for the perp on >= 75% of days, for BTC and ETH."
+  rationale: "Tells the desk which Bybit price to treat as the fair-value reference for short-horizon decisions."
+  test: "VECM lag chosen by BIC (1..10) per day; days with < 80% coverage dropped."
+  success: "Supports iff both shares > 0.5 on >= 75% of days for both BTC and ETH; contradicts iff the perp midpoint IS < 0.5 on >= 50% of days for either; else inconclusive."
+  prior: 0.7
+  family: ws10_infoshare
+  status: proposed
+H-WS10-13:
+  title: "Binance leads Bybit (xvenue journal, about 1-min snapshots)"
+  statement: "On the xvenue journal mids (bn vs by, BTC ETH SOL XRP DOGE, 2026-11-15..11-26, rows with both venues present), the Hasbrouck IS lower bound for Binance is > 0.5 (supports) or its upper bound is < 0.5 (contradicts)."
+  rationale: "The tape and the desk use cross-venue leadership; at ~1-min non-synchronous polls the IS bounds may be too wide to identify anything (an identification check)."
+  test: "VECM on the snapshot grid (rows ~1 min apart), per symbol pooled over days; IS bounds from both orderings; GG share."
+  success: "Supports iff Binance IS lower bound > 0.5 for >= 3 of 5 symbols; contradicts iff the upper bound < 0.5 for >= 3; else inconclusive (bounds straddle 0.5)."
+  prior: 0.3
+  family: ws10_infoshare
+  status: proposed
+H-WS10-14:
+  title: "Makers at the touch lose to adverse selection before fees (realized spread < 0)"
+  statement: "On the 5 perps, the notional-weighted 60 s realized spread of taker orders (maker's gross profit = side * (price - mid_t+60s)) is negative with a day-cluster 95% CI below 0, and the Huang-Stoll (1997) adverse-selection share alpha is > 0.5, per symbol in clean_holdout."
+  rationale: "Feeds the pegged-limit adverse-selection cost; repeats R-MMR-1 in decomposition form."
+  test: "Effective = realized + price impact identity per order at 5 s and 60 s (1 s book mid); Huang-Stoll three-way GMM on event-time trade prices per symbol-day."
+  success: "Supports iff both hold for >= 4 of 5 symbols; contradicts iff the realized spread CI > 0 for >= 3; else inconclusive."
+  prior: 0.6
+  family: ws10_spread
+  status: proposed
+H-WS10-15:
+  title: "Roll's spread estimator is invalid on these perps"
+  statement: "On >= 25% of symbol-days the first-order autocovariance of order-to-order trade price changes is >= 0 (Roll undefined), or the Roll spread differs from the measured effective spread by more than 50% on the median symbol-day."
+  rationale: "A validity check: whether trade-based spread estimators can be used where no book is stored (older data, other venues)."
+  test: "Per symbol-day on the event-time tape."
+  success: "Supports iff either condition holds; contradicts iff neither holds for any symbol; else inconclusive."
+  prior: 0.6
+  family: ws10_spread
+  status: proposed
