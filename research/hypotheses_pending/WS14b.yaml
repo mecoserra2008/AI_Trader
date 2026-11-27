@@ -1,0 +1,11 @@
+# ---- WS14 extra trial (registered 2026-11-26 ~23:58 UTC AFTER seeing llm_in_sample per-refit fidelity R^2 of the
+# spline arm for refits 2021-07..2022-04 printed by the running core job; clean_holdout refits not yet seen) ----
+H-WS14-11:
+  title: "An additive-spline (GAM) surrogate reproduces the 1h PNN and can replace it without loss"
+  statement: "Per refit, additive cubic splines (5 knots per continuous input, binary inputs linear, ridge 1e-3) on all 19 HOURLY_FEATURES, distilled from the network's log sigma, q50 and log tail ratio on fit-block rows, reproduce the network's log sigma on the test month with R^2 > 0.95, and the rebuilt quantiles are non-inferior on realised pinball with the H-WS14-2 margin (0.25 x the PNN's gain over log-HAR-t)."
+  rationale: "The first layer of the KAN is additive by construction; if the head is close to linear in the latents, the network is a GAM. Extra trial: llm_in_sample fidelity was partly seen before registration."
+  test: "as H-WS14-2 (wf_1h test months, per-date paired pinball, NW mean and SE, one-sided 95% bounds)."
+  success: "supports iff in clean_holdout R^2 > 0.95 and mean + 1.645 SE < margin (llm_in_sample reported, contaminated); contradicts iff in clean_holdout mean - 1.645 SE > margin or R^2 < 0.9; else inconclusive."
+  prior: 0.5
+  family: ws14_interp
+  status: proposed

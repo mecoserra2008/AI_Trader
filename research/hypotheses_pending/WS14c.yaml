@@ -1,0 +1,19 @@
+# ---- WS14 pick-up of the WS12 deep models (registered 2026-11-27 ~00:05 UTC, before any WS12 weights existed) ----
+H-WS14-12:
+  title: "WS12's GRU / TCN 1h variance forecast is a scaled HAR plus the hour-of-week factor"
+  statement: "On WS12 refit R2 test rows (2026-07-01..2026-11-25, clean holdout) and R1 test rows (2025-07-01..2026-06-30, llm_in_sample), an OLS surrogate of the seed-averaged 1h logF in [1, lsig_rel1y, har_d, har_w, har_m, lfacn of the next bar (last step), lu of the last 6 steps], fitted on a fit sample of the same refit's training rows to the network's own output, reproduces the network's 1h logF with out-of-sample R^2 > 0.9, for the chosen-lr GRU and TCN."
+  rationale: "WS12 asks whether its sequence networks are a scaled HAR; H-WS14-1 found the PNN is not (0.71 / 0.79) but is close to additive."
+  test: "per arch and refit; pooled test-row R^2 with 10-day block bootstrap; additive-spline variant reported as descriptive."
+  success: "supports iff R^2 > 0.9 for both arches in both refits; contradicts iff R^2 < 0.8 for either arch in either refit; else inconclusive."
+  prior: 0.4
+  family: ws14_interp
+  status: proposed
+H-WS14-13:
+  title: "WS12's 24h head reads only the calendar and the weekly HAR level"
+  statement: "The 24h logF of the chosen-lr GRU / TCN is reproduced by an OLS surrogate in [1, har_w, lfac_n24, lsig_rel1y] with out-of-sample R^2 > 0.8 on both refits' test rows."
+  rationale: "WS12's own question; at 24h small networks do not beat log-HAR-t (H-PNN1, H-XS2)."
+  test: "as H-WS14-12, 24h head."
+  success: "supports iff R^2 > 0.8 for both arches in both refits; contradicts iff R^2 < 0.6 for either; else inconclusive."
+  prior: 0.5
+  family: ws14_interp
+  status: proposed

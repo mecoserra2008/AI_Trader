@@ -1,0 +1,96 @@
+# ---- WS14 INTERP (specification program 2026-11-27): mechanistic interpretability of the live networks ----
+# Registered before any fit or evaluation by WS14. Networks: live PNN 1h / 1d (live_nn.v1 and v2.1 share them; refit
+# 2026-11) and their walk-forward refits (data/models/pnn/wf_<h>/), xs_v3 (frozen 2026Q4 refit) and xs_v4 (frozen + wf).
+# Segments: llm_in_sample = rows before 2026-07-01, clean_holdout = from 2026-07-01 (walk-forward test months / quarters,
+# plus the live 2026-11 refit on 2026-11-01..2026-11-26 rows rebuilt point in time from the lake).
+# sigma = (q90 - q10) / 2.5631 of the 2-seed (PNN) / 3-seed (xs) mean quantiles, in model units (r / sqrt(s2)).
+H-WS14-1:
+  title: "The live 1h PNN sigma is a scaled log-HAR plus an hour-of-week term"
+  statement: "A linear surrogate of log sigma (model units) in [1, lsig2, lfac, har_d, har_w, har_m], fitted by OLS on each refit's fit-block rows to that refit network's own output, reproduces the network's log sigma on the refit's test month with out-of-sample R^2 > 0.9."
+  rationale: "Brain atlas (2026-11-15): lfac drives every latent unit and HAR terms come next; if the network is HAR + clock, a 6-coefficient formula can replace it."
+  test: "65 monthly refits of wf_1h (2021-07..2026-11); per segment, R^2 = 1 - SSE/SST pooled over test rows (SST around the segment mean of the network's log sigma); 10-day block-bootstrap CI over dates; per-refit median R^2 reported; the 2026-11 refit also on live rows 2026-11-01..26."
+  success: "supports iff R^2 > 0.9 in both segments; contradicts iff R^2 < 0.8 in either segment; else inconclusive."
+  prior: 0.35
+  family: ws14_interp
+  status: proposed
+H-WS14-2:
+  title: "A linear surrogate on the 19 inputs can replace the 1h PNN without loss"
+  statement: "OLS surrogates on all 19 HOURLY_FEATURES, distilled per refit from the network's q50, log(q90 - q10) and log((q95 - q05)/(q90 - q10)) on fit-block rows, with quantiles rebuilt from the fit-block mean standardised shape, (a) reproduce log sigma with out-of-sample R^2 > 0.9 and (b) are non-inferior on realised pinball: margin m = 0.25 x (log-HAR-t - PNN) mean pinball of the same segment."
+  rationale: "If the 1h network's 0.4-0.6% pinball gain over log-HAR-t is linear in recent |returns| and the clock, the network is unnecessary complexity (ARCHITECTURE 1.6)."
+  test: "wf_1h test months; per-row mean pinball over the 7 taus in model units; paired difference surrogate - PNN averaged per UTC date; NW (HAC) mean and SE over dates; one-sided 95% bounds; per segment."
+  success: "supports iff in both segments R^2 > 0.9 and mean + 1.645 SE < m; contradicts iff in either segment mean - 1.645 SE > m; else inconclusive."
+  prior: 0.45
+  family: ws14_interp
+  status: proposed
+H-WS14-3:
+  title: "The live 24h PNN sigma is log-HAR plus a weekend clock"
+  statement: "A linear surrogate of the 1d PNN's log sigma (model units, sigma_ref = exp(lrv_w / 2)) in [1, log_sigma, lrv_d, lrv_w, lrv_m, lrv_q, next_wk_hours, dow_sin, dow_cos], fitted per refit on fit-block rows to the network's output, reproduces it on the test month with out-of-sample R^2 > 0.9."
+  rationale: "H-PNN1: the 1d net does not beat log-HAR-t; the symbolic extraction found a quadratic weekend latent (next_wk_hours -> z3, R^2 0.995)."
+  test: "64 monthly refits of wf_1d; pooled test-row R^2 per segment with 10-day block-bootstrap CI."
+  success: "supports iff R^2 > 0.9 in both segments; contradicts iff R^2 < 0.8 in either; else inconclusive."
+  prior: 0.4
+  family: ws14_interp
+  status: proposed
+H-WS14-4:
+  title: "The 1h PNN raw sigma rises monotonically with the last hour's |return|"
+  statement: "Holding every other input fixed and updating lu_1, lu_m6, lu_m24, jump24 and since_jump consistently, the live 1h network's raw sigma (sqrt(s2) x sigma) is non-decreasing in x = |r_{t-1}| / sqrt(s2) on the grid x = 0, 0.25, .., 8."
+  rationale: "Every sensible volatility model (GARCH, HAR) raises next-hour vol after a bigger move; the atlas found wiggly lu_1 edges and an after-jump unit that collapses, which could make sigma fall at the 4-sigma jump threshold."
+  test: "2026-11 live refit, all rows 2025-11-14..2026-11-26 (validation, test and live); per row, the largest drop between consecutive grid points relative to sigma at the lower point; segments by row date."
+  success: "supports iff in both segments >= 99% of rows have no drop > 0.5%; contradicts iff in either segment > 5% of rows have a drop > 2%; else inconclusive."
+  prior: 0.5
+  family: ws14_interp
+  status: proposed
+H-WS14-5:
+  title: "The live networks are invariant to the price level"
+  statement: "Multiplying a symbol's OHLC prices by c in {1e-3, 1e3} (volume and turnover unchanged) and rebuilding the features with the production pipeline (enrich_bars, add_robust_vol, ml.hourly.symbol_hourly / xs_network_study.token_rows + assemble) changes the 1h PNN quantiles and the xs_v3 / xs_v4 vol and rel quantiles by < 1e-6 relative on every common row."
+  rationale: "All inputs are log returns, ratios to the base variance or log OI changes; a price-level dependence would be a pipeline bug."
+  test: "BTCUSDT 1h frame (xs_v3 cache) for the PNN; one token scaled inside the xs_v3 / xs_v4 panels; max relative change of outputs."
+  success: "supports iff max relative change < 1e-6 for every network; contradicts iff any network > 1e-3; else inconclusive."
+  prior: 0.9
+  family: ws14_interp
+  status: proposed
+H-WS14-6:
+  title: "The 1h PNN latent encodes the clock and the vol level selectively and invents nothing"
+  statement: "Ridge probes on the 8 latent units (both seeds) of the live 1h network, fitted on fit-block rows and scored on rows 2025-11-14..2026-11-12, recover (a) lfac and (b) the absolute weekly log RV level (har_w + lsig2) with R^2 >= 0.8 and selectivity (R^2 minus the mean R^2 of 10 random-initialised networks of the same architecture) >= 0.2, while (c) a control task (a random value per hour of week) stays below R^2 0.2, (d) block-shuffled labels give R^2 <= 0.02, and (e) BTC funding z (fund_z90, not an input) is no better decoded from the latent than from a linear probe on the 19 inputs (difference < 0.02)."
+  rationale: "Hewitt-Liang control tasks and random-network baselines separate what the network learned from what any projection of the inputs would carry."
+  test: "sklearn Ridge (alpha by 5-fold blocked CV on the fit rows), out-of-sample R^2 by segment (llm_in_sample 2025-11-14..2026-06-30, clean_holdout 2026-07-01..2026-11-12)."
+  success: "supports iff (a)-(e) hold in both segments; contradicts iff (a) or (b) fail on selectivity (< 0.1) in both segments; else inconclusive."
+  prior: 0.5
+  family: ws14_interp
+  status: proposed
+H-WS14-7:
+  title: "Clock first, recent returns second: what the 1h PNN's out-of-sample skill rests on"
+  statement: "Resample ablation of input groups (the group's columns jointly replaced by those of a random other test row of the same refit month, 5 draws) raises out-of-sample pinball for the clock group (lfac, dow_sin, dow_cos) most, and for recent_returns (lu_*) second, each with NW t > 2 in both segments; the funding-hour flags and the jump terms do not (|t| < 2)."
+  rationale: "Brain atlas mean ablations on mostly in-sample rows; this is the out-of-sample, off-distribution-safe version with HAC inference."
+  test: "wf_1h test months; per-date mean pinball increase, NW t; groups of ml.hourly.HOURLY_GROUPS with lfac + dow merged into 'clock'."
+  success: "supports iff all four statements hold in both segments; contradicts iff clock is not the top group in either segment; else inconclusive."
+  prior: 0.55
+  family: ws14_interp
+  status: proposed
+H-WS14-8:
+  title: "Where the 1h PNN fails: release hours and high-vol cells"
+  statement: "(a) In walk-forward test hours whose bar contains a scheduled CPI, NFP or FOMC release minute, the raw PNN 80% band [q10, q90] covers < 0.75 of outcomes; (b) in hours whose BTC v0 cell (known at the decision time) is R3, R6 or R9, the PNN's pinball gain over log-HAR-t is not significant (paired NW t > -2) while in R1, R4, R7 it is (t < -2)."
+  rationale: "The network has no event input and lfac only knows recurring hour-of-week patterns; vol mean reversion learned in calm hours may misfire in high-vol regimes."
+  test: "latent_1h.parquet walk-forward rows 2021-07..2026-11-12 pooled over both segments for (a) (one-sided binomial test vs 0.80); (b) per segment, per-date means within the cell group, NW t."
+  success: "supports iff (a) holds with binomial p < 0.05 and (b) holds in both segments; contradicts iff (a) coverage >= 0.80 and (b) high-vol t < -2 in both segments; else inconclusive."
+  prior: 0.4
+  family: ws14_interp
+  status: proposed
+H-WS14-9:
+  title: "Integrated-gradient attributions of the 1h PNN pass the Adebayo sanity checks"
+  statement: "Integrated gradients (baseline = training mean, 64 steps) of the live 1h net's log sigma satisfy completeness within 1%, change under model randomisation (all weights re-initialised: median per-row Spearman of |IG| with the trained net < 0.5) and data randomisation (2 seeds retrained with the same protocol on permuted labels: median per-row Spearman < 0.5), and their global ranking (mean |IG|) agrees with the resample-ablation ranking of single inputs (Spearman >= 0.6)."
+  rationale: "Adebayo et al. 2018: some attribution methods mirror the input, not the model; only attributions that pass both randomisations can be read as explanations."
+  test: "2,000 rows 2025-11-14..2026-11-12 of the live 2026-11 refit; Spearman over the 19 inputs."
+  success: "supports iff all four checks pass; contradicts iff either randomisation check fails; else inconclusive."
+  prior: 0.6
+  family: ws14_interp
+  status: proposed
+H-WS14-10:
+  title: "xs_v3 / xs_v4 vol heads are HAR + clock + recent returns, and their rel ranking is vol drag"
+  statement: "(a) A pooled linear surrogate of log q50 of the 1h vol head in the 19 hourly features + lfac4, lfac24, hod_sin, hod_cos, fitted on the refit's fit-block cells to the network output, reproduces it on the test quarter with R^2 > 0.9; (b) a one-parameter vol-drag surrogate of the 24h rel median in raw units, -b x 24 x s2_i (b fitted on fit-block cells), has mean per-hour cross-sectional Spearman >= 0.7 with the network's raw 24h rel median on test hours."
+  rationale: "The xs_v3 report: the rel ranking is close to a free low-vol ranking; log-return medians of high-vol tokens sit below the basket (vol drag / skew), so the ranking may be a units artefact."
+  test: "xs_v3 2026Q4 refit (= frozen) and xs_v4 wf 2026Q4 refit on their test quarters (clean_holdout), plus the 2025Q2 xs_v3 refit (llm_in_sample); R^2 pooled over test cells; Spearman per hour, mean over hours."
+  success: "supports iff (a) and (b) hold for both networks in every tested refit; contradicts iff (a) R^2 < 0.8 or (b) Spearman < 0.5 for either network; else inconclusive."
+  prior: 0.5
+  family: ws14_interp
+  status: proposed
