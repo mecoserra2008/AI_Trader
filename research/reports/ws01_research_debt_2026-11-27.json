@@ -1,10 +1,10 @@
 {
- "version": "v1",
+ "version": "v2",
  "workstream": "WS01 AUDIT",
  "snapshot": {
   "rows": 596,
   "sha256_first_rows": "1be16ba2a6bdee17d547b2dafbe0215e9c055339dee4313179b10459239b2e0b",
-  "registry_ids": 458
+  "registry_ids": 463
  },
  "scoring": {
   "score": "decision_value weight x type weight x cost weight (x1.2 for high-severity manual items)",
@@ -25,7 +25,8 @@
    "selection": 1.5,
    "no-statistic": 1.5,
    "null-claim-untested-equivalence": 1.5,
-   "untested": 1.0
+   "untested": 1.0,
+   "powered-null": 0.3
   },
   "cost": {
    "cheap": 1.25,
@@ -41,26 +42,213 @@
   "BH10_supports_surviving": 66,
   "BY10_supports_surviving": 47
  },
- "n_items": 191,
+ "n_items": 268,
  "items": [
   {
-   "family": "rules",
-   "title": "rules R-PD-1, R-PD-2, R-PX-3",
-   "evidence": "research/rules.yaml",
-   "decision_value": "medium",
+   "hypothesis": "H-GT1/H-GT2/H-TR1/H-TR2",
+   "family": "trend",
+   "title": "",
+   "type": "contradicted-but-used",
+   "severity": "high",
+   "problem": "checked: geo_* are registered generators, not live sleeves (agent/decision.py candidates = validated sleeves shock_regime and trend_4h only); but trend_4h is gated by zoo_ensemble's rules (GATE_STRATEGY), and zoo's own continuous-position holdout (H-TR1) contradicts while its stress SURVIVES is knife-edge (RT-STRESS-1/2). R-PX-3 already says 'thin edge at best, negative Jul-Nov 2026'.",
+   "evidence": "",
+   "decision_value": "high",
+   "used_by_rules": [
+    "R-AVOID-1",
+    "R-MAP-6",
+    "R-PD-1",
+    "R-PD-2",
+    "R-PX-3",
+    "R-SYN-2"
+   ],
+   "suggested_test": "keep the sleeve only under the H-WS01-9 harm rule; do not cite zoo_ensemble SURVIVES as validation",
+   "cost": "cheap",
+   "source": "family audit S2 (debt)",
+   "score": 13.5,
+   "rank": 1
+  },
+  {
+   "hypothesis": "H-LEV2,H-VCL2",
+   "family": "refine",
+   "title": "R-LEV-1 (A, expect): crypto has no leverage effect",
+   "type": "contradicted-but-used",
+   "severity": "high",
+   "decision_value": "high",
+   "used_by_rules": [
+    "R-LEV-1",
+    "R-VOL-7",
+    "R-FLD-2"
+   ],
+   "cost": "cheap",
+   "problem": "the daily null is underpowered (H-LEV2 SHAR b(RS-) - b(RS+): MDE80 0.32 in-sample / 0.35 holdout vs coefficients 0.26 / 0.29) and the hourly re-test H-WS01-10 finds a leverage asymmetry in-sample: b(down) 0.154 vs b(up) 0.102, A = +0.053 (day-clustered t 7.3, 814k token-hours); holdout A = +0.001 (t 0.05) with MDE80 0.065 > the in-sample A",
+   "evidence": "data/research/ws01/lev_hourly.json; H-WS01-10 rows",
+   "source": "refine",
+   "suggested_test": "downgrade R-LEV-1 to C and scope it to daily horizons; re-read the hourly asymmetry once the holdout MDE80 falls below 0.03 (about 4.7x the current 138-day holdout, i.e. about 650 holdout days, spring 2028)",
+   "score": 13.5,
+   "rank": 2
+  },
+  {
+   "hypothesis": "H-PNN1",
+   "family": "btc_pnn",
+   "title": "",
+   "type": "contradicted-but-used",
+   "severity": "medium",
+   "problem": "R-PNN-1 (active, B, prefer the quantile network over log-HAR-t) cites H-PNN1, whose llm_in_sample and pooled verdicts contradict (the network did not beat log-HAR-t); the other cited evidence H-NN8 is about variance, not the return distribution",
+   "evidence": "research/RULES.md:282 vs S3.txt lines 366-368 (H-PNN1 pooled verdict = contradicts).",
+   "decision_value": "high",
+   "used_by_rules": [
+    "R-PNN-1",
+    "R-PNN-2",
+    "R-XS-1"
+   ],
+   "suggested_test": "Add a one-line note in RULES.md clarifying that R-PNN-1 rests on the 'beats log-HAR-t' sub-result only, not the full H-PNN1 pairwise-vs-MLP criterion.",
+   "cost": "cheap",
+   "source": "family audit S3",
+   "score": 11.25,
+   "rank": 3
+  },
+  {
+   "hypothesis": "H-STRESS0,H-STRESS10",
+   "family": "red team: stress_test_2026-11-26.md",
+   "title": "RT-STRESS-2",
+   "type": "mis-specified",
+   "severity": "high",
+   "problem": "The holdout figure behind zoo_ensemble (+0.664 R on 151 trades) is driven by 20 positions still open at the data end and marked at the last close (+87.4 R, about +4.4 R each, the November sell-off). Closed holdout trades: +0.099 R on 131 trades, 95% CI [-0.73, +0.99] (P(<=0) 0.46), and -47.6 R in total without its 5 best trades. The holdout carries no information about the trend edge (MDE at 80% power about 1.1 R per trade; detecting +0.3 R needs about 1,700 closed holdout trades, about 5 years at the current rate).",
+   "evidence": "redteam_stress.json zoo_ensemble.hold_closed; stress report scorecard 'open at data end: 20, +87.4'",
+   "decision_value": "high",
+   "used_by_rules": [
+    "agent/decision.py GATE_STRATEGY trend_4h -> zoo_ensemble"
+   ],
+   "suggested_test": "Make closed-trade statistics the primary verdict input, report open positions as censored (with their mark) in a sensitivity column; never let the data end date decide a holdout verdict.",
+   "cost": "cheap",
+   "source": "red team",
+   "score": 11.25,
+   "rank": 4
+  },
+  {
+   "hypothesis": "H-STRESS0,H-TR1",
+   "family": "red team: stress_test_2026-11-26.md",
+   "title": "RT-STRESS-1",
+   "type": "mis-specified",
+   "severity": "high",
+   "problem": "zoo_ensemble 'SURVIVES' is knife-edge and does not survive a holding-period-matched bootstrap on closed trades. Closed trades: mean +0.317 R (n 2170); 95% CI with 5-day blocks [+0.003, +0.686] (re-run [+0.011, +0.683]), with 20-day blocks [-0.020, +0.701], with blocks = p90 holding period (32 d) [-0.004, +0.703], one-sided bootstrap P(mean <= 0) = 0.027. Median holding 6.8 d, p90 32 d, so the registered 5-day block is shorter than most trades.",
+   "evidence": "stress.py mean_ci (BLOCK_DAYS = 5); redteam_stress2.json zoo_ensemble",
+   "decision_value": "high",
    "used_by_rules": [
     "R-PD-1",
     "R-PD-2",
-    "R-PX-3"
+    "R-PX-3",
+    "agent/decision.py GATE_STRATEGY trend_4h -> zoo_ensemble"
    ],
+   "suggested_test": "Report zoo_ensemble as FRAGILE-positive (the strongest), not SURVIVES; set the stress bootstrap block to max(5, p90 holding days) per unit; stop citing 'zoo_ensemble SURVIVES' as evidence of edge for the trend_4h sleeve (agent/decision.py GATE_STRATEGY maps trend_4h to zoo_ensemble rules).",
    "cost": "cheap",
-   "source": "auto",
-   "hypothesis": "H-TR1",
+   "source": "red team",
+   "score": 11.25,
+   "rank": 5
+  },
+  {
+   "hypothesis": "H-STRESS0",
+   "family": "red team: stress_test_2026-11-26.md",
+   "title": "RT-STRESS-3",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "Re-judged on closed trades with matched blocks (trade-level gates F1 / G5 / G6 / G7 recomputed, others as reported), no unit SURVIVES: geo_pivot_bo (closed holdout -0.155 R, CI with 55-day blocks [-0.000, +0.915]) and zoo_ensemble become FRAGILE; trend_4h stays FRAGILE (all-period CI [-0.035, +0.221]) although its closed holdout is the best (+0.43 R, n 266, CI [+0.02, +0.86] with 5-day blocks) and its in-sample is weak (+0.07 R, CI includes 0). FAILS units are unchanged.",
+   "evidence": "redteam_stress2.json (note: its G6 label also fires on CIs entirely below 0; that does not change any verdict because F1 fires first)",
+   "decision_value": "high",
+   "used_by_rules": [
+    "agent/decision.py GATE_STRATEGY trend_4h -> zoo_ensemble"
+   ],
+   "suggested_test": "Replace the launch statement 'only the 4h trend family survives (zoo_ensemble SURVIVES)' with 'no unit passes every screen; zoo_ensemble and trend_4h are the strongest FRAGILE-positive units'.",
+   "cost": "cheap",
+   "source": "red team",
+   "score": 9.375,
+   "rank": 6
+  },
+  {
+   "hypothesis": "H-V1,H-V1b,H-V2,H-VCL2,H-VCL3,H-VCL5",
+   "family": "vol",
+   "title": "",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "Pooled cross-symbol QLIKE comparisons don't uniformly state date-level clustering despite crypto's known cross-sectional co-movement (a house rule in ARCHITECTURE \u00a71).",
+   "evidence": "Notes give NW t by date for some (H-VCL5 clusters by week explicitly) but not consistently for H-V1/H-V1b/H-V2/H-VC4/H-LC2.",
+   "decision_value": "high",
+   "used_by_rules": [
+    "R-LEV-1",
+    "R-ML-3",
+    "R-VOL-2",
+    "R-VOL-25",
+    "R-VOL-3",
+    "R-VOL-7"
+   ],
+   "suggested_test": "Confirm or add date-level clustering for every pooled-panel QLIKE test in this family.",
+   "cost": "cheap",
+   "source": "family audit S2",
+   "score": 9.375,
+   "rank": 7
+  },
+  {
+   "hypothesis": "H-VM5",
+   "family": "vol_model",
+   "title": "",
+   "type": "verdict-error",
+   "severity": "medium",
+   "problem": "'Supports' verdict is MCS-membership (a low bar: not rejected from a set of up to 25 models, p=0.15-0.29, rank 3-16), used as primary evidence for confidence-B production rules R-VOL-20/21/22.",
+   "evidence": "S2.txt line 989 (holdout_best often a different model, e.g. 'p_loghar_f','p_harq').",
+   "decision_value": "high",
+   "used_by_rules": [
+    "R-FLD-5",
+    "R-ML-1",
+    "R-VOL-20",
+    "R-VOL-21",
+    "R-VOL-22",
+    "R-VOL-4"
+   ],
+   "suggested_test": "Cite the rank/MCS-p alongside 'supports' in rules.yaml, and re-weight toward holdout_best if the gap persists with more data.",
+   "cost": "cheap",
+   "source": "family audit S2",
+   "score": 9.375,
+   "rank": 8
+  },
+  {
+   "hypothesis": "RT-SYS-2",
+   "family": "red team: (all)",
+   "title": "RT-SYS-2",
+   "type": "verdict-error",
+   "severity": "medium",
+   "problem": "Holdout verdicts are sign-only by design (verdicts.py MIN_HOLDOUT = 8 and most study scripts), so a 'supports' row in clean_holdout is usually a sign agreement: 24 of 57 holdout supports with a statistic have p > 0.10, and registry-wide BY10 keeps 17 of 66 holdout supports.",
+   "evidence": "src/ai_trader/research/verdicts.py:37-41; data/research/ws01/fdr.json",
+   "decision_value": "high",
+   "used_by_rules": [],
+   "suggested_test": "Record the holdout statistic and n with every verdict, and grade rules on two-stage replication (discovery BY10, holdout BH10 among the selected), not on labels.",
+   "cost": "cheap",
+   "source": "red team",
+   "score": 9.375,
+   "rank": 9
+  },
+  {
+   "hypothesis": "H-RC1/H-RC2",
+   "family": "regime_strategy",
+   "title": "",
    "type": "contradicted-but-used",
-   "problem": "cites a hypothesis that was supported in-sample and contradicted in the clean holdout",
-   "suggested_test": "check the rule's direction against the holdout; downgrade to C unless a later read replicates",
+   "severity": "medium",
+   "problem": "H-RC2 holdout supports while H-RC1 (same data) finds no stable strategy-cell ranking; cited by R-MAP-1 / R-MAP-2 (B)",
+   "evidence": "",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-MAP-1",
+    "R-MAP-2",
+    "R-MAP-3",
+    "R-MAP-4",
+    "R-MAP-5",
+    "R-MAP-6",
+    "R-MAP-7"
+   ],
+   "suggested_test": "extend H-RC2's holdout window and re-check H-RC1's rank stability jointly before relying on a conditional book.",
+   "cost": "cheap",
+   "source": "family audit S2 (debt)",
    "score": 7.5,
-   "rank": 1
+   "rank": 10
   },
   {
    "hypothesis": "H-S4",
@@ -78,7 +266,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 7.5,
-   "rank": 2
+   "rank": 11
   },
   {
    "hypothesis": "H-STRESS0",
@@ -93,7 +281,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 7.5,
-   "rank": 3
+   "rank": 12
   },
   {
    "hypothesis": "H-TR1",
@@ -112,7 +300,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 7.5,
-   "rank": 4
+   "rank": 13
   },
   {
    "hypothesis": "H-VM5",
@@ -134,58 +322,25 @@
    "cost": "cheap",
    "source": "auto",
    "score": 7.5,
-   "rank": 5
+   "rank": 14
   },
   {
-   "family": "rules",
-   "title": "R-PX-10 (A, avoid): WHEN price makes its first 1h close beyond the prior UTC day's floor pivot R1 or S1 THEN don't expect continuation beyond a generic k-sigma ",
-   "evidence": "research/rules.yaml",
-   "decision_value": "high",
+   "hypothesis": "H-X1",
+   "family": "execution",
+   "title": "",
+   "type": "mis-specified",
+   "severity": "high",
+   "problem": "The stop-band filter [0.5,4]*sigma*close (coded in stops.py) discards 95% of donchian_breakout entries (n=17 total, n=0 in clean_holdout for both BTC and ETH), so the rule R-EXEC-1 -- applied to ALL bracket orders -- rests almost entirely on the ema_stack leg's evidence.",
+   "evidence": "S3.txt line 1161 note: '95% of donchian entries skipped (pivot >4\u03c3 away)'; src/ai_trader/research/stops.py line 17 'skip the trade if ... |entry - stop| is outside [0.5,4]*sigma*close'.",
+   "decision_value": "medium",
    "used_by_rules": [
-    "R-PX-10"
+    "R-EXEC-1"
    ],
+   "suggested_test": "Report donchian_breakout and ema_stack as separate rules if their evidence quality differs this much, or widen/diagnose the stop-band so donchian pivots are not systematically excluded.",
    "cost": "cheap",
-   "source": "auto",
-   "hypothesis": "H-BO1",
-   "type": "underpowered",
-   "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
-   "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
+   "source": "family audit S3",
    "score": 7.5,
-   "rank": 6
-  },
-  {
-   "family": "rules",
-   "title": "R-LEV-1 (A, expect): WHEN a crypto perp had a down day THEN don't expect higher next-day vol than after an up day with the same realised variance; forecast vol f",
-   "evidence": "research/rules.yaml",
-   "decision_value": "high",
-   "used_by_rules": [
-    "R-LEV-1"
-   ],
-   "cost": "cheap",
-   "source": "auto",
-   "hypothesis": "H-LEV2,H-VCL2",
-   "type": "underpowered",
-   "problem": "expect rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
-   "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
-   "score": 7.5,
-   "rank": 7
-  },
-  {
-   "family": "rules",
-   "title": "R-AVOID-4 (A, avoid): WHEN tempted to tilt direction by trading session (Asia, Europe, US, late UTC) THEN do not; session means are equal and the ranking flips ou",
-   "evidence": "research/rules.yaml",
-   "decision_value": "high",
-   "used_by_rules": [
-    "R-AVOID-4"
-   ],
-   "cost": "cheap",
-   "source": "auto",
-   "hypothesis": "H-NS3",
-   "type": "underpowered",
-   "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
-   "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
-   "score": 7.5,
-   "rank": 8
+   "rank": 15
   },
   {
    "family": "rules",
@@ -202,75 +357,69 @@
    "problem": "expect rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 7.5,
-   "rank": 9
+   "rank": 16
   },
   {
-   "family": "rules",
-   "title": "R-VOL-2 (A, prefer): WHEN setting stops or risk across a weekend THEN use the unshrunk risk sigma, because weekends are jump-prone",
-   "evidence": "research/rules.yaml",
-   "decision_value": "high",
+   "hypothesis": "H-OF1,H-OF2,H-OF5",
+   "family": "order_flow",
+   "title": "",
+   "type": "verdict-error",
+   "severity": "high",
+   "problem": "The registered |z|>4 anomaly detector fires on ~20% of symbol-minutes (not a rare event), which the study itself states 'weakens H-OF1/2/5 as tests' -- a core design/calibration flaw that likely explains the uniform contradicts verdicts rather than ruling out the underlying anomaly-predicts-vol/direction idea.",
+   "evidence": "S3.txt lines 940,952,990: 'firing_rate_z4: pooled 0.21611 ... weakens H-OF1/2/5 as tests'.",
+   "decision_value": "medium",
    "used_by_rules": [
-    "R-VOL-2"
+    "R-FLOW-1",
+    "R-FLOW-3",
+    "R-MINE-3",
+    "R-ML-13",
+    "R-MS-12"
    ],
+   "suggested_test": "H-OF6 already registers the fix (frozen per-symbol top-1% threshold); prioritise running it now that >=14-15 forward days have likely accumulated since 2026-11-11.",
    "cost": "cheap",
-   "source": "auto",
-   "hypothesis": "H-V2",
-   "type": "underpowered",
-   "problem": "prefer rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
-   "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
+   "source": "family audit S3",
    "score": 7.5,
-   "rank": 10
+   "rank": 17
   },
   {
-   "family": "rules",
-   "title": "R-VOL-5 (A, expect): WHEN a vector candle or an Amihud illiquidity spike appears THEN do not expect extra volatility beyond the robust forecast",
-   "evidence": "research/rules.yaml",
+   "hypothesis": "H-S2,H-S3",
+   "family": "refine",
+   "title": "shock sleeve (shock_regime, live validated sleeve)",
+   "type": "underpowered",
+   "severity": "high",
    "decision_value": "high",
    "used_by_rules": [
-    "R-VOL-5"
+    "config/strategies.yaml shock_regime",
+    "agent/decision.py SLEEVE_FAMILY"
    ],
-   "cost": "cheap",
-   "source": "auto",
-   "hypothesis": "H-VC4,H-LC2",
-   "type": "underpowered",
-   "problem": "expect rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
-   "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
-   "score": 7.5,
-   "rank": 11
+   "cost": "medium",
+   "problem": "data-generated sleeve; stress closed-trade holdout -0.027 R (n 618) vs in-sample +0.058 R; holdout MDE80 about 0.2 R, confirming +0.06 R needs about 7,700 trades (5 years)",
+   "evidence": "redteam_stress2.json shock_regime",
+   "source": "refine",
+   "suggested_test": "H-WS01-11 (registered, forward harm test at 200 / 500 / 1000 closed trades)",
+   "score": 7.2,
+   "rank": 18
   },
   {
-   "family": "rules",
-   "title": "R-VOL-7 (A, expect): WHEN modelling crypto volatility THEN do not add downside semivariance, BTC vol spillover or compression terms to HAR; none improved forecas",
-   "evidence": "research/rules.yaml",
+   "hypothesis": "H-STRESS0,H-TR1",
+   "family": "refine",
+   "title": "trend sleeve edge (trend_4h / zoo_ensemble)",
+   "type": "underpowered",
+   "severity": "high",
    "decision_value": "high",
    "used_by_rules": [
-    "R-VOL-7"
+    "R-PX-3",
+    "R-PD-1",
+    "R-PD-2",
+    "agent/decision.py GATE_STRATEGY"
    ],
-   "cost": "cheap",
-   "source": "auto",
-   "hypothesis": "H-VCL2,H-VCL3,H-VCL5,H-LEV2,H-LEV4,H-VM4",
-   "type": "underpowered",
-   "problem": "expect rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
-   "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
-   "score": 7.5,
-   "rank": 12
-  },
-  {
-   "family": "rules",
-   "title": "R-VOL-24 (A, avoid): WHEN choosing inputs for a daily variance forecast from 1h bars THEN don't expect range estimators (Garman-Klass, Parkinson) to beat 1h real",
-   "evidence": "research/rules.yaml",
-   "decision_value": "high",
-   "used_by_rules": [
-    "R-VOL-24"
-   ],
-   "cost": "cheap",
-   "source": "auto",
-   "hypothesis": "H-VM3",
-   "type": "underpowered",
-   "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
-   "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
-   "score": 7.5,
-   "rank": 13
+   "cost": "medium",
+   "problem": "the clean holdout cannot confirm the trend edge: closed-trade MDE80 is about 1.1 R/trade for zoo_ensemble (n 131) and 0.53 R for trend_4h (n 266); confirming +0.15-0.30 R needs 1,700-7,000 closed trades (5+ years); a daily-P&L Sharpe of 0.96 needs about 6.7 years for t = 2.5",
+   "evidence": "redteam_stress.json; H-TR1 rows",
+   "source": "refine",
+   "suggested_test": "H-WS01-9 (registered, forward, group-sequential with a harm boundary); treat the edge as a prior with a kill rule, not as a confirmed fact",
+   "score": 7.2,
+   "rank": 19
   },
   {
    "hypothesis": "H-XS3",
@@ -287,7 +436,564 @@
    "cost": "cheap",
    "source": "auto",
    "score": 6.25,
-   "rank": 14
+   "rank": 20
+  },
+  {
+   "hypothesis": "H-BOS2",
+   "family": "bos_regime",
+   "title": "",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "research/rules.yaml (4 citations, lines ~3385-3439)",
+   "evidence": "",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-BOS-1",
+    "R-BOS-2",
+    "R-BOS-3",
+    "R-BOS-4"
+   ],
+   "suggested_test": "re-run with a BH/Holm-controlled definition of 'explosive'/'detrimental' cell.",
+   "cost": "cheap",
+   "source": "family audit S2 (debt)",
+   "score": 6.25,
+   "rank": 21
+  },
+  {
+   "hypothesis": "H-DS3",
+   "family": "state_space_discrete",
+   "title": "",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "Cell-ordering Spearman rho is exactly 0.0 for 9 of 11 unrelated discretisation schemes, suggesting a degenerate or NaN-coerced-to-zero computation rather than genuine null findings.",
+   "evidence": "S2.txt line 1390 (ordering_all_rho: 9 entries at exactly 0.0, one at -0.23793).",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-DS-6"
+   ],
+   "suggested_test": "Inspect the Spearman-ordering helper for a divide-by-zero/constant-input guard that silently returns 0.0; surface the guard instead of silently zeroing.",
+   "cost": "cheap",
+   "source": "family audit S2",
+   "score": 6.25,
+   "rank": 22
+  },
+  {
+   "hypothesis": "H-IC3",
+   "family": "decision_budget",
+   "title": "",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "The half-life/edge-ratio metric is structurally undefined whenever the zero-lag edge is <=0, which happened for both trend and shock legs in the entire clean_holdout segment, making the registered test inapplicable there (not merely underpowered).",
+   "evidence": "S3.txt line 278: 'ratio': null, 'half_life_h': null, 'leg_note': 'edge(0) <= 0: ratio undefined' for both trend and shock in clean_holdout.",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-BUDGET-3",
+    "R-BUDGET-4"
+   ],
+   "suggested_test": "Define an edge-ratio fallback (e.g. absolute-edge difference) for segments where baseline edge is non-positive, or report those segments explicitly as 'not evaluable' rather than folding them into 'inconclusive'.",
+   "cost": "cheap",
+   "source": "family audit S3",
+   "score": 6.25,
+   "rank": 23
+  },
+  {
+   "hypothesis": "H-KF2",
+   "family": "state_space",
+   "title": "",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "none found in rules.yaml",
+   "evidence": "",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-PX-11"
+   ],
+   "suggested_test": "check q_hat's distribution for boundary clustering at 0 before concluding state-space SNR carries no timing information.",
+   "cost": "cheap",
+   "source": "family audit S2 (debt)",
+   "score": 6.25,
+   "rank": 24
+  },
+  {
+   "hypothesis": "H-MMR0",
+   "family": "mm_replay",
+   "title": "",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "The replay engine that H-MMR1/2/3 (and H-EXE1/H-MM3 execution rules) all build on is itself validated against only 6 live symbol-days, several with 0-2 fills, a thin base for a chain of downstream parameter decisions.",
+   "evidence": "S3.txt line 1293: 'median_abs_fill_error 0.25, sign_agreement 1.0, n: 6'; note 'Live symbol-days with 0-2 fills: little power'.",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-MMR-4"
+   ],
+   "suggested_test": "Expand H-MMR0's live-fill validation set as more mainnet days accumulate before leaning further on replay-derived parameter choices.",
+   "cost": "cheap",
+   "source": "family audit S3",
+   "score": 6.25,
+   "rank": 25
+  },
+  {
+   "hypothesis": "H-MS5b,H-MD4",
+   "family": "microstructure_dist",
+   "title": "",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "The free-spread subgroup test pools symbol-days from a small number of distinct symbols (originally 3) without visible symbol-level clustering, risking pseudo-replication in the sign test even though day-level clustering is used elsewhere in this family.",
+   "evidence": "S3.txt lines 748-750: n_qualifying 17-61 symbol-days, but the underlying symbol set (CARV, KAS, NVDA plus any newly qualifying free-spread names) is small.",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-MD-2"
+   ],
+   "suggested_test": "Cluster the sign test by symbol as well as day, or report a symbol-count-adjusted CI.",
+   "cost": "cheap",
+   "source": "family audit S3",
+   "score": 6.25,
+   "rank": 26
+  },
+  {
+   "hypothesis": "H-OBG1,H-OBG2",
+   "family": "btc_orderbook",
+   "title": "",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "The whole generator (used for both H-OBG1's validation and H-OBG2's training-augmentation test) is calibrated from only 3 real days (2026-04-15, 2026-09-13, 2026-10-28), a thin basis for a tool then judged against 12-31 different held-out days.",
+   "evidence": "S3.txt lines 1350-1352 data description: 'ob200 event-level BTC days 2026-04-15, 2026-09-13, 2026-10-28 ... raw deleted after aggregation'.",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-OBG-1",
+    "R-OBG-2"
+   ],
+   "suggested_test": "Add more FIT days (ideally spanning more market states) before drawing stronger conclusions from the generator, especially since H-OBG2 already shows it does not help as training augmentation.",
+   "cost": "cheap",
+   "source": "family audit S3",
+   "score": 6.25,
+   "rank": 27
+  },
+  {
+   "hypothesis": "H-OPT1,H-OPT2,H-OPT3",
+   "family": "options",
+   "type": "mis-specified",
+   "severity": "low",
+   "problem": "data tag '(BACKTEST_TREND_FOLLOWING)' on Deribit option trades suggests a mislabelled or reused loader",
+   "evidence": "results data field",
+   "decision_value": "medium",
+   "suggested_test": "confirm the loader and relabel",
+   "cost": "cheap",
+   "source": "family audit S1",
+   "used_by_rules": [
+    "R-AVOID-2"
+   ],
+   "title": "",
+   "score": 6.25,
+   "rank": 28
+  },
+  {
+   "hypothesis": "H-SP2",
+   "family": "ml_sparsity",
+   "title": "",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "Pooled overlap statistic is NaN (jaccard: NaN, n_selected=0 in both segments) rather than an explicit 0/undefined flag, which could silently corrupt any downstream aggregation (e.g. scoreboard parsing) that sums or Holm-corrects across this family.",
+   "evidence": "S3.txt line 204: '\"jaccard\": NaN, \"intersection\": [], \"p_hypergeom\": 1.0'.",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-SP-1",
+    "R-SP-2"
+   ],
+   "suggested_test": "Have sparsity_study emit an explicit sentinel (e.g. null with a reason string) instead of NaN when both selected sets are empty, and guard any aggregate stats against NaN propagation.",
+   "cost": "cheap",
+   "source": "family audit S3",
+   "score": 6.25,
+   "rank": 29
+  },
+  {
+   "hypothesis": "H-SYN1",
+   "family": "synthetic",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "registered supports (seed 0) equals the study's own random-non-champion null (-0.59 vs -0.59) and does not replicate at seeds 1/2; cited by active rules R-SYN-2/3",
+   "evidence": "H-SYN1 clean_holdout null_random_variant_mean -0.593 vs mean_diff -0.587",
+   "decision_value": "medium",
+   "suggested_test": "success rule must beat the random-choice null and agree on >= 2 of 3 seeds; downgrade R-SYN-2/3 to C",
+   "cost": "cheap",
+   "source": "family audit S1",
+   "used_by_rules": [
+    "R-SYN-1",
+    "R-SYN-2",
+    "R-SYN-3"
+   ],
+   "title": "",
+   "score": 6.25,
+   "rank": 30
+  },
+  {
+   "hypothesis": "H-TR2",
+   "family": "trend",
+   "title": "",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "Holdout comparison rests on 5 monthly paired observations with an undefined NW t.",
+   "evidence": "S2.txt line 280 ('n_months': 5, 'paired_t_nw': NaN).",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-PX-3",
+    "R-SYN-2"
+   ],
+   "suggested_test": "Wait for >=12 holdout months, or use a higher-frequency paired test.",
+   "cost": "cheap",
+   "source": "family audit S2",
+   "score": 6.25,
+   "rank": 31
+  },
+  {
+   "hypothesis": "H-VC3",
+   "family": "microstructure",
+   "title": "",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "H-VC3's operationalisation makes the 'near edge' equal to the event candle's own close, so the 'first touch' is always the very next bar -- the test as executed cannot distinguish a real support/resistance effect from a trivial next-bar-move question, as the researchers themselves note.",
+   "evidence": "S3.txt line 823: 'Caveat: the near edge = event close, so the touch is always bar t+1 and the test reduces to next +-1 sigma move from the vector close'.",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-PX-4"
+   ],
+   "suggested_test": "Redefine the near edge with a minimum gap (e.g. require the touch to occur >=2 bars after the event) before re-running.",
+   "cost": "cheap",
+   "source": "family audit S3",
+   "score": 6.25,
+   "rank": 32
+  },
+  {
+   "hypothesis": "H-X2,H-RG1",
+   "family": "regime",
+   "title": "",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "Both hypotheses initially produced invalid results from coding bugs (non-scale-free metric; variance ratio divided by q twice) before being caught and rerun.",
+   "evidence": "S2.txt lines 56-57 ('superseded by H-X2b'); lines 112-113 ('every VR was ~1/24').",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-PX-5"
+   ],
+   "suggested_test": "Add a unit test on the metric-scale/VR computation before the next regime study reuses it.",
+   "cost": "cheap",
+   "source": "family audit S2",
+   "score": 6.25,
+   "rank": 33
+  },
+  {
+   "hypothesis": "RT-SYS-1",
+   "family": "red team: (all)",
+   "title": "RT-SYS-1",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "The shared evaluate.newey_west_t uses lag = floor(4 (n/100)^(2/9)): 8 lags for 3,500 hourly rows, 10 for 13,000. Hourly loss or return series with daily / weekly seasonality or multi-day overlapping labels need far longer lags or block aggregation. It happened not to matter for TVTP (RT-TVTP-1), but every hourly study using it inherits the risk.",
+   "evidence": "src/ai_trader/research/evaluate.py:27-41",
+   "decision_value": "medium",
+   "used_by_rules": [],
+   "suggested_test": "For hourly series report the day- or week-mean t alongside the automatic HAC t; for overlapping labels set the lag to at least the label horizon.",
+   "cost": "cheap",
+   "source": "red team",
+   "score": 6.25,
+   "rank": 34
+  },
+  {
+   "hypothesis": "H-AU1",
+   "family": "auction",
+   "title": "",
+   "type": "verdict-error",
+   "severity": "medium",
+   "problem": "Initial analysis tested the per-day mean against zero and reported 'supports' (t=5.2) before recognizing a non-zero driftless-null bias erases most of the effect (excess-vs-null t=1.58, not significant).",
+   "evidence": "S2.txt lines 589-591.",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-PX-5"
+   ],
+   "suggested_test": "Standardize the simulated-null preprocessing step for any event-weighted per-day statistic, as for H-GT3, rather than catching it after the fact.",
+   "cost": "cheap",
+   "source": "family audit S2",
+   "score": 6.25,
+   "rank": 35
+  },
+  {
+   "hypothesis": "H-BOS2",
+   "family": "bos_regime",
+   "title": "",
+   "type": "verdict-error",
+   "severity": "medium",
+   "problem": "Success criterion has no adjustment for the near-certainty of being satisfied by chance across ~18 regime cells, yet it is the family's only 'supports' and is cited in rules.yaml.",
+   "evidence": "S2.txt lines 517-528; research/rules.yaml lines ~3385-3439.",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-BOS-1",
+    "R-BOS-2",
+    "R-BOS-3",
+    "R-BOS-4"
+   ],
+   "suggested_test": "Require the explosive/detrimental cells to survive a BH/Holm correction across all cells tested, as H-BOS1 already does.",
+   "cost": "cheap",
+   "source": "family audit S2",
+   "score": 6.25,
+   "rank": 36
+  },
+  {
+   "hypothesis": "H-FU2",
+   "family": "fundamentals",
+   "title": "",
+   "type": "verdict-error",
+   "severity": "medium",
+   "problem": "clean_holdout 'supports' shows t=6.45 on n=14 with heavy outcome overlap, not plausible evidence for the claimed VRP-return relationship.",
+   "evidence": "S2.txt line 758 (n=14, t=6.45297).",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-AVOID-1"
+   ],
+   "suggested_test": "Report an effective-N-adjusted or block-bootstrap CI for holdout regressions with overlapping outcomes and n<30.",
+   "cost": "cheap",
+   "source": "family audit S2",
+   "score": 6.25,
+   "rank": 37
+  },
+  {
+   "hypothesis": "H-GT3",
+   "family": "levels",
+   "title": "",
+   "type": "verdict-error",
+   "severity": "medium",
+   "problem": "First-pass result used a mis-specified flat-0.5 null and reported 'supports' (z=6.78) before correction to 'contradicts' against the proper per-event null (z=0.80).",
+   "evidence": "S2.txt lines 297-300.",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-PX-4"
+   ],
+   "suggested_test": "Standardize the simulated/per-event null as a required preprocessing step for every race-design test, not an after-the-fact check.",
+   "cost": "cheap",
+   "source": "family audit S2",
+   "score": 6.25,
+   "rank": 38
+  },
+  {
+   "hypothesis": "H-NEWS3",
+   "family": "btc_news",
+   "title": "",
+   "type": "verdict-error",
+   "severity": "medium",
+   "problem": "H-NEWS3 is labelled 'contradicts' in both segments, but the reported t-stats (1.4998, 1.46442) do not exceed |t|>2 in either segment -- the point estimate is wrong-signed but not statistically distinguishable from zero.",
+   "evidence": "S3.txt lines 440-441: qlike_diff positive, nw_t=1.50/1.46.",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-NEWS-5"
+   ],
+   "suggested_test": "Require |t|>2 for a contradicts call (symmetric to the supports rule); otherwise label as inconclusive when the wrong-signed estimate isn't significant.",
+   "cost": "cheap",
+   "source": "family audit S3",
+   "score": 6.25,
+   "rank": 39
+  },
+  {
+   "hypothesis": "H-OF1,H-OF2,H-OF3,H-OF5",
+   "family": "order_flow",
+   "title": "",
+   "type": "verdict-error",
+   "severity": "medium",
+   "problem": "Each result reports two different parameter specs (min_valid 720 vs 360, rel_floor 0 vs 0.01) with materially different significance/verdicts, and it is unclear from the batch which was pre-registered before any data was seen.",
+   "evidence": "S3.txt lines 940,952,965,990 'sensitivity_original_spec' blocks differing from the primary 'spec'.",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-FLOW-1",
+    "R-FLOW-2",
+    "R-FLOW-3",
+    "R-MINE-3",
+    "R-ML-13",
+    "R-MS-12"
+   ],
+   "suggested_test": "State explicitly in the report which spec was registered first and treat the other strictly as a disclosed robustness check, not an alternate primary.",
+   "cost": "cheap",
+   "source": "family audit S3",
+   "score": 6.25,
+   "rank": 40
+  },
+  {
+   "hypothesis": "H-P1",
+   "family": "positioning",
+   "title": "",
+   "type": "verdict-error",
+   "severity": "medium",
+   "problem": "clean_holdout 'supports' rests on one cell (R3=0.706) an order of magnitude larger than comparable values elsewhere in the batch, with no n/SE reported.",
+   "evidence": "S2.txt line 681.",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-AVOID-1",
+    "R-MAP-5"
+   ],
+   "suggested_test": "Report per-cell trade count/SE for H-P1's holdout cells; recompute with a minimum-n filter or winsorisation.",
+   "cost": "cheap",
+   "source": "family audit S2",
+   "score": 6.25,
+   "rank": 41
+  },
+  {
+   "hypothesis": "H-PD6",
+   "family": "execution",
+   "title": "",
+   "type": "verdict-error",
+   "severity": "medium",
+   "problem": "clean_holdout for k=2.5 is labelled 'supports' with t_nw=1.63 and one-sided p=0.0515, both short of the hypothesis's own registered t>2 bar, while llm_in_sample clearly contradicts (t=-2.30); the pooled verdict correctly shows contradicts, but the per-segment 'supports' label on a non-significant holdout number is an inconsistent application of the stated threshold.",
+   "evidence": "S3.txt line 1203: k2.5 t_nw=1.63033, p_one_sided=0.05152.",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-EXIT-1",
+    "R-EXIT-2",
+    "R-EXIT-3",
+    "R-OPX-4"
+   ],
+   "suggested_test": "Apply the same |t|>2 bar to label the holdout segment, or explicitly document a relaxed holdout rule if intended.",
+   "cost": "cheap",
+   "source": "family audit S3",
+   "score": 6.25,
+   "rank": 42
+  },
+  {
+   "hypothesis": "H-RC1,H-RC2",
+   "family": "regime_strategy",
+   "title": "",
+   "type": "verdict-error",
+   "severity": "medium",
+   "problem": "H-RC2's holdout 'supports' is evaluated against a backdrop where H-RC1 (same data) found no significant rank stability of the underlying strategy-cell map.",
+   "evidence": "S2.txt line 650 (rho=0.085, CI crosses 0); line 664 (p_holm 0.006-0.038).",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-MAP-1",
+    "R-MAP-2",
+    "R-MAP-3",
+    "R-MAP-4",
+    "R-MAP-5",
+    "R-MAP-6",
+    "R-MAP-7"
+   ],
+   "suggested_test": "Report H-RC1's instability finding alongside any use of H-RC2's result as a durability caveat.",
+   "cost": "cheap",
+   "source": "family audit S2",
+   "score": 6.25,
+   "rank": 43
+  },
+  {
+   "hypothesis": "H-TR3,H-TR4,H-RL1,H-RL3",
+   "family": "regime",
+   "title": "",
+   "type": "verdict-error",
+   "severity": "medium",
+   "problem": "'Supports' in clean_holdout is recorded on sign alone with t in [0.3,1.6] on small samples.",
+   "evidence": "S2.txt lines 128 (t=0.30), 141 (t=0.71), 197 (t=0.56), 223 (z=1.47).",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-PX-3",
+    "R-PX-6",
+    "R-PX-8",
+    "R-RB-3"
+   ],
+   "suggested_test": "Show holdout t/CI next to the verdict label in SCOREBOARD so 'supports' isn't read as significant.",
+   "cost": "cheap",
+   "source": "family audit S2",
+   "score": 6.25,
+   "rank": 44
+  },
+  {
+   "hypothesis": "H-VBOS2",
+   "family": "vol_bos_trend",
+   "title": "",
+   "type": "verdict-error",
+   "severity": "medium",
+   "problem": "clean_holdout 'supports' (t=3.08) is driven by an aggregate signed statistic that vanishes almost completely when split by side.",
+   "evidence": "S2.txt line 449: by_side '1': t=-0.001, '-1': t=0.08, vs top-level t=3.0812.",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-VBOS-2"
+   ],
+   "suggested_test": "Re-derive the primary statistic from the by-side numbers directly, or investigate the aggregation code, before treating this as directional evidence.",
+   "cost": "cheap",
+   "source": "family audit S2",
+   "score": 6.25,
+   "rank": 45
+  },
+  {
+   "hypothesis": "H-W2,H-W5b,H-OPT2,H-NS1,H-SEC2",
+   "family": "calendar/new_strategies/options/panel",
+   "type": "verdict-error",
+   "severity": "medium",
+   "problem": "per-segment holdout 'supports' labels are sign-only (verdicts.py:37-41) and do not meet the hypotheses' own |t| bars; H-NS1 holdout supports on raw t 2.34 while its own Holm p = 0.70; H-W2 holdout supports (t -1.36) after an in-sample contradicts",
+   "evidence": "src/ai_trader/research/verdicts.py:37-41; H-NS1 clean_holdout holm_p 0.699",
+   "decision_value": "medium",
+   "suggested_test": "add a hypothesis-level verdict per the registered rule (both segments) and gate the holdout judge on the study's own adjusted p",
+   "cost": "cheap",
+   "source": "family audit S1",
+   "used_by_rules": [
+    "R-AVOID-2",
+    "R-CARRY-2",
+    "R-PX-9",
+    "R-VOL-9"
+   ],
+   "title": "",
+   "score": 6.25,
+   "rank": 46
+  },
+  {
+   "hypothesis": "H-NN4, H-NN9",
+   "family": "ml_interpretability",
+   "title": "",
+   "type": "contradicted-but-used",
+   "severity": "medium",
+   "problem": "none found in research/rules.yaml or RULES.md",
+   "evidence": "",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-ML-6",
+    "R-ML-8",
+    "R-ML-9"
+   ],
+   "suggested_test": "none needed; properly resolved negative result, keep as diary record",
+   "cost": "medium",
+   "source": "family audit S3 (debt)",
+   "score": 6.0,
+   "rank": 47
+  },
+  {
+   "hypothesis": "H-XS4 (secondary walk-forward panel)",
+   "family": "xs_network",
+   "title": "",
+   "type": "look-ahead",
+   "severity": "medium",
+   "problem": "R-XS-5 context signal",
+   "evidence": "",
+   "decision_value": "medium",
+   "used_by_rules": [],
+   "suggested_test": "Rebuild the historical candidate panel from a point-in-time liquid-universe definition per quarter instead of today's survivors",
+   "cost": "medium",
+   "source": "family audit S3 (debt)",
+   "score": 6.0,
+   "rank": 48
+  },
+  {
+   "hypothesis": "H-MMR1, H-MMR2, H-MMR3",
+   "family": "mm_replay",
+   "title": "",
+   "type": "underpowered",
+   "severity": "medium",
+   "problem": "live MM parameter/gating choices (mainnet capital)",
+   "evidence": "",
+   "decision_value": "high",
+   "used_by_rules": [
+    "R-MMR-1",
+    "R-MMR-2",
+    "R-MMR-3",
+    "R-MMR-5",
+    "R-MMR-6"
+   ],
+   "suggested_test": "Continue accumulating held-out replay/live days toward a CI that excludes 0",
+   "cost": "medium",
+   "source": "family audit S3 (debt)",
+   "score": 6.0,
+   "rank": 49
   },
   {
    "hypothesis": "H-BO1",
@@ -304,7 +1010,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.625,
-   "rank": 15
+   "rank": 50
   },
   {
    "hypothesis": "H-LEV2",
@@ -323,7 +1029,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.625,
-   "rank": 16
+   "rank": 51
   },
   {
    "hypothesis": "H-MC1",
@@ -340,7 +1046,45 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.625,
-   "rank": 17
+   "rank": 52
+  },
+  {
+   "hypothesis": "H-TR1,H-STRESS0",
+   "family": "red team: stress_test_2026-11-26.md",
+   "title": "RT-STRESS-4",
+   "type": "selection",
+   "severity": "medium",
+   "problem": "Same zoo signals, two reads of the same clean holdout: H-TR1 (continuous ensemble positions, daily net P&L) recorded clean_holdout contradicts (portfolio Sharpe -0.42, NW t -0.32, 8 of 23 symbols positive); the stress trade layer (4-sigma exchange stop, |s| >= 0.3 entry, no re-entry after a stop) reads the holdout as positive. The second read under a different P&L definition after the first one failed is a forking path and was not counted as an extra trial of H-TR1.",
+   "evidence": "hypotheses_results.jsonl H-TR1 rows; stress report method 'Trade layer'",
+   "decision_value": "high",
+   "used_by_rules": [
+    "R-PD-1",
+    "R-PD-2",
+    "R-PX-3",
+    "agent/decision.py GATE_STRATEGY trend_4h -> zoo_ensemble"
+   ],
+   "suggested_test": "Register the trade-layer zoo_ensemble / trend_4h as their own hypothesis with forward-only confirmation (see H-WS01-9) and count the trial; keep R-PX-3 / R-PD-1 / R-PD-2 citing H-TR1 as contradicted in the holdout.",
+   "cost": "cheap",
+   "source": "red team",
+   "score": 5.625,
+   "rank": 53
+  },
+  {
+   "hypothesis": "H-AU1",
+   "family": "auction",
+   "title": "Acceptance outside the prior value area leads to continuation (imbalance)",
+   "type": "fdr-fragile",
+   "problem": "recorded supports but discovery p=2.12e-07 (q_BY=0.0) does not survive registry-wide BY10; holdout supports p=0.123",
+   "evidence": "fdr.json hypotheses[H-AU1]",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-PX-5"
+   ],
+   "suggested_test": "re-test on the growing clean_holdout with the registered statistic recorded (estimate, SE, n, HAC); count it in the registry family",
+   "cost": "cheap",
+   "source": "auto",
+   "score": 5.0,
+   "rank": 54
   },
   {
    "hypothesis": "H-AU3",
@@ -357,7 +1101,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 18
+   "rank": 55
   },
   {
    "family": "rules",
@@ -374,7 +1118,7 @@
    "problem": "rests on 3 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 19
+   "rank": 56
   },
   {
    "hypothesis": "H-BOS2",
@@ -394,7 +1138,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 20
+   "rank": 57
   },
   {
    "family": "rules",
@@ -411,7 +1155,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 21
+   "rank": 58
   },
   {
    "hypothesis": "H-DOW3",
@@ -428,7 +1172,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 22
+   "rank": 59
   },
   {
    "hypothesis": "H-GEN2",
@@ -445,7 +1189,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 23
+   "rank": 60
   },
   {
    "hypothesis": "H-GT3",
@@ -462,7 +1206,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 24
+   "rank": 61
   },
   {
    "family": "rules",
@@ -479,7 +1223,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 25
+   "rank": 62
   },
   {
    "family": "rules",
@@ -496,7 +1240,7 @@
    "problem": "rests on 2 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 26
+   "rank": 63
   },
   {
    "hypothesis": "H-KF1",
@@ -513,7 +1257,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 27
+   "rank": 64
   },
   {
    "hypothesis": "H-MMR0",
@@ -530,7 +1274,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 28
+   "rank": 65
   },
   {
    "hypothesis": "H-NN1",
@@ -551,7 +1295,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 29
+   "rank": 66
   },
   {
    "family": "rules",
@@ -568,7 +1312,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 30
+   "rank": 67
   },
   {
    "family": "rules",
@@ -585,7 +1329,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 31
+   "rank": 68
   },
   {
    "hypothesis": "H-NN3",
@@ -606,7 +1350,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 32
+   "rank": 69
   },
   {
    "family": "rules",
@@ -623,7 +1367,7 @@
    "problem": "rests on 2 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 33
+   "rank": 70
   },
   {
    "family": "rules",
@@ -640,7 +1384,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 34
+   "rank": 71
   },
   {
    "family": "rules",
@@ -657,7 +1401,7 @@
    "problem": "rests on 3 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 35
+   "rank": 72
   },
   {
    "hypothesis": "H-OPT2",
@@ -674,7 +1418,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 36
+   "rank": 73
   },
   {
    "family": "rules",
@@ -691,7 +1435,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 37
+   "rank": 74
   },
   {
    "hypothesis": "H-P1",
@@ -709,7 +1453,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 38
+   "rank": 75
   },
   {
    "family": "rules",
@@ -726,7 +1470,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 39
+   "rank": 76
   },
   {
    "family": "rules",
@@ -743,7 +1487,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 40
+   "rank": 77
   },
   {
    "family": "rules",
@@ -760,7 +1504,7 @@
    "problem": "rests on 2 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 41
+   "rank": 78
   },
   {
    "hypothesis": "H-PD6",
@@ -780,7 +1524,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 42
+   "rank": 79
   },
   {
    "family": "rules",
@@ -798,7 +1542,7 @@
    "problem": "rests on 3 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 43
+   "rank": 80
   },
   {
    "family": "rules",
@@ -815,7 +1559,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 44
+   "rank": 81
   },
   {
    "family": "rules",
@@ -832,7 +1576,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 45
+   "rank": 82
   },
   {
    "family": "rules",
@@ -849,7 +1593,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 46
+   "rank": 83
   },
   {
    "hypothesis": "H-RC2",
@@ -866,7 +1610,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 47
+   "rank": 84
   },
   {
    "hypothesis": "H-RL1",
@@ -883,7 +1627,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 48
+   "rank": 85
   },
   {
    "family": "rules",
@@ -900,7 +1644,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 49
+   "rank": 86
   },
   {
    "hypothesis": "H-SP1",
@@ -918,7 +1662,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 50
+   "rank": 87
   },
   {
    "family": "rules",
@@ -935,7 +1679,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 51
+   "rank": 88
   },
   {
    "family": "rules",
@@ -952,7 +1696,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 52
+   "rank": 89
   },
   {
    "family": "rules",
@@ -969,7 +1713,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 53
+   "rank": 90
   },
   {
    "hypothesis": "H-TR3",
@@ -986,7 +1730,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 54
+   "rank": 91
   },
   {
    "hypothesis": "H-TR4",
@@ -1003,7 +1747,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 55
+   "rank": 92
   },
   {
    "family": "rules",
@@ -1020,7 +1764,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 56
+   "rank": 93
   },
   {
    "family": "rules",
@@ -1037,7 +1781,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 57
+   "rank": 94
   },
   {
    "hypothesis": "H-VC1",
@@ -1054,7 +1798,24 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 58
+   "rank": 95
+  },
+  {
+   "hypothesis": "H-VC2",
+   "family": "microstructure",
+   "title": "Swept zones get revisited more than a random walk implies",
+   "type": "fdr-fragile",
+   "problem": "recorded supports but discovery p=2.49e-12 (q_BY=0.0) does not survive registry-wide BY10; holdout supports p=0.004",
+   "evidence": "fdr.json hypotheses[H-VC2]",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-PX-4"
+   ],
+   "suggested_test": "re-test on the growing clean_holdout with the registered statistic recorded (estimate, SE, n, HAC); count it in the registry family",
+   "cost": "cheap",
+   "source": "auto",
+   "score": 5.0,
+   "rank": 96
   },
   {
    "hypothesis": "H-VM1",
@@ -1072,7 +1833,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 59
+   "rank": 97
   },
   {
    "family": "rules",
@@ -1089,7 +1850,7 @@
    "problem": "rests on 2 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 60
+   "rank": 98
   },
   {
    "hypothesis": "H-W2",
@@ -1106,7 +1867,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 61
+   "rank": 99
   },
   {
    "family": "rules",
@@ -1123,7 +1884,7 @@
    "problem": "rests on 1 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 62
+   "rank": 100
   },
   {
    "hypothesis": "H-W4",
@@ -1142,7 +1903,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 63
+   "rank": 101
   },
   {
    "family": "rules",
@@ -1159,24 +1920,7 @@
    "problem": "rests on 3 supports rows, none surviving registry-wide BY10",
    "suggested_test": "grade by FDR-surviving evidence; re-test the key hypothesis on the grown holdout with the statistic recorded",
    "score": 5.0,
-   "rank": 64
-  },
-  {
-   "hypothesis": "H-AU1",
-   "family": "auction",
-   "title": "Acceptance outside the prior value area leads to continuation (imbalance)",
-   "type": "sign-only-holdout",
-   "problem": "in-sample survives BY10 but the holdout 'supports' is a sign agreement (p=0.123)",
-   "evidence": "fdr.json hypotheses[H-AU1]",
-   "decision_value": "medium",
-   "used_by_rules": [
-    "R-PX-5"
-   ],
-   "suggested_test": "fix the holdout read date for when n_hold reaches 80% power (see power_z) and re-read once",
-   "cost": "cheap",
-   "source": "auto",
-   "score": 5.0,
-   "rank": 65
+   "rank": 102
   },
   {
    "hypothesis": "H-C1",
@@ -1193,7 +1937,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 66
+   "rank": 103
   },
   {
    "hypothesis": "H-PD3",
@@ -1210,7 +1954,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 67
+   "rank": 104
   },
   {
    "hypothesis": "H-RL3",
@@ -1228,7 +1972,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 68
+   "rank": 105
   },
   {
    "family": "rules",
@@ -1245,7 +1989,25 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 69
+   "rank": 106
+  },
+  {
+   "hypothesis": "H-C1",
+   "family": "refine",
+   "title": "funding carry (R-CARRY-1)",
+   "type": "underpowered",
+   "severity": "medium",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-CARRY-1"
+   ],
+   "cost": "cheap",
+   "problem": "in-sample net NW t 3.45 over 323 weeks (d = 0.19/week); the 17-week holdout has power 0.21; 80% power needs about 168 holdout weeks (3.2 years), 670 if the effect is half",
+   "evidence": "H-C1 rows",
+   "source": "refine",
+   "suggested_test": "decompose carry into funding income (observable) and adverse price drift, and test only the drift term (the risk), which has a smaller SD",
+   "score": 5.0,
+   "rank": 107
   },
   {
    "family": "rules",
@@ -1262,7 +2024,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 70
+   "rank": 108
   },
   {
    "family": "rules",
@@ -1279,7 +2041,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 71
+   "rank": 109
   },
   {
    "family": "rules",
@@ -1296,7 +2058,7 @@
    "problem": "expect rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 72
+   "rank": 110
   },
   {
    "family": "rules",
@@ -1313,7 +2075,7 @@
    "problem": "prefer rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 73
+   "rank": 111
   },
   {
    "family": "rules",
@@ -1330,7 +2092,7 @@
    "problem": "prefer rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 74
+   "rank": 112
   },
   {
    "family": "rules",
@@ -1347,7 +2109,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 75
+   "rank": 113
   },
   {
    "family": "rules",
@@ -1364,7 +2126,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 76
+   "rank": 114
   },
   {
    "family": "rules",
@@ -1381,7 +2143,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 77
+   "rank": 115
   },
   {
    "family": "rules",
@@ -1398,7 +2160,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 78
+   "rank": 116
   },
   {
    "family": "rules",
@@ -1415,7 +2177,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 79
+   "rank": 117
   },
   {
    "family": "rules",
@@ -1432,7 +2194,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 80
+   "rank": 118
   },
   {
    "family": "rules",
@@ -1449,7 +2211,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 81
+   "rank": 119
   },
   {
    "family": "rules",
@@ -1466,7 +2228,7 @@
    "problem": "expect rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 82
+   "rank": 120
   },
   {
    "family": "rules",
@@ -1483,7 +2245,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 83
+   "rank": 121
   },
   {
    "family": "rules",
@@ -1500,7 +2262,7 @@
    "problem": "expect rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 84
+   "rank": 122
   },
   {
    "family": "rules",
@@ -1518,7 +2280,7 @@
    "problem": "expect rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 85
+   "rank": 123
   },
   {
    "hypothesis": "H-PD3",
@@ -1535,7 +2297,25 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 86
+   "rank": 124
+  },
+  {
+   "hypothesis": "H-PNN3",
+   "family": "btc_pnn",
+   "title": "",
+   "type": "underpowered",
+   "severity": "medium",
+   "problem": "none (research only)",
+   "evidence": "",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "R-PNN-4"
+   ],
+   "suggested_test": "Report the feedback-vs-control pinball comparison's own t explicitly (currently collapsed in the batch excerpt) rather than relying on the combined p",
+   "cost": "cheap",
+   "source": "family audit S3 (debt)",
+   "score": 5.0,
+   "rank": 125
   },
   {
    "family": "rules",
@@ -1552,7 +2332,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 87
+   "rank": 126
   },
   {
    "family": "rules",
@@ -1570,7 +2350,23 @@
    "problem": "expect rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 88
+   "rank": 127
+  },
+  {
+   "hypothesis": "H-RL3,H-PD3,H-W5b",
+   "family": "refine",
+   "title": "sign-only or tiny holdouts on surviving discoveries",
+   "type": "underpowered",
+   "severity": "medium",
+   "decision_value": "medium",
+   "used_by_rules": [],
+   "cost": "cheap",
+   "problem": "holdout power for the in-sample effect: H-RL3 0.16 (needs about 13,400 regime-age origins, 6 years), H-PD3 0.22 (needs about 150 weeks), H-W5b holdout 6 eventful weekends (< MIN_HOLDOUT 8; about 20 needed)",
+   "evidence": "fdr.json power_z",
+   "source": "refine",
+   "suggested_test": "fix each re-read date at the n required for 80% power and read once; until then keep the discovery-only label",
+   "score": 5.0,
+   "rank": 128
   },
   {
    "family": "rules",
@@ -1587,7 +2383,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 89
+   "rank": 129
   },
   {
    "family": "rules",
@@ -1604,7 +2400,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 90
+   "rank": 130
   },
   {
    "family": "rules",
@@ -1621,7 +2417,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 91
+   "rank": 131
   },
   {
    "family": "rules",
@@ -1638,7 +2434,7 @@
    "problem": "expect rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 92
+   "rank": 132
   },
   {
    "family": "rules",
@@ -1655,7 +2451,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 93
+   "rank": 133
   },
   {
    "family": "rules",
@@ -1672,7 +2468,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 94
+   "rank": 134
   },
   {
    "family": "rules",
@@ -1689,7 +2485,7 @@
    "problem": "prefer rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 95
+   "rank": 135
   },
   {
    "family": "rules",
@@ -1706,7 +2502,7 @@
    "problem": "expect rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 96
+   "rank": 136
   },
   {
    "family": "rules",
@@ -1723,7 +2519,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 97
+   "rank": 137
   },
   {
    "family": "rules",
@@ -1740,7 +2536,7 @@
    "problem": "expect rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 98
+   "rank": 138
   },
   {
    "family": "rules",
@@ -1757,7 +2553,7 @@
    "problem": "avoid rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 99
+   "rank": 139
   },
   {
    "hypothesis": "H-W5b",
@@ -1774,7 +2570,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 5.0,
-   "rank": 100
+   "rank": 140
   },
   {
    "family": "rules",
@@ -1791,7 +2587,91 @@
    "problem": "prefer rule built only on contradicts / inconclusive rows (absence of evidence); power never stated",
    "suggested_test": "report the MDE of each cited test; keep the rule only where the MDE is below the smallest effect that would matter",
    "score": 5.0,
-   "rank": 101
+   "rank": 141
+  },
+  {
+   "hypothesis": "H-NN10",
+   "family": "ml_models",
+   "title": "",
+   "type": "untested",
+   "severity": "high",
+   "problem": "The desk's PLAYBOOK/R-ML-7/R-ML-20 rules gate live use of the ML vol tool on H-NN10 ('when validated, H-NN10'), but H-NN10 (forward validation of the frozen H-NN8 model) has zero recorded results.",
+   "evidence": "S3.txt lines 80-90 (H-NN10 registration, no RESULT rows); research/PLAYBOOK.md:45,114,256 'when validated, H-NN10'; research/RULES.md:201 R-ML-7 status 'provisional'.",
+   "decision_value": "high",
+   "used_by_rules": [],
+   "suggested_test": "Run the frozen-model forward comparison once >=60 forward days have elapsed from 2026-11-13 (due ~2027-01-12); until then keep R-ML-7/20 explicitly provisional, which they already are.",
+   "cost": "cheap",
+   "source": "family audit S3",
+   "score": 4.5,
+   "rank": 142
+  },
+  {
+   "hypothesis": "H-NN10",
+   "family": "ml_models",
+   "title": "",
+   "type": "untested",
+   "severity": "high",
+   "problem": "R-ML-7, R-ML-20 (provisional; gate on using tools.vol_ml for live vol expectations)",
+   "evidence": "",
+   "decision_value": "high",
+   "used_by_rules": [],
+   "suggested_test": "Compare the frozen H-NN8 XGB forecast vs baseline on logged forward hours once N>=60 days exist",
+   "cost": "cheap",
+   "source": "family audit S3 (debt)",
+   "score": 4.5,
+   "rank": 143
+  },
+  {
+   "hypothesis": "H-S3",
+   "family": "shock",
+   "type": "untested",
+   "severity": "high",
+   "problem": "the live shock_regime strategy (config/strategies.yaml:30-32) runs on H-S2/H-S3, which are data-generated and still forward-only; the stress test has shock_regime holdout -0.03 R and shock_desk FAILS",
+   "evidence": "config/strategies.yaml:30-32; stress_test_2026-11-26.md scorecard",
+   "decision_value": "high",
+   "suggested_test": "forward read already defined (rules.yaml review trigger: >= 100 forward shocks, edge t > 2); until then treat shock_regime as paper-only",
+   "cost": "cheap",
+   "source": "family audit S1",
+   "used_by_rules": [],
+   "title": "",
+   "score": 4.5,
+   "rank": 144
+  },
+  {
+   "hypothesis": "H-XS4",
+   "family": "xs_network",
+   "title": "",
+   "type": "untested",
+   "severity": "high",
+   "problem": "xs.v4 is already live (research/live/xs_v4_LATEST.md is actively updated per git status) and backing the R-XS-5 desk rule, but its own pre-registered PRIMARY verdict test (the forward shadow at 60 daily origins) has not yet run -- only the secondary walk-forward is reported, and the gap is already tracked in rules.yaml ('H-XS4 forward pending') so this is a known, not hidden, risk.",
+   "evidence": "S3.txt lines 522-524 (both segments labelled SECONDARY); research/rules.yaml:3609-3625.",
+   "decision_value": "high",
+   "used_by_rules": [
+    "R-XS-5"
+   ],
+   "suggested_test": "No code fix needed; schedule the forward-shadow evaluation once 60 daily origins accumulate from the live xs_v4 journal (data/journal/live_xs_v4/scores.jsonl).",
+   "cost": "cheap",
+   "source": "family audit S3",
+   "score": 4.5,
+   "rank": 145
+  },
+  {
+   "hypothesis": "H-XS4",
+   "family": "xs_network",
+   "title": "",
+   "type": "untested",
+   "severity": "high",
+   "problem": "R-XS-5 (provisional), xs.v4 live shadow signal",
+   "evidence": "",
+   "decision_value": "high",
+   "used_by_rules": [
+    "R-XS-5"
+   ],
+   "suggested_test": "Evaluate the pre-registered forward shadow once 60 daily origins exist (already specified, just needs to run)",
+   "cost": "cheap",
+   "source": "family audit S3 (debt)",
+   "score": 4.5,
+   "rank": 146
   },
   {
    "hypothesis": "H-FLD2",
@@ -1808,7 +2688,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 3.75,
-   "rank": 102
+   "rank": 147
   },
   {
    "hypothesis": "H-NEWS4",
@@ -1825,7 +2705,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 3.75,
-   "rank": 103
+   "rank": 148
   },
   {
    "hypothesis": "H-NN2",
@@ -1844,7 +2724,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 3.75,
-   "rank": 104
+   "rank": 149
   },
   {
    "hypothesis": "H-NN6",
@@ -1861,7 +2741,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 3.75,
-   "rank": 105
+   "rank": 150
   },
   {
    "hypothesis": "H-OPT3",
@@ -1878,7 +2758,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 3.75,
-   "rank": 106
+   "rank": 151
   },
   {
    "hypothesis": "H-VBOS2",
@@ -1895,7 +2775,25 @@
    "cost": "cheap",
    "source": "auto",
    "score": 3.75,
-   "rank": 107
+   "rank": 152
+  },
+  {
+   "hypothesis": "H-STRESS0",
+   "family": "red team: stress_test_2026-11-26.md",
+   "title": "RT-STRESS-5",
+   "type": "selection",
+   "severity": "medium",
+   "problem": "23 units x 7 verdict gates without multiplicity control: SURVIVES is the maximum of 23 screens. Registry-wide, the zoo_ensemble row's CI-derived p (about 0.04) does not survive BH or BY at 10%; within the 23 units Holm would also reject it. The report itself states the verdicts are screens, not evidence of edge, but the program summary used them as evidence.",
+   "evidence": "data/research/ws01/fdr.json (H-STRESS0 rows)",
+   "decision_value": "medium",
+   "used_by_rules": [
+    "agent/decision.py GATE_STRATEGY trend_4h -> zoo_ensemble"
+   ],
+   "suggested_test": "Quote stress verdicts as robustness screens only; any edge claim needs a family-wise or FDR-controlled test across the units screened.",
+   "cost": "cheap",
+   "source": "red team",
+   "score": 3.75,
+   "rank": 153
   },
   {
    "hypothesis": "H-W5b",
@@ -1912,7 +2810,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 3.75,
-   "rank": 108
+   "rank": 154
   },
   {
    "hypothesis": "H-X2b",
@@ -1929,7 +2827,91 @@
    "cost": "cheap",
    "source": "auto",
    "score": 3.75,
-   "rank": 109
+   "rank": 155
+  },
+  {
+   "hypothesis": "H-AI1, H-AI2",
+   "family": "ai_decision",
+   "title": "",
+   "type": "untested",
+   "severity": "medium",
+   "problem": "principle-1 validation of the LLM decision layer itself",
+   "evidence": "",
+   "decision_value": "high",
+   "used_by_rules": [],
+   "suggested_test": "Keep logging; gated by the same slow live cadence as H-LT1/LT2",
+   "cost": "cheap",
+   "source": "family audit S3 (debt)",
+   "score": 3.75,
+   "rank": 156
+  },
+  {
+   "hypothesis": "H-AS1, H-AS2",
+   "family": "adverse_selection",
+   "title": "",
+   "type": "untested",
+   "severity": "medium",
+   "problem": "R-MMR3/execution adverse-selection components (adverse_1s/adverse_60s) used ad hoc without this formal characterisation",
+   "evidence": "",
+   "decision_value": "high",
+   "used_by_rules": [],
+   "suggested_test": "Run now; the pre-registered >=14-day data minimum is already satisfied",
+   "cost": "cheap",
+   "source": "family audit S3 (debt)",
+   "score": 3.75,
+   "rank": 157
+  },
+  {
+   "hypothesis": "H-C1b",
+   "family": "carry",
+   "title": "",
+   "type": "untested",
+   "severity": "medium",
+   "problem": "research/rules.yaml R-CARRY-1 (active, already implements this design)",
+   "evidence": "",
+   "decision_value": "high",
+   "used_by_rules": [],
+   "suggested_test": "already running forward test; needs ~9 more weeks to reach the registered 26-week bar.",
+   "cost": "cheap",
+   "source": "family audit S2 (debt)",
+   "score": 3.75,
+   "rank": 158
+  },
+  {
+   "hypothesis": "H-LIVE1, H-LIVE2",
+   "family": "btc_live",
+   "title": "",
+   "type": "untested",
+   "severity": "medium",
+   "problem": "whether Claude's interpretation of the network/field/news adds value over the raw tool output (principle 4)",
+   "evidence": "",
+   "decision_value": "high",
+   "used_by_rules": [],
+   "suggested_test": "Keep logging pre-outcome forecasts; no action possible until >=300/100 forward observations accumulate",
+   "cost": "cheap",
+   "source": "family audit S3 (debt)",
+   "score": 3.75,
+   "rank": 159
+  },
+  {
+   "hypothesis": "H-NN10,H-OF6,H-OF7",
+   "family": "refine",
+   "title": "forward tests overdue or never re-run since 2026-11-14",
+   "type": "untested",
+   "severity": "medium",
+   "decision_value": "high",
+   "used_by_rules": [
+    "PLAYBOOK (ML vol tool gated on H-NN10)",
+    "R-ML-7",
+    "R-ML-20"
+   ],
+   "cost": "cheap",
+   "problem": "scripts/forward_tests.py last ran 2026-11-14 (status.json); H-OF6 needed 14 forward flow days from 2026-11-11 and is likely due; H-NN10 gates the live ML vol tool",
+   "evidence": "research/reports/forward_tests_status.md",
+   "source": "refine",
+   "suggested_test": "run scripts/forward_tests.py (status) through the governor; record only where the registered n is met",
+   "score": 3.75,
+   "rank": 160
   },
   {
    "hypothesis": "H-STOP1",
@@ -1944,7 +2926,55 @@
    "cost": "cheap",
    "source": "auto",
    "score": 3.75,
-   "rank": 110
+   "rank": 161
+  },
+  {
+   "hypothesis": "H-STOP1",
+   "family": "ai_decision",
+   "title": "",
+   "type": "untested",
+   "severity": "medium",
+   "problem": "ai_trader.risk.stop_posterior / the live 4-sigma stop cap (a real risk parameter)",
+   "evidence": "",
+   "decision_value": "high",
+   "used_by_rules": [],
+   "suggested_test": "Check data/models/risk/stop_cap.json's current 'n' (closed winning paper trades) -- if n>=40 already, this result is likely overdue to be recorded in hypotheses.yaml even though the mechanism itself is already running",
+   "cost": "cheap",
+   "source": "family audit S3 (debt)",
+   "score": 3.75,
+   "rank": 162
+  },
+  {
+   "hypothesis": "H-EV2",
+   "family": "macro_event",
+   "type": "verdict-error",
+   "severity": "high",
+   "problem": "scripts/path_study.py:155-157 has a two-way supports/contradicts judge without an inconclusive branch or a minimum n; a 2-event holdout is recorded as contradicts ('refuted') and an in-sample estimate of the right sign (+0.30, t 1.50) as contradicts",
+   "evidence": "scripts/path_study.py:155-157; RESULT clean_holdout n_down_cpi_days = 2",
+   "decision_value": "low",
+   "suggested_test": "re-judge with the 3-way, size-floored rule; inconclusive until n >= 8",
+   "cost": "cheap",
+   "source": "family audit S1",
+   "used_by_rules": [],
+   "title": "",
+   "score": 3.75,
+   "rank": 163
+  },
+  {
+   "hypothesis": "H-JD1",
+   "family": "volatility",
+   "title": "",
+   "type": "verdict-error",
+   "severity": "high",
+   "problem": "llm_in_sample metrics contain Infinity and NaN (mean_vs_t, t_vs_t, BTCUSDT) recorded alongside a 'contradicts' verdict, indicating a numerical failure (likely a zero-probability density tail) rather than a valid result.",
+   "evidence": "S2.txt line 1269.",
+   "decision_value": "low",
+   "used_by_rules": [],
+   "suggested_test": "Find and guard/clip the density evaluation producing the infinite log-score before trusting any aggregate statistic from this study.",
+   "cost": "cheap",
+   "source": "family audit S2",
+   "score": 3.75,
+   "rank": 164
   },
   {
    "hypothesis": "H-PART5",
@@ -1959,7 +2989,170 @@
    "cost": "cheap",
    "source": "auto",
    "score": 3.125,
-   "rank": 111
+   "rank": 165
+  },
+  {
+   "hypothesis": "H-C1b",
+   "family": "carry",
+   "title": "",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "R-CARRY-1 (status active, confidence B) already prescribes H-C1b's exact mechanism although H-C1b has zero result rows.",
+   "evidence": "research/rules.yaml:317-331 vs S2.txt lines 715-728 (no RESULT line).",
+   "decision_value": "low",
+   "used_by_rules": [],
+   "suggested_test": "Mark R-CARRY-1 provisional until H-C1b reports a forward result, or decouple the rule from the unconfirmed scaling detail.",
+   "cost": "cheap",
+   "source": "family audit S2",
+   "score": 3.125,
+   "rank": 166
+  },
+  {
+   "hypothesis": "H-GEO9,H-GEO16",
+   "family": "red team: intraday_geometry_2026-11-26.md",
+   "title": "RT-GEO-1",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "The only direction effect (first touch of the prior-day / prior-week high or low continues: +0.15-0.33 sigma vs placebo) is a tail, not a hit rate (continuation probability 0.46-0.49, same as placebo), 5-8 bp against about 15 bp of round-trip costs, and every executable rule built on it loses (H-GEO16, DSR 0 over 2,576 trials). The placebo levels sit 0.5-1.5 daily sigma away, so real and placebo touches differ in how far price travelled; only a post-hoc time-of-day match was checked, not a distance match.",
+   "evidence": "report sections 2 and Caveats ('Placebo design', 'A confound checked ... post-hoc')",
+   "decision_value": "low",
+   "used_by_rules": [],
+   "suggested_test": "Keep it as an expectation for risk (levels break more than hold, R-PX-4), not an entry signal; a distance-matched placebo is the registered follow-up if anyone wants to use it.",
+   "cost": "cheap",
+   "source": "red team",
+   "score": 3.125,
+   "rank": 167
+  },
+  {
+   "hypothesis": "H-GT1,H-GT2",
+   "family": "trend",
+   "title": "",
+   "type": "mis-specified",
+   "severity": "low",
+   "problem": "H-GT1/H-GT2 contradicted in both segments (holdout Sharpe -0.90 to -1.16); checked: geo_* are registered generators in config/strategies.yaml, not live sleeves, so nothing live depends on them",
+   "evidence": "config/strategies.yaml:33-39 vs S2.txt lines 240-254.",
+   "decision_value": "low",
+   "used_by_rules": [
+    "R-AVOID-1",
+    "R-MAP-6"
+   ],
+   "suggested_test": "Gate these out of the live registry, or mark experimental-only pending a positive re-test.",
+   "cost": "cheap",
+   "source": "family audit S2",
+   "score": 3.125,
+   "rank": 168
+  },
+  {
+   "hypothesis": "H-PART2",
+   "family": "red team: participants_2026-11-26.md",
+   "title": "RT-PART-1",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "'Informedness' is the 60 s markout side x (mid(t+60 s) - execution price) relative to the all-order mean. It includes each order's own permanent price impact and is not size-matched, while the types are defined by size, levels crossed and burst traits; the sweepers' +0.84 bp may be own impact of large multi-level orders rather than information. Registry-wide the result is robust statistically (t 13-22 over days), so the issue is interpretation, not significance.",
+   "evidence": "src/ai_trader/research/participants.py:406-415 (markouts), 1404-1428 (H-PART2 test)",
+   "decision_value": "low",
+   "used_by_rules": [],
+   "suggested_test": "Before using types to decide whom to quote against: markout from the post-trade mid (t + 1 s) to t + 60 s and a within-type regression on log(notional / L1); report permanent vs temporary impact.",
+   "cost": "cheap",
+   "source": "red team",
+   "score": 3.125,
+   "rank": 169
+  },
+  {
+   "hypothesis": "H-PART4,H-PART9",
+   "family": "red team: participants_2026-11-26.md",
+   "title": "RT-PART-2",
+   "type": "mis-specified",
+   "severity": "low",
+   "problem": "HMM inputs (ln spread in bp, 5 bp bands) drift with the price level; house rule 1.3 (ADF + KPSS, PSI) was not run before the fit. Disclosed as a mistake; it inflated the H-PART4 60-min gain. Forward follow-up H-PART9 uses the type mix only, which is the right repair.",
+   "evidence": "report Caveats; diary 2026-11-26 mistake",
+   "decision_value": "low",
+   "used_by_rules": [],
+   "suggested_test": "Apply the stationarity gate to every feature in the PART pipeline before H-PART9 is read.",
+   "cost": "cheap",
+   "source": "red team",
+   "score": 3.125,
+   "rank": 170
+  },
+  {
+   "hypothesis": "H-GEO1,H-GEO6",
+   "family": "red team: intraday_geometry_2026-11-26.md",
+   "title": "RT-GEO-2",
+   "type": "verdict-error",
+   "severity": "low",
+   "problem": "Cross-segment success rules recorded per segment: H-GEO1's rule needs rho_holdout >= 0.8 for variance and volume, but its llm_in_sample row is 'supports' while variance rho_holdout = 0.768; H-GEO6's rule needs the off-clock check in both DST regimes (fails in EST, 1.75) yet the holdout row is 'supports'. The hypothesis-level verdict is inconclusive in both cases.",
+   "evidence": "hypotheses_results.jsonl H-GEO1 llm_in_sample (var_rho_holdout 0.768); H-GEO6",
+   "decision_value": "low",
+   "used_by_rules": [],
+   "suggested_test": "Record a pooled, hypothesis-level verdict for cross-segment rules; the hour-of-week vol profile itself is robust elsewhere (H-NS4, H-GEO3).",
+   "cost": "cheap",
+   "source": "red team",
+   "score": 3.125,
+   "rank": 171
+  },
+  {
+   "hypothesis": "H-SEC1,H-SEC2,H-SEC3,H-PAN1,H-PAN2",
+   "family": "panel",
+   "type": "look-ahead",
+   "severity": "medium",
+   "problem": "cross-sectional tests on today's listed tokens (survivorship-biased universe, self-labelled in every row); delisted tokens absent",
+   "evidence": "results data field 'Bybit daily perps (survivorship-biased universe)'",
+   "decision_value": "low",
+   "suggested_test": "rebuild the panel from the Bybit listing/delisting log (WS02 data catalogue) before any cross-sectional claim (WS08 XSECT)",
+   "cost": "medium",
+   "source": "family audit S1",
+   "used_by_rules": [],
+   "title": "",
+   "score": 3.0,
+   "rank": 172
+  },
+  {
+   "hypothesis": "H-BR1",
+   "family": "brain",
+   "title": "",
+   "type": "untested",
+   "severity": "medium",
+   "problem": "live 'brain' nowcast feeding desk decisions (per rationale)",
+   "evidence": "",
+   "decision_value": "high",
+   "used_by_rules": [],
+   "suggested_test": "Log paired pinball losses at minutes 15/30/45 for >=300 hours, forward only",
+   "cost": "medium",
+   "source": "family audit S3 (debt)",
+   "score": 3.0,
+   "rank": 173
+  },
+  {
+   "hypothesis": "H-F1, H-F2, H-F3, H-F4",
+   "family": "flow",
+   "title": "",
+   "type": "untested",
+   "severity": "medium",
+   "problem": "underlies R-MMR/execution microstructure reasoning generally, no specific rule yet",
+   "evidence": "",
+   "decision_value": "high",
+   "used_by_rules": [],
+   "suggested_test": "Run against the flow_3s/flow_1m data already collected since 2026-11-07 (same pipeline as H-OF1-7); not forward-only by design, no data-availability barrier",
+   "cost": "medium",
+   "source": "family audit S3 (debt)",
+   "score": 3.0,
+   "rank": 174
+  },
+  {
+   "hypothesis": "H-IC4",
+   "family": "decision_budget",
+   "title": "",
+   "type": "untested",
+   "severity": "medium",
+   "problem": "desk's per-cycle prompt/context design (principle 1 context budget)",
+   "evidence": "",
+   "decision_value": "high",
+   "used_by_rules": [],
+   "suggested_test": "Run the paired compact-vs-full A/B once >=60 forward decisions exist per arm",
+   "cost": "medium",
+   "source": "family audit S3 (debt)",
+   "score": 3.0,
+   "rank": 175
   },
   {
    "hypothesis": "H-LIVE1",
@@ -1974,7 +3167,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 3.0,
-   "rank": 112
+   "rank": 176
   },
   {
    "hypothesis": "H-LIVE2",
@@ -1989,7 +3182,39 @@
    "cost": "medium",
    "source": "auto",
    "score": 3.0,
-   "rank": 113
+   "rank": 177
+  },
+  {
+   "hypothesis": "H-LT1, H-LT2, H-SENT1",
+   "family": "live_desk",
+   "title": "",
+   "type": "untested",
+   "severity": "medium",
+   "problem": "the central principle-1 forward validation of the whole live program",
+   "evidence": "",
+   "decision_value": "high",
+   "used_by_rules": [],
+   "suggested_test": "Keep logging; H-LT1/LT2 are rate-limited by the live trading cadence (3 trades/72h) so will take a long time to mature -- no action beyond continuing to log",
+   "cost": "medium",
+   "source": "family audit S3 (debt)",
+   "score": 3.0,
+   "rank": 178
+  },
+  {
+   "hypothesis": "H-MM1, H-MM3, H-NS7",
+   "family": "microstructure",
+   "title": "",
+   "type": "untested",
+   "severity": "medium",
+   "problem": "live mainnet market-making runs (data/mm/*)",
+   "evidence": "",
+   "decision_value": "high",
+   "used_by_rules": [],
+   "suggested_test": "Continue accumulating mainnet/paired-replay run-days toward the pre-registered N (>=4 weekends/200 fills; >=10 paired runs; >=10 symbol-days)",
+   "cost": "medium",
+   "source": "family audit S3 (debt)",
+   "score": 3.0,
+   "rank": 179
   },
   {
    "hypothesis": "H-NN10",
@@ -2004,7 +3229,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 3.0,
-   "rank": 114
+   "rank": 180
   },
   {
    "hypothesis": "H-SENT1",
@@ -2019,7 +3244,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 3.0,
-   "rank": 115
+   "rank": 181
   },
   {
    "hypothesis": "H-GEO1",
@@ -2034,7 +3259,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 2.5,
-   "rank": 116
+   "rank": 182
   },
   {
    "hypothesis": "H-JD3",
@@ -2049,7 +3274,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 2.5,
-   "rank": 117
+   "rank": 183
   },
   {
    "hypothesis": "H-MINE2",
@@ -2064,7 +3289,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 2.5,
-   "rank": 118
+   "rank": 184
   },
   {
    "hypothesis": "H-MMW2",
@@ -2079,7 +3304,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 2.5,
-   "rank": 119
+   "rank": 185
   },
   {
    "hypothesis": "H-SEC2",
@@ -2094,7 +3319,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 2.5,
-   "rank": 120
+   "rank": 186
   },
   {
    "hypothesis": "H-STRESS1",
@@ -2109,7 +3334,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 2.5,
-   "rank": 121
+   "rank": 187
   },
   {
    "hypothesis": "H-STRESS2",
@@ -2124,7 +3349,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 2.5,
-   "rank": 122
+   "rank": 188
   },
   {
    "hypothesis": "H-TR5",
@@ -2139,7 +3364,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 2.5,
-   "rank": 123
+   "rank": 189
   },
   {
    "hypothesis": "H-TR6",
@@ -2154,7 +3379,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 2.5,
-   "rank": 124
+   "rank": 190
   },
   {
    "hypothesis": "H-TVTP1",
@@ -2169,7 +3394,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 2.5,
-   "rank": 125
+   "rank": 191
   },
   {
    "hypothesis": "H-VZ4",
@@ -2184,7 +3409,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 2.5,
-   "rank": 126
+   "rank": 192
   },
   {
    "hypothesis": "H-X2",
@@ -2199,7 +3424,39 @@
    "cost": "cheap",
    "source": "auto",
    "score": 2.5,
-   "rank": 127
+   "rank": 193
+  },
+  {
+   "hypothesis": "H-MMW1,H-MMW2",
+   "family": "mm_weekend",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "H-MMW1 ladder filled 1 lot in 9,233 resting orders (test non-functional, filed as inconclusive); H-MMW2 'passes' with PBO 0.41, DSR 0.05 and a negative purged-CV OOS estimate (-0.033 USD/symbol-day), and the positive CI comes from inventory marks on 19 of 56 symbol-days",
+   "evidence": "research/reports/mm_weekend_2026-11-21.md (selection and overfitting table)",
+   "decision_value": "low",
+   "suggested_test": "require PBO < 0.5 and non-negative purged-CV OOS as pass conditions; relabel H-MMW1 'untested (design non-functional)'",
+   "cost": "medium",
+   "source": "family audit S1",
+   "used_by_rules": [],
+   "title": "",
+   "score": 2.5,
+   "rank": 194
+  },
+  {
+   "hypothesis": "H-MS5b",
+   "family": "microstructure_dist",
+   "title": "",
+   "type": "mis-specified",
+   "severity": "medium",
+   "problem": "none (negative result)",
+   "evidence": "",
+   "decision_value": "low",
+   "used_by_rules": [],
+   "suggested_test": "none needed",
+   "cost": "medium",
+   "source": "family audit S3 (debt)",
+   "score": 2.5,
+   "rank": 195
   },
   {
    "hypothesis": "H-GEO9",
@@ -2214,7 +3471,23 @@
    "cost": "cheap",
    "source": "auto",
    "score": 2.5,
-   "rank": 128
+   "rank": 196
+  },
+  {
+   "hypothesis": "H-JD3",
+   "family": "shock",
+   "type": "underpowered",
+   "severity": "medium",
+   "problem": "clean_holdout 'contradicts' rests on 22-24 events per leg with |t| < 1.1; the holdout MDE (about 0.67 sigma) exceeds the in-sample estimate (0.39 sigma)",
+   "evidence": "H-JD3 clean_holdout low n 22 t 1.00, normal_high n 24 t 0.37",
+   "decision_value": "low",
+   "suggested_test": "relabel inconclusive; re-read once n per leg >= 80",
+   "cost": "cheap",
+   "source": "family audit S1",
+   "used_by_rules": [],
+   "title": "",
+   "score": 2.5,
+   "rank": 197
   },
   {
    "hypothesis": "H-STRESS3",
@@ -2229,7 +3502,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.875,
-   "rank": 129
+   "rank": 198
   },
   {
    "hypothesis": "H-STRESS4",
@@ -2244,7 +3517,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.875,
-   "rank": 130
+   "rank": 199
   },
   {
    "hypothesis": "H-STRESS6",
@@ -2259,7 +3532,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.875,
-   "rank": 131
+   "rank": 200
   },
   {
    "hypothesis": "H-STRESS7",
@@ -2274,7 +3547,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.875,
-   "rank": 132
+   "rank": 201
   },
   {
    "hypothesis": "H-PART9",
@@ -2289,7 +3562,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.875,
-   "rank": 133
+   "rank": 202
   },
   {
    "hypothesis": "H-TVTP1s",
@@ -2304,7 +3577,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.875,
-   "rank": 134
+   "rank": 203
   },
   {
    "hypothesis": "H-AI2",
@@ -2319,7 +3592,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 135
+   "rank": 204
   },
   {
    "hypothesis": "H-ARB1",
@@ -2334,7 +3607,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 136
+   "rank": 205
   },
   {
    "hypothesis": "H-ARB2",
@@ -2349,7 +3622,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 137
+   "rank": 206
   },
   {
    "hypothesis": "H-AS1",
@@ -2364,7 +3637,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 138
+   "rank": 207
   },
   {
    "hypothesis": "H-AS2",
@@ -2379,7 +3652,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 139
+   "rank": 208
   },
   {
    "hypothesis": "H-F1",
@@ -2394,7 +3667,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 140
+   "rank": 209
   },
   {
    "hypothesis": "H-F2",
@@ -2409,7 +3682,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 141
+   "rank": 210
   },
   {
    "hypothesis": "H-F4",
@@ -2424,7 +3697,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 142
+   "rank": 211
   },
   {
    "hypothesis": "H-F5",
@@ -2439,7 +3712,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 143
+   "rank": 212
   },
   {
    "hypothesis": "H-LT1",
@@ -2454,7 +3727,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 144
+   "rank": 213
   },
   {
    "hypothesis": "H-LT2",
@@ -2469,7 +3742,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 145
+   "rank": 214
   },
   {
    "hypothesis": "H-MM1",
@@ -2484,7 +3757,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 146
+   "rank": 215
   },
   {
    "hypothesis": "H-MM3",
@@ -2499,7 +3772,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 147
+   "rank": 216
   },
   {
    "hypothesis": "H-NS7",
@@ -2514,7 +3787,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 148
+   "rank": 217
   },
   {
    "hypothesis": "H-PAN3",
@@ -2529,7 +3802,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 149
+   "rank": 218
   },
   {
    "hypothesis": "H-PAN6",
@@ -2544,7 +3817,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 150
+   "rank": 219
   },
   {
    "hypothesis": "H-PM1",
@@ -2559,7 +3832,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 151
+   "rank": 220
   },
   {
    "hypothesis": "H-PM2",
@@ -2574,7 +3847,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 152
+   "rank": 221
   },
   {
    "hypothesis": "H-SP4",
@@ -2589,7 +3862,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 153
+   "rank": 222
   },
   {
    "hypothesis": "H-VC7",
@@ -2604,7 +3877,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 154
+   "rank": 223
   },
   {
    "hypothesis": "H-VO1",
@@ -2619,7 +3892,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 155
+   "rank": 224
   },
   {
    "hypothesis": "H-VO2",
@@ -2634,7 +3907,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 156
+   "rank": 225
   },
   {
    "hypothesis": "H-X2c",
@@ -2649,7 +3922,7 @@
    "cost": "cheap",
    "source": "auto",
    "score": 1.25,
-   "rank": 157
+   "rank": 226
   },
   {
    "hypothesis": "H-AI1",
@@ -2664,7 +3937,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 158
+   "rank": 227
   },
   {
    "hypothesis": "H-AN1",
@@ -2679,7 +3952,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 159
+   "rank": 228
   },
   {
    "hypothesis": "H-AN2",
@@ -2694,7 +3967,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 160
+   "rank": 229
   },
   {
    "hypothesis": "H-BR1",
@@ -2709,7 +3982,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 161
+   "rank": 230
   },
   {
    "hypothesis": "H-C1b",
@@ -2724,7 +3997,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 162
+   "rank": 231
   },
   {
    "hypothesis": "H-CONF1",
@@ -2739,7 +4012,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 163
+   "rank": 232
   },
   {
    "hypothesis": "H-DS4",
@@ -2754,7 +4027,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 164
+   "rank": 233
   },
   {
    "hypothesis": "H-F3",
@@ -2769,7 +4042,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 165
+   "rank": 234
   },
   {
    "hypothesis": "H-FLD4",
@@ -2784,7 +4057,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 166
+   "rank": 235
   },
   {
    "hypothesis": "H-IC4",
@@ -2799,7 +4072,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 167
+   "rank": 236
   },
   {
    "hypothesis": "H-ICE1",
@@ -2814,7 +4087,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 168
+   "rank": 237
   },
   {
    "hypothesis": "H-LEV6",
@@ -2829,7 +4102,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 169
+   "rank": 238
   },
   {
    "hypothesis": "H-LEV7",
@@ -2844,7 +4117,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 170
+   "rank": 239
   },
   {
    "hypothesis": "H-MAC9",
@@ -2859,7 +4132,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 171
+   "rank": 240
   },
   {
    "hypothesis": "H-MINE2a",
@@ -2874,7 +4147,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 172
+   "rank": 241
   },
   {
    "hypothesis": "H-MINE2b",
@@ -2889,7 +4162,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 173
+   "rank": 242
   },
   {
    "hypothesis": "H-MS5b",
@@ -2904,7 +4177,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 174
+   "rank": 243
   },
   {
    "hypothesis": "H-NN7",
@@ -2919,7 +4192,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 175
+   "rank": 244
   },
   {
    "hypothesis": "H-OF6",
@@ -2934,7 +4207,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 176
+   "rank": 245
   },
   {
    "hypothesis": "H-OF7",
@@ -2949,7 +4222,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 177
+   "rank": 246
   },
   {
    "hypothesis": "H-OPT4",
@@ -2964,7 +4237,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 178
+   "rank": 247
   },
   {
    "hypothesis": "H-PAN4",
@@ -2979,7 +4252,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 179
+   "rank": 248
   },
   {
    "hypothesis": "H-PAN5",
@@ -2994,7 +4267,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 180
+   "rank": 249
   },
   {
    "hypothesis": "H-PART9",
@@ -3009,7 +4282,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 181
+   "rank": 250
   },
   {
    "hypothesis": "H-PD5",
@@ -3024,7 +4297,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 182
+   "rank": 251
   },
   {
    "hypothesis": "H-RV4",
@@ -3039,7 +4312,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 183
+   "rank": 252
   },
   {
    "hypothesis": "H-S3",
@@ -3054,7 +4327,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 184
+   "rank": 253
   },
   {
    "hypothesis": "H-SEC4",
@@ -3069,7 +4342,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 185
+   "rank": 254
   },
   {
    "hypothesis": "H-TP1b",
@@ -3084,7 +4357,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 186
+   "rank": 255
   },
   {
    "hypothesis": "H-VBOS5",
@@ -3099,7 +4372,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 187
+   "rank": 256
   },
   {
    "hypothesis": "H-VC6",
@@ -3114,7 +4387,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 188
+   "rank": 257
   },
   {
    "hypothesis": "H-VM6",
@@ -3129,7 +4402,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 189
+   "rank": 258
   },
   {
    "hypothesis": "H-XV1",
@@ -3144,7 +4417,7 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 190
+   "rank": 259
   },
   {
    "hypothesis": "H-XV2",
@@ -3159,7 +4432,187 @@
    "cost": "medium",
    "source": "auto",
    "score": 1.0,
-   "rank": 191
+   "rank": 260
+  },
+  {
+   "hypothesis": "H-BO1",
+   "family": "refine",
+   "title": "absence-of-evidence rule checked for power",
+   "type": "powered-null",
+   "severity": "low",
+   "decision_value": "low",
+   "used_by_rules": [],
+   "cost": "cheap",
+   "problem": "pivot minus placebo MDE80 0.031 R in-sample (n 26,272), 0.10 R holdout: powered in-sample",
+   "evidence": "recorded estimates and t in hypotheses_results.jsonl",
+   "source": "refine (MDE table)",
+   "suggested_test": "none needed beyond reporting the MDE next to the rule",
+   "replaces": [
+    {
+     "type": "underpowered",
+     "hypothesis": "H-BO1"
+    }
+   ],
+   "score": 0.375,
+   "rank": 261
+  },
+  {
+   "hypothesis": "H-LEV2,H-VCL2",
+   "family": "refine",
+   "title": "replaced by the R-LEV-1 item",
+   "type": "powered-null",
+   "severity": "low",
+   "decision_value": "low",
+   "used_by_rules": [],
+   "cost": "cheap",
+   "problem": "see the R-LEV-1 contradicted-but-used item",
+   "evidence": "",
+   "source": "refine",
+   "suggested_test": "",
+   "replaces": [
+    {
+     "type": "underpowered",
+     "hypothesis": "H-LEV2,H-VCL2"
+    }
+   ],
+   "score": 0.375,
+   "rank": 262
+  },
+  {
+   "hypothesis": "H-NS3",
+   "family": "refine",
+   "title": "absence-of-evidence rule checked for power",
+   "type": "powered-null",
+   "severity": "low",
+   "decision_value": "low",
+   "used_by_rules": [],
+   "cost": "cheap",
+   "problem": "session-mean MDE80 about 0.025 vol units per session-day in-sample: powered relative to costs",
+   "evidence": "recorded estimates and t in hypotheses_results.jsonl",
+   "source": "refine (MDE table)",
+   "suggested_test": "none needed beyond reporting the MDE next to the rule",
+   "replaces": [
+    {
+     "type": "underpowered",
+     "hypothesis": "H-NS3"
+    }
+   ],
+   "score": 0.375,
+   "rank": 263
+  },
+  {
+   "hypothesis": "H-TR1",
+   "family": "refine",
+   "title": "auto flag checked",
+   "type": "powered-null",
+   "severity": "low",
+   "decision_value": "low",
+   "used_by_rules": [
+    "R-PX-3",
+    "R-PD-1",
+    "R-PD-2"
+   ],
+   "cost": "cheap",
+   "source": "refine (check)",
+   "problem": "the auto 'contradicted-but-used' flag is a false positive in substance: R-PX-3 already states the negative Jul-Nov 2026 holdout; R-PD-1/2 cite H-TR1 for the one-bet structure, not for edge",
+   "evidence": "research/rules.yaml R-PX-3",
+   "suggested_test": "none",
+   "replaces": [
+    {
+     "type": "contradicted-but-used",
+     "hypothesis": "H-TR1"
+    }
+   ],
+   "score": 0.375,
+   "rank": 264
+  },
+  {
+   "hypothesis": "H-V2",
+   "family": "refine",
+   "title": "absence-of-evidence rule checked for power",
+   "type": "powered-null",
+   "severity": "low",
+   "decision_value": "low",
+   "used_by_rules": [],
+   "cost": "cheap",
+   "problem": "H-V2 dQLIKE MDE80 0.034 / 0.050 (about 8-12% of QLIKE ~0.4): moderately powered; the point estimates say the weekend shrink hurts (+0.018 / +0.011)",
+   "evidence": "recorded estimates and t in hypotheses_results.jsonl",
+   "source": "refine (MDE table)",
+   "suggested_test": "none needed beyond reporting the MDE next to the rule",
+   "replaces": [
+    {
+     "type": "underpowered",
+     "hypothesis": "H-V2"
+    }
+   ],
+   "score": 0.375,
+   "rank": 265
+  },
+  {
+   "hypothesis": "H-VC4,H-LC2",
+   "family": "refine",
+   "title": "absence-of-evidence rule checked for power",
+   "type": "powered-null",
+   "severity": "low",
+   "decision_value": "low",
+   "used_by_rules": [],
+   "cost": "cheap",
+   "problem": "H-VC4 median ratio CI [0.916, 0.929] in-sample, [0.887, 0.933] holdout: tight, a powered null",
+   "evidence": "recorded estimates and t in hypotheses_results.jsonl",
+   "source": "refine (MDE table)",
+   "suggested_test": "none needed beyond reporting the MDE next to the rule",
+   "replaces": [
+    {
+     "type": "underpowered",
+     "hypothesis": "H-VC4,H-LC2"
+    }
+   ],
+   "score": 0.375,
+   "rank": 266
+  },
+  {
+   "hypothesis": "H-VCL2,H-VCL3,H-VCL5,H-LEV2,H-LEV4,H-VM4",
+   "family": "refine",
+   "title": "absence-of-evidence rule checked for power",
+   "type": "powered-null",
+   "severity": "low",
+   "decision_value": "low",
+   "used_by_rules": [],
+   "cost": "cheap",
+   "problem": "H-VCL2 MDE80 0.0024 / 0.0070, H-VCL3 0.0034 / 0.0095, H-VM4 0.0021 / 0.0068 (0.5-2.3% of QLIKE): powered nulls; H-LEV2 is the exception (see R-LEV-1 item)",
+   "evidence": "recorded estimates and t in hypotheses_results.jsonl",
+   "source": "refine (MDE table)",
+   "suggested_test": "none needed beyond reporting the MDE next to the rule",
+   "replaces": [
+    {
+     "type": "underpowered",
+     "hypothesis": "H-VCL2,H-VCL3,H-VCL5,H-LEV2,H-LEV4,H-VM4"
+    }
+   ],
+   "score": 0.375,
+   "rank": 267
+  },
+  {
+   "hypothesis": "H-VM3",
+   "family": "refine",
+   "title": "absence-of-evidence rule checked for power",
+   "type": "powered-null",
+   "severity": "low",
+   "decision_value": "low",
+   "used_by_rules": [],
+   "cost": "cheap",
+   "problem": "not a null: range estimators are significantly worse (t +4.9 in-sample, +4.8 holdout); the audit's p for this rule came from a one-sided Holm p",
+   "evidence": "recorded estimates and t in hypotheses_results.jsonl",
+   "source": "refine (MDE table)",
+   "suggested_test": "none needed beyond reporting the MDE next to the rule",
+   "replaces": [
+    {
+     "type": "underpowered",
+     "hypothesis": "H-VM3"
+    }
+   ],
+   "score": 0.375,
+   "rank": 268
   }
  ]
 }

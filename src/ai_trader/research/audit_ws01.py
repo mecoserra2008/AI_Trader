@@ -535,7 +535,7 @@ def hypothesis_table(rows: list[Row], reg: dict) -> list[dict[str, Any]]:
              "disc_segment": r_in.segment if r_in else None, "disc_verdict": r_in.verdict if r_in else None,
              "disc_p": r_in.p if r_in else None, "disc_source": r_in.source if r_in else None,
              "disc_q_by": (r_in.q_by.get("F_disc") if r_in else None), "disc_q_by_all": (r_in.q_by.get("F_all") if r_in else None),
-             "disc_by10": bool(r_in and r_in.surv.get("F_disc:BY0.10")),
+             "disc_by10": bool(r_in and r_in.verdict == "supports" and r_in.surv.get("F_disc:BY0.10")),
              "hold_verdict": r_h.verdict if r_h else None, "hold_p": r_h.p if r_h else None,
              "hold_source": r_h.source if r_h else None, "hold_q_by": r_h.q_by.get("F_hold") if r_h else None}
         out.append(d)
@@ -604,7 +604,7 @@ LIVE_IDS = {"H-NN10", "H-LIVE1", "H-LIVE2", "H-XS4", "H-SENT1", "H-PNN1", "H-STR
 DV_W = {"high": 3.0, "medium": 2.0, "low": 1.0}
 TYPE_W = {"contradicted-but-used": 3.0, "look-ahead": 3.0, "verdict-error": 2.5, "mis-specified": 2.5, "holdout-contradicts": 2.5,
           "fdr-fragile": 2.0, "sign-only-holdout": 2.0, "underpowered": 2.0, "selection": 1.5, "no-statistic": 1.5,
-          "null-claim-untested-equivalence": 1.5, "untested": 1.0}
+          "null-claim-untested-equivalence": 1.5, "untested": 1.0, "powered-null": 0.3}
 COST_W = {"cheap": 1.25, "medium": 1.0, "expensive": 0.8}
 
 
@@ -713,7 +713,10 @@ LEDGER_COPY = ROOT / "research" / "reports" / "ws01_research_debt_2026-11-27.jso
 def write_ledger(res: dict[str, Any]) -> dict[str, Any]:
     items = list(res["ledger_auto"])
     if LEDGER_MANUAL.is_file():
-        for it in json.loads(LEDGER_MANUAL.read_text(encoding="utf-8")):
+        manual = json.loads(LEDGER_MANUAL.read_text(encoding="utf-8"))
+        drop = {(r["type"], r["hypothesis"]) for it in manual for r in it.get("replaces", [])}
+        items = [it for it in items if (it["type"], it["hypothesis"]) not in drop]
+        for it in manual:
             it.setdefault("source", "manual")
             it["score"] = round(DV_W.get(it.get("decision_value", "low"), 1.0) * TYPE_W.get(it.get("type"), 1.0)
                                 * COST_W.get(it.get("cost", "medium"), 1.0) * (1.2 if it.get("severity") == "high" else 1.0), 3)

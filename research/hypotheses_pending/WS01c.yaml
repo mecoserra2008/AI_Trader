@@ -1,0 +1,29 @@
+# WS01 REFINE (trimmed WS19): improved designs for the highest decision-value inconclusive / underpowered results.
+# Registered 2026-11-27 ~00:05 UTC before any computation on the data that tests them. H-WS01-9 and -11 are forward-only.
+H-WS01-9:
+  title: "Forward: the 4h trend sleeve (trend_4h) earns positive net R per closed trade (group-sequential, harm-first)"
+  statement: "trend_4h as coded in ai_trader.research.stress (bracket layer, live costs) on universe L, entries from 2026-11-27 00:00 UTC, closed trades only (open trades censored). Primary statistic: mean net R per closed trade; inference: stationary bootstrap of entry days with block = max(5, p90 holding days measured on the pre-2026-11-27 trades, 19 d). Looks at 100, 250, 500 and 1000 closed trades; one-sided 5% O'Brien-Fleming-type boundaries z = 3.47, 2.45, 2.00, 1.73 for benefit; harm boundary: bootstrap P(mean > 0) < 0.10 at any look from 250 trades on."
+  rationale: "The stress trade-layer holdout (+0.43 R on 266 closed trades) and H-TR1's continuous-position holdout (Sharpe -0.42) disagree, and the in-sample trade-layer edge is weak (+0.07 R, CI includes 0). With about 5 R per-trade dispersion a fixed-n test of +0.15 R needs thousands of trades, so the design stops early for harm and treats benefit as a long-run question. Counts as an extra trial of the trend family."
+  test: "Group-sequential bootstrap z = mean / bootstrap SE at each look."
+  success: "Supports iff the benefit boundary is crossed at a look; contradicts iff the harm boundary is crossed or mean <= 0 at 1000 trades; else inconclusive (continue)."
+  prior: 0.40
+  family: audit_refine
+  status: proposed
+H-WS01-10:
+  title: "Crypto has no economically relevant hourly leverage asymmetry (TOST on an hourly HAR with signed returns)"
+  statement: "Panel of 23 universe-L perps, hourly RV from 5m Bybit klines (data/research/rough_vol/rv_*.npz), deseasonalised by the causal weekly hour-of-week profile P. y = ln(rv_{t+1}/s_{t+1}); regressors: ln(rv_t/s_t), mean of the deseasonalised log RV over t-23..t and t-167..t, zn_t = |min(r_t, 0)| / sqrt(rv_t), zp_t = max(r_t, 0) / sqrt(rv_t), token fixed effects. Asymmetry A = b(zn) - b(zp); a positive A is a leverage effect. SE clustered by UTC day (all tokens share a day). Equivalence margin: |A| <= 0.25 x (b(zn) + b(zp)) / 2. Segments by origin at 2026-07-01."
+  rationale: "R-LEV-1 (A-grade) rests on H-LEV2, whose daily SHAR test has an MDE (80%) of 0.32 for b(RS-) - b(RS+), larger than the coefficients themselves (0.26 / 0.29): an underpowered null. Hourly data gives about 24x the origins; the hourly-horizon question has not been tested, so its holdout is unread."
+  test: "Pooled OLS with day-clustered sandwich SE per segment; 90% CI of A against the margin (TOST)."
+  success: "Supports iff in both segments the 90% CI of A lies inside the margin; contradicts iff A > 0 with t >= 2 in both segments (a leverage effect exists at 1h); if A < 0 with t <= -2 in both segments, record contradicts with note 'inverse asymmetry'; else inconclusive."
+  prior: 0.45
+  family: audit_refine
+  status: proposed
+H-WS01-11:
+  title: "Forward: the shock sleeve (shock_regime) does not lose money (harm test)"
+  statement: "shock_regime as coded in config/strategies.yaml through the stress trade layer on universe L, entries from 2026-11-27, closed trades only; mean net R per closed trade with a stationary bootstrap of entry days (block 5 d, the p90 holding period is under 5 d). Looks at 200, 500 and 1000 closed trades."
+  rationale: "shock_regime is a live 'validated sleeve' (agent/decision.py) built from data-generated H-S2 / H-S3, with stress holdout -0.03 R on 618 closed trades and an in-sample +0.06 R. Confirming +0.06 R needs about 7,700 trades (MDE at n = 618 is about 0.2 R), so the feasible question is harm, not benefit."
+  test: "Bootstrap P(mean > 0) at each look."
+  success: "Contradicts (harm) iff P(mean > 0) < 0.10 at any look; supports iff P(mean > 0) > 0.95 at 1000 trades; else inconclusive."
+  prior: 0.35
+  family: audit_refine
+  status: proposed
