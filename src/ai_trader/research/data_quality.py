@@ -432,7 +432,7 @@ def _mode(a: np.ndarray) -> int:
 def funding_gaps(df: pl.DataFrame, down) -> tuple[dict, list[dict]]:
     """Missing settlements allowing interval changes: a step is a hole iff it exceeds the larger of the modal steps of the
     6 steps before and the 6 after (an interval change leaves one of the two modes equal to the step)."""
-    gaps, mis = [], 0
+    gaps, mis, misl = [], 0, []
     allowed = {h * 3_600_000 for h in (1, 2, 4, 8)}
     for (sym,), s in df.group_by("symbol", maintain_order=True):
         ts = np.unique(s["ev"].to_numpy())
@@ -442,12 +442,16 @@ def funding_gaps(df: pl.DataFrame, down) -> tuple[dict, list[dict]]:
             mp = _mode(d[max(0, i - 6):i]) if i > 0 else int(x)
             mn = _mode(d[i + 1:i + 7]) if i + 1 < len(d) else int(x)
             ref = max(mp, mn)
+            loc = min(mp, mn)
+            if loc in allowed and ts[i + 1] % loc != 0:
+                misl.append((sym, iso(int(ts[i + 1])), loc // 3_600_000))
             if ref in allowed and x > ref:
                 step = ref if x % ref == 0 else min(mp, mn)
                 a, b = int(ts[i] + step), int(ts[i + 1])
                 gaps.append({"dataset": "funding", "stream": "bybit", "symbol": sym, "gap_start": a, "gap_end": b, "n_missing": int(x // step - 1),
                              "kind": "missing_settlement", "cause": cause_of(a, b, down), "fillable_from": "bybit REST /v5/market/funding/history", "filled": ""})
-    return {"misaligned_hour": mis, "missing_settlement_runs": len(gaps)}, gaps
+    return {"misaligned_hour": mis, "misaligned_local_interval": len(misl), "misaligned_local_examples": misl[:10],
+            "missing_settlement_runs": len(gaps)}, gaps
 
 
 def scan_alt(con) -> tuple[list[dict], dict]:
@@ -488,11 +492,15 @@ def fred_asof_check(n: int = 200, seed: int = 7) -> dict:
     from ai_trader.storage.lake import Lake
     con = _con()
     glob = (load().lake_dir / "alt_series" / "source=fred").as_posix() + "/**/*.parquet"
-    rev = pl.from_arrow(con.sql(f"""
-        WITH t AS (SELECT series_id, entity, epoch_ms(event_ts) ev, epoch_ms(known_ts) kn, value FROM read_parquet('{glob}', hive_partitioning = true)),
-        f AS (SELECT series_id, entity, ev, arg_min(value, kn) first_val, min(kn) first_kn FROM t GROUP BY ALL HAVING count(DISTINCT value) > 1),
-        s AS (SELECT t.series_id, t.entity, t.ev, min(t.kn) second_kn FROM t JOIN f USING (series_id, entity, ev) WHERE t.kn > f.first_kn GROUP BY ALL)
-        SELECT f.*, s.second_kn FROM f JOIN s USING (series_id, entity, ev)""").to_arrow_table())
+    sids = [r[0] for r in con.sql(f"SELECT DISTINCT series_id FROM read_parquet('{glob}')").fetchall()]
+    parts = []
+    for sid in sids:  # per series: bounded memory (NFCI / ANFCI hold ~1M rows each)
+        parts.append(pl.from_arrow(con.sql(f"""
+            WITH t AS (SELECT series_id, entity, epoch_ms(event_ts) ev, epoch_ms(known_ts) kn, value FROM read_parquet('{glob}') WHERE series_id = '{sid}'),
+            f AS (SELECT series_id, entity, ev, arg_min(value, kn) first_val, min(kn) first_kn FROM t GROUP BY ALL HAVING count(DISTINCT value) > 1),
+            s AS (SELECT t.series_id, t.entity, t.ev, min(t.kn) second_kn FROM t JOIN f USING (series_id, entity, ev) WHERE t.kn > f.first_kn GROUP BY ALL)
+            SELECT f.*, s.second_kn FROM f JOIN s USING (series_id, entity, ev)""").to_arrow_table()))
+    rev = pl.concat([x for x in parts if x.height], how="vertical_relaxed")
     smp = rev.sample(min(n, rev.height), seed=seed) if rev.height else rev
     lake = Lake()
     ok = bad = 0
@@ -579,6 +587,14 @@ def run_tables() -> None:
     (tmp / "tables_stats.json").write_text(json.dumps({"stats": stats, "extra": extra}, default=str, indent=1))
     pl.DataFrame(gaps, schema=GAP_SCHEMA).write_parquet(tmp / "tables_gaps.parquet")
     del con
+    extras(stats, extra)
+
+
+def extras(stats: list | None = None, extra: dict | None = None) -> None:
+    tmp = out_dir() / "tmp"
+    if stats is None:
+        ts = json.loads((tmp / "tables_stats.json").read_text())
+        stats, extra = ts["stats"], ts["extra"]
     extra["survivorship"] = survivorship(_con("400MB", 2))
     extra["fred_asof"] = fred_asof_check()
     (tmp / "tables_stats.json").write_text(json.dumps({"stats": stats, "extra": extra}, default=str, indent=1))
@@ -663,16 +679,58 @@ def compare_fill(symbol: str, day: str, windows: list[tuple[int, int]], category
     lake = lake.sort("ev", "kn").unique("ev", keep="last")
     j = lake.join(f.select("ev", (pl.col("n_buy") + pl.col("n_sell")).alias("n_a"), pl.col("buy_vol").alias("bv_a"), pl.col("sell_vol").alias("sv_a")), on="ev")
     j = j.filter(pl.any_horizontal([(pl.col("ev") >= a) & (pl.col("ev") < b) for a, b in windows]) & ~((pl.col("n") == 0) & (pl.col("book_cov") <= 0)))
-    rel = lambda x, y: ((pl.col(x) - pl.col(y)).abs() <= 1e-6 * pl.max_horizontal(pl.col(y).abs(), pl.lit(1e-12)) + 1e-9)  # noqa: E731
-    # flow_3s volumes are float32 sums: allow f32 rounding (~6e-8 per add) on top of 1e-6
-    rel32 = lambda x, y: ((pl.col(x) - pl.col(y)).abs() <= 1e-6 * pl.col(y).abs() + 1e-6 * pl.col(y).abs().clip(0, None) + 1e-7)  # noqa: E731
+    rel = lambda x, y: (pl.col(x) - pl.col(y)).abs() <= 1e-6 * pl.col(y).abs() + 1e-9  # noqa: E731
     r = j.select(pl.len().alias("candles"), (pl.col("n") == pl.col("n_a")).mean().alias("count_match"),
-                 (rel32("bv", "bv_a") & rel32("sv", "sv_a")).mean().alias("vol_match_1e6"),
+                 (rel("bv", "bv_a") & rel("sv", "sv_a")).mean().alias("vol_match_1e6"),
                  (((pl.col("bv") - pl.col("bv_a")).abs() + (pl.col("sv") - pl.col("sv_a")).abs()) <= 1e-4 * (pl.col("bv_a") + pl.col("sv_a")) + 1e-9).mean().alias("vol_match_1e4"),
                  pl.col("n").sum().alias("trades_lake"), pl.col("n_a").sum().alias("trades_archive"),
                  (pl.col("bv") + pl.col("sv")).sum().alias("vol_lake"), (pl.col("bv_a") + pl.col("sv_a")).sum().alias("vol_archive")).row(0, named=True)
-    del rel
     return {"symbol": symbol, "day": day, **r}
+
+
+def _kline_hours(con) -> pl.DataFrame:
+    return pl.from_arrow(con.sql(f"""SELECT symbol, epoch_ms(event_ts) AS "hour", arg_max(volume, known_ts) kv, arg_max(close, known_ts) kc
+        FROM read_parquet('{(load().lake_dir / 'bars' / 'venue=bybit' / 'price_type=last' / 'freq=1h').as_posix()}/year=2026/*.parquet')
+        WHERE event_ts >= TIMESTAMP '2026-11-07' GROUP BY 1, 2""").to_arrow_table())
+
+
+def trade_deficit_hours(types: dict[str, str], wins: list[dict], thresh: float = 0.9) -> pl.DataFrame:
+    """Silent partial feed: linear crypto symbol-hours with >= 600 candles present whose flow_3s taker volume is below
+    `thresh` x the kline volume scaled by the share of candles present (trades trickle while the book stream is alive)."""
+    h = pl.concat([pl.read_parquet(p) for p in sorted((out_dir() / "tmp" / "flow3s").glob("linear_*_hourly.parquet"))], how="diagonal")
+    h = h.filter((pl.col("rows") >= 600) & pl.col("symbol").map_elements(lambda s: types.get(s, "x") == "", return_dtype=pl.Boolean))
+    j = h.join(_kline_hours(_con("500MB", 2)), on=["symbol", "hour"]).filter(pl.col("kv") > 0)
+    j = j.filter(pl.col("vol") < thresh * pl.col("kv") * pl.col("rows") / 1200)
+    return j.select(pl.lit("flow_3s").alias("dataset"), pl.lit("bybit/linear").alias("stream"), "symbol", pl.col("hour").alias("gap_start"),
+                    (pl.col("hour") + 3_600_000).alias("gap_end"), pl.lit(0, dtype=pl.Int64).alias("n_missing"), pl.lit("trade_deficit").alias("kind"),
+                    pl.struct("hour").map_elements(lambda r: cause_kind(r["hour"], r["hour"] + 3_600_000, wins) or "collector_or_ws", return_dtype=pl.Utf8).alias("cause"),
+                    pl.lit("public.bybit.com/trading (trade fields)").alias("fillable_from"), pl.lit("").alias("filled"))
+
+
+def flow_vs_klines() -> dict:
+    """H-WS02-8: fully covered flow_3s symbol-hours (1200 candles, no empty-fill run) vs bybit last 1h klines."""
+    d = out_dir()
+    types = symbol_types()
+    h = pl.concat([pl.read_parquet(p) for p in sorted((d / "tmp" / "flow3s").glob("linear_*_hourly.parquet"))], how="diagonal")
+    h = h.filter((pl.col("rows") == 1200) & pl.col("symbol").map_elements(lambda s: types.get(s, "x") == "", return_dtype=pl.Boolean))
+    g = pl.read_parquet(d / "gaps.parquet").filter((pl.col("dataset") == "flow_3s") & (pl.col("stream") == "bybit/linear") & (pl.col("kind") == "empty_fill"))
+    bad = set()
+    for sym, a, b in g.select("symbol", "gap_start", "gap_end").rows():
+        for hr in range(a // 3_600_000 * 3_600_000, b, 3_600_000):
+            bad.add((sym, hr))
+    h = h.filter(~pl.struct("symbol", "hour").map_elements(lambda r: (r["symbol"], r["hour"]) in bad, return_dtype=pl.Boolean))
+    j = h.join(_kline_hours(_con("500MB", 2)), on=["symbol", "hour"], how="inner")
+    j = j.with_columns(((pl.col("vol") - pl.col("kv")).abs() <= 0.005 * pl.col("kv")).alias("vok"),
+                       ((pl.col("last_close") - pl.col("kc")).abs() <= 1e-9 * pl.col("kc")).alias("cok"),
+                       (pl.col("vol") / pl.col("kv") - 1).alias("vrel"))
+    worst = j.filter(~pl.col("vok")).sort((pl.col("vrel")).abs(), descending=True).select("symbol", "hour", "vol", "kv", "vrel").head(8)
+    r = {"symbol_hours": j.height, "symbols": j["symbol"].n_unique(), "vol_share_within_0.5pct": float(j["vok"].mean()),
+         "close_share_equal": float(j["cok"].mean()), "median_abs_vol_rel": float(j["vrel"].abs().median()),
+         "vol_rel_p01_p99": [float(j["vrel"].quantile(0.01)), float(j["vrel"].quantile(0.99))],
+         "worst": [(a, iso(b), c, e, f) for a, b, c, e, f in worst.rows()]}
+    r["verdict"] = ("supports" if r["vol_share_within_0.5pct"] >= 0.99 and r["close_share_equal"] >= 0.99
+                    else ("contradicts" if r["vol_share_within_0.5pct"] < 0.95 else "inconclusive"))
+    return r
 
 
 def symbol_types() -> dict[str, str]:
@@ -757,10 +815,11 @@ def assemble() -> None:
     coll = btc.with_columns(pl.lit("collector").alias("dataset"), pl.lit("bybit/ws").alias("stream"), pl.lit("*").alias("symbol"))
     liq = btc.with_columns(pl.lit("liquidations").alias("dataset"), pl.lit("bybit/allLiquidation").alias("stream"), pl.lit("*").alias("symbol"),
                            pl.lit("none (WS only; no REST history)").alias("fillable_from"))
+    td = trade_deficit_hours(types, wins)
     fills = d / "fills" / "manifest.json"
     tg = tg.with_columns(pl.struct("gap_start", "gap_end", "cause").map_elements(
         lambda r: cause_kind(r["gap_start"], r["gap_end"], wins) or ("unknown" if r["cause"] == "machine_down" else r["cause"]), return_dtype=pl.Utf8).alias("cause"))
-    gaps = pl.concat([x.select(list(GAP_SCHEMA)) for x in (mach, coll, liq, f3, tg)], how="vertical_relaxed")
+    gaps = pl.concat([x.select(list(GAP_SCHEMA)) for x in (mach, coll, liq, f3, td, tg)], how="vertical_relaxed")
     if fills.exists():
         man = json.loads(fills.read_text())
         for f in man.get("fills", []):
@@ -864,6 +923,43 @@ def verdicts() -> dict:
             "worst": sorted(rows, key=lambda x: x[2])[:8],
             "verdict": "supports" if share >= 0.95 else ("contradicts" if share < 0.90 else "inconclusive")}
     out["H-WS02-7"]["verdict"] = out["H-WS02-7"]["registered"]["verdict"]
+    out["H-WS02-8"] = flow_vs_klines()
+    # H-WS02-9: BTC / ETH on one overlap day; windows = day minus (flow_3s holes of the symbol +- 60 s)
+    day = "2026-11-24"
+    d0 = ms(date.fromisoformat(day))
+    res = []
+    for sym in ("BTCUSDT", "ETHUSDT"):
+        hs = gaps.filter((pl.col("dataset") == "flow_3s") & (pl.col("stream") == "bybit/linear") & (pl.col("symbol") == sym))
+        holes = [(a - 60_000, b + 60_000) for a, b in hs.select("gap_start", "gap_end").rows()]
+        if (out_dir() / "fills" / "flow_3s_trades" / "category=linear" / f"date={day}" / f"{sym}.parquet").exists():
+            res.append(compare_fill(sym, day, _complement(d0, d0 + DAY_MS, holes)))
+    ok = res and all(r["count_match"] >= 0.98 and r["vol_match_1e6"] >= 0.98 for r in res)
+    badv = any(r["count_match"] < 0.95 or r["vol_match_1e6"] < 0.95 for r in res)
+    out["H-WS02-9"] = {"per_symbol": res, "verdict": "supports" if ok else ("contradicts" if badv else "inconclusive")}
+    # H-WS02-10 survivorship
+    sv = ex.get("survivorship", {})
+    gone = sv.get("delisted_since_first_snapshot", [])
+    out["H-WS02-10"] = {"delisted_since_first_snapshot": len(gone), "examples": gone[:15],
+                        "bars_symbols_delisted": sv.get("bars_symbols_delisted_since_first_snapshot"),
+                        "closed_usdt_perps_listed_by_bybit": sv.get("closed_usdt_perps_listed_by_bybit"), "snapshots": sv.get("snapshots"),
+                        "verdict": "supports" if gone and not sv.get("bars_symbols_delisted_since_first_snapshot") else "contradicts"}
+    # H-WS02-11 FRED vintages
+    fr = [s for s in st if s["table"] == "alt_series" and s["stream"].startswith("fred/")]
+    fa = ex.get("fred_asof", {})
+    c1 = all(s["vintage_null"] == 0 and s["pit_quality"] == "vintage" for s in fr)
+    c2 = any(s.get("obs_with_2plus_vintages", 0) > 0 for s in fr)
+    c3 = fa.get("checked", 0) > 0 and fa.get("wrong", 1) == 0
+    out["H-WS02-11"] = {"series": len(fr), "all_vintage_nonnull": c1, "any_2plus_vintages": c2, "asof_first_release": fa,
+                        "pit_known_before_vintage_plus_1d": sum(s.get("pit_known_before_vintage_plus_1d", 0) for s in fr),
+                        "verdict": "supports" if c1 and c2 and c3 else "contradicts"}
+    # H-WS02-12 funding
+    fs = next(s for s in st if s["table"] == "funding")
+    fg = gaps.filter((pl.col("dataset") == "funding") & pl.col("symbol").is_in(crypto_live) & (pl.col("gap_start") < ms(date(2026, 11, 26))))
+    out["H-WS02-12"] = {"misaligned_hour": fs.get("misaligned_hour"), "misaligned_local_interval": fs.get("misaligned_local_interval"),
+                        "misaligned_examples": fs.get("misaligned_local_examples"), "missing_runs_crypto_live": fg.height,
+                        "missing_settlements": int(fg["n_missing"].sum() or 0),
+                        "examples": [(a, str(b), c) for a, b, c in fg.select("symbol", "start_utc", "n_missing").head(10).rows()],
+                        "verdict": "supports" if fg.height == 0 and not fs.get("misaligned_local_interval") else ("contradicts" if fg.height else "inconclusive")}
     return out
 
 
@@ -878,6 +974,12 @@ def _cli(argv=None) -> None:
     f.add_argument("--category", nargs="*", default=["linear", "spot"])
     sub.add_parser("tables")
     sub.add_parser("assemble")
+    fl = sub.add_parser("fill")
+    fl.add_argument("--symbols", nargs="+", required=True)
+    fl.add_argument("--days", nargs="+", required=True)
+    fl.add_argument("--category", default="linear")
+    sub.add_parser("verdicts")
+    sub.add_parser("extras")
     a = ap.parse_args(argv)
     if a.cmd == "machine":
         for w in machine_windows(refresh=True):
@@ -888,6 +990,14 @@ def _cli(argv=None) -> None:
         run_tables()
     elif a.cmd == "assemble":
         assemble()
+    elif a.cmd == "fill":
+        fill_trades(a.symbols, a.days, a.category)
+    elif a.cmd == "extras":
+        extras()
+    elif a.cmd == "verdicts":
+        v = verdicts()
+        (out_dir() / "verdicts.json").write_text(json.dumps(v, default=str, indent=1))
+        sys.stdout.write(json.dumps({k: x.get("verdict") for k, x in v.items()}) + chr(10))
 
 
 if __name__ == "__main__":

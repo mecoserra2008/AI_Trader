@@ -1,0 +1,371 @@
+{
+ "H-WS02-1": {
+  "violations": 43,
+  "per_stream": {
+   "binance/last/1h": [
+    0,
+    0,
+    43
+   ],
+   "binance/last/1m": [
+    0,
+    0,
+    0
+   ],
+   "bybit/index/1h": [
+    0,
+    0,
+    0
+   ],
+   "bybit/last/15m": [
+    0,
+    0,
+    0
+   ],
+   "bybit/last/1d": [
+    0,
+    0,
+    0
+   ],
+   "bybit/last/1h": [
+    0,
+    0,
+    0
+   ],
+   "bybit/last/4h": [
+    0,
+    0,
+    0
+   ],
+   "bybit/last/5m": [
+    0,
+    0,
+    0
+   ],
+   "bybit/mark/1d": [
+    0,
+    0,
+    0
+   ],
+   "bybit/mark/1h": [
+    0,
+    0,
+    0
+   ],
+   "bybit/mark/4h": [
+    0,
+    0,
+    0
+   ],
+   "deribit/last/1h": [
+    0,
+    0,
+    0
+   ]
+  },
+  "verdict": "contradicts"
+ },
+ "H-WS02-2": {
+  "rows_written_before_close": 0,
+  "no_write_ms": 0,
+  "per_stream": {},
+  "verdict": "supports"
+ },
+ "H-WS02-3": {
+  "pit_grid": 0,
+  "pit_known_before_end": 0,
+  "pit_written_before_known": 51602,
+  "rows": 31996777,
+  "written_before_known_max_ms": 0,
+  "verdict": "contradicts"
+ },
+ "H-WS02-4": {
+  "per_table": {},
+  "total": 0,
+  "tables_checked": 71,
+  "verdict": "supports"
+ },
+ "H-WS02-5": {
+  "conflicting": {},
+  "flow_3s_conflicting": 0,
+  "exact_extra_rows": {
+   "bars/bybit/last/1d": 380,
+   "bars/bybit/last/1h": 7570,
+   "bars/bybit/last/4h": 1521,
+   "bars/bybit/mark/1d": 159,
+   "bars/bybit/mark/1h": 3880,
+   "bars/bybit/mark/4h": 954,
+   "funding/venue=bybit": 1303,
+   "open_interest/venue=bybit/interval=4h": 1292,
+   "liquidations/venue=bybit": 1,
+   "flow_bars/venue=bybit/freq=15m": 2592,
+   "flow_bars/venue=bybit/freq=1h": 648,
+   "alt_series/alternative_me/fear_greed": 3201,
+   "alt_series/defillama/stablecoins_total_usd": 3265,
+   "alt_series/deribit/dvol_close": 1148,
+   "alt_series/fred/GDPC1": 4426,
+   "alt_series/fred/PCEPILFE": 9170
+  },
+  "revised_keys": {},
+  "verdict": "supports"
+ },
+ "H-WS02-6": {
+  "missing_crypto_bars": 0,
+  "crypto_runs": 0,
+  "examples": [],
+  "missing_tradfi_bars": 0,
+  "verdict": "supports"
+ },
+ "H-WS02-7": {
+  "registered": {
+   "stream_days": 1109,
+   "share_ge_99pct": 0.12082957619477007,
+   "median_awake_coverage": 0.72954,
+   "worst": [
+    [
+     "1000PEPEUSDT",
+     "2026-11-23",
+     0.10433,
+     6.91
+    ],
+    [
+     "AAVEUSDT",
+     "2026-11-23",
+     0.10433,
+     6.91
+    ],
+    [
+     "ADAUSDT",
+     "2026-11-23",
+     0.10433,
+     6.91
+    ],
+    [
+     "ARBUSDT",
+     "2026-11-23",
+     0.10433,
+     6.91
+    ],
+    [
+     "ATOMUSDT",
+     "2026-11-23",
+     0.10433,
+     6.91
+    ],
+    [
+     "AVAXUSDT",
+     "2026-11-23",
+     0.10433,
+     6.91
+    ],
+    [
+     "BCHUSDT",
+     "2026-11-23",
+     0.10433,
+     6.91
+    ],
+    [
+     "BEAMUSDT",
+     "2026-11-23",
+     0.10433,
+     6.91
+    ]
+   ],
+   "verdict": "contradicts"
+  },
+  "post_hoc_with_standby": {
+   "stream_days": 975,
+   "share_ge_99pct": 0.6564102564102564,
+   "median_awake_coverage": 1.0,
+   "worst": [
+    [
+     "CARVUSDT",
+     "2026-11-11",
+     0.19632,
+     14.16
+    ],
+    [
+     "MAVIAUSDT",
+     "2026-11-11",
+     0.19632,
+     14.16
+    ],
+    [
+     "1000PEPEUSDT",
+     "2026-11-11",
+     0.19638,
+     14.16
+    ],
+    [
+     "AAVEUSDT",
+     "2026-11-11",
+     0.19638,
+     14.16
+    ],
+    [
+     "ADAUSDT",
+     "2026-11-11",
+     0.19638,
+     14.16
+    ],
+    [
+     "ARBUSDT",
+     "2026-11-11",
+     0.19638,
+     14.16
+    ],
+    [
+     "ATOMUSDT",
+     "2026-11-11",
+     0.19638,
+     14.16
+    ],
+    [
+     "AVAXUSDT",
+     "2026-11-11",
+     0.19638,
+     14.16
+    ]
+   ],
+   "verdict": "contradicts"
+  },
+  "verdict": "contradicts"
+ },
+ "H-WS02-8": {
+  "symbol_hours": 9925,
+  "symbols": 54,
+  "vol_share_within_0.5pct": 0.9275566750629723,
+  "close_share_equal": 0.959294710327456,
+  "median_abs_vol_rel": 1.4155804306525965e-09,
+  "vol_rel_p01_p99": [
+   -0.6601172974565749,
+   1.2308572112651461e-06
+  ],
+  "worst": [
+   [
+    "CARVUSDT",
+    "2026-11-16 17:00:00",
+    9661.0,
+    192770.0,
+    -0.9498832805934534
+   ],
+   [
+    "ADAUSDT",
+    "2026-11-10 13:00:00",
+    2527194.0,
+    49806267.0,
+    -0.9492595178835628
+   ],
+   [
+    "LTCUSDT",
+    "2026-11-10 13:00:00",
+    3717.399988308549,
+    49684.8,
+    -0.9251803370787737
+   ],
+   [
+    "DOTUSDT",
+    "2026-11-10 13:00:00",
+    112879.89958870411,
+    1446508.1,
+    -0.9219638662315792
+   ],
+   [
+    "1000BONKUSDT",
+    "2026-11-10 13:00:00",
+    24289500.0,
+    308663300.0,
+    -0.9213074570251792
+   ],
+   [
+    "TRXUSDT",
+    "2026-11-09 16:00:00",
+    196579.0,
+    2455220.0,
+    -0.9199342625100806
+   ],
+   [
+    "XLMUSDT",
+    "2026-11-10 13:00:00",
+    1409821.0,
+    17267555.0,
+    -0.9183543356311881
+   ],
+   [
+    "TIAUSDT",
+    "2026-11-10 13:00:00",
+    213538.19875466824,
+    2568411.3,
+    -0.916859811839845
+   ]
+  ],
+  "verdict": "contradicts"
+ },
+ "H-WS02-9": {
+  "per_symbol": [
+   {
+    "symbol": "BTCUSDT",
+    "day": "2026-11-24",
+    "candles": 13486,
+    "count_match": 0.5674032329823521,
+    "vol_match_1e6": 0.5550941717336497,
+    "vol_match_1e4": 0.5554649265905384,
+    "trades_lake": 1066160,
+    "trades_archive": 1066099,
+    "vol_lake": 35105.77698935685,
+    "vol_archive": 35104.873999999974
+   },
+   {
+    "symbol": "ETHUSDT",
+    "day": "2026-11-24",
+    "candles": 13486,
+    "count_match": 0.5856443719412724,
+    "vol_match_1e6": 0.575782292748035,
+    "vol_match_1e4": 0.5760047456621682,
+    "trades_lake": 612089,
+    "trades_archive": 612071,
+    "vol_lake": 398711.82992683165,
+    "vol_archive": 398711.17999999993
+   }
+  ],
+  "verdict": "contradicts"
+ },
+ "H-WS02-10": {
+  "delisted_since_first_snapshot": 3,
+  "examples": [
+   "4STOCKUSDT",
+   "AGIUSDT",
+   "HAJIMIUSDT"
+  ],
+  "bars_symbols_delisted": [],
+  "closed_usdt_perps_listed_by_bybit": 318,
+  "snapshots": [
+   "2026-11-07 15:59:46",
+   "2026-11-07 17:05:44"
+  ],
+  "verdict": "supports"
+ },
+ "H-WS02-11": {
+  "series": 44,
+  "all_vintage_nonnull": true,
+  "any_2plus_vintages": true,
+  "asof_first_release": {
+   "revised_obs": 21533,
+   "checked": 200,
+   "first_release_returned": 200,
+   "wrong": 0,
+   "wrong_examples": []
+  },
+  "pit_known_before_vintage_plus_1d": 0,
+  "verdict": "supports"
+ },
+ "H-WS02-12": {
+  "misaligned_hour": 0,
+  "misaligned_local_interval": 0,
+  "misaligned_examples": [],
+  "missing_runs_crypto_live": 0,
+  "missing_settlements": 0,
+  "examples": [],
+  "verdict": "supports"
+ }
+}
