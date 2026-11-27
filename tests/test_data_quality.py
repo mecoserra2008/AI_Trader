@@ -52,3 +52,22 @@ def test_funding_gaps_allow_interval_change_but_flag_holes():
     st, gaps = dq.funding_gaps(df, [])
     assert st["misaligned_hour"] == 0
     assert len(gaps) == 1 and gaps[0]["gap_start"] == 3 * 8 * h and gaps[0]["n_missing"] == 1
+
+
+def test_archive_candles_buckets_on_exchange_time(tmp_path):
+    import gzip
+    d0 = 1_795_478_400  # 2026-11-24 00:00 UTC, seconds
+    rows = ["timestamp,symbol,side,size,price,tickDirection,trdMatchID,grossValue,homeNotional,foreignNotional,RPI",
+            f"{d0}.0005,X,Buy,2,10,PlusTick,a,0,2,20,0",
+            f"{d0 + 2}.9999,X,Sell,1,11,PlusTick,b,0,1,11,0",
+            f"{d0 + 3}.0000,X,Sell,3,9,MinusTick,c,0,3,27,0"]
+    p = tmp_path / "X.csv.gz"
+    with gzip.open(p, "wt") as f:
+        f.write("\n".join(rows) + "\n")
+    c = dq.archive_candles(p, "2026-11-24")
+    assert c.height == 28_800
+    r0, r1, r2 = c.row(0, named=True), c.row(1, named=True), c.row(2, named=True)
+    assert (r0["n_buy"], r0["n_sell"], r0["open"], r0["close"], r0["buy_vol"], r0["sell_vol"]) == (1, 1, 10, 11, 2, 1)
+    assert (r1["n_sell"], r1["low"], r1["sell_notional"]) == (1, 9, 27)
+    assert r2["n_buy"] + r2["n_sell"] == 0 and r2["close"] == 9   # close carried forward through a quiet candle
+    assert r0["kn"] == r0["ev"] + 3_500                           # candle end + 500 ms
