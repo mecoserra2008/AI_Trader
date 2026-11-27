@@ -3728,3 +3728,1342 @@ hypotheses:
     prior: 0.40
     family: tvtp
     status: proposed
+
+  # WS01 AUDIT (specification program 2026-11-27): testable claims about the research record itself.
+  # Registered before any registry-wide FDR, power or decline statistic was computed. Unit = a row of
+  # research/hypotheses_results.jsonl as of the freeze (rows appended by other workstreams after the freeze are excluded).
+  # Primary statistic per row is extracted by the frozen rules in src/ai_trader/research/audit_ws01.py (diary "WS01 design
+  # frozen before results"); rows with no extractable statistic enter every FDR family with p = 1 (conservative, m counts
+  # every recorded test). "Effect-claim supports" = verdict supports on hypotheses whose claim is an effect, not a null /
+  # bound / equivalence claim (those are classified by the frozen rule and audited for power instead).
+  H-WS01-1:
+    title: "Fewer than half of the registry's effect-claim supports survive Benjamini-Yekutieli at 10%"
+    statement: "Over the registry-wide family (every result row, one primary two-sided p per row, p = 1 where none is extractable), BY at q = 0.10 rejects fewer than 50% of the rows that carry verdict supports on effect-claim hypotheses."
+    rationale: "Most holdout supports are sign agreements on small samples (verdicts.py requires only the sign in the holdout) and the registry holds ~600 tests; BY pays a ln(m) ~ 7 factor for arbitrary dependence."
+    test: "BY step-up at q = 0.10 over all rows; share of effect-claim supports rows rejected."
+    success: "Supports iff the share < 0.50; contradicts iff >= 0.50."
+    prior: 0.70
+    family: audit
+    status: proposed
+  H-WS01-2:
+    title: "Fewer than 70% of effect-claim supports survive Benjamini-Hochberg at 10%"
+    statement: "Same family and rows as H-WS01-1 with BH (valid under independence / PRDS) at q = 0.10."
+    rationale: "BH is the lenient bound; if even BH removes a large share, the registry's 'supports' are a weak signal."
+    test: "BH step-up at q = 0.10 over all rows; share of effect-claim supports rows rejected."
+    success: "Supports iff the share < 0.70; contradicts iff >= 0.70."
+    prior: 0.55
+    family: audit
+    status: proposed
+  H-WS01-3:
+    title: "Holdout supports are mostly sign agreements, not significant replications"
+    statement: "Among clean_holdout rows with verdict supports on effect-claim hypotheses that carry an extractable statistic, more than 40% have two-sided p > 0.10."
+    rationale: "verdicts.py and most study scripts judge the holdout on sign only; under a zero effect the sign agrees half of the time."
+    test: "Share of such rows with p > 0.10."
+    success: "Supports iff share > 0.40; contradicts iff <= 0.40."
+    prior: 0.70
+    family: audit
+    status: proposed
+  H-WS01-4:
+    title: "Holdout tests are underpowered for the in-sample effect"
+    statement: "For hypotheses with an in-sample (llm_in_sample) supports row and a clean_holdout row that both report t and the same sample-count key, the median power of the holdout test to detect the in-sample standardised effect (expected holdout t = t_in * sqrt(n_hold / n_in), one-sided 5%) is below 0.50."
+    rationale: "Holdouts are 4-5 months against years in-sample; in-sample t is also inflated by selection, so this power is an upper bound."
+    test: "Median over hypotheses of 1 - Phi(1.645 - |t_in| sqrt(n_hold/n_in))."
+    success: "Supports iff median < 0.50; contradicts iff >= 0.50; inconclusive if fewer than 8 hypotheses qualify."
+    prior: 0.60
+    family: audit
+    status: proposed
+  H-WS01-5:
+    title: "In-sample supports that survive BY replicate in the holdout more often than those that do not"
+    statement: "Among effect-claim hypotheses with an llm_in_sample supports row and a clean_holdout row, the share whose latest holdout verdict is supports is higher when the in-sample row survives BY at q = 0.10 in the discovery family (llm_in_sample rows, plus pooled rows of hypotheses without an llm_in_sample row) than when it does not."
+    rationale: "If registry significance carries information, surviving discoveries should replicate more; if not, the verdict machinery is mostly noise."
+    test: "One-sided Fisher exact test on the 2x2 table (BY-survives x holdout supports)."
+    success: "Supports iff Fisher one-sided p < 0.10; contradicts iff the surviving group's holdout support share is <= the non-surviving group's; else inconclusive (also if either group has fewer than 5 hypotheses)."
+    prior: 0.55
+    family: audit
+    status: proposed
+  H-WS01-6:
+    title: "There is an excess of test statistics just above the significance threshold (caliper test)"
+    statement: "Among all extracted two-sided p-values converted to |z| = Phi^-1(1 - p/2), the count with |z| in [1.96, 2.156) exceeds the count in [1.764, 1.96) (10% caliper, Gerber-Malhotra)."
+    rationale: "Selection after results and threshold-hunting leave a bump just past the threshold. The registry's own threshold is often t >= 2, so the same test at 2.0 (+-0.2) is reported as a secondary."
+    test: "One-sided binomial test of over vs under at p = 0.5."
+    success: "Supports iff binomial one-sided p < 0.10; contradicts iff count over <= count under; else inconclusive."
+    prior: 0.25
+    family: audit
+    status: proposed
+  H-WS01-7:
+    title: "Effects decline from the in-sample to the holdout (winner's curse)"
+    statement: "For hypotheses with an llm_in_sample supports row and a clean_holdout row that both report t and the same sample-count key, the standardised effect ratio (t_hold / sqrt(n_hold)) / (t_in / sqrt(n_in)) has median < 1."
+    rationale: "Effects selected on in-sample significance shrink out of sample (regression to the mean, adaptive design)."
+    test: "Median ratio; one-sided sign test of ratio < 1."
+    success: "Supports iff median < 1 and sign-test one-sided p < 0.10; contradicts iff median >= 1; else inconclusive (also if fewer than 8 qualify)."
+    prior: 0.75
+    family: audit
+    status: proposed
+
+  # WS02 DATA (specification program 2026-11-27): testable claims about the lake's point-in-time correctness,
+  # completeness and duplicates. Registered 2026-11-26 ~23:45 UTC, before any row-level check was run (only directory
+  # listings and the Windows power log had been read). Code: src/ai_trader/research/data_quality.py. Segment: pooled
+  # (data-integrity claims have no llm_in_sample / clean_holdout meaning; flow data is all post-cutoff anyway).
+  # "Machine-down" windows = Windows Power-Troubleshooter sleep->wake intervals and Kernel-General shutdown->boot
+  # intervals (System event log), each extended by 10 minutes after the wake for collector restart / reconnect.
+  H-WS02-1:
+    title: "bars: no point-in-time violation and exact UTC grid alignment"
+    statement: "Every row of bars (all venues, price types, freqs) has known_ts >= close_ts, close_ts - event_ts equal to the freq duration, and event_ts on the UTC freq grid (1d bars at 00:00 UTC)."
+    rationale: "known_ts = close + 2 s by construction (at-bybit lake.rs); other writers (binance, deribit bars) may not follow it."
+    test: "Count violations per (venue, price_type, freq)."
+    success: "Supports iff 0 violations; contradicts iff >= 1 violation."
+    prior: 0.85
+    family: data_quality
+    status: proposed
+  H-WS02-2:
+    title: "bars: no bar was written before it closed"
+    statement: "For every bars row in a file named part-<written_ms>-*, written_ms >= close_ts (no incomplete bar stored under a close-time known_ts)."
+    rationale: "MarketData::klines filters open_ts + dur <= now; a writer without that filter would store a partial bar that later reads treat as final."
+    test: "Count rows with written_ms < close_ts; files without a parsable write time are excluded and counted."
+    success: "Supports iff 0 such rows; contradicts iff >= 1."
+    prior: 0.85
+    family: data_quality
+    status: proposed
+  H-WS02-3:
+    title: "flow_3s: no point-in-time violation"
+    statement: "Every flow_3s row has event_ts on the 3 s grid, known_ts >= event_ts + 3000 ms, and (where the part file name carries a write time) written_ms >= known_ts."
+    rationale: "candle.rs clamps known_ts to the candle end; a flush can never precede finalisation."
+    test: "Count violations per category and day."
+    success: "Supports iff 0 violations; contradicts iff >= 1."
+    prior: 0.9
+    family: data_quality
+    status: proposed
+  H-WS02-4:
+    title: "Other tables: known_ts never precedes the information"
+    statement: "funding known_ts >= event_ts; open_interest and ls_ratio known_ts >= event_ts + period; liquidations and trades_raw known_ts >= event_ts; flow_bars known_ts >= close_ts; alt_series known_ts >= event_ts, FRED rows known_ts >= max(vintage, event_ts) + 1 day, Deribit DVOL known_ts >= candle close; instruments known_ts >= event_ts."
+    rationale: "Writer rules in at-bybit lake.rs, at-alt and at-flow collector.rs; Python-side writers (deribit_svi, binance, research loaders) are unverified."
+    test: "Count violations per table / source."
+    success: "Supports iff 0 violations in every table; contradicts iff >= 1 violation in any table."
+    prior: 0.7
+    family: data_quality
+    status: proposed
+  H-WS02-5:
+    title: "No conflicting duplicates in the lake"
+    statement: "No primary key in any lake table carries two rows with the same known_ts and different values (a non-deterministic as-of read). Exact duplicates and revisions (different known_ts) are counted, not violations."
+    rationale: "The 2026-11-07 audit found 1,037 exact duplicates and 0 conflicting ones in bars; live writers append overlapping windows (updater backfill_days = 3)."
+    test: "Per table, group by primary key + known_ts, count groups with > 1 distinct value tuple."
+    success: "Supports iff 0 conflicting groups in every table; contradicts iff >= 1."
+    prior: 0.6
+    family: data_quality
+    status: proposed
+  H-WS02-6:
+    title: "REST-fed bars have no holes after the PC suspends (the updater repairs them)"
+    statement: "For every crypto symbol in live.symbols, bybit last 1h / 4h / 1d and mark 1h bars have no missing bar between 2026-11-07 00:00 and 2026-11-26 00:00 UTC (or the symbol's first bar if later)."
+    rationale: "The updater restarts with a cursor and backfill_days = 3 after each wake; suspends lasted at most ~57 h (11-21 08:18 -> 11-23 16:55)."
+    test: "Expected grid minus present event_ts per (symbol, price_type, freq); TradFi perps reported separately (session closures)."
+    success: "Supports iff 0 missing crypto bars; contradicts iff >= 1 missing crypto bar."
+    prior: 0.75
+    family: data_quality
+    status: proposed
+  H-WS02-7:
+    title: "flow_3s is complete while the machine is awake"
+    statement: "For linear crypto streams, outside machine-down windows, at least 99% of the expected 3 s candles are present on at least 95% of stream-days (2026-11-08..11-25 with at least 6 awake hours)."
+    rationale: "The collector auto-restarts and fills sub-10-minute reconnect gaps with empty candles; outages should be machine-level only."
+    test: "Present / expected candles per stream-day over awake time."
+    success: "Supports iff the 95% share condition holds; contradicts iff fewer than 90% of stream-days reach 99%; else inconclusive."
+    prior: 0.6
+    family: data_quality
+    status: proposed
+  H-WS02-8:
+    title: "flow_3s taker volume matches Bybit 1h kline volume on fully covered hours"
+    statement: "On linear crypto symbol-hours with all 1200 candles present and no empty-candle run of >= 20 candles (60 s) with book_cov = 0, sum(buy_vol + sell_vol) is within 0.5% of the bybit last 1h kline volume for >= 99% of symbol-hours, and the last traded price equals the kline close for >= 99%."
+    rationale: "Tests collector completeness, exchange-time bucketing and UTC alignment against an independent REST source at once."
+    test: "Join hourly rollups to bars 1h."
+    success: "Supports iff both shares >= 99%; contradicts iff the volume share < 95%; else inconclusive."
+    prior: 0.6
+    family: data_quality
+    status: proposed
+  H-WS02-9:
+    title: "public.bybit.com trade archives reproduce flow_3s trade fields (valid gap fill)"
+    statement: "On fully covered windows of days that also have an archive file, 3 s candles rebuilt from the archive trades match flow_3s exactly in n_buy + n_sell on >= 98% of candles and in buy_vol and sell_vol within 1e-6 relative on >= 98%."
+    rationale: "Same matching-engine prints; differences can come only from websocket drops or timestamp rounding."
+    test: "Candle-by-candle comparison for BTCUSDT and ETHUSDT on one overlap day each."
+    success: "Supports iff both shares >= 98%; contradicts iff either share < 95%; else inconclusive."
+    prior: 0.7
+    family: data_quality
+    status: proposed
+  H-WS02-10:
+    title: "The research bars universe is survivor-only"
+    statement: "At least one linear USDT perp that is Trading in the earliest instruments snapshot is missing or not Trading in the latest Bybit instruments list, and the bars table holds no rows for any such symbol."
+    rationale: "bars were backfilled from today's survivors (data_audit_2026-11-07 #10)."
+    test: "Earliest lake snapshot vs a fresh public instruments-info listing; bars symbol set."
+    success: "Supports iff both conditions hold; contradicts iff no delisted symbol exists or bars contain delisted symbols."
+    prior: 0.8
+    family: data_quality
+    status: proposed
+  H-WS02-11:
+    title: "FRED rows are true vintages and as-of reads return the first release"
+    statement: "Every source=fred row has a non-null vintage and pit_quality = vintage; at least one series holds >= 2 vintages for some observation; and for every revised observation, Lake.read_asof one day after the first vintage's known_ts returns the first-release value, not the latest."
+    rationale: "fred.rs stores every ALFRED revision as its own row; if only the latest vintage was fetched, macro studies carry look-ahead."
+    test: "Vintage counts per series; as-of read for every revised observation (or a 200-row random sample if more)."
+    success: "Supports iff all three conditions hold; contradicts iff any fails."
+    prior: 0.6
+    family: data_quality
+    status: proposed
+  H-WS02-12:
+    title: "Funding settlements are complete and on the interval grid"
+    statement: "For every crypto symbol in live.symbols, funding event_ts lie on the symbol's settlement grid (multiples of the local interval in {1, 2, 4, 8} h, UTC) and no settlement is missing between the symbol's first row and 2026-11-26 00:00 UTC, allowing interval changes."
+    rationale: "Funding is fetched from a complete REST history; gaps would bias carry studies."
+    test: "Per symbol, modal local interval from consecutive differences; count misaligned stamps and missing settlements."
+    success: "Supports iff 0 misaligned and 0 missing; contradicts iff >= 1 missing settlement in any crypto symbol."
+    prior: 0.7
+    family: data_quality
+    status: proposed
+
+  # ---- WS14 INTERP (specification program 2026-11-27): mechanistic interpretability of the live networks ----
+  # Registered before any fit or evaluation by WS14. Networks: live PNN 1h / 1d (live_nn.v1 and v2.1 share them; refit
+  # 2026-11) and their walk-forward refits (data/models/pnn/wf_<h>/), xs_v3 (frozen 2026Q4 refit) and xs_v4 (frozen + wf).
+  # Segments: llm_in_sample = rows before 2026-07-01, clean_holdout = from 2026-07-01 (walk-forward test months / quarters,
+  # plus the live 2026-11 refit on 2026-11-01..2026-11-26 rows rebuilt point in time from the lake).
+  # sigma = (q90 - q10) / 2.5631 of the 2-seed (PNN) / 3-seed (xs) mean quantiles, in model units (r / sqrt(s2)).
+  H-WS14-1:
+    title: "The live 1h PNN sigma is a scaled log-HAR plus an hour-of-week term"
+    statement: "A linear surrogate of log sigma (model units) in [1, lsig2, lfac, har_d, har_w, har_m], fitted by OLS on each refit's fit-block rows to that refit network's own output, reproduces the network's log sigma on the refit's test month with out-of-sample R^2 > 0.9."
+    rationale: "Brain atlas (2026-11-15): lfac drives every latent unit and HAR terms come next; if the network is HAR + clock, a 6-coefficient formula can replace it."
+    test: "65 monthly refits of wf_1h (2021-07..2026-11); per segment, R^2 = 1 - SSE/SST pooled over test rows (SST around the segment mean of the network's log sigma); 10-day block-bootstrap CI over dates; per-refit median R^2 reported; the 2026-11 refit also on live rows 2026-11-01..26."
+    success: "supports iff R^2 > 0.9 in both segments; contradicts iff R^2 < 0.8 in either segment; else inconclusive."
+    prior: 0.35
+    family: ws14_interp
+    status: proposed
+  H-WS14-2:
+    title: "A linear surrogate on the 19 inputs can replace the 1h PNN without loss"
+    statement: "OLS surrogates on all 19 HOURLY_FEATURES, distilled per refit from the network's q50, log(q90 - q10) and log((q95 - q05)/(q90 - q10)) on fit-block rows, with quantiles rebuilt from the fit-block mean standardised shape, (a) reproduce log sigma with out-of-sample R^2 > 0.9 and (b) are non-inferior on realised pinball: margin m = 0.25 x (log-HAR-t - PNN) mean pinball of the same segment."
+    rationale: "If the 1h network's 0.4-0.6% pinball gain over log-HAR-t is linear in recent |returns| and the clock, the network is unnecessary complexity (ARCHITECTURE 1.6)."
+    test: "wf_1h test months; per-row mean pinball over the 7 taus in model units; paired difference surrogate - PNN averaged per UTC date; NW (HAC) mean and SE over dates; one-sided 95% bounds; per segment."
+    success: "supports iff in both segments R^2 > 0.9 and mean + 1.645 SE < m; contradicts iff in either segment mean - 1.645 SE > m; else inconclusive."
+    prior: 0.45
+    family: ws14_interp
+    status: proposed
+  H-WS14-3:
+    title: "The live 24h PNN sigma is log-HAR plus a weekend clock"
+    statement: "A linear surrogate of the 1d PNN's log sigma (model units, sigma_ref = exp(lrv_w / 2)) in [1, log_sigma, lrv_d, lrv_w, lrv_m, lrv_q, next_wk_hours, dow_sin, dow_cos], fitted per refit on fit-block rows to the network's output, reproduces it on the test month with out-of-sample R^2 > 0.9."
+    rationale: "H-PNN1: the 1d net does not beat log-HAR-t; the symbolic extraction found a quadratic weekend latent (next_wk_hours -> z3, R^2 0.995)."
+    test: "64 monthly refits of wf_1d; pooled test-row R^2 per segment with 10-day block-bootstrap CI."
+    success: "supports iff R^2 > 0.9 in both segments; contradicts iff R^2 < 0.8 in either; else inconclusive."
+    prior: 0.4
+    family: ws14_interp
+    status: proposed
+  H-WS14-4:
+    title: "The 1h PNN raw sigma rises monotonically with the last hour's |return|"
+    statement: "Holding every other input fixed and updating lu_1, lu_m6, lu_m24, jump24 and since_jump consistently, the live 1h network's raw sigma (sqrt(s2) x sigma) is non-decreasing in x = |r_{t-1}| / sqrt(s2) on the grid x = 0, 0.25, .., 8."
+    rationale: "Every sensible volatility model (GARCH, HAR) raises next-hour vol after a bigger move; the atlas found wiggly lu_1 edges and an after-jump unit that collapses, which could make sigma fall at the 4-sigma jump threshold."
+    test: "2026-11 live refit, all rows 2025-11-14..2026-11-26 (validation, test and live); per row, the largest drop between consecutive grid points relative to sigma at the lower point; segments by row date."
+    success: "supports iff in both segments >= 99% of rows have no drop > 0.5%; contradicts iff in either segment > 5% of rows have a drop > 2%; else inconclusive."
+    prior: 0.5
+    family: ws14_interp
+    status: proposed
+  H-WS14-5:
+    title: "The live networks are invariant to the price level"
+    statement: "Multiplying a symbol's OHLC prices by c in {1e-3, 1e3} (volume and turnover unchanged) and rebuilding the features with the production pipeline (enrich_bars, add_robust_vol, ml.hourly.symbol_hourly / xs_network_study.token_rows + assemble) changes the 1h PNN quantiles and the xs_v3 / xs_v4 vol and rel quantiles by < 1e-6 relative on every common row."
+    rationale: "All inputs are log returns, ratios to the base variance or log OI changes; a price-level dependence would be a pipeline bug."
+    test: "BTCUSDT 1h frame (xs_v3 cache) for the PNN; one token scaled inside the xs_v3 / xs_v4 panels; max relative change of outputs."
+    success: "supports iff max relative change < 1e-6 for every network; contradicts iff any network > 1e-3; else inconclusive."
+    prior: 0.9
+    family: ws14_interp
+    status: proposed
+  H-WS14-6:
+    title: "The 1h PNN latent encodes the clock and the vol level selectively and invents nothing"
+    statement: "Ridge probes on the 8 latent units (both seeds) of the live 1h network, fitted on fit-block rows and scored on rows 2025-11-14..2026-11-12, recover (a) lfac and (b) the absolute weekly log RV level (har_w + lsig2) with R^2 >= 0.8 and selectivity (R^2 minus the mean R^2 of 10 random-initialised networks of the same architecture) >= 0.2, while (c) a control task (a random value per hour of week) stays below R^2 0.2, (d) block-shuffled labels give R^2 <= 0.02, and (e) BTC funding z (fund_z90, not an input) is no better decoded from the latent than from a linear probe on the 19 inputs (difference < 0.02)."
+    rationale: "Hewitt-Liang control tasks and random-network baselines separate what the network learned from what any projection of the inputs would carry."
+    test: "sklearn Ridge (alpha by 5-fold blocked CV on the fit rows), out-of-sample R^2 by segment (llm_in_sample 2025-11-14..2026-06-30, clean_holdout 2026-07-01..2026-11-12)."
+    success: "supports iff (a)-(e) hold in both segments; contradicts iff (a) or (b) fail on selectivity (< 0.1) in both segments; else inconclusive."
+    prior: 0.5
+    family: ws14_interp
+    status: proposed
+  H-WS14-7:
+    title: "Clock first, recent returns second: what the 1h PNN's out-of-sample skill rests on"
+    statement: "Resample ablation of input groups (the group's columns jointly replaced by those of a random other test row of the same refit month, 5 draws) raises out-of-sample pinball for the clock group (lfac, dow_sin, dow_cos) most, and for recent_returns (lu_*) second, each with NW t > 2 in both segments; the funding-hour flags and the jump terms do not (|t| < 2)."
+    rationale: "Brain atlas mean ablations on mostly in-sample rows; this is the out-of-sample, off-distribution-safe version with HAC inference."
+    test: "wf_1h test months; per-date mean pinball increase, NW t; groups of ml.hourly.HOURLY_GROUPS with lfac + dow merged into 'clock'."
+    success: "supports iff all four statements hold in both segments; contradicts iff clock is not the top group in either segment; else inconclusive."
+    prior: 0.55
+    family: ws14_interp
+    status: proposed
+  H-WS14-8:
+    title: "Where the 1h PNN fails: release hours and high-vol cells"
+    statement: "(a) In walk-forward test hours whose bar contains a scheduled CPI, NFP or FOMC release minute, the raw PNN 80% band [q10, q90] covers < 0.75 of outcomes; (b) in hours whose BTC v0 cell (known at the decision time) is R3, R6 or R9, the PNN's pinball gain over log-HAR-t is not significant (paired NW t > -2) while in R1, R4, R7 it is (t < -2)."
+    rationale: "The network has no event input and lfac only knows recurring hour-of-week patterns; vol mean reversion learned in calm hours may misfire in high-vol regimes."
+    test: "latent_1h.parquet walk-forward rows 2021-07..2026-11-12 pooled over both segments for (a) (one-sided binomial test vs 0.80); (b) per segment, per-date means within the cell group, NW t."
+    success: "supports iff (a) holds with binomial p < 0.05 and (b) holds in both segments; contradicts iff (a) coverage >= 0.80 and (b) high-vol t < -2 in both segments; else inconclusive."
+    prior: 0.4
+    family: ws14_interp
+    status: proposed
+  H-WS14-9:
+    title: "Integrated-gradient attributions of the 1h PNN pass the Adebayo sanity checks"
+    statement: "Integrated gradients (baseline = training mean, 64 steps) of the live 1h net's log sigma satisfy completeness within 1%, change under model randomisation (all weights re-initialised: median per-row Spearman of |IG| with the trained net < 0.5) and data randomisation (2 seeds retrained with the same protocol on permuted labels: median per-row Spearman < 0.5), and their global ranking (mean |IG|) agrees with the resample-ablation ranking of single inputs (Spearman >= 0.6)."
+    rationale: "Adebayo et al. 2018: some attribution methods mirror the input, not the model; only attributions that pass both randomisations can be read as explanations."
+    test: "2,000 rows 2025-11-14..2026-11-12 of the live 2026-11 refit; Spearman over the 19 inputs."
+    success: "supports iff all four checks pass; contradicts iff either randomisation check fails; else inconclusive."
+    prior: 0.6
+    family: ws14_interp
+    status: proposed
+  H-WS14-10:
+    title: "xs_v3 / xs_v4 vol heads are HAR + clock + recent returns, and their rel ranking is vol drag"
+    statement: "(a) A pooled linear surrogate of log q50 of the 1h vol head in the 19 hourly features + lfac4, lfac24, hod_sin, hod_cos, fitted on the refit's fit-block cells to the network output, reproduces it on the test quarter with R^2 > 0.9; (b) a one-parameter vol-drag surrogate of the 24h rel median in raw units, -b x 24 x s2_i (b fitted on fit-block cells), has mean per-hour cross-sectional Spearman >= 0.7 with the network's raw 24h rel median on test hours."
+    rationale: "The xs_v3 report: the rel ranking is close to a free low-vol ranking; log-return medians of high-vol tokens sit below the basket (vol drag / skew), so the ranking may be a units artefact."
+    test: "xs_v3 2026Q4 refit (= frozen) and xs_v4 wf 2026Q4 refit on their test quarters (clean_holdout), plus the 2025Q2 xs_v3 refit (llm_in_sample); R^2 pooled over test cells; Spearman per hour, mean over hours."
+    success: "supports iff (a) and (b) hold for both networks in every tested refit; contradicts iff (a) R^2 < 0.8 or (b) Spearman < 0.5 for either network; else inconclusive."
+    prior: 0.5
+    family: ws14_interp
+    status: proposed
+
+  # ---------------------------------------------------------------- WS16 TREND (+ WS15 generative core), registered 2026-11-26 ~23:55 UTC
+  # Specification program 2026-11-27. Code: src/ai_trader/research/trend_spec.py; outputs data/research/ws16/; design.json there.
+  # Common design (frozen before any data run):
+  #   universe L (23 crypto perps, trend_zoo_study.UNIVERSE), 4h bars, as_of 2026-11-26T23:00Z, segments split at 2026-07-01.
+  #   Base trade layer = stress.walk_signal: enter at the 4h close when flat and |s| >= 0.3, exit at the first close with s*side <= 0,
+  #   exchange stop 4.0 x sigma_risk_next (per 4h bar) from the fill walked on 1h bars, no re-entry after a stop until flat/flip,
+  #   pegged entry 2.0 + 1.3 bp, taker exits 5.5 + 2.0 bp. R as in stress.r_net. Base signal = zoo_ew (trend_zoo.ensemble, the
+  #   STRESS SURVIVES unit). "Paired difference" = (mean net R/trade of variant) - (base), 95% CI from a stationary bootstrap of
+  #   entry days (block 5 d, 2000 draws, the same day draws for both). Romano-Wolf stepdown (max-t over the variant family) and
+  #   Hansen SPA on the same bootstrap. Verdict rules = STRESS H-STRESS0 (F1, F2, G1..G7) plus G8 (below). Holdout already seen
+  #   for zoo_ensemble / trend_4h / tsmom / ema_stack / donchian by STRESS and trend_zoo: selection uses llm_in_sample only;
+  #   the holdout is read once per hypothesis; no variant is promoted on its holdout.
+  H-WS16-1:
+    title: "TSMOM magnitude (tanh of the vol-scaled move) carries information beyond its sign"
+    statement: "In the pooled daily panel (4h close at 00:00 UTC, universe L), regressing the next-7-day standardised log return y = sum of the next 42 4h log returns / (sigma_4h sqrt 42) jointly on sign(z_k) and tanh(z_k), the tanh(z_k) coefficient is > 0."
+    rationale: "Moskowitz-Ooi-Pedersen use the sign; Baltas-Kosowski and the zoo use a scaled magnitude. If the magnitude carries nothing, sign signals are simpler and cheaper to trade."
+    test: "Pooled OLS, k in {7, 14, 30} days; SE from Newey-West (lag 7) on the daily cross-sectional sum of scores (Driscoll-Kraay). Per segment."
+    success: "Supports iff the tanh coefficient has t >= 2 for >= 2 of the 3 horizons in llm_in_sample and the same horizons keep a positive coefficient in clean_holdout; contradicts iff t < 1 for all 3 in llm_in_sample; else inconclusive."
+    prior: 0.30
+    family: ws16_trend
+    status: proposed
+  H-WS16-2:
+    title: "Alternative zoo weightings do not beat the equal-weight ensemble (1/N)"
+    statement: "zoo_iv (inverse trailing variance of each variant's pooled per-bar P&L), zoo_shr (Ledoit-Wolf minimum-variance weights, non-negative, shrunk 50% toward 1/N), zoo_fam (equal weight per rule family) and zoo_vote (mean of signs) each have a paired difference vs zoo_ew below +0.05 R/trade or a CI that includes 0, in llm_in_sample."
+    rationale: "DeMiguel-Garlappi-Uppal: estimated weights rarely beat 1/N out of sample; the zoo has ~2 effective bets (trend_zoo 2026-11-08), so reweighting has little to work with. Weights are causal (monthly, trailing 365 d, pooled over symbols)."
+    test: "Base trade layer on each weighting; paired difference; Romano-Wolf over the 4 weightings."
+    success: "Supports iff no weighting beats zoo_ew by >= +0.05 R with RW-adjusted p < 0.05; contradicts iff at least one does; else inconclusive (never: the rule is binary)."
+    prior: 0.70
+    family: ws16_trend
+    status: proposed
+  H-WS16-3:
+    title: "The adaptive LLT Kalman slope is not better than the 30-day regression slope"
+    statement: "kalman_llt (adaptive gain, q = 1e-3, tanh(slope / trailing 180 d sd); H-KF1 construction) has a paired difference vs slope_30d below +0.05 R/trade or a CI including 0, in llm_in_sample."
+    rationale: "H-KF1 found adaptive vs constant gain worth ~+0.1 Sharpe, unproven; a local-linear-trend slope is a near-linear filter of past returns like the OLS slope."
+    test: "Base trade layer; paired difference (variant = kalman_llt, base = slope_30d)."
+    success: "Supports iff the statement holds; contradicts iff kalman_llt beats slope_30d by >= +0.05 R with the CI excluding 0."
+    prior: 0.60
+    family: ws16_trend
+    status: proposed
+  H-WS16-4:
+    title: "No exit variant beats the signal-flat exit for zoo_ew"
+    statement: "None of: hysteresis exit (s*side < -0.1), flip-only exit (s*side <= -0.3, i.e. stay in until the opposite entry), chandelier trail (stop ratchets to the best 4h close since entry x exp(-4 sigma_4h), plus the flat exit), 30-day time stop (plus the flat exit) beats the base by >= +0.05 R/trade with Romano-Wolf p < 0.05 in llm_in_sample."
+    rationale: "Trend P&L is a few large winners (hit 25-35%); trailing and time exits cut the right tail that pays for the losers."
+    test: "Paired differences, Romano-Wolf over the 4 exit variants."
+    success: "Supports iff none does; contradicts iff at least one does."
+    prior: 0.65
+    family: ws16_trend
+    status: proposed
+  H-WS16-5:
+    title: "Stops beyond the prior-day extreme beat the 4-sigma stop (R-GEO-1)"
+    statement: "For zoo_ew, a structural stop beyond the prior UTC day's extreme on the adverse side (PDL for longs, PDH for shorts) by 0.5 sigma_4h, used when it lies between 1 and 4 sigma_4h from the fill, else beyond the prior week's extreme on the same terms, else 4 sigma_4h, has a higher mean net R/trade than the 4 sigma_4h stop."
+    rationale: "GEO: first touches of PDH/PDL/PWH/PWL extend (continuation), so a stop inside the extension zone is hit by the run; a stop just beyond the extreme is placed where the market's own stops sit, with a margin."
+    test: "Paired difference per segment."
+    success: "Supports iff the paired difference > 0 with CI excluding 0 in llm_in_sample and > 0 in clean_holdout; contradicts iff <= 0 in llm_in_sample; else inconclusive."
+    prior: 0.30
+    family: ws16_trend
+    status: proposed
+  H-WS16-6:
+    title: "Not entering at the 12:00 UTC close (US-open vol peak ahead) helps"
+    statement: "zoo_ew with entries blocked at the 12:00 UTC 4h close (the next eligible close is 16:00, after the 13:30/14:30 UTC open) has a paired difference vs base >= +0.02 R/trade with CI excluding 0, in llm_in_sample."
+    rationale: "GEO: 14:00-16:00 UTC carries 1.6-2x average variance; a sigma-unit stop set at 12:00 with an average sigma is more often hit in the loudest bar. Under zero drift timing cannot change expected R except through such stop hits, so the prior is low."
+    test: "Paired difference; also reported: mean R by entry close hour (descriptive), a 1h entry delay and an offset (02/06/.. UTC) 4h grid as robustness."
+    success: "Supports iff the statement holds; contradicts iff the paired difference <= 0; else inconclusive."
+    prior: 0.20
+    family: ws16_trend
+    status: proposed
+  H-WS16-7:
+    title: "Pegged entries fill for most trend signals, but the missed ones are the runners"
+    statement: "(a) A limit at the decision close for zoo_ew entries fills within 15 minutes (5m bars, 1 bp trade-through) for >= 50% of entries; (b) the mean net R of the unfilled entries (traded counterfactually with a taker at the close) exceeds that of the filled entries (difference > 0, CI excluding 0); (c) peg-then-chase (taker at +15 min if unfilled) has mean net R per signal >= taker-at-close."
+    rationale: "Adverse selection of passive orders: a long limit fills when price dips, i.e. when the trend pauses; runners leave the limit behind. The cost saving of a peg is ~4 bp, ~0.01 R at a 4-sigma 4h stop."
+    test: "Entries from 2022-01-01 (5m BOS cache + GEO extension); per segment; day bootstrap CIs."
+    success: "Reported per part (a), (b), (c); overall supports iff (a) and (b) hold in llm_in_sample; contradicts iff (a) fails or (b) has difference <= 0; else inconclusive."
+    prior: 0.45
+    family: ws16_trend
+    status: proposed
+  H-WS16-8:
+    title: "Entering only in the a-priori trend regimes improves zoo_ew"
+    statement: "Entering zoo_ew only when the 1h v0 cell at entry is in {R1, R2, R7, R8} (TSMom / EMAStack expected_regimes, declared in StrategySpec before any test) raises mean net R/trade by >= +0.05 R with paired CI excluding 0 in llm_in_sample, and the clean_holdout paired difference is > 0."
+    rationale: "Trend should pay in persistent directional cells and not in range/whipsaw or liquidation cells. Coordinated with WS07 (v0 only here)."
+    test: "Paired difference per segment. Also reported (not a separate verdict): direction agreement filter (no long in R7-R9, no short in R1-R3), no entry in R6."
+    success: "Supports iff the statement holds; contradicts iff the in-sample paired difference <= 0; else inconclusive."
+    prior: 0.30
+    family: ws16_trend
+    status: proposed
+  H-WS16-9:
+    title: "The TradFi-weekend entry block helps zoo_ew (confirmatory, data already seen)"
+    statement: "Blocking zoo_ew entries in the TradFi weekend (research.calendar tradfi_weekend at the decision time) raises mean net R/trade by >= +0.05 R with CI excluding 0 in llm_in_sample."
+    rationale: "S4 playbook rule, already applied to trend_4h. STRESS slices showed zoo_ensemble -0.09 R on weekend entries vs +0.49 on weekdays (pooled, both segments seen), so this is confirmatory on seen data; only the forward record is evidence."
+    test: "Paired difference per segment."
+    success: "Supports iff the statement holds; contradicts iff the paired difference <= 0; else inconclusive."
+    prior: 0.80
+    family: ws16_trend
+    status: proposed
+  H-WS16-10:
+    title: "Conviction-scaled risk beats fixed risk per trade"
+    statement: "For zoo_ew trades, net R is increasing in |s_entry|: OLS slope of R on |s_entry| > 0 with day-clustered t >= 2 in llm_in_sample (so risk proportional to |s_entry|, normalised to a mean of 1R, raises mean R per unit risk)."
+    rationale: "If conviction is informative, a fixed 1R per trade wastes it; the desk's fixed risk unit is the null."
+    test: "Trade-level regression, day-clustered SE; report the conviction-scaled mean R per unit risk."
+    success: "Supports iff t >= 2 in llm_in_sample and the slope is > 0 in clean_holdout; contradicts iff the in-sample slope <= 0; else inconclusive."
+    prior: 0.35
+    family: ws16_trend
+    status: proposed
+  H-WS16-11:
+    title: "Some WS16 trade-layer variant beats zoo_ew after multiplicity control"
+    statement: "Over all WS16 variants (signals, weightings, exits, stops, timing, order type, filters), Hansen's SPA test (consistent, studentised) of 'no variant has a higher mean net R/trade than zoo_ew' is rejected at 5% in llm_in_sample."
+    rationale: "Many small tweaks were tried; only a multiplicity-controlled improvement should change the spec."
+    test: "SPA on the paired day-bootstrap of mean R/trade differences; Romano-Wolf adjusted p per variant reported; deflated Sharpe of the selected spec's daily R with N = all trials (WS16 + STRESS 23 + trend_zoo 44); CSCV PBO (16 blocks) over the variant set."
+    success: "Supports iff SPA p < 0.05; contradicts iff SPA p >= 0.20; else inconclusive."
+    prior: 0.15
+    family: ws16_trend
+    status: proposed
+  H-WS16-12:
+    title: "zoo_ew beats vol-clustering-only null paths (corrected synthetic stress; WS15 core)"
+    statement: "zoo_ew's real mean net R/trade (pooled over the 6 synthetic sources BTC ETH SOL XRP DOGE LINK, each on its full history) exceeds the 95th percentile of the same statistic on null paths of equal length from (a) a stationary block bootstrap of whole 1h bars with mean block min(Politis-White on |r|, 24 bars) and (b) a zero-drift GARCH(1,1)-t fitted per source (wicks resampled in sigma units)."
+    rationale: "H-STRESS8 used blocks capped at ~30 days, which keep month-long real trends inside the paths; a 1-day cap keeps intraday vol clustering and fat tails but destroys multi-day trend persistence, so it is a valid null for a multi-day trend edge. GARCH-t keeps vol clustering parametrically with no drift."
+    test: "100 replications per generator (6 paths each); one-sided Monte Carlo p = (1 + #null >= real) / (1 + 100). Stylised-fact check of each generator (excess kurtosis, Hill tail index, |r| ACF at 1/24/168, leverage, 1d kurtosis, 7d variance ratio) and a real-vs-synthetic logistic discriminator AUC on 30-day windows (5-fold CV; all features, vol-only, trend-only). New verdict rule G8 for every finalist: FRAGILE if the real mean <= the 95th null percentile under (a)."
+    success: "Supports iff MC p <= 0.05 under both (a) and (b); contradicts iff p > 0.20 under both; else inconclusive."
+    prior: 0.45
+    family: ws16_trend
+    status: proposed
+  H-WS16-13:
+    title: "The recommended spec(s), chosen on llm_in_sample by the frozen rule, keep a positive clean-holdout mean on closed trades"
+    statement: "Selection rule (frozen): spec 1 = zoo_ew plus every single modification that beats it with Romano-Wolf p < 0.10 in llm_in_sample (combined and run once, one extra trial); spec 2 = the non-zoo_ew signal with the highest in-sample lower 95% CI bound of mean net R/trade among in-sample SURVIVES. Each has clean_holdout mean net R/trade > 0 on closed trades (open positions excluded)."
+    rationale: "RESEARCH_PROTOCOL 3b: select in-sample only, read the holdout once."
+    test: "clean_holdout, closed trades, base trade layer."
+    success: "Supports iff every recommended spec is > 0; contradicts iff all are <= 0; else inconclusive."
+    prior: 0.50
+    family: ws16_trend
+    status: proposed
+  H-WS16-14:
+    title: "Capacity at 50-200 USD notional is not a constraint"
+    statement: "For every universe-L symbol, square-root-law impact Y sigma_d sqrt(Q / V_d) with Y = 1, Q = 200 USD and V_d = point-in-time trailing 30-day median daily turnover (5th percentile over the in-sample days) is < 1 bp."
+    rationale: "Even the smallest perps trade millions per day; 200 USD is ~1e-5 of daily volume."
+    test: "Per symbol, from 1h turnover in the lake."
+    success: "Supports iff < 1 bp for all symbols; contradicts iff > 3 bp for any; else inconclusive."
+    prior: 0.85
+    family: ws16_trend
+    status: proposed
+
+  # ==== WS04 VOL (+ trimmed WS03 DIST core), specification program 2026-11-27. Registered 2026-11-26 ~23:55 UTC BEFORE any
+  # fit on the data that tests them. Code: src/ai_trader/research/vol_spec.py. Assets: BTC, ETH, SOL, XRP, DOGE (Bybit 5m
+  # klines 2022-01..2026-11-26), XAU, XAG (Bybit 5m from 2026-03-09). Horizons 1h / 4h / 1d (own-frequency bars, origins every
+  # bar). Target RV = sum of squared 5m log returns over the window. Monthly refits, expanding window capped at 3 years.
+  # Segments split at research.knowledge_cutoff (2026-07-01). DISCLOSURE: the clean_holdout up to 2026-11-10/15 was already
+  # used by H-VM1..5, H-NS4, H-RFSV2, H-NN8 for related vol comparisons (daily HAR family, robust_bc x hour-of-week, RFSV);
+  # for those parts this is a re-measurement, not a confirmation. Origins >= 2026-11-16 are reported as a descriptive
+  # 'fresh' slice. Pooled crypto = cross-asset mean loss per origin over the 5 crypto perps (common origins); DM t = Newey-West
+  # with the Harvey-Leybourne-Newbold correction; MCS = Hansen-Lunde-Nason Tmax, 90%, circular block bootstrap.
+  H-WS04-1:
+    title: "The intraday clock lowers next-hour and next-4h QLIKE for the risk sigma"
+    statement: "Scaling the forecast by a causal hour-of-week (1h) / 4h-block-of-week (4h) factor lowers QLIKE: rbc_how vs rbc and loghar_c vs loghar, pooled crypto, at 1h and 4h."
+    rationale: "Intraday variance runs 0.5x-2x of the mean by hour of week (H-GEO1, H-NS4). A calendar-blind EWMA is too high in quiet hours and too low at the US open."
+    test: "paired QLIKE differences, pooled crypto, DM-HLN t by origin; segments."
+    success: "both pairs diff < 0 with t < -2 at 1h and 4h in llm_in_sample, same sign in clean_holdout."
+    prior: 0.9
+    family: vol_model
+    status: proposed
+  H-WS04-2:
+    title: "Complexity beyond the clock log-HAR does not pay (GARCH family, HARQ, HAR-J)"
+    statement: "At 1h, 4h and 1d the best HAR-family spec with the clock (loghar_c or loghar_cr) is in the pooled-crypto 90% MCS in both segments, and no GARCH-family spec (GARCH / GJR / EGARCH / APARCH / FIGARCH, Normal / t / skew-t, raw or clock-deflated) beats it with DM t < -2 in either segment."
+    rationale: "GARCH sees one squared return per bar; HAR sees 5m RV. Realised measures are more informative (ABDL 2003, Corsi 2009); HARQ/HAR-J gains in the 1d tournament were small."
+    test: "MCS over all specs per horizon and segment, pooled crypto; pairwise DM-HLN vs the best clock log-HAR."
+    success: "MCS membership in both segments at all three horizons and no GARCH DM t < -2."
+    prior: 0.7
+    family: vol_model
+    status: proposed
+  H-WS04-3:
+    title: "The recommended spec beats the live robust_bc sigma_risk at its own timeframe"
+    statement: "The selection-rule pick (simplest spec in the pooled-crypto in-sample 90% MCS that is also in the holdout MCS) has lower QLIKE than robust_bc computed on the same timeframe's bars (the live sigma_risk_next) at 1h, 4h and 1d."
+    rationale: "robust_bc is a calendar-blind EWMA of one squared return per bar; it was the worst or near-worst contestant at 1d/5d in H-VM."
+    test: "paired QLIKE, pooled crypto, DM-HLN t; segments; also per asset."
+    success: "diff < 0 with t < -2 in llm_in_sample at all three horizons, same sign in clean_holdout."
+    prior: 0.8
+    family: vol_model
+    status: proposed
+  H-WS04-4:
+    title: "Scheduled-release dummies add to the clock log-HAR"
+    statement: "Adding a dummy for a scheduled CPI / NFP / FOMC release inside the target window (schedule known before the origin) to the clock log-HAR lowers QLIKE on the release windows at 1h and 4h."
+    rationale: "The first 5 min after CPI/FOMC carry ~15x variance (H-GEO3); the clock cannot see the release calendar."
+    test: "QLIKE loghar_cr - loghar_c on windows containing a release (pooled crypto, per-event mean, bootstrap over events) and on all windows (DM-HLN)."
+    success: "release-window diff < 0 with 95% CI excluding 0 in llm_in_sample and same sign in clean_holdout; all-window diff not > 0 with t > 2."
+    prior: 0.6
+    family: vol_model
+    status: proposed
+  H-WS04-5:
+    title: "Weekend scaling improves the central forecast but must not be used for the risk sigma unless weekend VaR still covers"
+    statement: "(a) At 1d the day-of-week clock log-HAR beats the calendar-blind log-HAR on QLIKE (crypto pooled, and XAU/XAG). (b) Under the clock spec with Student-t innovations, the 1% lower and upper VaR exceedance rate on weekend windows stays <= 2% (Kupiec p > 0.05) at 1h, 4h and 1d."
+    rationale: "Weekend RV is 0.5x (crypto) and 0.05-0.16x (metals) of weekdays (H-VM tables, H-TVTP1s), but weekends are jump-prone (H-V2: shrinking the risk sigma worsened tail loss)."
+    test: "(a) paired QLIKE, DM-HLN t; (b) exceedance counts on weekend windows, Kupiec POF, pooled crypto and per metal."
+    success: "(a) diff < 0, t < -2 in-sample, same sign holdout (crypto); (b) holds in both segments (crypto pooled)."
+    prior: 0.55
+    family: vol_model
+    status: proposed
+  H-WS04-6:
+    title: "Student-t is the right innovation default; skew-t and a GPD tail add little"
+    statement: "For returns standardised by the recommended spec, a unit-variance Student-t (nu fit on llm_in_sample) beats the Normal on clean_holdout log score at 1h, 4h and 1d (pooled crypto), skew-t (Hansen) does not beat the t (|t| < 2), and the t's 1% two-sided VaR exceedance rates pass Kupiec and Christoffersen (p > 0.05)."
+    rationale: "Crypto returns standardised by a good vol forecast keep fat tails (nu ~ 3-6 at 1h); skewness is small and unstable."
+    test: "per-observation log-score differences (DM-HLN t), Kupiec POF, Christoffersen CC, PIT KS / Berkowitz; GPD (POT at the 5% tails) reported as a tail-coverage comparison at 0.5% / 0.1%."
+    success: "t beats Normal with t-stat > 2 at all three horizons; skew-t vs t |t| < 2; t VaR tests pass at 1% in the holdout."
+    prior: 0.65
+    family: distribution
+    status: proposed
+  H-WS04-7:
+    title: "The trusted spec prices the 4-sigma tail correctly"
+    statement: "Under the recommended spec with its Student-t (in-sample nu), the clean_holdout frequency of a one-bar adverse move beyond 4 sigma (each side) lies inside the 95% binomial interval of the model probability at 1h, 4h and 1d (pooled crypto), and the 24h first-passage frequency to -4 sigma_1h is within a factor 1.5 of the model's simulated probability."
+    rationale: "The 4 sigma stop cap (stops.MAX_STOP_SIGMA, H-STOP1 prior) assumes sigma_risk scales the tail; a mis-specified sigma or tail makes the cap either loose or tight."
+    test: "binomial interval per horizon and side; first passage from 5m lows/highs over the next 24 h at hourly origins every 4 h vs t-innovation simulation of the 1h spec."
+    success: "all one-bar frequencies inside the interval and the first-passage ratio within [0.67, 1.5] in clean_holdout."
+    prior: 0.45
+    family: distribution
+    status: proposed
+
+  # WS07 REGIME (specification program 2026-11-27, agent WS07). Registered before any fit on the data that tests them.
+  # Design frozen in the diary ("WS07 design frozen before results"). Module: src/ai_trader/research/regime_specs.py.
+  # Common design: universe L (23 Bybit crypto perps), daily unit (UTC day d), state known at 00:00 UTC of d (filtered on
+  # data through d-1; smoothed states never used in a test). Specs: v0_cell / v0_vol / v0_dir (research.regimes, 1h, as the
+  # live gate), ghmm2 / ghmm3 (Gaussian HMM on daily log return), thmm3 (Student-t nu=5 HMM), msar2 (MS-AR(1) K=2),
+  # msvar3 (MS-VAR(1) K=3 on [r, log RV]), tvtp3 (msvar3 with transitions driven by funding z and 7d OI change z),
+  # bocpd (Adams-MacKay on log RV, hazard 1/30, vol tercile of the run-weighted level), pelt (online PELT on log RV,
+  # BIC penalty, tercile of the last segment mean), kmeans9 / gmm3 (start-of-day vol percentile, v0 dir_score, funding z,
+  # OI change z), msgarch2 optional (Haas MS-GARCH t, only if time allows). Walk-forward: expanding, origins every Jan 1 and
+  # Jul 1 from 2022-01-01 to 2026-07-01 (the holdout is forecast only by fits on data before 2026-07-01), 1-day embargo,
+  # >= 365 training days per symbol. Segments: llm_in_sample = OOS days before 2026-07-01, clean_holdout = on/after.
+  # Pooled statistics average across symbols per date first (clustering by time); DM = Newey-West HAC t with the
+  # Harvey-Leybourne-Newbold correction; MCS = Hansen-Lunde-Nason T_max, 10-day moving blocks, 2000 draws, alpha 0.10.
+  H-WS07-1:
+    title: "Regime state adds to log-HAR for next-day variance"
+    statement: "For at least one regime spec, adding its start-of-day state (filtered probabilities or labels, ridge-shrunk intercept shifts, lambda 20) to the per-symbol log-HAR lowers next-day QLIKE out of sample versus the plain log-HAR."
+    rationale: "v0 vol states lag the EWMA, and HAR already carries vol persistence; LAT1 cells (v0 direction x weekday x vol tercile) helped HAR, so regime labels might carry level or asymmetry information HAR misses."
+    test: "Per spec: date-level mean of (QLIKE_cond - QLIKE_HAR) across symbols, DM-HAC (HLN) per segment; Holm across the specs within llm_in_sample."
+    success: "Supports for spec s iff mean diff < 0 with Holm-adjusted p < 0.05 in llm_in_sample and diff < 0 in clean_holdout; the hypothesis is supported iff at least one spec supports; contradicts iff no spec has diff < 0 with unadjusted p < 0.05 in llm_in_sample; else inconclusive."
+    prior: 0.45
+    family: regime_specs
+    status: proposed
+  H-WS07-2:
+    title: "v0 is not the best regime conditioner for variance"
+    statement: "In the 90% Model Confidence Set over all next-day variance forecasts (EWMA, log-HAR, log-HAR conditioned on each spec, native regime-model forecasts) on llm_in_sample OOS days, the v0-conditioned log-HARs (v0_cell, v0_vol, v0_dir) are all excluded while at least one other regime-conditioned forecast is included."
+    rationale: "If a fitted regime model dominates v0 for the decision it most plausibly feeds (variance), v0 should be replaced there."
+    test: "MCS T_max on the date x model QLIKE matrix (intersection of rows), per segment."
+    success: "Supports iff the condition holds in llm_in_sample and the best alternative's QLIKE is below every v0-conditioned QLIKE in clean_holdout; contradicts iff a v0-conditioned forecast is in the llm_in_sample MCS; else inconclusive."
+    prior: 0.40
+    family: regime_specs
+    status: proposed
+  H-WS07-3:
+    title: "A native regime-switching variance forecast beats log-HAR"
+    statement: "At least one native regime-model forecast of next-day variance (ghmm2/ghmm3/thmm3/msar2 mixture E[r^2], msvar3/tvtp3 mixture E[RV], bocpd predictive RV, msgarch2 if run) has lower QLIKE than the per-symbol log-HAR."
+    rationale: "Markov-switching variance models are the textbook alternative to HAR; HAR is hard to beat at 1 day."
+    test: "DM-HAC (HLN) of date-level QLIKE differences, per segment; Holm across the native forecasts in llm_in_sample."
+    success: "Supports iff some native forecast has diff < 0 with Holm p < 0.05 in llm_in_sample and diff < 0 in clean_holdout; contradicts iff every native forecast has diff > 0 in llm_in_sample; else inconclusive."
+    prior: 0.25
+    family: regime_specs
+    status: proposed
+  H-WS07-4:
+    title: "Regime-based predictive densities improve the next-day log score"
+    statement: "For at least one spec, a regime-based predictive density of the next-day log return (the model's own filtered mixture density, or a Student-t with the regime-conditioned log-HAR scale) has a higher log score than the Student-t with the plain log-HAR scale (nu by MLE on training standardised returns, floor 3)."
+    rationale: "Mixtures of regime densities can fit tails and vol jumps better than one t with a HAR scale."
+    test: "Date-level mean log-score difference, DM-HAC (HLN) per segment; Holm across density variants in llm_in_sample; MCS over all densities."
+    success: "Supports iff some variant has diff > 0 with Holm p < 0.05 in llm_in_sample and diff > 0 in clean_holdout; contradicts iff no variant has diff > 0 with unadjusted p < 0.05 in llm_in_sample; else inconclusive."
+    prior: 0.40
+    family: regime_specs
+    status: proposed
+  H-WS07-5:
+    title: "No regime spec carries next-day direction (R-PX-6 under every spec)"
+    statement: "Adding state-specific shrunk means (episode shrinkage kappa 10 toward 0) of the vol-standardised return to the regime-conditioned HAR-t density does not raise the next-day log score for any spec."
+    rationale: "R-PX-6 / H-RL1: v0 cells carry no direction; a fitted regime spec might, if v0's direction axis is just badly built."
+    test: "Date-level log-score difference (with means minus without), DM-HAC per spec and segment."
+    success: "Supports iff no spec has diff > 0 with t >= 2 in llm_in_sample; contradicts iff some spec has t >= 2 in llm_in_sample and t >= 1 in clean_holdout; else inconclusive."
+    prior: 0.85
+    family: regime_specs
+    status: proposed
+  H-WS07-6:
+    title: "Regime gating improves the 4h trend sleeve (zoo_ensemble)"
+    statement: "Switching zoo_ensemble off on symbol-days whose start-of-day state of spec s had a training shrunk mean pnl_d <= 0 (kappa 10 episodes, walk-forward) raises its out-of-sample annualised Sharpe versus ungated, for at least one spec."
+    rationale: "The trend family is the only survivor; H-TR3/H-TR4 trend-vs-MR gates failed, but those used other features; a vol-regime gate is the natural remaining candidate."
+    test: "Daily sleeve P&L = mean over symbols of gate x pnl_d (data/priors/strategy_panel_daily.parquet, to 2026-11-09); Sharpe difference vs ungated with a 10-day moving-block bootstrap (2000); Romano-Wolf stepdown across specs; deflated Sharpe of the best gated variant with N = number of specs."
+    success: "Supports iff some spec has RW-adjusted p < 0.05 in llm_in_sample and Sharpe diff > 0 in clean_holdout; contradicts iff every spec has Sharpe diff <= 0 in llm_in_sample; else inconclusive."
+    prior: 0.20
+    family: regime_specs
+    status: proposed
+  H-WS07-7:
+    title: "A fitted regime spec makes a better cell-conditional book than v0 (and v0 beats unconditional selection)"
+    statement: "The R-MAP-2-style book (per symbol-day, equal weight over the registered strategies whose training shrunk mean in the current state is > 0; walk-forward) built from spec s has a higher OOS annualised Sharpe than the same book built from v0 cells; and the v0 book beats the unconditional book (strategies with training pooled mean > 0)."
+    rationale: "R-MAP-2 found the v0-conditional book loses less than equal weight, but only marginally less than unconditional selection; the question is whether any regime spec carries the selection value, or none does."
+    test: "Daily book P&L on the 16 bar-runnable strategies (strategy panel, universe L); paired Sharpe differences, 10-day moving-block bootstrap (2000); Romano-Wolf across specs for the spec-vs-v0 comparisons."
+    success: "Part A (spec vs v0) supports for spec s iff RW p < 0.05 in llm_in_sample and diff > 0 in clean_holdout; contradicts iff every spec has diff <= 0 in llm_in_sample. Part B (v0 vs unconditional) supports iff bootstrap p < 0.05 in llm_in_sample and diff > 0 in clean_holdout; contradicts iff diff <= 0 in llm_in_sample; else inconclusive."
+    prior: 0.30
+    family: regime_specs
+    status: proposed
+  H-WS07-8:
+    title: "R-MAP-3..7 cell effects survive controls for a fitted regime and for continuous vol / trend"
+    statement: "For each rule R-MAP-3..7, the effect of being in the rule's v0 cells on the named strategies' pnl_d (active symbol-days, relative to their other cells) keeps its negative sign with |t| >= 2 in llm_in_sample after adding (i) ghmm3 state dummies and (ii) continuous controls (start-of-day vol percentile, v0 dir_score, |dir_score|), and keeps its sign in clean_holdout."
+    rationale: "If the cell effect is only a coarse proxy for vol level or trend strength, it should be restated in those terms (or the regime spec that carries it); if it survives, the v0 cells carry their own information."
+    test: "Per rule: OLS of pnl_d on 1{cell in rule cells} (+ controls) with date-clustered SEs, per segment; effect with and without controls."
+    success: "Per rule: supports iff the controlled coefficient is < 0 with t <= -2 in llm_in_sample under both control sets and < 0 in clean_holdout; contradicts iff the controlled coefficient is >= 0 in llm_in_sample under either control set; else inconclusive."
+    prior: 0.40
+    family: regime_specs
+    status: proposed
+  H-WS07-9:
+    title: "R-VOL-8 is a property of high vol, not of the v0 labeller, and HAR absorbs it"
+    statement: "(a) The high-minus-low vol-state contrast in log(RV_7d / (7 x EWMA daily variance)) is negative with t <= -2 for v0_vol, ghmm3 and bocpd states; (b) against the log-HAR 7-day forecast instead of EWMA, the v0 contrast has |t| < 2."
+    rationale: "R-VOL-8 says high v0 vol states over-forecast next-week vol vs EWMA; that is vol mean reversion, which any vol state and HAR should show or absorb."
+    test: "Daily rows, overlapping 7-day outcomes, date-level means of the state contrast, NW HAC with lag >= 7, per segment."
+    success: "(a) supports iff t <= -2 for all three specs in llm_in_sample and the sign holds in clean_holdout; contradicts iff any of them has contrast >= 0 in llm_in_sample. (b) supports iff |t| < 2 in llm_in_sample; contradicts iff t <= -2 in llm_in_sample; holdout reported."
+    prior: 0.65
+    family: regime_specs
+    status: proposed
+  H-WS07-10:
+    title: "Fitted regime specs are stable across refits"
+    statement: "For each fitted spec, the median over symbols of the adjusted Rand index between the labels that consecutive refits assign to the same (earlier refit's) training days is >= 0.6."
+    rationale: "Gates built on labels that change meaning at each refit cannot be trusted; v0 is stable by construction (no fit)."
+    test: "Per spec, per symbol, per consecutive refit pair: ARI on the overlap; median over symbols and pairs."
+    success: "Per spec: supports iff median ARI >= 0.6; contradicts iff median ARI < 0.4; else inconclusive."
+    prior: 0.55
+    family: regime_specs
+    status: proposed
+
+  # WS10 MICRO + COSTS (specification program 2026-11-27). Registered before any fit or cost measurement.
+  # Data: PART participant days (data/research/participants/days: 5 Bybit USDT perps BTC ETH SOL XRP DOGE; ms taker-order tape + 1 s book)
+  #   FIT  = 12 pre-cutoff days + 2026-10-06..10-29 (36 days); TEST = 2026-10-30..11-24 (26 days, clean_holdout).
+  #   llm_in_sample check = fit on 2026-10-06..10-29 only, score the 12 pre-cutoff days.
+  # lake flow_3s 2026-11-07..11-26 (all clean_holdout) for the 23 stress perps; xvenue journal 2026-11-15..11-26.
+  # Costs in bp of the decision-time mid; maker 2.0 bp, taker 5.5 bp; order sizes $50, $100, $200 (and $1k, $10k for scale).
+  H-WS10-1:
+    title: "Own price impact of a $50-200 order is a negligible part of its cost"
+    statement: "For $50-200 orders on the 5 PART perps (TEST days) and the 23 stress perps (flow_3s), predicted own impact (best out-of-sample impact spec evaluated at Q) plus book walk is < 10% of the expected all-in taker cost (fee + half spread + walk + impact) in every symbol x UTC-hour cell."
+    rationale: "Our orders are 0.1-1% of L1 on the majors; if true, the cost model can ignore impact and model spread, fee, latency drift and stop slippage only."
+    test: "Per symbol x hour cell: impact_bp(Q) from the H-WS10-6..9 winner at 60 s (or the square-root fit) and walk from L1 / depth bands; ratio to the all-in taker cost."
+    success: "Supports iff the ratio < 10% in >= 95% of symbol-hour cells at Q = 200; contradicts iff < 80% of cells; else inconclusive."
+    prior: 0.85
+    family: ws10_costs
+    status: proposed
+  H-WS10-2:
+    title: "A pegged $100 limit at the touch costs less than an immediate taker order, every hour"
+    statement: "A $100 PostOnly limit joining the touch at the decision time, re-pegged to the new touch each second the touch moves away, cancelled after 60 s and then crossed as taker, has a lower mean implementation shortfall vs the decision-time mid (fees included) than an immediate taker order (fill at the touch 1 s later, 5.5 bp), on BTC ETH SOL XRP DOGE, decision times every minute of the TEST days, pessimistic queue (only trades at or through our price advance us; no cancels ahead)."
+    rationale: "R-EXE-1/2 found +0.01 R for 0.7-8k orders on BTC/ETH/SOL; check it at our size on all 5 perps, by hour, including the no-fill fallback."
+    test: "Paired per decision (taker cost - pegged cost), day-clustered bootstrap 95% CI per symbol (2000 reps); by hour point estimates. Secondary: pro-rata queue; 'runaway' decisions (mid moves >= 1 sigma_60s in the trade direction within 60 s)."
+    success: "Supports iff the CI > 0 for every symbol and the point estimate > 0 in >= 90% of symbol-hours; contradicts iff the CI < 0 for >= 3 symbols; else inconclusive."
+    prior: 0.8
+    family: ws10_costs
+    status: proposed
+  H-WS10-3:
+    title: "The stress harness's flat slippage assumptions are conservative for liquid perps"
+    statement: "On the 5 PART perps (TEST days), the mean taker slippage beyond the touch-mid (half spread + 1 s latency drift + walk) at $100 is <= 2.0 bp (stress slip_bps) and the mean stop-market slippage vs the stop level ($100, 300 ms latency, stops at 0.5/1/2 hourly sigma) is <= 10 bp (liquid-tier stop_slip) with the 99th percentile <= 25 bp."
+    rationale: "The harness charges 2 bp per side plus tier stop slippage; the live stop on 2026-11-20 slipped 3.0 bp. If the flat numbers are far off the measured distribution, every net-R number shifts."
+    test: "Empirical distributions from the ms tape: stop trigger = first print at or through the level; fill = touch on the exit side 300 ms later (tape), plus walk; per symbol, pooled over levels; day-clustered CI."
+    success: "Supports iff both means are below the harness values (CI upper bound) and the stop p99 <= 25 bp for every symbol; contradicts iff any mean CI lower bound exceeds the harness value; else inconclusive."
+    prior: 0.7
+    family: ws10_costs
+    status: proposed
+  H-WS10-4:
+    title: "Funding over typical holds is too small to change a verdict"
+    statement: "Funding paid or received over the actual holds of zoo_ensemble, trend_4h and hrb2 trades (lake funding settlements between entry and exit, signed by side) averages less than 0.02 R per trade in absolute value for each unit, and adding it changes no stress verdict."
+    rationale: "The harness omits funding; trend trades hold days, and longs pay positive funding most of the time."
+    test: "Exact settlements per trade from data/lake/funding; R = funding cost / the harness at-risk denominator."
+    success: "Supports iff |mean| < 0.02 R for all three and no verdict changes; contradicts iff a verdict changes; else inconclusive."
+    prior: 0.6
+    family: ws10_costs
+    status: proposed
+  H-WS10-5:
+    title: "Re-pricing with the calibrated cost model leaves the stress verdicts of zoo_ensemble, trend_4h and hrb2 unchanged"
+    statement: "Replacing the harness's flat costs by the calibrated model (per symbol x hour half spread, pegged entry cost with fill probability and taker fallback, exit taker cost, stop-slippage distribution, funding) on the saved stress trades keeps zoo_ensemble SURVIVES, trend_4h FRAGILE and hrb2 FRAGILE under the registered verdict rules F1/F2/G2/G4..G7 (G1 and G3 carried over from the stress run)."
+    rationale: "The decision link: whether our net-R numbers depend on the cost assumptions."
+    test: "stress.r_net-style R with the model costs (mean costs; and a pessimistic q90 cost case); stress.mean_ci; stress.verdict."
+    success: "Supports iff all three verdicts are unchanged under mean costs; contradicts iff any verdict changes under mean costs; the q90 case is reported, not scored."
+    prior: 0.7
+    family: ws10_costs
+    status: proposed
+  H-WS10-6:
+    title: "Contemporaneous signed taker flow explains mid changes out of sample (linear Kyle lambda)"
+    statement: "On non-overlapping 60 s intervals, the constant-lambda spec dlog mid = lambda * signed taker notional (OLS without intercept, per symbol, fit on FIT) has out-of-sample R2 >= 0.05 on TEST for each of the 5 perps; reported also at 10 s and 300 s."
+    rationale: "The base impact spec; Kyle lambda is the cost of trading per dollar of flow."
+    test: "OOS R2 vs the zero (martingale) forecast; HAC t on lambda in FIT."
+    success: "Supports iff R2 >= 0.05 at 60 s for all 5 in clean_holdout and the lambda sign is positive in the llm_in_sample check; contradicts iff R2 <= 0 for >= 3 symbols; else inconclusive."
+    prior: 0.8
+    family: ws10_impact
+    status: proposed
+  H-WS10-7:
+    title: "Scaling lambda by trailing vol / volume beats a constant lambda"
+    statement: "K2: dlog mid / sigma_hat = kappa * flow / V_hat (sigma_hat = trailing 60-min realized vol per sqrt interval, V_hat = trailing 60-min taker notional per interval, both point in time) beats K1 (constant lambda) on TEST MSE of dlog mid at 60 s."
+    rationale: "Kyle / square-root logic: impact per dollar scales with sigma / volume; a constant lambda should be unstable across days and hours."
+    test: "Diebold-Mariano on per-interval squared-error differences, Newey-West HAC (lag 10), Harvey-Leybourne-Newbold correction; pooled over symbols (per-timestamp average) and per symbol. Stability: day-level lambda / kappa coefficient of variation and a Chow-type F across FIT days."
+    success: "Supports iff pooled DM t >= 2 in favour of K2 and >= 4 of 5 symbols same sign in clean_holdout; contradicts iff pooled t <= -2; else inconclusive."
+    prior: 0.6
+    family: ws10_impact
+    status: proposed
+  H-WS10-8:
+    title: "Aggregate impact is concave in signed flow"
+    statement: "K3: dlog mid / sigma_hat = kappa * sign(x) |x|^beta with x = flow / V_hat beats K2 (beta = 1) on TEST MSE at 60 s, and beta_hat < 1 (day-bootstrap CI excludes 1)."
+    rationale: "Concave aggregate impact is a robust empirical fact (Plerou, Gabaix); it implies costs grow slower than linearly with size."
+    test: "beta by NLS on FIT (per symbol); DM HAC as H-WS10-7."
+    success: "Supports iff pooled DM t >= 2 for K3 and beta CI < 1 for >= 4 of 5 symbols; contradicts iff beta CI includes or exceeds 1 for >= 3 symbols; else inconclusive."
+    prior: 0.6
+    family: ws10_impact
+    status: proposed
+  H-WS10-9:
+    title: "Book order-flow imbalance explains mid changes better than trade flow (Cont-Kukanov-Stoikov)"
+    statement: "K4: dlog mid = beta * OFI / D_hat (L1 OFI summed over the interval, D_hat = trailing 60-min mean L1 notional) beats K2 on TEST MSE at 10 s and at 60 s."
+    rationale: "CKS 2014: OFI explains ~65% of short-horizon price changes, trades much less; tells us which state variable an impact / fair-value model should use."
+    test: "DM HAC as H-WS10-7 at both horizons."
+    success: "Supports iff pooled DM t >= 2 for K4 at both horizons; contradicts iff pooled t <= -2 at both; else inconclusive."
+    prior: 0.6
+    family: ws10_impact
+    status: proposed
+  H-WS10-10:
+    title: "Square-root law on reconstructed metaorders"
+    statement: "Metaorders = maximal runs of same-side taker orders with identical size, PART type 2 or 3, gap <= 10 s between children, >= 4 children. Peak impact I = side * dlog(mid just after the last child vs mid before the first) / sigma_d with sigma_d, V_d = trailing 4 h realized vol (scaled to 1 day) and taker notional (scaled to 1 day). In I = Y (Q / V_d)^delta, the free delta has a day-cluster bootstrap 95% CI containing 0.5 and excluding 1, and the square-root spec beats the linear spec on TEST MSE (DM, clustered by day)."
+    rationale: "The square-root law is the standard cost model for larger orders; it scales the cost table to $1k-10k orders."
+    test: "Huber-robust NLS on individual metaorders (FIT), binned-mean check; TEST MSE and pinball (0.5, 0.9) of I; DM with day-clustered variance."
+    success: "Supports iff both conditions hold in clean_holdout; contradicts iff the delta CI excludes 0.5 and the linear spec wins; else inconclusive."
+    prior: 0.45
+    family: ws10_impact
+    status: proposed
+  H-WS10-11:
+    title: "Trade signs have long memory and impact is transient (propagator)"
+    statement: "Taker-order signs have C(l) ~ l^-gamma with gamma in (0, 1) (lags 10-1000 orders, day-bootstrap CI excludes 1) for every perp, and a transient-impact kernel (free 200-lag propagator, solved on FIT by the Toeplitz system) predicts next-order mid changes on TEST better than the permanent-only sign model (dm_n = theta * eps_n) by DM with HAC on per-minute aggregated loss differences, pooled and for >= 4 of 5 perps."
+    rationale: "Bouchaud et al.: long-memory signs plus decaying impact keep prices diffusive; if impact is transient, a cost model must not treat short-horizon markouts as permanent."
+    test: "Event time = taker orders; pre-trade mid proxy = first print - eps * tick / 2 (1-tick books); power-law and exponential kernels reported as well; efficiency check beta ~ (1 - gamma) / 2 descriptive."
+    success: "Supports iff both parts hold in clean_holdout; contradicts iff gamma CI includes 1 for >= 3 perps or the permanent model wins (t <= -2) pooled; else inconclusive."
+    prior: 0.6
+    family: ws10_impact
+    status: proposed
+  H-WS10-12:
+    title: "Bybit perp leads Bybit spot in price discovery (BTC, ETH)"
+    statement: "On lake flow_3s 3 s mids (perp vs spot, log prices, cointegrating vector (1, -1)), a VECM per day gives a Hasbrouck information-share midpoint (average of the two Cholesky orderings) > 0.5 for the perp and a Gonzalo-Granger component share > 0.5 for the perp on >= 75% of days, for BTC and ETH."
+    rationale: "Tells the desk which Bybit price to treat as the fair-value reference for short-horizon decisions."
+    test: "VECM lag chosen by BIC (1..10) per day; days with < 80% coverage dropped."
+    success: "Supports iff both shares > 0.5 on >= 75% of days for both BTC and ETH; contradicts iff the perp midpoint IS < 0.5 on >= 50% of days for either; else inconclusive."
+    prior: 0.7
+    family: ws10_infoshare
+    status: proposed
+  H-WS10-13:
+    title: "Binance leads Bybit (xvenue journal, about 1-min snapshots)"
+    statement: "On the xvenue journal mids (bn vs by, BTC ETH SOL XRP DOGE, 2026-11-15..11-26, rows with both venues present), the Hasbrouck IS lower bound for Binance is > 0.5 (supports) or its upper bound is < 0.5 (contradicts)."
+    rationale: "The tape and the desk use cross-venue leadership; at ~1-min non-synchronous polls the IS bounds may be too wide to identify anything (an identification check)."
+    test: "VECM on the snapshot grid (rows ~1 min apart), per symbol pooled over days; IS bounds from both orderings; GG share."
+    success: "Supports iff Binance IS lower bound > 0.5 for >= 3 of 5 symbols; contradicts iff the upper bound < 0.5 for >= 3; else inconclusive (bounds straddle 0.5)."
+    prior: 0.3
+    family: ws10_infoshare
+    status: proposed
+  H-WS10-14:
+    title: "Makers at the touch lose to adverse selection before fees (realized spread < 0)"
+    statement: "On the 5 perps, the notional-weighted 60 s realized spread of taker orders (maker's gross profit = side * (price - mid_t+60s)) is negative with a day-cluster 95% CI below 0, and the Huang-Stoll (1997) adverse-selection share alpha is > 0.5, per symbol in clean_holdout."
+    rationale: "Feeds the pegged-limit adverse-selection cost; repeats R-MMR-1 in decomposition form."
+    test: "Effective = realized + price impact identity per order at 5 s and 60 s (1 s book mid); Huang-Stoll three-way GMM on event-time trade prices per symbol-day."
+    success: "Supports iff both hold for >= 4 of 5 symbols; contradicts iff the realized spread CI > 0 for >= 3; else inconclusive."
+    prior: 0.6
+    family: ws10_spread
+    status: proposed
+  H-WS10-15:
+    title: "Roll's spread estimator is invalid on these perps"
+    statement: "On >= 25% of symbol-days the first-order autocovariance of order-to-order trade price changes is >= 0 (Roll undefined), or the Roll spread differs from the measured effective spread by more than 50% on the median symbol-day."
+    rationale: "A validity check: whether trade-based spread estimators can be used where no book is stored (older data, other venues)."
+    test: "Per symbol-day on the event-time tape."
+    success: "Supports iff either condition holds; contradicts iff neither holds for any symbol; else inconclusive."
+    prior: 0.6
+    family: ws10_spread
+    status: proposed
+
+  # WS12 ML BENCHMARK (specification program 2026-11-27; scope trimmed by the orchestrator 2026-11-26 23:40 UTC: WS12 deep
+  # models + the core of WS13 trees; the WS11 foundation-model part is blocked, see the report). Registered BEFORE any fit on
+  # the data that tests them. Design: src/ai_trader/research/ws12_deep.py and ws12_meta.py docstrings, diary "WS12 design
+  # frozen before results".
+  # Deep part. Assets BTC, ETH, SOL, XRP, DOGE, BNB (Bybit 1h perps, pooled training, vol-standardised inputs, no asset id).
+  # Decision time = open of bar t; targets for h in {1h, 4h, 24h}: y_h = r_{t..t+h-1} / sqrt(h s2_t) (s2_t = robust_bc base
+  # variance known at the open) and v_h = sum r^2 / (h s2_t). Models: gru, tcn (deep sequence, 72 h window), mlp (feature
+  # MLP on the H-NN8 hourly features: the non-sequence reference), each with a Student-t head (learned df > 2) per horizon
+  # and a QLIKE log-RV head per horizon; 3 seeds. Classical: log-HAR-t per asset (OLS log-HAR with the causal hour-of-week
+  # factor, QLIKE bias constant, Student-t on standardised returns, MLE), base-t (robust sigma x hour-of-week, Student-t),
+  # empirical quantiles (trailing standardised returns: 720 hourly / 180 4h / 365 daily origins). Refits R1 = 2025-07-01 (tests 2025-07-01..2026-06-30 =
+  # llm_in_sample), R2 = 2026-07-01 (tests 2026-07-01..2026-11-25 = clean_holdout); expanding training, label_end <= refit -
+  # 1 day; inner validation = last 90 days of training (purged 1 day) for early stopping and the lr choice {1e-3, 3e-3}
+  # (seed 0); seeds 1-2 with the chosen lr. D* = the sequence arch (gru / tcn) with the lower R1 inner-validation loss,
+  # fixed before any test row is scored. Scores in vol-standardised units on non-overlapping origins (1h every hour, 4h at
+  # 00/04/../20 UTC, 24h at 00 UTC): pinball over taus 0.05,0.1,0.25,0.5,0.75,0.9,0.95, log score, CRPS, QLIKE (v/F + log F).
+  # Tests: per-UTC-date mean loss difference pooled over assets, Newey-West t with the Harvey-Leybourne-Newbold correction;
+  # MCS (Tmax, 10-day blocks) over all models per horizon x metric x segment; Holm over H-WS12-1..3 per segment.
+  # Segment verdict: supports iff diff < 0 with t < -2 (Holm p < 0.05 for 1..3); contradicts iff diff >= 0; else
+  # inconclusive. Pooled: supports iff both segments support; contradicts iff llm_in_sample contradicts or both contradict.
+  H-WS12-1:
+    title: "A small deep sequence model beats log-HAR-t on next-hour return quantiles (6 crypto perps)"
+    statement: "D* (the 3-seed ensemble of the dev-chosen GRU or TCN with a Student-t head) has lower mean pinball loss than per-asset log-HAR-t for the next 1h vol-standardised return, pooled over BTC, ETH, SOL, XRP, DOGE, BNB, in both segments."
+    rationale: "H-PNN1 / R-PNN-1 (BTC, ~500-parameter quantile networks beat log-HAR-t by 0.4-0.6% at 1h) and H-NN8; the question is whether a sequence encoder on raw hourly inputs carries that over to a pooled alt panel."
+    test: "per-date mean pinball difference D* - log-HAR-t, NW t with HLN correction; Holm over H-WS12-1..3 per segment."
+    success: "difference < 0 with t < -2 (Holm p < 0.05) in both segments."
+    prior: 0.45
+    family: ml_models
+    status: proposed
+  H-WS12-2:
+    title: "A small deep sequence model beats log-HAR-t on next-day return quantiles"
+    statement: "D* has lower mean pinball than log-HAR-t for the next 24h vol-standardised return (00 UTC origins), pooled over the 6 perps, in both segments."
+    rationale: "H-PNN1 / R-PNN-2: at 1d nothing beat log-HAR-t on BTC; pooling 6 assets gives the network 6x the daily rows, which is the one thing that could change the verdict."
+    test: "as H-WS12-1 at 24h origins."
+    success: "difference < 0 with t < -2 (Holm p < 0.05) in both segments."
+    prior: 0.15
+    family: ml_models
+    status: proposed
+  H-WS12-3:
+    title: "A small deep sequence model beats log-HAR on next-hour realised variance (QLIKE)"
+    statement: "D*'s RV head has lower QLIKE than per-asset log-HAR (hour-of-week, QLIKE bias constant) for the next 1h squared return in base units, pooled over the 6 perps, in both segments."
+    rationale: "H-NN8 supported (XGB -0.040 / -0.065 QLIKE vs robust sigma x hour-of-week); the xs_v3/v4 vol heads beat panel log-HAR at 1h (R-XS-1)."
+    test: "per-date mean QLIKE difference D* - log-HAR, NW t with HLN correction; Holm as above."
+    success: "difference < 0 with t < -2 (Holm p < 0.05) in both segments."
+    prior: 0.45
+    family: ml_models
+    status: proposed
+  H-WS12-4:
+    title: "The sequence encoder adds nothing over a feature MLP on the same targets (stated as the null)"
+    statement: "D* does NOT beat the feature MLP (same Student-t and RV heads, same protocol and seeds, inputs = the 19 H-NN8 hourly features + the same static covariates) on 1h pinball and 1h QLIKE: neither difference D* - mlp has t < -2 in both segments."
+    rationale: "The networks' 1h gains so far come from the hour-of-week factor and recent |returns| (H-PNN1 extraction), which hand-made lag features already carry; a 72-step recurrent / convolutional encoder should only re-learn them."
+    test: "per-date mean differences D* - mlp, NW t with HLN correction."
+    success: "supports iff neither metric has difference < 0 with t < -2 in both segments; contradicts iff both metrics do."
+    prior: 0.70
+    family: ml_models
+    status: proposed
+  H-WS12-5:
+    title: "Single-seed deep results are reliable: seed spread is small next to the gap to log-HAR-t"
+    statement: "For D* at 1h, every one of the 3 seeds has the same sign of the pinball difference to log-HAR-t as the ensemble in each segment, and the seed standard deviation of the mean pinball is below half of the |ensemble - log-HAR-t| difference."
+    rationale: "Deep models on noisy returns can rank differently by seed (seed lottery); a conclusion that depends on the seed is not a conclusion."
+    test: "per-seed mean pinball on the test origins; sd over seeds; sign agreement."
+    success: "both conditions in both segments; contradicts iff the sign flips for any seed in both segments."
+    prior: 0.55
+    family: ml_models
+    status: proposed
+  # Trees part (WS13 core). Trades = data/research/stress/trades base variant of zoo_ensemble and trend_4h (all symbols),
+  # net R by stress.r_net (base costs). Features at entry (bars closed before entry_ts only): side-signed 24h / 72h / 240h
+  # vol-standardised returns of the symbol and of BTC, log vol level vs its 1-year mean, HAR daily / weekly / monthly levels,
+  # funding (side-signed, bp), 24h OI change (side-signed), stop distance in sigma units, hour of day, weekday, weekend /
+  # holiday / funding-window flags, tier, unit. Label 1{R_net > 0}. LightGBM (depth 3, 200 trees, lr 0.05, min 40 leaf rows,
+  # monotone constraints none), expanding walk-forward by entry quarter from 2023Q1, purged (exit_ts of training trades <
+  # test start - 1 day), 3 seeds (bagging_seed / feature_fraction_seed). Rule fixed now: take a trade iff p_hat >= the
+  # training-fold base rate. Segment by entry_ts vs the knowledge cutoff.
+  H-WS12-6:
+    title: "A LightGBM meta-label filter improves the 4h trend trades out of sample"
+    statement: "On zoo_ensemble and trend_4h trades (pooled), the trades the walk-forward LightGBM meta-label filter rejects have mean net R < 0, so removing them raises net R per candidate trade, out of sample."
+    rationale: "Meta-labelling (Lopez de Prado 2018) asks whether conditions at entry separate losing trend trades; the stress report shows trend trades lose on TradFi weekends and in drought states, which is the kind of structure a shallow tree could pick up."
+    test: "mean net R of rejected trades, trade-level t clustered by entry date (NW over the per-date sums); segments; also accepted - all and the deflated Sharpe of the filtered stream with 3 seeds x 2 units as trials."
+    success: "mean R(rejected) < 0 with t < -2 in llm_in_sample and < 0 in clean_holdout."
+    prior: 0.20
+    family: ml_models
+    status: proposed
+  H-WS12-7:
+    title: "The meta-label model's top SHAP features are stable across folds and seeds"
+    statement: "The top-5 features by mean |TreeSHAP| on each walk-forward fold's test trades have mean pairwise Jaccard >= 0.5 across folds x seeds."
+    rationale: "A filter whose important inputs change from quarter to quarter is fitting noise; stable attributions are the precondition for a rule."
+    test: "lightgbm pred_contrib on out-of-sample trades per fold and seed; Jaccard of top-5 sets over all pairs."
+    success: "supports iff mean Jaccard >= 0.5; contradicts iff < 0.3; else inconclusive."
+    prior: 0.45
+    family: ml_interpretability
+    status: proposed
+
+  # WS05 TAIL RISK: jumps, clustering and joint tails (specification program 2026-11-27; owns the trimmed core of WS06 DEPEND).
+  # Registered 2026-11-26 ~23:45 UTC BEFORE any fit or test statistic on the data that tests them. Code:
+  # src/ai_trader/research/ws05_tails.py. Frozen definitions (diary "WS05 design frozen before results"):
+  #   returns = log close-to-close; LM = Lee-Mykland 2008 at alpha 1% per day (Gumbel with n = bars per day), spot vol =
+  #   bipower over the previous K = 1 day of periodicity-adjusted returns, periodicity = hour-of-day factor from past days
+  #   only (robust, shrunk to 1 with 3 pseudo-days); BNS = Huang-Tauchen ratio-max statistic with tri-power quarticity,
+  #   alpha 1% per day; ASJ = Ait-Sahalia-Jacod 2009 S(p=4, k=2) with truncated power variations (4 local sd), alpha 1%.
+  #   J1(t) / J4(t) = at least one 5m LM jump in BTC in (t, t+1h] / (t, t+4h]. BTC 5m = Bybit lake 2020-04 .. 2026-09-27
+  #   plus 5m built from flow_3s 2026-11-07 .. 2026-11-26; flow 1m pool = liquid Bybit USDT perps from flow_3s.
+  #   Liquidation cluster = R-FLOW-2: 1m liquidation notional > trailing-24h 99th percentile and >= 3 prints.
+  #   Segments split at research.knowledge_cutoff 2026-07-01; flow_3s / liquidation data exist only in clean_holdout.
+  #   Walk-forward: monthly expanding refits from 2021-04; DM tests use the Harvey-Leybourne-Newbold correction with
+  #   Newey-West variance (lag 24 for hourly origins).
+  H-WS05-1:
+    title: "BTC 5m returns are not a pure diffusion: jump tests fire far above their false-positive rate"
+    statement: "On BTC 5m (both segments) the share of days with a detection is >= 5x the nominal 1% for each of LM, BNS and ASJ, and the mean daily jump share of quadratic variation max(RV - BV, 0) / RV is >= 5%."
+    rationale: "Crypto prints liquidation cascades and news repricings; if the SV-diffusion null held, the stop and blackout logic would not need a jump component at all."
+    test: "Daily detection rates per test and segment; mean jump share of QV; binomial CI."
+    success: "Supports iff every test's detection share >= 5% of days and mean jump share >= 0.05 in both segments; contradicts iff any test < 2% of days in llm_in_sample."
+    prior: 0.85
+    family: jumps
+    status: proposed
+  H-WS05-2:
+    title: "Jump tests and sampling frequencies agree on which days had jumps"
+    statement: "Day-level Cohen's kappa >= 0.4 for each pair of (LM, BNS, ASJ) on BTC 5m in both segments, and kappa(1m vs 5m, same test, same days) >= 0.4 on the flow 1m pool (clean_holdout)."
+    rationale: "The literature (Dumitru-Urga 2012, Theodosiou-Zikes 2011) finds large disagreement between tests and frequencies; if they disagree, any jump-conditioned rule depends on an arbitrary choice."
+    test: "Cohen's kappa and Jaccard of day-level indicator sets; per pair and segment."
+    success: "Supports iff all kappas >= 0.4; contradicts iff any kappa < 0.2."
+    prior: 0.35
+    family: jumps
+    status: proposed
+  H-WS05-3:
+    title: "A Kou jump-diffusion density beats the Student-t house default for 5m BTC returns"
+    statement: "For BTC 5m returns standardised by the jump-robust periodicity-adjusted spot vol, the Kou mixture (constant p, fit on llm_in_sample) has a higher mean out-of-sample log score than the Student-t (nu by MLE), with DM-HLN t > 2 in llm_in_sample (walk-forward by year) and diff > 0 in clean_holdout. Gaussian (SV pure diffusion) and Merton (normal jumps) are reported as further comparators."
+    rationale: "H-JD1 (1h, bipower sigma) found the Kou mixture LOSES to a t by 0.05 nats; at 5m the jump component is better identified."
+    test: "Per-bar log-score differences, HLN-DM with NW lag 288; segments."
+    success: "Supports iff Kou - t > 0 with t > 2 in llm_in_sample and > 0 in clean_holdout; contradicts iff Kou - t < 0 with t < -2 in llm_in_sample."
+    prior: 0.35
+    family: jumps
+    status: proposed
+  H-WS05-4:
+    title: "BTC 5m jumps self-excite and a Hawkes intensity passes the time-rescaling test"
+    statement: "At the cutoff fit (data < 2026-07-01) the discrete-time Hawkes (cloglog Bernoulli per 5m bar, exponential kernel, baseline with hour-of-day factor and log spot vol) has alpha > 0 with LR p < 0.01 against the same baseline without excitation, and its discrete time-rescaling (Haslinger 2010) KS p-value is > 0.01 while the no-excitation baseline's is < 0.01."
+    rationale: "Jumps cluster (H-JD2 found alpha > 0 at 1h); goodness of fit decides whether the Hawkes is the right description or only a better wrong one."
+    test: "LR test; KS of rescaled times on the fit sample; Ljung-Box(10) of rescaled times."
+    success: "Supports iff both conditions hold; contradicts iff LR p > 0.05."
+    prior: 0.60
+    family: jumps
+    status: proposed
+  H-WS05-5:
+    title: "A Hawkes forecast of P(jump next 1h / 4h) beats a constant rate out of sample"
+    statement: "Walk-forward Hawkes with vol baseline (M4) beats the expanding constant base rate (M0) on mean Bernoulli log score for J1 and J4, DM-HLN t > 2 in llm_in_sample and diff > 0 in clean_holdout."
+    rationale: "The desk needs a jump probability for blackouts and stops; a constant rate is the honest null."
+    test: "Hourly origins; log score and Brier; HLN-DM (NW lag 24 for J1, 48 for J4); reliability tables; MCS over all models."
+    success: "Supports iff both horizons pass in llm_in_sample and keep diff > 0 in clean_holdout; contradicts iff diff < 0 with t < -2 in llm_in_sample at either horizon."
+    prior: 0.60
+    family: jumps
+    status: proposed
+  H-WS05-6:
+    title: "The desk's field P(jump) is calibrated for an observable high-frequency jump in the next hour"
+    statement: "Frozen cutoff field (data/models/field/btc_field_cutoff_2026-07-01.json) P(jump) against J1 in clean_holdout: |mean p - base rate| < 2 binomial SE, logistic calibration slope (logit y on logit p) in [0.5, 1.5], and log score >= the constant base rate."
+    rationale: "The desk prints 'jump probability 1.5-2%' and mm/execution gates threshold it; its jump is a latent mixture branch (mean >= 3 sd at 1h), not a detected event, so calibration for an observable event is not guaranteed."
+    test: "Calibration-in-the-large, Spiegelhalter z, calibration slope, reliability table; log score vs M0; also llm_in_sample (in-fit, labelled)."
+    success: "Supports iff all three hold in clean_holdout; contradicts iff any fails."
+    prior: 0.20
+    family: jumps
+    status: proposed
+  H-WS05-7:
+    title: "The field P(jump) is calibrated for its own jump definition"
+    statement: "On clean_holdout the mean of p_t equals the mean posterior jump weight w_{t+1} of the realised 1h return within 2 SE (NW), and the field-implied P(|x_{t+1}| > 4 sqrt(vf_t)) matches the realised 4-sigma flag frequency within 2 SE."
+    rationale: "Separates 'mis-specified for observable jumps' from 'internally inconsistent out of sample'."
+    test: "Means with NW SE (lag 24); per segment."
+    success: "Supports iff both agree within 2 SE in clean_holdout; contradicts iff either is off by > 3 SE."
+    prior: 0.50
+    family: jumps
+    status: proposed
+  H-WS05-8:
+    title: "The Hawkes jump forecast beats the field P(jump)"
+    statement: "M4 beats the field P(jump) (and its 4h version 1 - (1 - p)^4) on J1 and J4 mean log score with DM-HLN t > 2 in llm_in_sample and diff > 0 in clean_holdout."
+    rationale: "The field's jump intensity has one weak term (m24*dir); a Hawkes uses the jump history directly."
+    test: "As H-WS05-5 with the field as comparator."
+    success: "Supports iff both horizons pass; contradicts iff the field beats M4 with t > 2 in llm_in_sample."
+    prior: 0.65
+    family: jumps
+    status: proposed
+  H-WS05-9:
+    title: "US release minutes are jump marks"
+    statement: "Scheduled CPI / NFP / FOMC times raise the BTC 5m jump intensity: in the Hawkes with a release kernel (bins from the release to +30 min) the release coefficient is > 0 with LR p < 0.01 at the cutoff fit, and the release model (M5) has a higher J1 mean log score than M4 in llm_in_sample (diff > 0)."
+    rationale: "Scheduled macro news is the canonical exogenous jump source (Andersen-Bollerslev-Diebold-Vega 2003); release minutes are known in advance, so the mark is point-in-time."
+    test: "LR test at the cutoff; walk-forward log-score difference; release-hour hit rates."
+    success: "Supports iff both hold; contradicts iff the coefficient is <= 0 or LR p > 0.05."
+    prior: 0.75
+    family: jumps
+    status: proposed
+  H-WS05-10:
+    title: "Liquidation clusters excite further jumps beyond the jump they coincide with"
+    statement: "Flow 1m pool (clean_holdout): the same-symbol LM jump rate in (0, 60] min after an R-FLOW-2 liquidation cluster exceeds the matched baseline (same symbol, hour-of-day factor and spot-vol tercile) with rate ratio > 1 and cluster-bootstrap 95% CI above 1; in the marked Hawkes the liquidation-mark excitation gamma > 0 with LR p < 0.05 given the jump self-excitation."
+    rationale: "Cascades are forced flow; if they raise the jump hazard after the fact, a post-cascade blackout protects stops; if the excess is only the coinciding jump, a jump-based gate suffices."
+    test: "Event study with matched controls and cluster bootstrap; marked Hawkes LR test."
+    success: "Supports iff both hold; contradicts iff the (0, 60] ratio CI is below or includes 1 AND gamma LR p > 0.05."
+    prior: 0.55
+    family: jumps
+    status: proposed
+  H-WS05-11:
+    title: "The 60-minute R-FLOW-2 blackout covers the post-cascade jump excess"
+    statement: "The post-cluster excess jump hazard is gone by 60 min: the rate ratio in (60, 120] min has a 95% CI that includes 1 or lies below it, and the fitted liquidation-kernel half-life is < 30 min."
+    rationale: "Tests the blackout length directly; too short leaves stops exposed, too long costs trades (stress test: hs2_fade_blackout leaves nothing to fade)."
+    test: "Rate ratios by lag bin (0-5, 5-15, 15-30, 30-60, 60-120, 120-240 min); kernel half-life with profile-likelihood CI."
+    success: "Supports iff both hold; contradicts iff the (60, 120] ratio CI is above 1."
+    prior: 0.50
+    family: jumps
+    status: proposed
+  H-WS05-12:
+    title: "Crypto jumps are mostly co-jumps and BTC jumps excite the alts"
+    statement: "On the flow 1m pool >= 30% of BTC LM jump minutes coincide with an ETH jump in the same minute and >= 30% with jumps in >= 3 pool alts; in the 1m multivariate Hawkes (BTC, ETH, SOL, alt basket) the BTC -> alt-basket excitation is > 0 with LR p < 0.01."
+    rationale: "If jumps are common, a 2-3 position crypto book is one jump bet; the co-stopping risk is a jump risk."
+    test: "Co-jump shares with binomial CI and a shuffled-day placebo; LR test of the cross term."
+    success: "Supports iff both shares >= 0.30 and LR p < 0.01; contradicts iff either share < 0.15."
+    prior: 0.60
+    family: dependence
+    status: proposed
+  H-WS05-13:
+    title: "Stops hit inside jumps slip far more than the live tier budgets"
+    statement: "flow_3s, stop-market exits at 4 x sigma_1h from hourly entries (fill = trigger 3s candle close, never better than the stop, minus half the 3s spread): the median slip of triggers in a jump minute (LM 1m jump against the position in the trigger or previous minute) is >= 3x the non-jump median, and >= 10% of jump-minute triggers exceed the tier budget (liquid 10 bp, mid 25 bp, illiquid 60 bp)."
+    rationale: "Links the 4 sigma cap (H-STOP1) and the 2 USD worst case to measured gap risk; the 1h stress test could not see gaps (0 gapped stops by construction)."
+    test: "Slip distributions by trigger type, k in {1, 2, 3, 4, 6}, tier; bootstrap by symbol-day."
+    success: "Supports iff both hold; contradicts iff the jump median < 1.5x non-jump or the exceedance share < 5%."
+    prior: 0.45
+    family: execution
+    status: proposed
+  H-WS05-14:
+    title: "Crypto 1h returns have lower-tail dependence a Gaussian copula misses"
+    statement: "Focused set (BTC, ETH, SOL, XRP, DOGE, ADA, LINK, AVAX; 1h, EWMA-standardised): a t-copula (one nu) beats the Gaussian copula on out-of-sample copula log-likelihood (DM t > 2 in llm_in_sample, diff > 0 in clean_holdout), and the empirical lower-tail co-exceedance at q = 1% for BTC-alt pairs exceeds the Gaussian-copula implied value by >= 50% (pooled)."
+    rationale: "Co-stopping in sell-offs is a joint lower-tail event; a Gaussian copula understates it."
+    test: "Yearly walk-forward copula fits on pseudo-observations (ranks from the fit window); co-exceedance with block bootstrap."
+    success: "Supports iff both hold; contradicts iff the Gaussian copula wins with t > 2 in llm_in_sample."
+    prior: 0.70
+    family: dependence
+    status: proposed
+  H-WS05-15:
+    title: "DCC correlation beats EWMA and rolling correlation for 1h and 4h covariance"
+    statement: "With the same univariate EWMA vols, DCC(1,1) correlation has a higher out-of-sample Gaussian log-likelihood per row than EWMA correlation (lambda 0.97) and a 30-day rolling correlation for the focused set at 1h and 4h, DM t > 2 in llm_in_sample and diff > 0 in clean_holdout."
+    rationale: "Correlation targets drive the same-side and cluster limits; if DCC adds nothing, EWMA is the simpler choice."
+    test: "Yearly refits (DCC by 2-step QML), per-row log-likelihood differences, HLN-DM."
+    success: "Supports iff DCC beats both at both horizons in llm_in_sample and keeps the sign in clean_holdout; contradicts iff EWMA beats DCC with t > 2 at both horizons."
+    prior: 0.45
+    family: dependence
+    status: proposed
+  H-WS05-16:
+    title: "A 2-3 position same-side crypto trend book is about one bet and co-stops in stress regimes"
+    statement: "For same-side books of 2 and 3 names from the focused set opened together, the effective number of bets (ENB = (sum eig)^2 / sum eig^2 of the 30-day correlation at entry) has median < 1.5 (2 names) and < 2.0 (3 names), and the empirical P(all stops hit within the same 4h | at least one hit) with 2 x sigma_4h stops and a 72h cap is >= 2x higher when the BTC v0 cell at entry is R6 / R8 / R9 than when it is R1 / R4 / R5."
+    rationale: "Quantifies the 'one bet' problem (R-PD-1) and whether co-stopping is regime-dependent, which decides if same-side limits should tighten by regime."
+    test: "Every 4h entry, all pairs / triples, both sides; regime split; block bootstrap by day."
+    success: "Supports iff both hold; contradicts iff the ENB medians exceed the bounds or the regime ratio < 1.2."
+    prior: 0.55
+    family: dependence
+    status: proposed
+  H-WS05-17:
+    title: "The live limits contain the measured joint tail"
+    statement: "Under the live_small limits (<= 2 same side, 3 open, 400 USD gross, 1.30 USD to the stop, 2 USD max per trade, 10 USD daily stop), the measured joint tail (flow_3s stop slips at the tier notional and empirical 1h co-stops) gives P(a trade's loss > 2 USD) < 1% of stopped trades and P(a same-side pair loses > 6 USD in one co-stop event) < 0.5% of pair co-stops."
+    rationale: "Answers whether 3 open / 2 same side / 400 gross match the joint tail or let a co-jump through two stops breach the per-trade and daily caps."
+    test: "Loss per stopped trade = 1.30 USD x (1 + slip / stop distance) + fees at the tier notional (capped); pair co-stop losses from same-hour co-stops with each leg's slip."
+    success: "Supports iff both probabilities are below the bounds; contradicts iff either exceeds 2x its bound."
+    prior: 0.65
+    family: dependence
+    status: proposed
+
+  # ---- WS08 PREDICT (+ core of WS09 XSECT and WS18 MACRO), specification program 2026-11-27. Registered 2026-11-26 ~23:55 UTC
+  # BEFORE any fit. Code: src/ai_trader/research/ws08_predict.py. Design: diary "WS08 design frozen before results".
+  # Common design for H-WS08-1..14 (the predictor grid):
+  #   targets BTC, ETH (Bybit perps) and ALT (equal-weight basket of the other 21 long-history universe-L perps), log returns
+  #   over h in {1h, 4h} (hourly origins) and {1d, 7d, 30d} (daily origins at 00:00 UTC), divided by the ex-ante EWMA sigma
+  #   x sqrt(h) (house rule: vol-standardised). Predictors as-of known_ts <= origin: funding (24h mean), funding percentile
+  #   (trailing 365 d), perp-index basis, Deribit 30d term basis, OI 24h (4h) log change, long/short account ratio, Coinbase
+  #   premium raw and USDT-adjusted, stablecoin 30d growth z, DVOL level, DVOL change, VRP = (DVOL/100)^2 - trailing 30d RV,
+  #   25d risk reversal (30d), 5d change in 10y real yield, 5d dollar log change, last NDX daily return, Fear & Greed.
+  #   Per cell: OLS slope per 1 sd of x, Newey-West t (lag h + auto), Hodrick (1992) 1B t, Stambaugh bias correction,
+  #   IVX Wald (Kostakis-Magdalinos-Stamatogiannis 2015, long-horizon version for h > 1 base period), day-block bootstrap
+  #   (60-day blocks, B = 999) and Romano-Wolf step-down over ALL grid cells jointly (FWER 5%). Fit segment llm_in_sample
+  #   (origin < 2026-07-01 and target window closed before it); clean_holdout = origins >= 2026-07-01, read once.
+
+  H-WS08-1:
+    title: "WS08 grid: at least one point-in-time predictor x target x horizon cell predicts vol-standardised returns after proper inference and multiplicity"
+    statement: >-
+      Among all registered predictor x {BTC, ETH, ALT} x {1h, 4h, 1d, 7d, 30d} cells, at least one has an in-sample slope with Romano-Wolf
+      adjusted p < 0.05 (day-block bootstrap, all cells jointly), IVX Wald p < 0.05, Hodrick |t| > 1.96 when h > 1 base period, and the
+      same slope sign in the clean holdout.
+    rationale: "Earlier positioning / fundamentals 'supports' (H-P1, H-FU2 holdout) used single-cell t-stats with overlapping 30d targets and persistent regressors; the correct inference has never been applied jointly."
+    test: "ws08_predict grid; RW step-down with bootstrap-standardised slopes; IVX; Hodrick 1B; holdout sign."
+    success: "supports iff >= 1 cell meets all four conditions; contradicts iff no cell has RW p < 0.10 in-sample; else inconclusive. Holdout: sign of each surviving cell's slope (inconclusive if < 30 non-overlapping obs)."
+    prior: 0.15
+    family: predict
+    status: proposed
+
+  H-WS08-2:
+    title: "Funding level and its 365-day percentile predict lower subsequent returns (crowding unwinds) at 1d-30d"
+    statement: "Slope of the vol-standardised forward return on funding (24h mean) and on the funding percentile is negative for BTC, ETH and ALT at 1d, 7d and 30d."
+    rationale: "Crowded-long funding is the most quoted positioning signal; H-P1 (funding_contrarian strategy) contradicted in-sample and 'supported' in the holdout on sign only."
+    test: "grid cells fund / fund_pct; NW, Hodrick, IVX, RW."
+    success: "supports iff any of these cells has slope < 0 with RW p < 0.05 and IVX p < 0.05 and holdout sign < 0; contradicts iff all in-sample slopes have IVX p > 0.10 or the significant ones are positive; else inconclusive."
+    prior: 0.20
+    family: predict
+    status: proposed
+
+  H-WS08-3:
+    title: "Perp-index basis and the Deribit 30d term basis predict lower subsequent returns"
+    statement: "Slope on the 24h mean perp premium ln(last/index) and on the annualised 30d futures basis implied by Deribit options is negative at 1h-30d (BTC, ETH; ALT uses BTC term basis)."
+    rationale: "Basis is the leverage-demand price; rich basis = crowded longs; overlaps funding, tested separately because it is observed continuously."
+    test: "grid cells basis / tbasis."
+    success: "as H-WS08-2 with these cells."
+    prior: 0.15
+    family: predict
+    status: proposed
+
+  H-WS08-4:
+    title: "Open-interest change predicts the direction of subsequent returns (two-sided)"
+    statement: "Slope on the 24h (daily origins) or 4h (hourly origins) log change in open interest is non-zero at some horizon for BTC, ETH or ALT."
+    rationale: "H-P2 (oi_price_divergence) failed in both segments as a strategy; the raw predictive slope with persistent-regressor-robust inference has not been tested."
+    test: "grid cells doi."
+    success: "supports iff any doi cell has RW p < 0.05, IVX p < 0.05 and holdout sign kept; contradicts iff all doi cells have IVX p > 0.10; else inconclusive."
+    prior: 0.10
+    family: predict
+    status: proposed
+
+  H-WS08-5:
+    title: "The Bybit long/short account ratio is a contrarian predictor"
+    statement: "Slope on log(long share / short share) (latest 4h print) is negative at 4h-7d."
+    rationale: "Retail account ratios are read as contrarian; available 2021-08 .. 2026-11-07 for the 23 long-history perps."
+    test: "grid cells ls."
+    success: "as H-WS08-2 with ls cells (sign < 0)."
+    prior: 0.15
+    family: predict
+    status: proposed
+
+  H-WS08-6:
+    title: "The Coinbase premium (raw and USDT-adjusted) predicts positive subsequent BTC/ETH returns at 1h-1d"
+    statement: >-
+      premium = ln(Coinbase BTC-USD close / Binance spot BTCUSDT close), adjusted = premium - ln(Coinbase USDT-USD close), hourly closes,
+      24h mean for daily origins, last 1h for hourly origins; slope > 0 at 1h, 4h, 1d (ALT uses BTC premium).
+    rationale: "US-spot demand lore; H-XV2 (forward, 30-min trigger) is still collecting; this is the historical PIT version (public hourly candles)."
+    test: "grid cells cbp_raw / cbp_adj."
+    success: "supports iff any of these cells has slope > 0, RW p < 0.05, IVX p < 0.05 and holdout sign > 0; contradicts iff all have IVX p > 0.10 or the significant ones are negative; else inconclusive."
+    prior: 0.20
+    family: predict
+    status: proposed
+
+  H-WS08-7:
+    title: "Stablecoin supply growth predicts positive subsequent returns (H-FU1 with persistent-regressor inference)"
+    statement: "Slope on the 30d log change of total stablecoin supply (z vs trailing 365 d) is positive at 7d and 30d."
+    rationale: "H-FU1 was inconclusive in-sample (t 1.63, NW only) and contradicted in the holdout; DefiLlama is revisable, so even a positive is weak."
+    test: "grid cells stable."
+    success: "as H-WS08-6 with stable cells at 7d/30d."
+    prior: 0.12
+    family: predict
+    status: proposed
+
+  H-WS08-8:
+    title: "Implied-vol predictors: DVOL level and the variance risk premium predict positive returns; DVOL changes are two-sided"
+    statement: "Slope on DVOL level and on VRP = (DVOL/100)^2 - trailing 30d realised variance (annualised) is positive at 7d/30d; slope on the DVOL change is non-zero at some horizon."
+    rationale: "Bollerslev-Tauchen-Zhou VRP predicts equity returns; H-FU2 contradicted in-sample (t -1.52) and 'supported' on 14 holdout weeks."
+    test: "grid cells dvol / ddvol / vrp."
+    success: "supports iff a dvol or vrp cell has slope > 0 (or any ddvol cell) with RW p < 0.05, IVX p < 0.05 and holdout sign kept; contradicts iff all have IVX p > 0.10 or the significant dvol/vrp ones are negative; else inconclusive."
+    prior: 0.15
+    family: predict
+    status: proposed
+
+  H-WS08-9:
+    title: "The 25-delta risk reversal (30d) predicts subsequent returns (two-sided)"
+    statement: "Slope on Deribit rr25_30 (daily 08:00 fit, PIT to the next origin) is non-zero at 1d-30d for BTC/ETH (ALT uses BTC)."
+    rationale: "Option skew as a sentiment / crash-demand gauge; data end 2026-10-09 so the holdout is about 3 months."
+    test: "grid cells skew."
+    success: "supports iff any skew cell has RW p < 0.05, IVX p < 0.05 and holdout sign kept; contradicts iff all have IVX p > 0.10; else inconclusive."
+    prior: 0.10
+    family: predict
+    status: proposed
+
+  H-WS08-10:
+    title: "Macro predictors: rising real yields and a rising dollar predict lower, and a positive NDX day predicts higher, subsequent crypto returns"
+    statement: "Slope on the 5d change in DFII10 (< 0), the 5d log change in DTWEXBGS (< 0) and the last NDX daily log return (> 0) at 1d-30d, daily origins (macro known at obs_date + 1 day 00:00 UTC)."
+    rationale: "Cross-asset liquidity channel; TVTP found the macro drivers unstable; macro_narrative cells were inconclusive."
+    test: "grid cells ry / usd / ndx."
+    success: "supports iff any of these cells has the registered sign with RW p < 0.05, IVX p < 0.05 and holdout sign kept; contradicts iff all have IVX p > 0.10 or the significant ones have the wrong sign; else inconclusive."
+    prior: 0.12
+    family: predict
+    status: proposed
+
+  H-WS08-11:
+    title: "Fear & Greed is a contrarian predictor at 7d-30d"
+    statement: "Slope on the alternative.me Fear & Greed index (value for day D known at D 01:00 UTC, so the D-1 value at the D 00:00 origin) is negative at 7d and 30d."
+    rationale: "Sentiment contrarian lore; H-NEWS4 found no next-day direction from news sentiment."
+    test: "grid cells fng."
+    success: "as H-WS08-2 with fng cells at 7d/30d."
+    prior: 0.12
+    family: predict
+    status: proposed
+
+  H-WS08-12:
+    title: "Positioning and implied-vol predictors move the tails, not the median, of 1d and 7d returns"
+    statement: >-
+      In quantile regressions of vol-standardised 1d (all daily origins) and 7d (non-overlapping Monday origins) returns at tau 0.1, 0.5, 0.9,
+      for at least one predictor in {fund, fund_pct, basis, doi, dvol, vrp, skew} the tail-spread slope b(0.9) - b(0.1) differs from 0 while
+      b(0.5) does not.
+    rationale: "Crowding and implied vol may predict crash risk / dispersion rather than the mean; if so they are risk inputs, not direction signals."
+    test: "statsmodels QuantReg, kernel SE (non-overlapping samples); b(0.9)-b(0.1) SE from a 60-day block bootstrap (B = 299); Holm across predictor x target x horizon."
+    success: "supports iff some cell has Holm p < 0.05 for b(0.9)-b(0.1) and b(0.5) p > 0.10, with the same sign of b(0.9)-b(0.1) in the holdout; contradicts iff no cell has raw p < 0.05 for the tail spread; else inconclusive."
+    prior: 0.30
+    family: predict
+    status: proposed
+
+  H-WS08-13:
+    title: "Some predictor beats the prevailing mean out of sample (Clark-West) and the conditional Giacomini-White test agrees"
+    statement: >-
+      Expanding-window (purged: only pairs whose target window closed before the origin) OLS forecasts beat the prevailing-mean benchmark:
+      OOS R^2 > 0 with Clark-West MSPE-adjusted NW t > 1.645 (one-sided), and the rolling-window (365 d / 90 d hourly) conditional GW test
+      (instruments 1, lagged loss difference) rejects equal predictive ability in favour of the predictor, for at least one cell after Holm.
+    rationale: "In-sample predictability with persistent regressors is often an artefact; OOS with the nested-model correction is the honest check (Welch-Goyal)."
+    test: "OOS from the 2nd year of each cell's data; llm_in_sample OOS block and clean_holdout OOS block reported separately; Holm over cells within each block."
+    success: "supports iff >= 1 cell passes CW (Holm) in the llm_in_sample OOS block and keeps OOS R^2 > 0 in the holdout; contradicts iff no cell has CW raw p < 0.05 in-sample OOS; else inconclusive."
+    prior: 0.15
+    family: predict
+    status: proposed
+
+  H-WS08-14:
+    title: "A sign rule on the best grid cell pays after costs"
+    statement: >-
+      For each cell that passes H-WS08-1 (or, if none, the top 3 by in-sample bootstrap |t|, flagged as selected), the rule position =
+      sign(b_IS x (x_t - median_IS(x))), held h, non-overlapping, earns mean net return > 0 in vol units after taker 5.5 bp per side
+      (and a maker-entry variant 2.0 + 1.3 bp entry, 5.5 bp exit), in both segments.
+    rationale: "Statistical significance is not economic value; break-even correlations are about 0.27 at 1h, 0.14 at 4h, 0.05 at 1d for BTC."
+    test: "mean net signed return per trade in sigma_h units and bp; day-block bootstrap CI; deflated Sharpe with the grid trial count."
+    success: "supports iff net mean > 0 with 95% CI above 0 in-sample and net mean > 0 in the holdout for a cell that passed H-WS08-1; contradicts iff no such cell or net <= 0; else inconclusive."
+    prior: 0.08
+    family: predict
+    status: proposed
+
+  # ---- XSECT core (WS09, folded into WS08): weekly cross-section of Bybit USDT crypto perps in the lake (TradFi perps excluded),
+  # rebalanced Monday 00:00 UTC, liquidity filter trailing 30d median daily turnover >= 20 M USD known at t, listing burn-in;
+  # characteristics MOM (log return t-30d .. t-1d), REV (t-7d .. t), CARRY (mean funding over the last 7 d), BETA (60 d daily beta to
+  # BTC). Next-week returns: price log return and total (price + funding received by a long = - sum of funding rates). Tercile
+  # long-short EW portfolios net of taker 5.5 bp x turnover; Fama-MacBeth on cross-sectional ranks (in [-0.5, 0.5]) of vol-scaled
+  # next-week returns, NW t (lag 4); Shanken (1992) EIV correction for the raw-beta FM. Survivorship: the lake holds today's list
+  # plus whatever delisted symbols it has; the bias is noted, not corrected.
+
+  H-WS08-15:
+    title: "Cross-sectional momentum: past-30d winners outperform losers next week across Bybit perps"
+    statement: "FM slope on the MOM rank > 0, and the top-minus-bottom tercile portfolio earns > 0 net of costs."
+    rationale: "Crypto xs momentum (Liu-Tsyvinski-Wu 2022) is the main candidate for alt selection inside the trend sleeve."
+    test: "FM NW t, tercile L-S net mean with NW t; RW over the four xs characteristics (week-block bootstrap)."
+    success: "supports iff FM slope > 0 with NW t > 2 (RW p < 0.05 over the 4 characteristics) in-sample and L-S net > 0 and the same FM sign in the holdout; contradicts iff the in-sample FM slope <= 0; else inconclusive."
+    prior: 0.30
+    family: xsect
+    status: proposed
+
+  H-WS08-16:
+    title: "Cross-sectional short-term reversal: last week's winners underperform next week"
+    statement: "FM slope on the REV rank < 0 and the bottom-minus-top tercile earns > 0 net."
+    rationale: "H-SEC2 (within-sector 7d reversal) supported in the holdout; this is the market-wide version with turnover costs."
+    test: "as H-WS08-15."
+    success: "as H-WS08-15 with the sign reversed."
+    prior: 0.30
+    family: xsect
+    status: proposed
+
+  H-WS08-17:
+    title: "Funding carry: high-funding perps underperform in price, and short-high / long-low earns funding plus price net of costs"
+    statement: "FM slope on the CARRY rank for next-week price returns < 0; tercile low-minus-high total return (price + funding) > 0 net."
+    rationale: "H-PAN3 (within-sector funding crowding) and the carry premium H-C1; this is the perp-only cross-sectional version."
+    test: "as H-WS08-15 (price and total returns)."
+    success: "supports iff the FM price slope < 0 with t < -2 (RW p < 0.05) in-sample, low-minus-high total net > 0 in-sample and the same FM sign in the holdout; contradicts iff the FM slope >= 0; else inconclusive."
+    prior: 0.25
+    family: xsect
+    status: proposed
+
+  H-WS08-18:
+    title: "The security market line is flat or inverted across perps (betting against beta)"
+    statement: "FM slope on BTC beta (raw beta with Shanken-corrected SE, and rank) is <= 0: high-beta perps do not earn more per unit of beta."
+    rationale: "Low-beta anomaly; decides whether alt selection should prefer low-beta names for a given trend signal."
+    test: "FM on raw beta (Shanken) and on beta rank."
+    success: "supports iff the FM rank slope < 0 with t < -2 (RW p < 0.05) in-sample and same sign holdout; contradicts iff the FM slope > 0 with t > 2; else inconclusive (a flat SML is inconclusive, not support)."
+    prior: 0.25
+    family: xsect
+    status: proposed
+
+  H-WS08-19:
+    title: "Inside the 4h trend sleeve, the cross-sectional rank at entry improves alt selection"
+    statement: >-
+      Among the stress-harness zoo_ensemble and trend_4h base trades on alts (non-BTC/ETH), trade R (gross, side x (exit - entry) / |entry - stop|)
+      regressed on the trade-direction-signed MOM, CARRY and BETA ranks at entry: the MOM slope > 0 (trend in the direction of xs winners is
+      better), with week-clustered t > 2 in-sample and the same sign in the holdout; a rank filter (top half in the trade direction) raises mean R.
+    rationale: "The only surviving family is 4h trend; if xs rank helps choose which alts to trade it raises R per slot under the 3-open-slot limit."
+    test: "pooled OLS of R on signed ranks with week-clustered SE; filter mean R difference with week-block bootstrap CI."
+    success: "supports iff MOM slope > 0 with clustered t > 2 in-sample and > 0 in the holdout and the filtered mean R exceeds the unfiltered one in both; contradicts iff the in-sample slope <= 0; else inconclusive."
+    prior: 0.25
+    family: xsect
+    status: proposed
+
+  # ---- MACRO core (WS18, folded into WS08): weekday UTC-day crypto log returns vs same-day NDX log return, change in DFII10,
+  # log change in DTWEXBGS, change in HY OAS (BAMLH0A0HYM2, from 2023-11). Betas: constant (expanding OLS, PIT), rolling 90 trading
+  # days, Kalman random-walk betas (state noise Q diagonal, MLE on llm_in_sample, then fixed). One-step conditional fit
+  # r_t vs alpha + beta_{t|t-1}' x_t; squared error and Gaussian log score; DM with HAC + HLN correction.
+
+  H-WS08-20:
+    title: "Crypto betas to macro are time-varying: Kalman betas beat constant and rolling betas in one-step conditional fit"
+    statement: "For BTC, ETH and ALT the Kalman random-walk-beta model has lower one-step squared error and higher log score than the expanding constant-beta and the rolling-90d models."
+    rationale: "TVTP and macro work found unstable macro links; whether the beta is a usable risk input depends on tracking it."
+    test: "DM (HAC, HLN) on squared-error and log-score differences; llm_in_sample OOS from 2022-01 and clean_holdout."
+    success: "supports iff Kalman beats both alternatives with DM t < -2 (MSE) for >= 2 of 3 targets in-sample and the same sign in the holdout; contradicts iff Kalman is worse than the constant beta (DM t > 2) for >= 2 targets; else inconclusive."
+    prior: 0.45
+    family: macro
+    status: proposed
+
+  H-WS08-21:
+    title: "Down-day asymmetry: crypto's beta to NDX is larger on NDX down days than on up days"
+    statement: "In r_crypto = a + b_up max(r_NDX, 0) + b_dn min(r_NDX, 0) + controls (d DFII10, d log dollar), b_dn - b_up > 0."
+    rationale: "Correlations rise in sell-offs; decides whether macro risk gates should be asymmetric."
+    test: "OLS with HAC t on b_dn - b_up per target; Holm over the 3 targets."
+    success: "supports iff b_dn - b_up > 0 with Holm p < 0.05 for >= 1 target in-sample and the same sign in the holdout; contradicts iff the in-sample difference < 0 for all targets; else inconclusive."
+    prior: 0.45
+    family: macro
+    status: proposed
+
+  H-WS08-22:
+    title: "DVOL improves 1d and 7d realised-variance forecasts beyond log-HAR; the 25d risk reversal adds nothing"
+    statement: >-
+      For BTC and ETH daily RV (sum of squared 1h log returns), log-HAR + log(DVOL^2/365) has lower QLIKE than log-HAR at h = 1d and 7d
+      (direct, expanding refit every 30 d); adding rr25_30 does not lower QLIKE further; the 90% MCS contains HAR+DVOL and not plain HAR.
+    rationale: "H-VCL4 found a small DVOL gain at 7d on weekly origins (t -1.44 in-sample); WS18 asks for the decision input sigma_risk."
+    test: "QLIKE DM (HAC lag h, HLN) per asset and horizon; MCS (Tmax, block bootstrap B = 999) over {HAR, HAR+DVOL, HAR+skew, HAR+DVOL+skew}."
+    success: "supports iff HAR+DVOL beats HAR with DM t < -2 for >= 3 of the 4 asset x horizon cells in-sample, the holdout sign agrees, and the skew increment is not significant (|t| < 2); contradicts iff HAR+DVOL is worse (t > 0) in >= 3 cells; else inconclusive."
+    prior: 0.55
+    family: macro
+    status: proposed
+
+  # WS01 extra trial (registered after H-WS01-4 / H-WS01-7 qualified only 2 pairs under the strict t-and-same-key rule).
+  H-WS01-8:
+    title: "Extra trial of H-WS01-4: holdout tests are underpowered for the in-sample effect (z from p, count key from the row)"
+    statement: "For effect-claim hypotheses with a latest llm_in_sample supports row and a latest clean_holdout row whose primary p came from a raw p, t/z or a CI (not adjusted-only, Simes-combined, manual or none) and that both carry the same sample-count key (first of N_KEYS in the statistic's scope, else at the top level of metrics), the median holdout power 1 - Phi(1.645 - |z_in| sqrt(n_hold / n_in)), with |z_in| = Phi^-1(1 - p_in / 2), is below 0.50."
+    rationale: "H-WS01-4's rule needed an explicit t in both rows; most rows report p. Counted as an additional trial of the same question."
+    test: "Median power over qualifying hypotheses; also required holdout n for 80% one-sided 5% power, n_req = n_in (2.486 / |z_in|)^2."
+    success: "Supports iff median < 0.50; contradicts iff >= 0.50; inconclusive if fewer than 8 hypotheses qualify."
+    prior: 0.60
+    family: audit
+    status: proposed
+
+  # ---- WS14 extra trial (registered 2026-11-26 ~23:58 UTC AFTER seeing llm_in_sample per-refit fidelity R^2 of the
+  # spline arm for refits 2021-07..2022-04 printed by the running core job; clean_holdout refits not yet seen) ----
+  H-WS14-11:
+    title: "An additive-spline (GAM) surrogate reproduces the 1h PNN and can replace it without loss"
+    statement: "Per refit, additive cubic splines (5 knots per continuous input, binary inputs linear, ridge 1e-3) on all 19 HOURLY_FEATURES, distilled from the network's log sigma, q50 and log tail ratio on fit-block rows, reproduce the network's log sigma on the test month with R^2 > 0.95, and the rebuilt quantiles are non-inferior on realised pinball with the H-WS14-2 margin (0.25 x the PNN's gain over log-HAR-t)."
+    rationale: "The first layer of the KAN is additive by construction; if the head is close to linear in the latents, the network is a GAM. Extra trial: llm_in_sample fidelity was partly seen before registration."
+    test: "as H-WS14-2 (wf_1h test months, per-date paired pinball, NW mean and SE, one-sided 95% bounds)."
+    success: "supports iff in clean_holdout R^2 > 0.95 and mean + 1.645 SE < margin (llm_in_sample reported, contaminated); contradicts iff in clean_holdout mean - 1.645 SE > margin or R^2 < 0.9; else inconclusive."
+    prior: 0.5
+    family: ws14_interp
+    status: proposed
+
+  # WS01 REFINE (trimmed WS19): improved designs for the highest decision-value inconclusive / underpowered results.
+  # Registered 2026-11-27 ~00:05 UTC before any computation on the data that tests them. H-WS01-9 and -11 are forward-only.
+  H-WS01-9:
+    title: "Forward: the 4h trend sleeve (trend_4h) earns positive net R per closed trade (group-sequential, harm-first)"
+    statement: "trend_4h as coded in ai_trader.research.stress (bracket layer, live costs) on universe L, entries from 2026-11-27 00:00 UTC, closed trades only (open trades censored). Primary statistic: mean net R per closed trade; inference: stationary bootstrap of entry days with block = max(5, p90 holding days measured on the pre-2026-11-27 trades, 19 d). Looks at 100, 250, 500 and 1000 closed trades; one-sided 5% O'Brien-Fleming-type boundaries z = 3.47, 2.45, 2.00, 1.73 for benefit; harm boundary: bootstrap P(mean > 0) < 0.10 at any look from 250 trades on."
+    rationale: "The stress trade-layer holdout (+0.43 R on 266 closed trades) and H-TR1's continuous-position holdout (Sharpe -0.42) disagree, and the in-sample trade-layer edge is weak (+0.07 R, CI includes 0). With about 5 R per-trade dispersion a fixed-n test of +0.15 R needs thousands of trades, so the design stops early for harm and treats benefit as a long-run question. Counts as an extra trial of the trend family."
+    test: "Group-sequential bootstrap z = mean / bootstrap SE at each look."
+    success: "Supports iff the benefit boundary is crossed at a look; contradicts iff the harm boundary is crossed or mean <= 0 at 1000 trades; else inconclusive (continue)."
+    prior: 0.40
+    family: audit_refine
+    status: proposed
+  H-WS01-10:
+    title: "Crypto has no economically relevant hourly leverage asymmetry (TOST on an hourly HAR with signed returns)"
+    statement: "Panel of 23 universe-L perps, hourly RV from 5m Bybit klines (data/research/rough_vol/rv_*.npz), deseasonalised by the causal weekly hour-of-week profile P. y = ln(rv_{t+1}/s_{t+1}); regressors: ln(rv_t/s_t), mean of the deseasonalised log RV over t-23..t and t-167..t, zn_t = |min(r_t, 0)| / sqrt(rv_t), zp_t = max(r_t, 0) / sqrt(rv_t), token fixed effects. Asymmetry A = b(zn) - b(zp); a positive A is a leverage effect. SE clustered by UTC day (all tokens share a day). Equivalence margin: |A| <= 0.25 x (b(zn) + b(zp)) / 2. Segments by origin at 2026-07-01."
+    rationale: "R-LEV-1 (A-grade) rests on H-LEV2, whose daily SHAR test has an MDE (80%) of 0.32 for b(RS-) - b(RS+), larger than the coefficients themselves (0.26 / 0.29): an underpowered null. Hourly data gives about 24x the origins; the hourly-horizon question has not been tested, so its holdout is unread."
+    test: "Pooled OLS with day-clustered sandwich SE per segment; 90% CI of A against the margin (TOST)."
+    success: "Supports iff in both segments the 90% CI of A lies inside the margin; contradicts iff A > 0 with t >= 2 in both segments (a leverage effect exists at 1h); if A < 0 with t <= -2 in both segments, record contradicts with note 'inverse asymmetry'; else inconclusive."
+    prior: 0.45
+    family: audit_refine
+    status: proposed
+  H-WS01-11:
+    title: "Forward: the shock sleeve (shock_regime) does not lose money (harm test)"
+    statement: "shock_regime as coded in config/strategies.yaml through the stress trade layer on universe L, entries from 2026-11-27, closed trades only; mean net R per closed trade with a stationary bootstrap of entry days (block 5 d, the p90 holding period is under 5 d). Looks at 200, 500 and 1000 closed trades."
+    rationale: "shock_regime is a live 'validated sleeve' (agent/decision.py) built from data-generated H-S2 / H-S3, with stress holdout -0.03 R on 618 closed trades and an in-sample +0.06 R. Confirming +0.06 R needs about 7,700 trades (MDE at n = 618 is about 0.2 R), so the feasible question is harm, not benefit."
+    test: "Bootstrap P(mean > 0) at each look."
+    success: "Contradicts (harm) iff P(mean > 0) < 0.10 at any look; supports iff P(mean > 0) > 0.95 at 1000 trades; else inconclusive."
+    prior: 0.35
+    family: audit_refine
+    status: proposed
+
+  # ---- WS14 pick-up of the WS12 deep models (registered 2026-11-27 ~00:05 UTC, before any WS12 weights existed) ----
+  H-WS14-12:
+    title: "WS12's GRU / TCN 1h variance forecast is a scaled HAR plus the hour-of-week factor"
+    statement: "On WS12 refit R2 test rows (2026-07-01..2026-11-25, clean holdout) and R1 test rows (2025-07-01..2026-06-30, llm_in_sample), an OLS surrogate of the seed-averaged 1h logF in [1, lsig_rel1y, har_d, har_w, har_m, lfacn of the next bar (last step), lu of the last 6 steps], fitted on a fit sample of the same refit's training rows to the network's own output, reproduces the network's 1h logF with out-of-sample R^2 > 0.9, for the chosen-lr GRU and TCN."
+    rationale: "WS12 asks whether its sequence networks are a scaled HAR; H-WS14-1 found the PNN is not (0.71 / 0.79) but is close to additive."
+    test: "per arch and refit; pooled test-row R^2 with 10-day block bootstrap; additive-spline variant reported as descriptive."
+    success: "supports iff R^2 > 0.9 for both arches in both refits; contradicts iff R^2 < 0.8 for either arch in either refit; else inconclusive."
+    prior: 0.4
+    family: ws14_interp
+    status: proposed
+  H-WS14-13:
+    title: "WS12's 24h head reads only the calendar and the weekly HAR level"
+    statement: "The 24h logF of the chosen-lr GRU / TCN is reproduced by an OLS surrogate in [1, har_w, lfac_n24, lsig_rel1y] with out-of-sample R^2 > 0.8 on both refits' test rows."
+    rationale: "WS12's own question; at 24h small networks do not beat log-HAR-t (H-PNN1, H-XS2)."
+    test: "as H-WS14-12, 24h head."
+    success: "supports iff R^2 > 0.8 for both arches in both refits; contradicts iff R^2 < 0.6 for either; else inconclusive."
+    prior: 0.5
+    family: ws14_interp
+    status: proposed

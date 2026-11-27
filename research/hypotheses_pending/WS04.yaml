@@ -1,0 +1,72 @@
+# ==== WS04 VOL (+ trimmed WS03 DIST core), specification program 2026-11-27. Registered 2026-11-26 ~23:55 UTC BEFORE any
+# fit on the data that tests them. Code: src/ai_trader/research/vol_spec.py. Assets: BTC, ETH, SOL, XRP, DOGE (Bybit 5m
+# klines 2022-01..2026-11-26), XAU, XAG (Bybit 5m from 2026-03-09). Horizons 1h / 4h / 1d (own-frequency bars, origins every
+# bar). Target RV = sum of squared 5m log returns over the window. Monthly refits, expanding window capped at 3 years.
+# Segments split at research.knowledge_cutoff (2026-07-01). DISCLOSURE: the clean_holdout up to 2026-11-10/15 was already
+# used by H-VM1..5, H-NS4, H-RFSV2, H-NN8 for related vol comparisons (daily HAR family, robust_bc x hour-of-week, RFSV);
+# for those parts this is a re-measurement, not a confirmation. Origins >= 2026-11-16 are reported as a descriptive
+# 'fresh' slice. Pooled crypto = cross-asset mean loss per origin over the 5 crypto perps (common origins); DM t = Newey-West
+# with the Harvey-Leybourne-Newbold correction; MCS = Hansen-Lunde-Nason Tmax, 90%, circular block bootstrap.
+H-WS04-1:
+  title: "The intraday clock lowers next-hour and next-4h QLIKE for the risk sigma"
+  statement: "Scaling the forecast by a causal hour-of-week (1h) / 4h-block-of-week (4h) factor lowers QLIKE: rbc_how vs rbc and loghar_c vs loghar, pooled crypto, at 1h and 4h."
+  rationale: "Intraday variance runs 0.5x-2x of the mean by hour of week (H-GEO1, H-NS4). A calendar-blind EWMA is too high in quiet hours and too low at the US open."
+  test: "paired QLIKE differences, pooled crypto, DM-HLN t by origin; segments."
+  success: "both pairs diff < 0 with t < -2 at 1h and 4h in llm_in_sample, same sign in clean_holdout."
+  prior: 0.9
+  family: vol_model
+  status: proposed
+H-WS04-2:
+  title: "Complexity beyond the clock log-HAR does not pay (GARCH family, HARQ, HAR-J)"
+  statement: "At 1h, 4h and 1d the best HAR-family spec with the clock (loghar_c or loghar_cr) is in the pooled-crypto 90% MCS in both segments, and no GARCH-family spec (GARCH / GJR / EGARCH / APARCH / FIGARCH, Normal / t / skew-t, raw or clock-deflated) beats it with DM t < -2 in either segment."
+  rationale: "GARCH sees one squared return per bar; HAR sees 5m RV. Realised measures are more informative (ABDL 2003, Corsi 2009); HARQ/HAR-J gains in the 1d tournament were small."
+  test: "MCS over all specs per horizon and segment, pooled crypto; pairwise DM-HLN vs the best clock log-HAR."
+  success: "MCS membership in both segments at all three horizons and no GARCH DM t < -2."
+  prior: 0.7
+  family: vol_model
+  status: proposed
+H-WS04-3:
+  title: "The recommended spec beats the live robust_bc sigma_risk at its own timeframe"
+  statement: "The selection-rule pick (simplest spec in the pooled-crypto in-sample 90% MCS that is also in the holdout MCS) has lower QLIKE than robust_bc computed on the same timeframe's bars (the live sigma_risk_next) at 1h, 4h and 1d."
+  rationale: "robust_bc is a calendar-blind EWMA of one squared return per bar; it was the worst or near-worst contestant at 1d/5d in H-VM."
+  test: "paired QLIKE, pooled crypto, DM-HLN t; segments; also per asset."
+  success: "diff < 0 with t < -2 in llm_in_sample at all three horizons, same sign in clean_holdout."
+  prior: 0.8
+  family: vol_model
+  status: proposed
+H-WS04-4:
+  title: "Scheduled-release dummies add to the clock log-HAR"
+  statement: "Adding a dummy for a scheduled CPI / NFP / FOMC release inside the target window (schedule known before the origin) to the clock log-HAR lowers QLIKE on the release windows at 1h and 4h."
+  rationale: "The first 5 min after CPI/FOMC carry ~15x variance (H-GEO3); the clock cannot see the release calendar."
+  test: "QLIKE loghar_cr - loghar_c on windows containing a release (pooled crypto, per-event mean, bootstrap over events) and on all windows (DM-HLN)."
+  success: "release-window diff < 0 with 95% CI excluding 0 in llm_in_sample and same sign in clean_holdout; all-window diff not > 0 with t > 2."
+  prior: 0.6
+  family: vol_model
+  status: proposed
+H-WS04-5:
+  title: "Weekend scaling improves the central forecast but must not be used for the risk sigma unless weekend VaR still covers"
+  statement: "(a) At 1d the day-of-week clock log-HAR beats the calendar-blind log-HAR on QLIKE (crypto pooled, and XAU/XAG). (b) Under the clock spec with Student-t innovations, the 1% lower and upper VaR exceedance rate on weekend windows stays <= 2% (Kupiec p > 0.05) at 1h, 4h and 1d."
+  rationale: "Weekend RV is 0.5x (crypto) and 0.05-0.16x (metals) of weekdays (H-VM tables, H-TVTP1s), but weekends are jump-prone (H-V2: shrinking the risk sigma worsened tail loss)."
+  test: "(a) paired QLIKE, DM-HLN t; (b) exceedance counts on weekend windows, Kupiec POF, pooled crypto and per metal."
+  success: "(a) diff < 0, t < -2 in-sample, same sign holdout (crypto); (b) holds in both segments (crypto pooled)."
+  prior: 0.55
+  family: vol_model
+  status: proposed
+H-WS04-6:
+  title: "Student-t is the right innovation default; skew-t and a GPD tail add little"
+  statement: "For returns standardised by the recommended spec, a unit-variance Student-t (nu fit on llm_in_sample) beats the Normal on clean_holdout log score at 1h, 4h and 1d (pooled crypto), skew-t (Hansen) does not beat the t (|t| < 2), and the t's 1% two-sided VaR exceedance rates pass Kupiec and Christoffersen (p > 0.05)."
+  rationale: "Crypto returns standardised by a good vol forecast keep fat tails (nu ~ 3-6 at 1h); skewness is small and unstable."
+  test: "per-observation log-score differences (DM-HLN t), Kupiec POF, Christoffersen CC, PIT KS / Berkowitz; GPD (POT at the 5% tails) reported as a tail-coverage comparison at 0.5% / 0.1%."
+  success: "t beats Normal with t-stat > 2 at all three horizons; skew-t vs t |t| < 2; t VaR tests pass at 1% in the holdout."
+  prior: 0.65
+  family: distribution
+  status: proposed
+H-WS04-7:
+  title: "The trusted spec prices the 4-sigma tail correctly"
+  statement: "Under the recommended spec with its Student-t (in-sample nu), the clean_holdout frequency of a one-bar adverse move beyond 4 sigma (each side) lies inside the 95% binomial interval of the model probability at 1h, 4h and 1d (pooled crypto), and the 24h first-passage frequency to -4 sigma_1h is within a factor 1.5 of the model's simulated probability."
+  rationale: "The 4 sigma stop cap (stops.MAX_STOP_SIGMA, H-STOP1 prior) assumes sigma_risk scales the tail; a mis-specified sigma or tail makes the cap either loose or tight."
+  test: "binomial interval per horizon and side; first passage from 5m lows/highs over the next 24 h at hourly origins every 4 h vs t-innovation simulation of the 1h spec."
+  success: "all one-bar frequencies inside the interval and the first-passage ratio within [0.67, 1.5] in clean_holdout."
+  prior: 0.45
+  family: distribution
+  status: proposed
