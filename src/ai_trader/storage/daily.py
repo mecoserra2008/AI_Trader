@@ -38,33 +38,39 @@ def atx_binary(root: Path) -> Path:
     raise FileNotFoundError("no atx binary: build with `cargo build --release -p atx` and copy it to bin/atx-ops.exe")
 
 
-def flow_bars_newest(lake: Lake) -> dict[str, date]:
+def flow_bars_days(lake: Lake) -> dict[str, set[date]]:
+    """UTC days with at least one 1h flow_bars row, per symbol."""
     files = list((lake.root / "flow_bars").rglob("part-*.parquet"))
     if not files:
         return {}
     con = duckdb.connect()
     con.execute("SET TimeZone = 'UTC'; SET memory_limit = '500MB'")
     flist = "[" + ", ".join("'" + f.as_posix() + "'" for f in files) + "]"
-    rows = con.sql(f"SELECT symbol, max(epoch_ms(event_ts)) FROM read_parquet({flist}, hive_partitioning = true) WHERE freq = '1h' GROUP BY 1").fetchall()
+    rows = con.sql(f"SELECT DISTINCT symbol, epoch_ms(event_ts) // 86400000 FROM read_parquet({flist}, hive_partitioning = true) WHERE freq = '1h'").fetchall()
     con.close()
-    return {s: datetime.fromtimestamp(ms / 1000, UTC).date() for s, ms in rows}
+    out: dict[str, set[date]] = {}
+    for s, dn in rows:
+        out.setdefault(s, set()).add(date(1970, 1, 1) + timedelta(days=int(dn)))
+    return out
 
 
-def flow_bars_plan(newest: dict[str, date], today: date, days: int, since: date | None) -> list[tuple[str, date]]:
-    """(symbol, day) pairs to fetch: days after the symbol's newest day, inside [since or today - days, today - 1]."""
+def flow_bars_plan(present: dict[str, set[date]], today: date, days: int, since: date | None) -> list[tuple[str, date]]:
+    """(symbol, day) pairs to fetch: every day in [since or today - days, today - 1] the symbol has no 1h row for.
+    Missing days anywhere in the window count, so an explicit `since` also closes a hole behind newer days."""
     lo = since or (today - timedelta(days=days))
     out = []
-    for sym in sorted(newest):
-        d = max(lo, newest[sym] + timedelta(days=1))
+    for sym in sorted(present):
+        d = lo
         while d < today:
-            out.append((sym, d))
+            if d not in present[sym]:
+                out.append((sym, d))
             d += timedelta(days=1)
     return out
 
 
 def run_flow_bars(root: Path, lake: Lake, days: int, since: date | None, dry_run: bool) -> list[str]:
     today = datetime.now(UTC).date()
-    plan = flow_bars_plan(flow_bars_newest(lake), today, days, since)
+    plan = flow_bars_plan(flow_bars_days(lake), today, days, since)
     log = [f"flow_bars: {len(plan)} symbol-days to fetch"]
     if dry_run or not plan:
         return log + [f"  would fetch {s} {d}" for s, d in plan[:20]]

@@ -126,10 +126,19 @@ def test_daily_flow_bars_plan_only_missing_recent_days():
     from ai_trader.storage.daily import flow_bars_plan
 
     today = date(2026, 11, 27)
-    newest = {"BTCUSDT": date(2026, 11, 10), "ETHUSDT": date(2026, 11, 26), "SOLUSDT": date(2026, 11, 25)}
-    assert flow_bars_plan(newest, today, 2, None) == [("BTCUSDT", date(2026, 11, 25)), ("BTCUSDT", date(2026, 11, 26)), ("SOLUSDT", date(2026, 11, 26))]
-    hole = flow_bars_plan(newest, today, 2, date(2026, 11, 11))
+
+    def upto(d):
+        return {d - timedelta(days=i) for i in range(30)}
+
+    present = {"BTCUSDT": upto(date(2026, 11, 10)), "ETHUSDT": upto(date(2026, 11, 26)), "SOLUSDT": upto(date(2026, 11, 25))}
+    assert flow_bars_plan(present, today, 2, None) == [("BTCUSDT", date(2026, 11, 25)), ("BTCUSDT", date(2026, 11, 26)), ("SOLUSDT", date(2026, 11, 26))]
+    hole = flow_bars_plan(present, today, 2, date(2026, 11, 11))
     assert hole[0] == ("BTCUSDT", date(2026, 11, 11)) and len([x for x in hole if x[0] == "BTCUSDT"]) == 16, "explicit backfill closes the hole"
+    # a hole behind newer days (the 2026-11-28 case: 11-26/27 already written, 11-11..11-24 missing) is still found
+    present["XRPUSDT"] = upto(date(2026, 11, 10)) | {date(2026, 11, 25), date(2026, 11, 26)}
+    behind = [d for s, d in flow_bars_plan(present, today, 2, date(2026, 11, 11)) if s == "XRPUSDT"]
+    assert behind == [date(2026, 11, 11) + timedelta(days=i) for i in range(14)]
+    assert not [x for x in flow_bars_plan(present, today, 2, None) if x[0] == "XRPUSDT"], "the default window skips present days"
 
 
 def test_svi_rows_follow_the_import_convention():
