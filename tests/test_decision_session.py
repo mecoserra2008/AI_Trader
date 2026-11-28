@@ -2,7 +2,10 @@
 
 Synthetic data only: candidates come from an injected analyse function, the gate from an injected function, and the
 paper book is the real Rust engine (`atx exec-intents --mode paper --as-of`) on CSV bars in a temp dir, so the
-persistence, kill-switch and no-lookahead checks exercise the actual fill logic.
+persistence, kill-switch and no-lookahead checks exercise the actual fill logic. The bracket candidates here use the
+legacy trend_4h sleeve (bracket machinery kept for open positions since D4); the WS16 trend sleeves (no target, rule
+exit) and the H-WS16-15 monitor are tested in tests/test_trend_sleeves.py. The monitor and the 4h signals are injected
+(hermetic: no lake reads).
 """
 
 from __future__ import annotations
@@ -60,12 +63,13 @@ def fake_analyse(n_cands: int = 1, px: float = 3000.0, future_data: bool = False
         for k in range(n_cands):
             stop = px * math.exp(-3 * SIG)
             tp = px * math.exp(6 * SIG)
-            c = Candidate(f"shk-{k}", SYM, "shock_regime", "long", "market", px, stop, tp, p_first(px, stop, tp), 0.45, 2.0, None, "test shock",
-                          "majors", str(t - timedelta(hours=1)), sigma_per_bar=SIG, freq="1h", stop_sigma=3.0)
+            c = Candidate(f"brk-{k}", SYM, "trend_4h", "long", "market", px, stop, tp, p_first(px, stop, tp), 0.45, 2.0, None, "test bracket",
+                          "majors", None, sigma_per_bar=SIG, freq="1h", stop_sigma=3.0)
             cands.append(c)
         known = t + timedelta(minutes=5) if future_data else t - timedelta(minutes=4)
         st = {"symbol": SYM, "price": px, "cell": "R4", "label": "test", "weekend": False, "har_day": 0.03, "sigma_risk_h": SIG, "sigma_rb_h": SIG, "wk_m": 1.0,
-              "trend_4h": 0.0, "shock_signal": 1.0, "shock": "test", "bar_ts": str(t - timedelta(hours=1)), "data_max_ts": str(known), "data_max_ts_4h": None}
+              "sigma_risk_4h": 2 * SIG, "zoo_ew": 0.5, "tsmom_30d": 0.4, "signal_close": str(t.replace(minute=0)), "bar_ts": str(t - timedelta(hours=1)),
+              "data_max_ts": str(known), "data_max_ts_4h": None}
         return f"{SYM} card", cands, st
     return f
 
@@ -76,11 +80,19 @@ def pass_gate(cands, states, as_of):
     return g, {}
 
 
-def prep(env, as_of=T, *, n=1, test=False, analyse=None, wall=None):
+def no_monitor(t):
+    return {"version": "test", "as_of": dm.iso(t), "forward_start": "2026-11-27T08:00:00+00:00", "sleeves": {}, "error": None}
+
+
+def no_signals(sym, t):
+    raise AssertionError("no trend-sleeve position in these tests: the 4h signals must not be read")
+
+
+def prep(env, as_of=T, *, n=1, test=False, analyse=None, wall=None, monitor=None, signals=None):
     p, bars = env
     book = dm.Book(p, dm.TEST_RUN if test else dm.BOOK_RUN, bars_dir=bars, journal=False)
     out = dm.prepare(as_of, paths=p, symbols=[SYM], pipeline_test=test, analyse_fn=analyse or fake_analyse(n), gate_fn=pass_gate, book=book,
-                     wall=wall or as_of + timedelta(minutes=1))
+                     wall=wall or as_of + timedelta(minutes=1), monitor_fn=monitor or no_monitor, signals_fn=signals or no_signals)
     return out, book
 
 
@@ -211,7 +223,7 @@ def test_size_stop_cap_and_limit_overrides_are_refused(bad):
 def test_size_override_is_refused_end_to_end_and_nothing_reaches_the_book(env):
     out, book = prep(env)
     sid = out.name
-    doc = take_all(sid, ["shk-0"])
+    doc = take_all(sid, ["brk-0"])
     doc["decisions"][0]["qty"] = 10
     with pytest.raises(dm.RefusedError, match="risk engine"):
         dm.decide(sid, doc, paths=env[0], wall=T + timedelta(minutes=5), book=book)
@@ -225,9 +237,9 @@ def test_deadline_refusal(env):
     out, book = prep(env)
     sid = out.name
     with pytest.raises(dm.RefusedError, match="deadline"):
-        dm.decide(sid, take_all(sid, ["shk-0"]), paths=env[0], wall=T + timedelta(minutes=31), book=book)
+        dm.decide(sid, take_all(sid, ["brk-0"]), paths=env[0], wall=T + timedelta(minutes=31), book=book)
     with pytest.raises(dm.RefusedError, match="pipeline_test"):
-        dm.decide(sid, take_all(sid, ["shk-0"]), paths=env[0], wall=T + timedelta(minutes=5), simulate_at=T + timedelta(minutes=5), book=book)
+        dm.decide(sid, take_all(sid, ["brk-0"]), paths=env[0], wall=T + timedelta(minutes=5), simulate_at=T + timedelta(minutes=5), book=book)
     assert not (out / "submitted.json").exists()
     # a real session cannot be prepared for a stale as_of either
     with pytest.raises(dm.RefusedError):
@@ -238,8 +250,8 @@ def test_deadline_refusal(env):
 def test_paper_book_persists_across_sessions_and_size_comes_from_the_engine(env):
     p, _ = env
     out, book = prep(env)
-    sub = dm.decide(out.name, take_all(out.name, ["shk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
-    assert sub["ids"] == ["shk-0"] and sub["accepted"] == ["shk-0"] and sub["tests"] == []
+    sub = dm.decide(out.name, take_all(out.name, ["brk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
+    assert sub["ids"] == ["brk-0"] and sub["accepted"] == ["brk-0"] and sub["tests"] == []
     it = json.loads((out / "intents.jsonl").read_text(encoding="utf-8").splitlines()[0])
     assert "qty" not in json.dumps(it) and it["targets"] and it["sigma"]["per_bar"] == SIG
     pend = book.positions()["pending_orders"]
@@ -253,7 +265,7 @@ def test_paper_book_persists_across_sessions_and_size_comes_from_the_engine(env)
     fill_ts = json.loads((book2.dir / "fills.jsonl").read_text(encoding="utf-8").splitlines()[0])["ts"]
     assert fill_ts == int((T.replace(minute=0) + timedelta(hours=1)).timestamp() * 1000), "fills at the 09:00 open, after the 08:15 decision"
     pk = (out2 / "PACKET.md").read_text(encoding="utf-8")
-    assert "open 1" in pk and f"{out.name}/shk-0" in pk
+    assert "open 1" in pk and f"{out.name}/brk-0" in pk
     assert len(pk.splitlines()) <= 120
     # the new candidate on the held symbol is blocked (one position per symbol)
     rows = json.loads((out2 / "candidates.json").read_text(encoding="utf-8"))
@@ -271,8 +283,8 @@ def test_live_flag_alone_does_not_stop_the_paper_harness_but_a_mainnet_process_i
     monkeypatch.setenv("AI_TRADER_ENVIRONMENT", "demo")
     monkeypatch.setitem(load().settings["execution"], "allow_mainnet", True)
     out, book = prep(env)
-    sub = dm.decide(out.name, take_all(out.name, ["shk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
-    assert sub["accepted"] == ["shk-0"]
+    sub = dm.decide(out.name, take_all(out.name, ["brk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
+    assert sub["accepted"] == ["brk-0"]
     pend = book.positions()["pending_orders"]
     assert len(pend) == 1 and pend[0]["qty"] > 0          # the order is in the paper book (atx exec-intents --mode paper)
     for k, v in (("AI_TRADER_ALLOW_MAINNET", "1"), ("AI_TRADER_ENVIRONMENT", "mainnet")):
@@ -280,7 +292,7 @@ def test_live_flag_alone_does_not_stop_the_paper_harness_but_a_mainnet_process_i
         with pytest.raises(dm.RefusedError, match="mainnet"):
             prep(env, as_of=T + timedelta(hours=4))
         with pytest.raises(dm.RefusedError, match="mainnet"):
-            dm.decide(out.name, take_all(out.name, ["shk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
+            dm.decide(out.name, take_all(out.name, ["brk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
         monkeypatch.delenv("AI_TRADER_ALLOW_MAINNET", raising=False)
         monkeypatch.setenv("AI_TRADER_ENVIRONMENT", "demo")
     assert len(book.positions()["pending_orders"]) == 1, "the refused calls changed nothing"
@@ -294,7 +306,7 @@ def test_no_lookahead(env, tmp_path):
         prep(env, analyse=fake_analyse(future_data=True))
     # the book never processes bars that close after as_of, though the CSV holds 2 more days
     out, book = prep(env)
-    dm.decide(out.name, take_all(out.name, ["shk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
+    dm.decide(out.name, take_all(out.name, ["brk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
     t2 = T + timedelta(hours=3, minutes=30)
     book.advance(t2)
     st = json.loads((book.dir / "state.json").read_text(encoding="utf-8"))
@@ -316,7 +328,7 @@ def test_no_lookahead(env, tmp_path):
 def test_kill_switch_flattens_and_blocks(env):
     p, _ = env
     out, book = prep(env)
-    dm.decide(out.name, take_all(out.name, ["shk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
+    dm.decide(out.name, take_all(out.name, ["brk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
     book.advance(T + timedelta(hours=2))
     assert len(book.positions()["positions"]) == 1
     p.kill.write_text("stop", encoding="utf-8")
@@ -335,8 +347,8 @@ def test_pipeline_test_sessions_are_excluded_from_the_scorecard(env):
 
     p, _ = env
     out, book = prep(env, test=True)
-    sub = dm.decide(out.name, take_all(out.name, ["shk-0"]), paths=p, wall=T + timedelta(hours=9), simulate_at=T + timedelta(minutes=10), book=book)
-    assert sub["pipeline_test"] and sub["tests"] == ["shk-0"]
+    sub = dm.decide(out.name, take_all(out.name, ["brk-0"]), paths=p, wall=T + timedelta(hours=9), simulate_at=T + timedelta(minutes=10), book=book)
+    assert sub["pipeline_test"] and sub["tests"] == ["brk-0"]
     assert book.run == dm.TEST_RUN
 
     class StubLake:
@@ -358,7 +370,7 @@ from ai_trader.risk import edge_posterior as ep  # noqa: E402
 
 def test_edge_prior_is_the_documented_edge_worth_30_pseudo_trades():
     assert ep.PRIOR_PSEUDO_TRADES == 30
-    assert ep.prior_edges() == {"shock_regime": 0.05, "trend_4h": 0.03}
+    assert ep.prior_edges() == {"trend_4h": 0.03}, "shock_regime retired with its sleeve (D5, 2026-11-27)"
     p = ep.posterior(0.05, [])
     assert p["mean"] == 0.05 and p["sd"] == pytest.approx(0.5 / math.sqrt(30))
     ys = [0.6, -0.4, -0.4, 0.6, -0.4]
@@ -377,18 +389,18 @@ def test_trade_observation_is_the_bracket_outcome_minus_the_null():
 
 def test_edge_update_is_weekly_point_in_time_and_fail_closed(tmp_path):
     f = tmp_path / "edge.json"
-    assert ep.applied_edges(T, f)[0] == {"shock_regime": 0.05, "trend_4h": 0.03}
-    losers = {"shock_regime": [{"id": f"x{i}", "symbol": SYM, "closed_ts": 0, "r": -1.0, "exit_reason": "stop", "y": -0.35} for i in range(20)]}
+    assert ep.applied_edges(T, f)[0] == {"trend_4h": 0.03}
+    losers = {"trend_4h": [{"id": f"x{i}", "symbol": SYM, "closed_ts": 0, "r": -1.0, "exit_reason": "stop", "y": -0.35} for i in range(20)]}
     d = ep.run_update(T, path=f, trades=losers)
-    assert d["sleeves"]["shock_regime"]["n"] == 20 and d["edges"]["shock_regime"] == pytest.approx((1.5 - 7.0) / 50)
-    assert d["edges"]["trend_4h"] == pytest.approx(0.03)
+    assert d["sleeves"]["trend_4h"]["n"] == 20 and d["edges"]["trend_4h"] == pytest.approx((0.9 - 7.0) / 50)
+    assert set(d["edges"]) == {"trend_4h"}
     assert ep.run_update(T + timedelta(days=2), path=f, trades={})["n"] == 20, "no mid-week drift"
-    assert ep.applied_edges(T, f)[0]["shock_regime"] < 0
-    assert ep.applied_edges(datetime(2026, 11, 1, tzinfo=UTC), f)[0]["shock_regime"] == 0.05, "point in time: the prior before the first update"
+    assert ep.applied_edges(T, f)[0]["trend_4h"] < 0
+    assert ep.applied_edges(datetime(2026, 11, 1, tzinfo=UTC), f)[0]["trend_4h"] == 0.03, "point in time: the prior before the first update"
     nxt = ep.run_update(T + timedelta(days=6), path=f, trades={})
-    assert len(nxt["history"]) == 2 and nxt["edges"]["shock_regime"] == 0.05
+    assert len(nxt["history"]) == 2 and nxt["edges"]["trend_4h"] == pytest.approx(0.03)
     bad = json.loads(f.read_text())
-    bad["history"][-1]["edges"]["shock_regime"] = 3.0
+    bad["history"][-1]["edges"]["trend_4h"] = 3.0
     f.write_text(json.dumps(bad))
     with pytest.raises(ValueError):
         ep.applied_edges(T + timedelta(days=7), f)
@@ -399,7 +411,7 @@ def test_session_p_quant_uses_the_edge():
 
     assert p_with_edge(0.33, 0.05) == pytest.approx(0.38) and p_with_edge(0.02, -0.1) == 0.0 and p_with_edge(0.93, 0.1) == 0.95
     px = 3000.0
-    c = Candidate("c", SYM, "shock_regime", "long", "market", px, px * math.exp(-0.05), px * math.exp(0.1), 0.0, 0.0, 2.0, None, "", "majors",
+    c = Candidate("c", SYM, "trend_4h", "long", "market", px, px * math.exp(-0.05), px * math.exp(0.1), 0.0, 0.0, 2.0, None, "", "majors",
                   sigma_per_bar=0.01)
     c.p_null = p_first(c.entry, c.stop, c.take_profit)
     cap_stop(c, 4.0, 0.5, 2.0, edge=-0.2)          # 5 sigma stop is capped, p_quant recomputed with the posterior edge
@@ -412,7 +424,7 @@ def edge_analyse(edge_file):
 
     def f(sym, t):
         card, cands, st = base(sym, t)
-        e = ep.applied_edges(t, edge_file)[0]["shock_regime"]
+        e = ep.applied_edges(t, edge_file)[0]["trend_4h"]
         for c in cands:
             c.take_profit = c.entry * math.exp(4 * SIG)        # 4 sigma target: prior net E[R] about +0.08 (between 0 and 0.10)
             c.p_null = p_first(c.entry, c.stop, c.take_profit)
@@ -425,20 +437,20 @@ def edge_analyse(edge_file):
 @needs_atx
 def test_paper_gate_accepts_small_positive_edges_and_a_bad_posterior_blocks_again(env):
     p, _ = env
-    # prior edge +0.05: net E[R] about +0.06 -> blocked under 0.10, accepted under the paper gate (> 0), by Python and Rust
+    # prior edge +0.03: net E[R] about +0.03 -> blocked under 0.10, accepted under the paper gate (> 0), by Python and Rust
     out, book = prep(env, analyse=edge_analyse(p.edge))
     r = json.loads((out / "candidates.json").read_text(encoding="utf-8"))[0]
     assert 0 < r["net_er"] < 0.10 and r["blocked"] is None
     meta = json.loads((out / "session.json").read_text(encoding="utf-8"))
-    assert meta["paper_gate"] == {"min_net_er": 0.0, "exclusive": True} and meta["edges"]["shock_regime"] == 0.05
+    assert meta["paper_gate"] == {"min_net_er": 0.0, "exclusive": True} and meta["edges"]["trend_4h"] == pytest.approx(0.03)
     assert "edge" in (out / "PACKET.md").read_text(encoding="utf-8")
-    sub = dm.decide(out.name, take_all(out.name, ["shk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
-    assert sub["accepted"] == ["shk-0"], sub["rejected"]
+    sub = dm.decide(out.name, take_all(out.name, ["brk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
+    assert sub["accepted"] == ["brk-0"], sub["rejected"]
     assert book.summary()["risk"]["min_net_expected_r"] == 0.0
     ctx = json.loads((out / "intents.jsonl").read_text(encoding="utf-8").splitlines()[0])["context"]
     assert {"p_null", "er_null", "g_net"} <= set(ctx)
     # a posterior below zero (e.g. after a losing streak) blocks the sleeve again
-    losers = {"shock_regime": [{"id": f"x{i}", "symbol": SYM, "closed_ts": 0, "r": -1.0, "exit_reason": "stop", "y": -0.35} for i in range(20)]}
+    losers = {"trend_4h": [{"id": f"x{i}", "symbol": SYM, "closed_ts": 0, "r": -1.0, "exit_reason": "stop", "y": -0.35} for i in range(20)]}
     p.edge.unlink()                                    # replace this week's (n = 0) update by one after a losing streak
     ep.run_update(T + timedelta(hours=4), path=p.edge, trades=losers)
     out2, _ = prep(env, as_of=T + timedelta(hours=4), analyse=edge_analyse(p.edge))
@@ -455,15 +467,15 @@ def test_closed_paper_trades_feed_the_edge_posterior(tmp_path):
     write_bars(bars, lambda k: (3000.0, 3003.0, 2997.0, 3000.0) if k < 51 else (up, up * 1.001, up * 0.999, up), t0, 120)   # jump through the target at 11:00
     env2 = (p, bars)
     out, book = prep(env2)
-    dm.decide(out.name, take_all(out.name, ["shk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
+    dm.decide(out.name, take_all(out.name, ["brk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
     book.advance(T + timedelta(hours=6))
     tr = book.trades()
     assert len(tr) == 1 and tr[0]["exit_reason"] == "target"
     d = ep.run_update(T + timedelta(days=6), path=p.edge, root=p.book)      # Monday 2026-11-16
-    s = d["sleeves"]["shock_regime"]
+    s = d["sleeves"]["trend_4h"]
     p0 = json.loads((out / "candidates.json").read_text(encoding="utf-8"))[0]["p_null"]
     assert s["n"] == 1 and s["trades"][0]["y"] == pytest.approx(1 - p0, abs=0.05)
-    assert s["posterior"]["mean"] == pytest.approx((30 * 0.05 + s["trades"][0]["y"]) / 31)
+    assert s["posterior"]["mean"] == pytest.approx((30 * 0.03 + s["trades"][0]["y"]) / 31)
 
 
 # ---------------------------------------------------------------- pegged limit entries at the touch (H-EXE1, 2026-11-15)
@@ -476,7 +488,7 @@ def test_pegged_entry_cost_model():
     assert entry_cost_bps("market") == pytest.approx(7.5) and entry_cost_bps("limit") == pytest.approx(2.0)
     assert cost_bps("pegged_limit") == pytest.approx(10.8) and cost_bps(None) == pytest.approx(15.0)
     px = 3000.0
-    c = Candidate("c", SYM, "shock_regime", "long", "market", px, px * math.exp(-0.03), px * math.exp(0.06), 0.33, 0.38, 2.0, None, "", "majors")
+    c = Candidate("c", SYM, "trend_4h", "long", "market", px, px * math.exp(-0.03), px * math.exp(0.06), 0.33, 0.38, 2.0, None, "", "majors")
     m = net_er(c)
     c.entry_type = "pegged_limit"
     assert net_er(c) > m, "maker + 1.3 bp is cheaper than taker + 2 bp"
@@ -487,13 +499,13 @@ def test_paper_entries_are_limits_pegged_to_the_touch(env):
     p, _ = env
     out, book = prep(env)
     meta = json.loads((out / "session.json").read_text(encoding="utf-8"))
-    assert meta["packet_version"] == "compact-2" and meta["exec_version"] == "pegged-limit-v1" and meta["tool_versions"]["exec"] == "pegged-limit-v1"
+    assert meta["packet_version"] == "compact-3" and meta["exec_version"] == "pegged-limit-v1" and meta["tool_versions"]["exec"] == "pegged-limit-v1"
     assert meta["paper_entry"]["mode"] == "pegged_limit" and meta["paper_entry"]["slip_bps"] == 1.3
     head = (out / "PACKET.md").read_text(encoding="utf-8").splitlines()[:4]
     assert any("pegged to the touch" in x for x in head)
     row = json.loads((out / "candidates.json").read_text(encoding="utf-8"))[0]
     assert row["entry_type"] == "pegged_limit"
-    dm.decide(out.name, take_all(out.name, ["shk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
+    dm.decide(out.name, take_all(out.name, ["brk-0"]), paths=p, wall=T + timedelta(minutes=10), book=book)
     it = json.loads((out / "intents.jsonl").read_text(encoding="utf-8").splitlines()[0])
     assert it["entry"] == {"type": "limit", "price": 3000.0, "peg": "touch"}
     dec = dm._jsonl(p.book / "decisions" / "ai.jsonl")[-1]

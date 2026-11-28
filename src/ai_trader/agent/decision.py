@@ -1,9 +1,12 @@
 """Phase-4 decision harness: Claude decides take / skip on a paper book every 4 hours (CLI: scripts/decision_session.py).
 
     prepare  [--as-of ISO]   point-in-time session under data/sessions/<id>/: advances the persistent paper book over
-                             the bars completed by as_of, runs the weekly stop-cap update, builds candidates from the
-                             validated sleeves (agent.session: shock_regime, trend_4h), applies the bias gate
-                             (execution.gate rules) and writes PACKET.md (<= ~120 lines) for Claude.
+                             the bars completed by as_of, runs the weekly stop-cap update and the H-WS16-15 monitor,
+                             sends the trend sleeves' rule exits (s x side <= 0 at a 4h close; deterministic, never
+                             Claude's choice), builds candidates from the sleeve config (agent.trend_sleeves via
+                             agent.session: trend_zoo_ew = WS16 spec A, trend_tsmom30 = spec B; user decisions D4 / D5
+                             2026-11-27), applies the bias gate (execution.gate rules) and writes PACKET.md (<= ~120
+                             lines) for Claude.
     decide   --session ID --file decisions.json
                              validates one answer per candidate (take | skip, reason, optional bounded tilt) and optional
                              early closes, refuses after the deadline (as_of + 30 min) and any attempt to set size, stops,
@@ -20,13 +23,16 @@ execution.allow_mainnet flag alone does not stop it (it belongs to the live desk
 Persistent book: data/exec/paper_book/ (atx --out-dir): paper/<run>/{state,positions,summary}.json and
 {fills,trades,cancels,equity}.jsonl, decisions/<run>.jsonl, intents/<session>.jsonl, ids.jsonl (intent -> candidate).
 Run `ai` is the real AI book; `pipeline_test` is a separate book for pipeline tests (scorecard excludes those sessions).
-Exits are the resting bracket (stop / target, conservative intrabar rule of at-exec: stop first when both are touched)
-plus Claude's early-close requests; the kill switch data/exec/KILL flattens the book and blocks new entries.
+Exits: the resting exchange stop (conservative intrabar rule of at-exec: stop first when both are touched), the trend
+sleeves' rule exit (a flat intent sent by prepare, filled at the next 1h open as taker), the legacy bracket's target
+(trend_4h positions opened before D4), and Claude's early-close requests; the kill switch data/exec/KILL flattens the
+book and blocks new entries.
 
-Candidates: only the validated sleeves of agent.session. The strategy_runner paper signals are NOT included: the 15
-non-sleeve strategies carry the driftless null (net E[R] <= 0, R-MAP-1 / R-PX-3: no validated edge, the engine
-rejects them anyway), and its shock_regime / zoo_ensemble events are the same two bets as the sleeves with a vol-only
-placement, so adding them would double count one bet per symbol (R-PD-1 / R-PD-2).
+Candidates: only the sleeves of agent.trend_sleeves (SLEEVES); shock_regime and setup C are retired (D5), trend_4h is
+legacy (D4: no new candidates, open positions keep their bracket). The strategy_runner paper signals are NOT included:
+the non-sleeve strategies carry the driftless null (net E[R] <= 0, R-MAP-1 / R-PX-3: no validated edge, the engine
+rejects them anyway), and its zoo_ensemble events are the same bet as the trend sleeves with a vol-only placement, so
+adding them would double count one bet per symbol (R-PD-1 / R-PD-2).
 """
 
 from __future__ import annotations
@@ -47,9 +53,10 @@ from ai_trader.core.config import load
 from ai_trader.core.time import LookAheadError, now, utc
 from ai_trader.journal import Journal
 
-HARNESS = "decision_session.v1"
-PACKET_VERSION = "compact-2"          # H-IC4 compact arm; changing the packet layout starts a new track record
+HARNESS = "decision_session.v2"       # v2 (2026-11-27, D4 / D5): trend-sleeve rule exits sent by prepare
+PACKET_VERSION = "compact-3"          # H-IC4 compact arm; changing the packet layout starts a new track record
 # compact-1 -> compact-2 (2026-11-15): header shows the entry mode; entries pegged to the touch (exec pegged-limit-v1)
+# compact-2 -> compact-3 (2026-11-27): WS16 trend sleeves (no target, signal exit), H-WS16-15 monitor, shock lines removed
 EXEC_VERSIONS = {"pegged_limit": "pegged-limit-v1", "as_signal": "as-signal-v1"}
 SLOT_HOURS = (0, 4, 8, 12, 16, 20)
 DEADLINE = timedelta(minutes=30)
@@ -58,8 +65,10 @@ BOOK_RUN, TEST_RUN = "ai", "pipeline_test"
 BOOK_EQUITY = 10_000.0                # seed of a NEW paper book only (USDT); BTC lot minimums need more than 100
 MAX_PACKET_RULES = 8                  # R-BUDGET-1: short cards
 NS = uuid.UUID("2f0c1d7e-9a4b-4b8e-8d0e-6c3a5e7f9b11")
-SLEEVE_FAMILY = {"shock_regime": "shock", "trend_4h": "trend"}
-GATE_STRATEGY = {"shock_regime": "shock_regime", "trend_4h": "zoo_ensemble"}   # the 4h trend sleeve in the gate's rules
+# sleeve -> contract family (execution.intents.FAMILIES; the engine's max_positions_per_cluster counts per family) and
+# -> the strategy name the bias gate's rules use. trend_4h: legacy bracket sleeve (no new candidates since D4).
+SLEEVE_FAMILY = {"trend_zoo_ew": "trend", "trend_tsmom30": "trend", "trend_4h": "trend"}
+GATE_STRATEGY = {"trend_zoo_ew": "zoo_ensemble", "trend_tsmom30": "zoo_ensemble", "trend_4h": "zoo_ensemble"}   # the 4h trend sleeves in the gate's rules
 TOP_KEYS = {"session_id", "model_id", "prompt_version", "decisions", "close", "market_view", "notes"}
 DECISION_KEYS = {"candidate_id", "action", "reason", "tilt"}
 TILT_KEYS = {"view_logodds", "confidence", "reason_codes", "evidence"}
@@ -84,10 +93,13 @@ class Paths:
     stop_cap: Path
     journal: Path | None = None       # None: paths.journal from settings (data/journal)
     edge: Path | None = None          # None: data/models/risk/edge_posterior.json next to stop_cap
+    trend: Path | None = None         # None: data/models/risk/trend_sleeves/ next to stop_cap (peg checks, kill latch)
 
     def __post_init__(self) -> None:
         if self.edge is None:
             self.edge = self.stop_cap.parent / "edge_posterior.json"
+        if self.trend is None:
+            self.trend = self.stop_cap.parent / "trend_sleeves"
 
     @classmethod
     def default(cls) -> Paths:
@@ -267,13 +279,15 @@ def live_line(as_of: datetime, root: Path) -> str:
 def compact_card(st: dict, gate_ctx: dict | None) -> list[str]:
     """<= 8 tested lines per symbol (H-IC4 compact arm). Untested context (flow, liquidations) stays in cards.txt only."""
     dev = (gate_ctx or {}).get("dev_1h")
+    nan = float("nan")
+    sc = st.get("signal_close") or ""
     lines = [
         f"- {st['symbol']} {st['price']:,.6g} | bar {st.get('bar_ts', '')[:16]} | cell {st['cell']} {st.get('label', '')}"
         + (" | TRADFI WEEKEND (R-PX-9)" if st.get("weekend") else ""),
-        f"- vol: risk sigma/h {st['sigma_risk_h']:.2%} (stops, R-VOL-2) | central sigma/h {st.get('sigma_rb_h', float('nan')):.2%} (weekend m {st.get('wk_m', float('nan')):.2f}, R-VOL-1)"
-        f" | HAR day {st['har_day']:.2%} (R-VOL-20)",
-        f"- shock: {st.get('shock', '?')} (P1, H-S2)",
-        f"- signals: shock_regime {st['shock_signal']:+.2f} | 4h ema_stack {st['trend_4h']:+.2f} (P3, weak)"
+        f"- vol: risk sigma/4h {st.get('sigma_risk_4h', nan):.2%} (trend stops, R-VOL-2) | risk sigma/h {st.get('sigma_risk_h', nan):.2%} | central sigma/h "
+        f"{st.get('sigma_rb_h', nan):.2%} (weekend m {st.get('wk_m', nan):.2f}, R-VOL-1) | HAR day {st.get('har_day', nan):.2%} (R-VOL-20)",
+        f"- signals at the {sc[11:16] or '?'}Z 4h close: zoo_ew (spec A) {st.get('zoo_ew', nan):+.2f} | tsmom_30d (spec B) {st.get('tsmom_30d', nan):+.2f} "
+        f"(entry |s| >= 0.30; WS16: fragile edge, IC ~0.03)"
         + (f" | 1h dev from EMA48 {dev:+.2f} sigma (R-PX-2: never fade >= 2)" if dev is not None else ""),
     ]
     return lines
@@ -291,13 +305,13 @@ def gate_candidates(cands: list, states: dict[str, dict], as_of: datetime) -> tu
     for c in cands:
         by_sym.setdefault(c.symbol, []).append(c)
     for sym, cs in by_sym.items():
-        sf = load_frames(sym, as_of, strategy_refs(["shock_regime", "zoo_ensemble"]))
+        sf = load_frames(sym, as_of, strategy_refs(sorted({GATE_STRATEGY[c.sleeve] for c in cs})))
         st = SymbolState.build(sf)
         i = st.row_at(as_of)
         for c in cs:
             strat = GATE_STRATEGY[c.sleeve]
             bar_close = st.close_ts[i] if i >= 0 else as_of
-            sig = states[sym]["shock_signal"] if c.sleeve == "shock_regime" else states[sym]["trend_4h"]
+            sig = c.sleeve_signal if c.sleeve_signal is not None else (1.0 if c.side == "long" else -1.0)
             sig = max(-1.0, min(1.0, float(sig))) or (1.0 if c.side == "long" else -1.0)
             ev = SignalEvent(strat, SLEEVE_FAMILY[c.sleeve], SLEEVE_FAMILY[c.sleeve], c.freq, sym, sf.asset_class, "entry", c.side, "flat", sig, sig,
                              bar_close - timedelta(hours=1), bar_close, as_of, c.entry, i)
@@ -337,8 +351,51 @@ def _fmt(x: float | None) -> str:
 
 # ====================================================================== prepare
 
+def rule_exit_intents(sid: str, as_of: datetime, exits: list[dict], pipeline_test: bool, model_id: str) -> list[dict]:
+    """Flat OrderIntents for the trend sleeves' rule exits (agent.trend_sleeves.exits_due): deterministic, not Claude's."""
+    from ai_trader.execution.intents import validate_intent
+
+    as_of = utc(as_of)
+    out = []
+    for x in exits:
+        why = f"sleeve rule exit: s {x['s']:+.2f} x side <= 0 at the {x['close_ts'][11:16]}Z 4h close" + (" (late: that session did not run)" if x["late"] else "")
+        it = {"intent_id": str(uuid.uuid5(NS, f"rule_exit|{sid}|{x['position_id']}")), "ts_ms": int(as_of.timestamp() * 1000), "as_of": as_of.isoformat(),
+              "mode": "paper", "strategy": x["strategy"], "family": x.get("family") or "trend", "symbol": x["symbol"], "asset_class": "crypto", "side": "flat",
+              "signal": 0.0, "entry": {"type": "market", "price": float(x["mark"])}, "stop": None, "targets": [],
+              "sigma": {"per_bar": None, "daily_logHAR": None, "weekday_factor": None, "source": "vol.har"}, "p_tp": None, "net_er_r": None,
+              "gate": {"decision": "pass", "rules_applied": ["R-EXIT-1"], "reasons": [why], "blocked_by": [], "stop_sigma": None},
+              "context": {"session_id": sid, "position_id": x["position_id"], "harness": HARNESS, "decision": "rule_exit", "reason": why, "signal_close": x["close_ts"],
+                          "s": x["s"], "late": x["late"], "pipeline_test": pipeline_test, "model_id": model_id}}
+        validate_intent(it)
+        out.append(it)
+    return out
+
+
+def send_rule_exits(sid: str, as_of: datetime, exits: list[dict], paths: Paths, book: Book, pipeline_test: bool, model_id: str, j: Journal) -> dict:
+    """Send the rule exits to the paper book at as_of (the position closes at the next 1h open, taker + slippage)."""
+    intents = rule_exit_intents(sid, as_of, exits, pipeline_test, model_id)
+    ip = paths.book / "intents" / f"{sid}-rule-exits.jsonl"
+    ip.parent.mkdir(parents=True, exist_ok=True)
+    ip.write_text("".join(json.dumps(x, separators=(",", ":")) + "\n" for x in intents), encoding="utf-8")
+    with (paths.book / "ids.jsonl").open("a", encoding="utf-8") as f:
+        for x in intents:
+            f.write(json.dumps({"intent_id": x["intent_id"], "session": sid, "candidate_id": None, "position_id": x["context"]["position_id"],
+                                "kind": "rule_exit", "book_run": book.run}) + "\n")
+    res = book.submit(ip, as_of, {x["intent_id"] for x in intents})
+    by = {x["intent_id"]: x for x in intents}
+    sent = [{"symbol": by[d["intent_id"]]["symbol"], "strategy": by[d["intent_id"]]["strategy"], "position_id": by[d["intent_id"]]["context"]["position_id"],
+             "decision": d["decision"], "rejections": d.get("rejections", []), "reason": by[d["intent_id"]]["context"]["reason"]} for d in res["decisions"]]
+    j.write("order", {"status": "paper", "kind": "rule_exit", "book_run": book.run, "intents": intents})
+    j.write("risk_decision", {"book_run": book.run, "kind": "rule_exit", "decisions": res["decisions"]})
+    return {"sent": sent, "error": None, "intents_file": str(ip)}
+
+
 def prepare(as_of: datetime | None = None, *, paths: Paths | None = None, symbols: list[str] | None = None, pipeline_test: bool = False,
-            analyse_fn: Callable | None = None, gate_fn: Callable | None = None, book: Book | None = None, wall: datetime | None = None) -> Path:
+            analyse_fn: Callable | None = None, gate_fn: Callable | None = None, book: Book | None = None, wall: datetime | None = None,
+            signals_fn: Callable | None = None, monitor_fn: Callable | None = None) -> Path:
+    """`signals_fn(sym, t)` -> trend_sleeves.SymbolSignals (default trend_sleeves.symbol_signals); `monitor_fn(t)` -> the
+    H-WS16-15 monitor document (default trend_sleeves.monitor over the unconstrained stream; real sessions write)."""
+    from ai_trader.agent import trend_sleeves as ts
     from ai_trader.agent.session import CLUSTER, DEFAULT, analyse, net_er
     from ai_trader.risk import edge_posterior as ep
     from ai_trader.risk import stop_posterior as sp
@@ -383,7 +440,23 @@ def prepare(as_of: datetime | None = None, *, paths: Paths | None = None, symbol
     # 2) the persistent paper book: advance over the bars completed by as_of (fills by the conservative intrabar rule)
     adv = book.advance(as_of)
     pos = book.positions()
+    trades = book.trades()
     held = {p["symbol"] for p in pos["positions"]} | {o["symbol"] for o in pos["pending_orders"]}
+    fam_cap = int(load().risk["max_positions_per_cluster"])
+    fam_n: dict[str, int] = {}
+    for x in pos["positions"] + pos["pending_orders"]:
+        fam_n[x.get("family", "?")] = fam_n.get(x.get("family", "?"), 0) + 1
+
+    # 2b) trend sleeves (agent.trend_sleeves): the H-WS16-15 monitor on the unconstrained stream, and the rule exits due
+    signals_fn = signals_fn or ts.symbol_signals
+    try:
+        mon = (monitor_fn or (lambda t: ts.monitor(t, root=paths.trend, write=not pipeline_test, book_trades=trades)))(as_of)
+    except Exception as e:  # never blocks the session; a missing monitor is shown in the packet
+        mon = {"version": ts.VERSION, "as_of": iso(as_of), "forward_start": ts.FORWARD_START.isoformat(), "sleeves": {}, "error": f"{type(e).__name__}: {e}"}
+    exit_errs: list[str] = []
+    exits = ts.exits_due(pos["positions"], as_of, signals_fn, exit_errs)      # a failed symbol is retried next session (late exit)
+    exit_err = "; ".join(exit_errs) or None
+    exiting = {x["symbol"] for x in exits}
 
     # 3) state cards and candidates from the validated sleeves, point in time
     analyse_fn = analyse_fn or (lambda s, t: analyse(s, t, lookback_bars=LOOKBACK_BARS, cap=cap, edges=edges))
@@ -402,14 +475,6 @@ def prepare(as_of: datetime | None = None, *, paths: Paths | None = None, symbol
         cards.append(c)
         cands += k
         states[sym] = st
-    by_bar: dict[str, list] = {}
-    for c in cands:
-        if c.shock_ts:
-            by_bar.setdefault(c.shock_ts, []).append(c)
-    for ts, group in by_bar.items():
-        if len(group) >= 3:
-            for c in group:
-                c.cluster = f"market-shock-{ts[:13]}"
 
     # 4) bias gate + book + kill + engine EV gate
     gres, gctx = (gate_fn or gate_candidates)(cands, states, as_of) if cands else ({}, {})
@@ -430,8 +495,21 @@ def prepare(as_of: datetime | None = None, *, paths: Paths | None = None, symbol
         er = net_er(c)
         if er < min_er or (excl and er <= min_er):
             why.append(f"net E[R] {er:+.3f} {'<=' if excl else '<'} {min_er} (paper gate; engine rejects)")
+        if c.sleeve in ts.SLEEVES:
+            k_why = ts.killed(mon, c.sleeve)
+            if k_why:
+                why.append(f"sleeve KILLED by the H-WS16-15 monitor ({k_why})")
+            try:
+                rb = ts.reentry_block(c.sleeve, c.symbol, c.side, trades, signals_fn(c.symbol, as_of))
+            except Exception as e:
+                rb = f"re-entry state unavailable ({type(e).__name__}: {e})"
+            if rb:
+                why.append(rb)
+        fam = SLEEVE_FAMILY.get(c.sleeve)
+        if fam is not None and fam_n.get(fam, 0) >= fam_cap:
+            why.append(f"family {fam} at the engine cap ({fam_n[fam]} open or pending, risk.yaml max_positions_per_cluster {fam_cap}): the engine rejects it")
         if c.symbol in held:
-            why.append("symbol already in the paper book (one position per symbol)")
+            why.append("symbol already in the paper book (one position per symbol)" + ("; its rule exit is sent this pass" if c.symbol in exiting else ""))
         if kill:
             why.append("KILL switch (data/exec/KILL)")
         c.blocked = "; ".join(why) if why else None
@@ -447,12 +525,24 @@ def prepare(as_of: datetime | None = None, *, paths: Paths | None = None, symbol
             "stop_cap_sigma": cap, "stop_cap_source": cap_src, "edges": edges, "edge_source": edge_src, "paper_gate": {"min_net_er": min_er, "exclusive": excl},
             "lookback_bars": LOOKBACK_BARS, **pin,
             "paper_entry": em,
-            "tool_versions": {"gate": _gate_version(), "stop_posterior": sp.VERSION, "edge_posterior": ep.VERSION, "exec": em["exec_version"], "rules_hash": next(iter(gres.values()))["rules_hash"] if gres else None},
+            "tool_versions": {"gate": _gate_version(), "stop_posterior": sp.VERSION, "edge_posterior": ep.VERSION, "exec": em["exec_version"],
+                              "trend_sleeves": ts.VERSION, "rules_hash": next(iter(gres.values()))["rules_hash"] if gres else None},
+            "trend_monitor": _finite({"error": mon.get("error"), "sleeves": {k: {kk: v.get(kk) for kk in ("killed", "kill_reason", "closed", "mean", "ub95", "open",
+                                                                                         "carried", "peg")}
+                                                                             for k, v in (mon.get("sleeves") or {}).items()}}),
             "candidates": [r["id"] for r in rows]}
     _write_json(out / "session.json", meta)
     (out / "cards.txt").write_text("\n\n".join(cards), encoding="utf-8")
     _write_json(out / "candidates.json", rows)
-    packet = render_packet(meta, rows, states, gctx, book, adv, cap_doc, live_line(as_of, paths.live_nn), edge_doc)
+    rx: dict = {"sent": [], "error": exit_err}
+    if exits:
+        try:
+            rx = send_rule_exits(sid, as_of, exits, paths, book, pipeline_test, pin["model_id"], j)
+        except (RefusedError, OSError, ValueError) as e:  # nothing reached the book; the exit is due again next session
+            rx = {"sent": [], "error": f"{type(e).__name__}: {e}", "due": exits}
+    meta["rule_exits"] = rx
+    _write_json(out / "session.json", meta)
+    packet = render_packet(meta, rows, states, gctx, book, adv, cap_doc, live_line(as_of, paths.live_nn), edge_doc, mon=mon, rx=rx)
     (out / "PACKET.md").write_text(packet, encoding="utf-8")
     j.write("session_start", {**pin, "as_of": iso(as_of), "pipeline_test": pipeline_test, "book_run": run, "stop_cap_sigma": cap, "tool_versions": meta["tool_versions"]})
     j.write("snapshot", {"states": list(states.values()), "packet": packet, "cards": cards})
@@ -477,8 +567,59 @@ def _entry_line(meta: dict) -> str:
     return f"entries: as the sleeve signals them (exec {pe.get('exec_version', '?')})"
 
 
+def gates_line(as_of: datetime) -> str | None:
+    """The live gate line (D2 release windows / D3 jump intensity) of ai_trader.live.gates.packet_line, in place of the
+    field card's "jump probability x%" sentence (WS05: a latent mixture weight, not the chance of a visible jump; the
+    decision packet never printed it). Point in time: a gates file written after as_of is not shown."""
+    try:
+        from ai_trader.live.gates import load as load_gates
+        from ai_trader.live.gates import packet_line
+    except ImportError:
+        return None
+    t_ms = int(utc(as_of).timestamp() * 1000)
+    try:
+        g = load_gates()
+        if g and g.get("written_ms") and int(g["written_ms"]) > t_ms:
+            return "Live gates: no gate state known at as_of (the gates file is newer)."
+        out = packet_line(gates=g, now=t_ms)
+    except Exception as e:  # never block a packet on a context line
+        return f"Live gates: unavailable ({type(e).__name__}: {e})"
+    return str(out) if out else None
+
+
+def _legacy_edges(doc: dict | None) -> dict | None:
+    """The edge posterior restricted to the bracket sleeves still in agent.session.PRIOR_EDGE (shock_regime is retired)."""
+    from ai_trader.agent.session import PRIOR_EDGE
+
+    if not doc or "sleeves" not in doc:
+        return doc
+    return {**doc, "sleeves": {k: v for k, v in doc["sleeves"].items() if k in PRIOR_EDGE}}
+
+
+def _finite(o: Any) -> Any:
+    """NaN / inf -> None (strict JSON in session.json)."""
+    if isinstance(o, float):
+        return o if math.isfinite(o) else None
+    if isinstance(o, dict):
+        return {k: _finite(v) for k, v in o.items()}
+    if isinstance(o, list):
+        return [_finite(v) for v in o]
+    return o
+
+
+def _exit_rule(p: dict) -> str:
+    from ai_trader.agent.trend_sleeves import LEGACY, SLEEVES
+
+    if p.get("strategy") in SLEEVES:
+        return "rule exit sent" if p.get("exit_requested") else "s x side <= 0 at a 4h close"
+    if p.get("strategy") in LEGACY:
+        return "legacy bracket"
+    return "-"
+
+
 def render_packet(meta: dict, rows: list[dict], states: dict, gctx: dict, book: Book, adv: dict, cap_doc: dict | None, live: str,
-                  edge_doc: dict | None = None) -> str:
+                  edge_doc: dict | None = None, *, mon: dict | None = None, rx: dict | None = None) -> str:
+    from ai_trader.agent import trend_sleeves as ts
     from ai_trader.risk.edge_posterior import describe as describe_edges
     from ai_trader.risk.stop_posterior import describe
 
@@ -487,8 +628,8 @@ def render_packet(meta: dict, rows: list[dict], states: dict, gctx: dict, book: 
          f"as_of {meta['as_of']} | slot {meta['slot'][11:16]}Z" + (f" (off schedule +{meta['off_schedule_min']:.0f} min)" if meta["off_schedule_min"] > 15 else "")
          + f" | decide by {meta['deadline']} | {meta['model_id']} prompt {meta['prompt_version']} packet {meta['packet_version']}",
          _entry_line(meta),
-         "PAPER book only (execution.allow_mainnet false). Size, stops, targets and caps come from the risk engine; you answer take/skip per candidate",
-         "with a reason, optionally a bounded tilt, and may ask to close an open position early.", ""]
+         "PAPER book only (execution.allow_mainnet false). Size, stops, targets and caps come from the risk engine; exits of the trend sleeves come from",
+         "their rule; you answer take/skip per candidate with a reason, optionally a bounded tilt, and may ask to close an open position early.", ""]
     s = book.summary()
     pos = book.positions()
     tr = book.trades()
@@ -497,23 +638,38 @@ def render_packet(meta: dict, rows: list[dict], states: dict, gctx: dict, book: 
           f"equity {_fmt(s.get('end_equity_marked'))} (start {_fmt(s.get('start_equity'))}) | open {len(pos['positions'])} | pending {len(pos['pending_orders'])} | "
           f"closed {len(tr)} (sum R {sum(t['r_multiple'] for t in tr):+.2f}) | KILL {'ON' if meta['kill_switch'] else 'off'}"]
     if pos["positions"] or pos["pending_orders"]:
-        L += ["| position | symbol | side | entry | stop | target | R now | age h |", "|---|---|---|---|---|---|---|---|"]
+        L += ["| position | symbol | sleeve | side | entry | stop | target | exit | R now | age h |", "|---|---|---|---|---|---|---|---|---|---|"]
         for p in pos["positions"]:
             ref = ids.get(p["id"], {})
             age = (as_of - datetime.fromtimestamp(p["opened_ts"] / 1000, UTC)).total_seconds() / 3600
-            L.append(f"| {ref.get('session', '?')}/{ref.get('candidate_id', p['id'][:8])} | {p['symbol']} | {str(p['side']).lower()} | {_fmt(p['entry_price'])} | "
-                     f"{_fmt(p['stop'])} | {_fmt(p.get('target'))} | {p.get('unrealised_r', 0):+.2f} | {age:.0f} |")
+            L.append(f"| {ref.get('session', '?')}/{ref.get('candidate_id', p['id'][:8])} | {p['symbol']} | {p.get('strategy', '?')} | {str(p['side']).lower()} | "
+                     f"{_fmt(p['entry_price'])} | {_fmt(p['stop'])} | {_fmt(p.get('target'))} | {_exit_rule(p)} | {p.get('unrealised_r', 0):+.2f} | {age:.0f} |")
         for o in pos["pending_orders"]:
             ref = ids.get(o["id"], {})
-            L.append(f"| {ref.get('session', '?')}/{ref.get('candidate_id', o['id'][:8])} | {o['symbol']} | {str(o['side']).lower()} | pending {o['entry_type']} "
-                     f"{_fmt(o['price'])} | {_fmt(o['stop'])} | {_fmt(o.get('target'))} | - | - |")
+            L.append(f"| {ref.get('session', '?')}/{ref.get('candidate_id', o['id'][:8])} | {o['symbol']} | {o.get('strategy', '?')} | {str(o['side']).lower()} | "
+                     f"pending {o['entry_type']} {_fmt(o['price'])} | {_fmt(o['stop'])} | {_fmt(o.get('target'))} | {_exit_rule(o)} | - | - |")
     new = [f"{t['symbol']} {t['exit_reason']} {t['r_multiple']:+.2f}R" for t in adv.get("trades", [])]
     canc = [f"{c['symbol']} {c['reason']}" for c in adv.get("cancels", [])]
     L.append(f"since last pass: {len(adv.get('fills', []))} fills; closed: {', '.join(new) or 'none'}; cancels: {', '.join(canc) or 'none'}")
+    rx = rx or {}
+    sent = [f"{x['symbol']} {x['strategy']} ({x['reason'].removeprefix('sleeve rule exit: ')}) -> {x['decision']}" for x in rx.get("sent", [])]
+    L.append("rule exits this pass (deterministic, not yours): " + ("; ".join(sent) if sent else "none")
+             + (f" | ERROR {rx['error']} (due again next session)" if rx.get("error") else ""))
     g = meta.get("paper_gate") or {}
-    L += ["", "## Stop cap and sleeve edges (weekly posteriors, never set by you)", describe(cap_doc), describe_edges(edge_doc),
+    k = ts.stop_k(meta.get("stop_cap_sigma") or ts.STOP_K)
+    L += ["", "## Stop cap, trend sleeves and the H-WS16-15 monitor (never set by you)", describe(cap_doc),
+          f"trend sleeves (D4, WS16): spec A trend_zoo_ew (primary) and spec B trend_tsmom30 (benchmark). Entry |s| >= {ts.THETA:.2f} at a 4h close, "
+          f"stop {k:.2f} x risk sigma 4h (the cap), exit by rule at the first 4h close with s x side <= 0, no target / trailing / pyramiding, no "
+          f"re-entry after a stop until s is flat or flips; net E[R] {ts.PRIOR_NET_R:+.2f} per closed trade (WS16 forward expectation, the engine's "
+          f"check); one trend position in the book at a time (risk.yaml max_positions_per_cluster). Retired: shock_regime, setup C (D5).",
+          *ts.describe(mon),
+          "legacy bracket edge posterior (open trend_4h position only): " + describe_edges(_legacy_edges(edge_doc)),
           f"paper EV gate: net E[R] {'>' if g.get('exclusive') else '>='} {g.get('min_net_er')} (risk.yaml min_net_expected_r_paper; live modes 0.10)",
-          "", "## Live network", live, ""]
+          "", "## Live network", live]
+    gl = gates_line(as_of)
+    if gl:
+        L.append(gl)
+    L.append("")
     with_c = sorted({r["symbol"] for r in rows})
     L.append("## Market state (symbols with candidates; tested lines only)")
     if not with_c:
@@ -525,18 +681,26 @@ def render_packet(meta: dict, rows: list[dict], states: dict, gctx: dict, book: 
         L += ["| id | symbol | sleeve | side | entry | stop | target | R:R | stop sigma | p_quant | net E[R] | gate | rules fired |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
         for r in rows:
             gs = "pass" if not r["blocked"] else "BLOCK"
-            L.append(f"| {r['id']} | {r['symbol']} | {r['sleeve']} | {r['side']} | {r['entry_type']} {_fmt(r['entry'])} | {_fmt(r['stop'])} | {_fmt(r['take_profit'])} | "
-                     f"{r['rr']:.2f} | {(r.get('stop_sigma') or float('nan')):.2f} | {r['p_quant']:.3f} | {r['net_er']:+.3f} | {gs} | {', '.join(r['fired']) or '-'} |")
+            own = r.get("take_profit") is None
+            tgt = "- (signal exit)" if own else _fmt(r["take_profit"])
+            rr = "-" if r.get("rr") is None else f"{r['rr']:.2f}"
+            pq = "-" if r.get("p_quant") is None else f"{r['p_quant']:.3f}"
+            er = f"{r['net_er']:+.3f}" + (" (prior)" if own else "")
+            L.append(f"| {r['id']} | {r['symbol']} | {r['sleeve']} | {r['side']} | {r['entry_type']} {_fmt(r['entry'])} | {_fmt(r['stop'])} | {tgt} | "
+                     f"{rr} | {(r.get('stop_sigma') or float('nan')):.2f} | {pq} | {er} | {gs} | {', '.join(r['fired']) or '-'} |")
         for r in rows:
             note = "; ".join(x for x in [r["rationale"], *r.get("flags", []), (f"BLOCKED: {r['blocked']}" if r["blocked"] else "")] if x)
             L.append(f"- {r['id']}: {note}")
+        if any(r.get("take_profit") is None for r in rows):
+            L.append("own-exit candidates: a tilt is recorded but changes nothing (no target, no p_tp; the engine checks the documented net E[R]).")
     else:
-        L.append("none: no validated sleeve produced a new signal (answer with an empty `decisions` list)")
+        L.append("none: no sleeve produced a new signal (answer with an empty `decisions` list)")
     fired = [x for r in rows for x in r["fired"]]
     L += ["", "## Rules (relevant, research.rules.for_prompt; never sizing)"]
     L += packet_rules({k: v for k, v in states.items() if k in with_c} or {k: v for k, v in list(states.items())[:1]}, fired)
     L += ["", "## Not included",
-          "strategy_runner paper signals: not validated (driftless null, net E[R] <= 0; R-MAP-1, R-PX-3) or duplicates of these two sleeves (R-PD-1/2).",
+          "strategy_runner paper signals: not validated (driftless null, net E[R] <= 0; R-MAP-1, R-PX-3) or duplicates of the trend sleeves (R-PD-1/2).",
+          "retired 2026-11-27: shock_regime (H-S2 shock fade, D5), setup C (D5), trend_4h ema_stack bracket (D4: replaced by trend_zoo_ew).",
           "", "## Answer (decisions.json)",
           '{"session_id": "' + meta["session_id"] + '", "model_id": "' + meta["model_id"] + '", "decisions": [{"candidate_id": "<id>", "action": "take|skip", '
           '"reason": "...", "tilt": {"view_logodds": 0.0, "confidence": "low|medium|high"}}], "close": [{"position_id": "<id>", "reason": "..."}]}',
@@ -628,12 +792,17 @@ def validate_decisions(doc: Any, meta: dict, rows: list[dict], positions: dict, 
                 errs.append(f"{cid}: |view_logodds| {v} exceeds the bound {cmax} (ARCHITECTURE 2.4)")
             if conf not in scale:
                 errs.append(f"{cid}: confidence {conf!r} not in {sorted(scale)}")
-        p = float(by[cid]["p_quant"])
         c = scale.get(conf, 0.0) if conf else 0.0
-        lo = math.log(p / (1 - p)) + c * float(v if isinstance(v, (int, float)) and math.isfinite(float(v)) else 0.0)
-        p_final = 1 / (1 + math.exp(-lo))
+        if by[cid].get("p_quant") is None:
+            # own-exit sleeve (no target): no p_tp to tilt; the view is recorded and changes nothing
+            p = p_final = p_used = None
+        else:
+            p = float(by[cid]["p_quant"])
+            lo = math.log(p / (1 - p)) + c * float(v if isinstance(v, (int, float)) and math.isfinite(float(v)) else 0.0)
+            p_final = 1 / (1 + math.exp(-lo))
+            p_used = min(p, p_final)
         seen[cid] = {"candidate_id": cid, "action": act, "reason": reason, "view_logodds": float(v) if isinstance(v, (int, float)) else 0.0,
-                     "confidence": conf, "scale": c, "p_quant": p, "p_final": p_final, "p_used": min(p, p_final)}
+                     "confidence": conf, "scale": c, "p_quant": p, "p_final": p_final, "p_used": p_used}
     missing = [r["id"] for r in rows if r["id"] not in seen]
     if missing:
         errs.append(f"unanswered candidates {missing}: every candidate needs take or skip")
@@ -666,8 +835,11 @@ def validate_decisions(doc: Any, meta: dict, rows: list[dict], positions: dict, 
 
 
 def build_intents(meta: dict, rows: list[dict], norm: dict) -> list[dict]:
-    """OrderIntents (docs/EXECUTION_PIPELINE.md) for the takes and early closes. Never a size: the engine sizes."""
+    """OrderIntents (docs/EXECUTION_PIPELINE.md) for the takes and early closes. Never a size: the engine sizes.
+    An own-exit candidate (trend sleeves: no target) sends targets [] and net_er_r = its documented expectation (the
+    engine checks that value); p_tp is the reference driftless P(+3R before the stop), as execution.gate does."""
     from ai_trader.agent.session import Candidate, net_er
+    from ai_trader.agent.trend_sleeves import REF_P_TP
     from ai_trader.execution.intents import validate_intent
 
     as_of = utc(meta["as_of"])
@@ -680,27 +852,34 @@ def build_intents(meta: dict, rows: list[dict], norm: dict) -> list[dict]:
             continue
         r = by[d["candidate_id"]]
         c = Candidate(**{k: v for k, v in r.items() if k in fields})
-        c.p_quant = d["p_used"]
-        er = float(net_er(c))
-        c0 = Candidate(**{k: v for k, v in r.items() if k in fields})
-        c0.p_quant = float(r["p_null"])
-        er_null = float(net_er(c0))
-        c0.p_quant = 1.0
-        g_net = float(net_er(c0))
+        own = r.get("take_profit") is None
+        if own:
+            er, er_null, g_net, p_tp = float(net_er(c)), None, None, REF_P_TP
+        else:
+            c.p_quant = d["p_used"]
+            er = float(net_er(c))
+            c0 = Candidate(**{k: v for k, v in r.items() if k in fields})
+            c0.p_quant = float(r["p_null"])
+            er_null = float(net_er(c0))
+            c0.p_quant = 1.0
+            g_net = float(net_er(c0))
+            p_tp = d["p_used"]
         g = r["gate"]
         out.append({
             "intent_id": str(uuid.uuid5(NS, f"take|{meta['session_id']}|{r['id']}")), "ts_ms": ts_ms, "as_of": as_of.isoformat(), "mode": "paper",
             "strategy": r["sleeve"], "family": SLEEVE_FAMILY[r["sleeve"]], "symbol": r["symbol"], "asset_class": r.get("asset_class", "crypto"), "side": r["side"],
             "signal": float(r.get("signal") or (1.0 if r["side"] == "long" else -1.0)), "entry": ({"type": "limit", "price": float(r["entry"]), "peg": "touch"} if r["entry_type"] == "pegged_limit"
                       else {"type": r["entry_type"], "price": float(r["entry"])}),
-            "stop": float(r["stop"]), "targets": [float(r["take_profit"])],
+            "stop": float(r["stop"]), "targets": [] if own else [float(r["take_profit"])],
             "sigma": {"per_bar": r.get("sigma_per_bar"), "daily_logHAR": r.get("har_day"), "weekday_factor": None, "source": "vol.har", "freq": r.get("freq", "1h")},
-            "p_tp": d["p_used"], "net_er_r": er,
+            "p_tp": p_tp, "net_er_r": er,
             "gate": {"decision": g.get("decision", "pass"), "rules_applied": g.get("rules_applied", []), "reasons": g.get("reasons", []),
                      "blocked_by": g.get("blocked_by", []), "stop_sigma": r.get("stop_sigma")},
             "context": {"session_id": meta["session_id"], "candidate_id": r["id"], "harness": HARNESS, "decision": "take", "reason": d["reason"],
                         "view_logodds": d["view_logodds"], "confidence": d["confidence"], "p_quant_session": d["p_quant"], "p_final": d["p_final"],
-                        "p_null": float(r["p_null"]), "er_null": er_null, "g_net": g_net,
+                        "p_null": None if own else float(r["p_null"]), "er_null": er_null, "g_net": g_net,
+                        "exit_rule": r.get("exit_rule"), "sleeve_signal": r.get("sleeve_signal"), "signal_close": r.get("signal_close"),
+                        "expected_r": r.get("expected_r"), "p_tp_meaning": "reference driftless P(+3R before the stop); no target" if own else "p_used",
                         "session_cluster": r["cluster"], "flags": r.get("flags", []), "rationale": r["rationale"], "pipeline_test": meta["pipeline_test"],
                         "model_id": meta["model_id"], "prompt_version": meta["prompt_version"]},
         })
@@ -816,6 +995,13 @@ def status(paths: Paths | None = None, record: bool = False, t: datetime | None 
     st = ai_stats(df)
     L.append(f"  H-AI1: {json.dumps(st['H-AI1'], default=float)}")
     L.append(f"  H-AI2: {json.dumps(st['H-AI2'], default=float)}")
+    try:
+        from ai_trader.agent import trend_sleeves as ts
+
+        mon = ts.monitor(t or now(), root=paths.trend, write=False, book_trades=tr)
+        L += ["\n# Trend sleeves (D4) and the H-WS16-15 monitor (unconstrained stream; read only)"] + ["  " + x for x in ts.describe(mon)]
+    except Exception as e:  # status must always print
+        L.append(f"\n# H-WS16-15 monitor unavailable: {type(e).__name__}: {e}")
     doc = sp.read(paths.stop_cap)
     L += ["\n# Stop posterior", "  " + sp.describe(doc)]
     if record:

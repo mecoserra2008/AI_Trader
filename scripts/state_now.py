@@ -1,6 +1,10 @@
 """Print compact state cards for the current moment: the inputs the decision layer reads.
 
     PYTHONIOENCODING=utf-8 uv run python scripts/state_now.py [SYMBOL ...]
+
+Since 2026-11-27 (user decisions D4 / D5): the SIGNALS line shows the paper trend sleeves (agent.trend_sleeves: spec A
+zoo_ew, spec B tsmom_30d) instead of the retired 4h ema_stack; a |z| >= 4 shock is context only (the shock fade H-S2 /
+shock_regime sleeve is retired, no continuation / reversal playbook).
 """
 
 from __future__ import annotations
@@ -17,7 +21,6 @@ from ai_trader.research.calendar import add_calendar
 from ai_trader.research.frame import market_frame
 from ai_trader.research.regimes import CELL_LABELS, label
 from ai_trader.storage.lake import Lake
-from ai_trader.strategies import REGISTRY
 
 
 def card(sym: str) -> str:
@@ -26,16 +29,16 @@ def card(sym: str) -> str:
     f4 = market_frame(sym, "4h", t, funding=False, oi=False)
     cal = add_calendar(f.tail(1))
     last = f.tail(1).row(0, named=True)
-    # shocks in the last 24 bars, classified by vol state at the shock (H-S2/S3 playbook)
+    # |z| >= 4 hourly shocks in the last 72 bars: context only (the H-S2 shock fade is retired, D5 2026-11-27)
     recent = f.tail(72).filter(pl.col("z").abs() >= 4)
     shock = "none in last 72h"
     if recent.height:
         r = recent.tail(1).row(0, named=True)
-        mode = "CONTINUATION" if r["vol_state"] == "low" else "REVERSAL"
         hrs = int((last["event_ts"] - r["event_ts"]).total_seconds() // 3600)
-        shock = f"{r['z']:+.1f}σ {hrs}h ago in {r['cell']} ({r['vol_state']} vol) -> {mode} playbook"
-    sig_shock = REGISTRY["shock_regime"]()(f)[-1]
-    sig_trend4h = REGISTRY["ema_stack"]()(f4)[-1]
+        shock = f"{r['z']:+.1f}σ {hrs}h ago in {r['cell']} ({r['vol_state']} vol); context only (shock fade H-S2 retired)"
+    from ai_trader.agent.trend_sleeves import signals_from_frame
+
+    sg = signals_from_frame(sym, f4, t)
     daily = (f.with_columns(pl.col("event_ts").dt.date().alias("d")).group_by("d")
              .agg((pl.col("ret").fill_nan(None).fill_null(0) ** 2).sum().alias("rv"), pl.len().alias("n")).filter(pl.col("n") == 24).sort("d"))
     har = float(np.sqrt(har_forecast(daily["rv"].to_numpy())[-1]))
@@ -52,7 +55,7 @@ def card(sym: str) -> str:
         f"  REGIME  {last['cell']} {CELL_LABELS.get(last['cell'], '')}  (dir score {last['dir_score']:+.2f}, vol {last['vol_state']})",
         f"  VOL     risk σ/h {last['sigma_risk_next']:.2%} (1y pct {vol_pct:.0%}) | central σ/h {last['sigma_rb_next']:.2%} (weekend m {last['wk_m']:.2f}) | HAR next day {har:.2%}",
         f"  SHOCK   {shock}",
-        f"  SIGNALS shock_regime {sig_shock:+.2f} | 4h ema_stack {sig_trend4h:+.2f}",
+        f"  SIGNALS trend sleeves (4h): zoo_ew spec A {sg.last('zoo_ew'):+.2f} | tsmom_30d spec B {sg.last('tsmom_30d'):+.2f} (entry |s| >= 0.30)",
         f"  CARRY   funding 7d mean {fund7 * 100:+.4f}%/8h ({fund7 * 3 * 365 * 100:+.1f}%/yr)" if fund7 is not None else "  CARRY   n/a",
     ]
     if vrp:

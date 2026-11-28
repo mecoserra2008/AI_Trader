@@ -57,3 +57,9 @@ change (<= $2 loss per trade incl. costs, $50-$200 notional, <= 20 entries / UTC
 ## Narrative and confluence (added 2026-11-15 by the orchestrator; CONTRACT section 8)
 - Read `<snapshot>/theses.md` (the user's macro thesis ledger: components a-d with status). A directional proposal must agree with at least one active or strengthening thesis component, or say explicitly why it doesn't need one. A thesis is never an entry signal by itself.
 - Always write `<snapshot>/reports/confluence.json`: one signed reading in [-1, 1] per layer (levels, flow, book, structure, momentum, vol_liq, positioning, narrative, onchain = null "no source") for every asset you discussed, each with an evidence pointer. Write it even when you propose no trade; the readings are scored forward (H-CONF1).
+
+## Retired setups (2026-11-27, user decision D5; added by agent A3, tightening only)
+- Never propose the shock fade (H-S2: fading a |z| >= 4 hourly shock) or setup C of research/desk/PLAN_2026-11-15.md
+  (spot-absorption reversal long after a sweep). Both are retired; the validator's rules list must not cite them as support.
+- The paper trend sleeves (WS16 spec A zoo_ew, spec B tsmom_30d; agent.trend_sleeves) are the decision harness's, not
+  desk setups: their 4h signal is context for you, never a trigger, and they exit by their own rule.

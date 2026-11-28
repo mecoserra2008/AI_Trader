@@ -5,7 +5,9 @@ orders are sent), each candidate is resolved on the 1h bars that close after the
   stop touched first (or both in one bar)  -> -1 R          (conservative intrabar ordering)
   target touched first                     -> +RR
   neither yet                              -> mark-to-market R at the latest close (flagged open)
-minus round-trip costs in R. Books:
+minus round-trip costs in R. Own-exit candidates (trend sleeves, exit_rule "signal_flat": no target) resolve on the
+stop or at the first 4h close after the decision where the sleeve signal has s x side <= 0 (the close price), with the
+signal recomputed point in time (agent.trend_sleeves.symbol_signals as of the scorecard time). Books:
   ALL     every candidate, including gate-blocked ones (did the gates help?)
   RULE    every non-blocked candidate (the deterministic sleeves without Claude)
   RANDOM  random picks from RULE of the same size as AI each session (seeded; averaged over 200 draws)
@@ -54,6 +56,25 @@ H_AI1_MIN_CLOSED = 60
 H_AI2_MIN_RESOLVED = 100
 
 
+def resolve_signal_exit(c: dict, t0: datetime, bars: pl.DataFrame, close_ms: np.ndarray, s: np.ndarray) -> dict:
+    """Own-exit candidate from its decision price: on each 1h bar closing after t0 the stop first; then, at a 4h close,
+    exit at the close when s x side <= 0 (agent.trend_sleeves trade layer). Costs as resolve()."""
+    d = 1 if c["side"] == "long" else -1
+    entry, stop = c["entry"], c["stop"]
+    risk = abs(entry - stop)
+    cost_r = entry * cost_bps(c.get("entry_type")) / 1e4 / risk
+    sig = {int(m): float(v) for m, v in zip(close_ms, s, strict=True)}
+    b = bars.filter(pl.col("close_ts") > t0) if "close_ts" in bars.columns else bars.filter(pl.col("event_ts") >= t0)
+    for r in b.iter_rows(named=True):
+        if (r["low"] <= stop) if d > 0 else (r["high"] >= stop):
+            return {"R": -1 - cost_r, "status": "stop", "closed": str(r["event_ts"])}
+        ms = int(r["close_ts"].timestamp() * 1000) if "close_ts" in r and r["close_ts"] is not None else None
+        if ms is not None and ms in sig and sig[ms] * d <= 0:
+            return {"R": d * (r["close"] - entry) / risk - cost_r, "status": "signal", "closed": str(r["close_ts"])}
+    last = b["close"][-1] if b.height else entry
+    return {"R": d * (last - entry) / risk - cost_r, "status": "open", "closed": None}
+
+
 def resolve(c: dict, t0: datetime, bars: pl.DataFrame) -> dict:
     d = 1 if c["side"] == "long" else -1
     entry, stop, tp = c["entry"], c["stop"], c["take_profit"]
@@ -97,6 +118,18 @@ def run(root: Path | None = None, t: datetime | None = None, lake: Lake | None =
     t = t or now()
     rows = []
     bars_cache: dict[str, pl.DataFrame] = {}
+    sig_cache: dict[str, object] = {}
+
+    def signals(sym: str):
+        from ai_trader.agent.trend_sleeves import symbol_signals
+
+        if sym not in sig_cache:
+            try:
+                sig_cache[sym] = symbol_signals(sym, t)
+            except Exception:  # no signal: the candidate stays open (marked to market)
+                sig_cache[sym] = None
+        return sig_cache[sym]
+
     for sdir in sorted(p for p in root.glob("S*") if p.is_dir()):
         cand_f = sdir / "candidates.json"
         if not cand_f.exists():
@@ -113,7 +146,16 @@ def run(root: Path | None = None, t: datetime | None = None, lake: Lake | None =
             sym = c["symbol"]
             if sym not in bars_cache:
                 bars_cache[sym] = lake.bars(sym, "1h", t, start=t0).select("event_ts", "close_ts", "high", "low", "close").sort("event_ts")
-            res = resolve(c, t0, bars_cache[sym])
+            if c.get("exit_rule") == "signal_flat" or c.get("take_profit") is None:
+                from ai_trader.agent.trend_sleeves import SLEEVES
+
+                sg, spec = signals(sym), SLEEVES.get(c["sleeve"])
+                if sg is not None and spec is not None:
+                    res = resolve_signal_exit(c, t0, bars_cache[sym], sg.close_ms, sg.s[spec.signal])
+                else:
+                    res = resolve_signal_exit(c, t0, bars_cache[sym], np.zeros(0, np.int64), np.zeros(0))
+            else:
+                res = resolve(c, t0, bars_cache[sym])
             rows.append({"session": sdir.name, "day": t0.date().isoformat(), **{k: c[k] for k in ("id", "symbol", "sleeve", "side", "rr")},
                          "blocked": c["blocked"] is not None, "ai": c["id"] in submitted.get("ids", []),
                          "test": whole_test or c["id"] in submitted.get("tests", []), "phase4": bool(sess.get("harness")), "decided": sub is not None,

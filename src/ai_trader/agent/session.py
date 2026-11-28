@@ -2,17 +2,18 @@
 
     PYTHONIOENCODING=utf-8 uv run python -m ai_trader.agent.session [SYMBOLS ...] [--out DIR]
 
-1. State cards for every symbol (regime, robust / HAR / weekend sigma, shock context, sleeve signals).
-2. Candidates from validated sleeves only:
-     shock_regime  (P1: continuation in calm cells, fade in volatile cells) - forward test from 2026-11-08
-     trend_4h      (P3: small ema_stack tilt) - low weight
-   Structural placement: stops/targets from the sleeve's own rules and the validated sigma (risk sigma, never
-   weekend-shrunk); p_quant = driftless first-passage null + a small documented prior edge per sleeve.
-   Stop cap (H-STOP1, user decision 2026-11-14): a stop farther than the applied cap (ai_trader.risk.stop_posterior:
+1. State cards for every symbol (regime, robust / HAR / weekend sigma, the trend sleeves' 4h signals).
+2. Candidates from the sleeves of the sleeve config (agent.trend_sleeves; user decisions D4 / D5, 2026-11-27):
+     trend_zoo_ew   WS16 spec A (zoo_ew, primary): |s| >= 0.30 at the 4h close, stop 4 x sigma_risk 4h, signal exit
+     trend_tsmom30  WS16 spec B (tsmom_30d, benchmark): the same trade layer
+   No target: the sleeves exit on their own signal (a rule exit the decision harness sends), so p_quant / R:R do not
+   apply and net E[R] is the documented WS16 forward expectation (trend_sleeves.PRIOR_NET_R).
+   Retired: shock_regime (H-S2 shock fade, D5) and the 4h ema_stack bracket trend_4h (D4; its open positions run to
+   completion under their bracket). The bracket machinery below (p_first, cap_stop, PRIOR_EDGE) stays for them.
+   Stop cap (H-STOP1, user decision 2026-11-14): no stop farther than the applied cap (ai_trader.risk.stop_posterior:
    4 sigma prior, weekly posterior, the same value crates/at-risk enforces) in per-bar risk sigmas of the sleeve's
-   frequency (1h for shock_regime, 4h for trend_4h) is pulled in to the cap (1% inside, for tick rounding) and
-   flagged `stop_capped`; continuation / trend targets keep their R multiple, the reversal target stays structural.
-3. Playbook gates: TradFi weekend => no new directional entries except shock sleeves (S4); stance per scenario.
+   frequency (4h for the trend sleeves), kept 1% inside it for tick rounding.
+3. Playbook gates: TradFi weekend => no new directional entries (S4); stance per scenario.
 4. Writes data/sessions/<id>/{cards.txt, candidates.json, proposals.json} and journals session_start / snapshot /
    decision. proposals.json is what `atx propose --file ... [--submit]` sends through the Rust risk engine.
 Claude's views are applied on top as bounded log-odds tilts (ARCHITECTURE §2.4) before submission.
@@ -37,15 +38,16 @@ from ai_trader.journal import Journal
 from ai_trader.research.calendar import add_calendar
 from ai_trader.research.frame import market_frame
 from ai_trader.research.regimes import CELL_LABELS, label
-from ai_trader.strategies import REGISTRY
 
 DEFAULT = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "ADAUSDT", "AVAXUSDT", "LINKUSDT", "XRPUSDT", "DOGEUSDT"]
 CLUSTER = {"BTCUSDT": "majors", "ETHUSDT": "majors", "SOLUSDT": "l1", "ADAUSDT": "l1", "AVAXUSDT": "l1",
            "LINKUSDT": "defi", "XRPUSDT": "payments", "DOGEUSDT": "meme"}
 # Documented prior edges over the driftless null (probability points), from the scoreboard; deliberately small.
 # Since 2026-11-14 these are the PRIORS of ai_trader.risk.edge_posterior (30 pseudo-trades, weekly update from closed
-# paper trades); analyse() uses the posterior mean in force at t.
-PRIOR_EDGE = {"shock_regime": 0.05, "trend_4h": 0.03}
+# paper trades). Bracket sleeves only: since D4 / D5 (2026-11-27) only the legacy trend_4h remains (open positions;
+# execution.gate maps zoo_ensemble to it); shock_regime was removed with its sleeve (D5). The trend sleeves have no
+# target, so no p_tp edge (agent.trend_sleeves).
+PRIOR_EDGE = {"trend_4h": 0.03}
 
 
 @dataclass
@@ -57,10 +59,10 @@ class Candidate:
     entry_type: str
     entry: float
     stop: float
-    take_profit: float
-    p_null: float
-    p_quant: float
-    rr: float
+    take_profit: float | None            # None: an own-exit sleeve (no resting target)
+    p_null: float | None
+    p_quant: float | None
+    rr: float | None
     blocked: str | None
     rationale: str
     cluster: str
@@ -69,6 +71,10 @@ class Candidate:
     freq: str = "1h"
     stop_sigma: float | None = None      # |ln(entry/stop)| / sigma_per_bar after the cap
     flags: list = field(default_factory=list)
+    exit_rule: str | None = None         # "signal_flat": exit at the first 4h close with s x side <= 0 (trend sleeves)
+    sleeve_signal: float | None = None   # the sleeve signal s at the decision close
+    expected_r: float | None = None      # documented net E[R] per closed trade of an own-exit sleeve (no target)
+    signal_close: str | None = None      # the 4h close the signal belongs to
 
 
 def _daily_har(f: pl.DataFrame) -> float:
@@ -92,7 +98,10 @@ def entry_cost_bps(entry_type: str) -> float:
 
 def net_er(c: "Candidate") -> float:
     """Net expected R exactly as the Rust risk engine computes it (at-risk intent.rs): round-trip costs (entry leg by
-    entry type, see entry_cost_bps; taker + slippage exit) added to the stop distance."""
+    entry type, see entry_cost_bps; taker + slippage exit) added to the stop distance. An own-exit candidate (no target)
+    carries its documented net expectation instead (the engine then checks the intent's net_er_r); missing -> -1."""
+    if c.take_profit is None:
+        return float(c.expected_r) if c.expected_r is not None and math.isfinite(c.expected_r) else -1.0
     k = load().risk["costs"]
     entry_bps = entry_cost_bps(c.entry_type)
     cost = c.entry * (entry_bps + k["taker_bps"] + k["slippage_bps"]) / 1e4
@@ -106,11 +115,35 @@ def p_first(entry: float, stop: float, tp: float) -> float:
     return b / (a + b)
 
 
+def flow_rows(sym: str, t0, t1, as_of, root: Path | None = None) -> pl.DataFrame:
+    """flow_3s rows of `sym` (every category) with event_ts in [t0, t1) known at as_of, the latest revision per candle,
+    read from the date partitions of the window only. Same rows as Lake.read_asof("flow_3s", ...), which scans every
+    file of the table (at ~20 days of 3 s data: > 1 GB and minutes per call)."""
+    from ai_trader.core.time import utc
+
+    t0, t1, as_of = utc(t0), utc(t1), utc(as_of)
+    base = Path(root or load().lake_dir) / "flow_3s" / "venue=bybit"
+    days, d = [], t0.date()
+    while d <= (t1 - timedelta(milliseconds=1)).date():
+        days.append(d.isoformat())
+        d += timedelta(days=1)
+    parts = []
+    for cdir in sorted(base.glob("category=*")) if base.is_dir() else []:
+        for day in days:
+            pdir = cdir / f"date={day}"
+            if pdir.is_dir() and any(pdir.glob("*.parquet")):
+                parts.append(pl.scan_parquet(str(pdir / "*.parquet"), hive_partitioning=False)
+                             .filter((pl.col("symbol") == sym) & (pl.col("event_ts") >= t0) & (pl.col("event_ts") < t1) & (pl.col("known_ts") <= as_of))
+                             .with_columns(pl.lit(cdir.name.split("=", 1)[1]).alias("category")))
+    if not parts:
+        return pl.DataFrame()
+    out = pl.concat(parts, how="diagonal_relaxed").collect()
+    return out.sort("known_ts").unique(["category", "event_ts"], keep="last").sort("event_ts") if out.height else out
+
+
 def flow_context(sym: str, t, minutes: int = 60) -> tuple[str, dict]:
     """Descriptive order-flow context from flow_3s (H-F*/H-AS* untested: context only, never a signal)."""
-    from ai_trader.storage.lake import Lake
-
-    d = Lake().read_asof("flow_3s", t, symbols=[sym], start=t - timedelta(minutes=minutes))
+    d = flow_rows(sym, t - timedelta(minutes=minutes), t + timedelta(milliseconds=1), t)
     if d.height == 0:
         return "flow: no flow_3s data", {}
     out, parts = {}, []
@@ -186,93 +219,75 @@ def cap_stop(c: Candidate, cap: float, min_sig: float, tp_r: float | None, edge:
     return c
 
 
-def _new_signal_age(s: np.ndarray, lookback: int) -> int | None:
-    """Bars since the held shock signal started, if it started within the last `lookback` bars and is still on."""
-    n = len(s)
-    if n == 0 or s[-1] == 0:
-        return None
-    sg = np.sign(s[-1])
-    for j in range(n - 1, max(-1, n - 1 - lookback), -1):
-        if np.sign(s[j]) != sg:
-            return None
-        if j == 0 or np.sign(s[j - 1]) != sg:
-            return n - 1 - j
-    return None
+def trend_candidates(sym: str, px: float, sg, *, weekend: bool, cap: float, min_sig: float, cell: str | None) -> list[Candidate]:
+    """Entry candidates of the trend sleeves (agent.trend_sleeves) at the latest 4h close: |s| >= THETA, side = sign(s),
+    stop STOP_K x sigma_risk 4h from the decision price (never beyond the cap), no target, documented net E[R]. Book
+    state (flat in the sleeve, re-entry after a stop, kill, engine caps) is applied by agent.decision.prepare."""
+    from ai_trader.agent import trend_sleeves as ts
+
+    out: list[Candidate] = []
+    if not sg.warm or len(sg) == 0:
+        return out
+    sig4 = float(sg.sigma4[-1])
+    k = ts.stop_k(cap)
+    close_iso = sg.last_close().isoformat() if sg.last_close() else None
+    for name, spec in ts.SLEEVES.items():
+        s = sg.last(spec.signal)
+        if not (abs(s) >= ts.THETA and math.isfinite(sig4) and sig4 > 0):
+            continue
+        d = 1 if s > 0 else -1
+        stop = px * math.exp(-d * k * sig4)
+        blocked = "TradFi weekend: no new directional entries (S4)" if weekend else None
+        if k < min_sig * (1 + TICK_MARGIN):
+            blocked = blocked or f"stop {k:.2f} sigma inside min_stop_distance_sigma {min_sig}"
+        flags = [f"stop_capped {ts.STOP_K:.2f}->{k:.2f} sigma (cap {cap:.2f})"] if k < ts.STOP_K * (1 - TICK_MARGIN) - 1e-9 else []
+        c = Candidate(f"{spec.prefix}-{sym[:4]}", sym, name, "long" if d > 0 else "short", "limit", px, stop, None, None, None, None, blocked,
+                      f"spec {spec.spec} {spec.signal} s {s:+.2f} at the {close_iso[11:16] if close_iso else '?'}Z close in {cell}; exit at the first 4h close "
+                      f"with s x side <= 0, no target", CLUSTER.get(sym, "other"), sigma_per_bar=sig4, freq="4h", stop_sigma=k, flags=flags,
+                      exit_rule="signal_flat", sleeve_signal=s, expected_r=ts.PRIOR_NET_R, signal_close=close_iso)
+        out.append(c)
+    return out
 
 
 def analyse(sym: str, t, lookback_bars: int = 1, cap: float | None = None, edges: dict | None = None) -> tuple[str, list[Candidate], dict]:
-    """State card, candidates and state for one symbol as of t. `lookback_bars`: a shock signal that started within
-    that many 1h bars and is still held is a NEW signal (1 = only on the last bar; 4 for the 4-hourly decision session,
-    entered at the current price on the sleeve's structural levels). `cap`: the stop cap in per-bar sigmas (default the
-    applied H-STOP1 cap at t)."""
-    from ai_trader.risk.stop_posterior import applied_cap
-
+    """State card, candidates and state for one symbol as of t: the trend sleeves' entry candidates (agent.trend_sleeves)
+    at the latest 4h close, entered at the current price. `cap`: the stop cap in per-bar sigmas (default the applied
+    H-STOP1 cap at t). `lookback_bars` (the retired shock sleeve's new-signal window) and `edges` (bracket-sleeve p_tp
+    edges; none active since D4 / D5) are kept for callers and recorded in the state."""
+    from ai_trader.agent import trend_sleeves as ts
     from ai_trader.risk.edge_posterior import applied_edges
+    from ai_trader.risk.stop_posterior import applied_cap
 
     if cap is None:
         cap = applied_cap(t)[0]
     edges = {**PRIOR_EDGE, **(applied_edges(t)[0] if edges is None else edges)}
     min_sig = float(load().risk["placement"]["min_stop_distance_sigma"])
     f = label(market_frame(sym, "1h", t), 1.0)
-    f4 = market_frame(sym, "4h", t, funding=False, oi=False)
+    sg = ts.symbol_signals(sym, t)
     last = f.tail(1).row(0, named=True)
     px = float(last["close"])
     cal = add_calendar(f.tail(1)).row(0, named=True)
     weekend = bool(cal["tradfi_weekend"])
     har = _daily_har(f)
     sig_risk_h = float(last["sigma_risk_next"])
-    cands: list[Candidate] = []
-
-    # --- shock sleeve: act only on a NEW signal (entry at this bar), with the strategy's own levels
-    shock = REGISTRY["shock_regime"]()
-    s = shock(f).to_numpy()
-    shock_txt = "none in last 72h"
-    recent = f.tail(72).filter(pl.col("z").abs() >= 4)
-    if recent.height:
-        r = recent.tail(1).row(0, named=True)
-        mode = "continuation" if r["vol_state"] == "low" else "reversal"
-        shock_txt = f"{r['z']:+.1f}σ at {r['event_ts']:%a %H:%M} in {r['cell']} ({r['vol_state']} vol) -> {mode}"
-        age = _new_signal_age(s, lookback_bars)
-        if age is not None:
-            d = 1 if s[-1] > 0 else -1
-            if mode == "reversal":
-                tp = r["open"]
-                stop = (r["low"] - 0.5 * r["sigma_next"] * r["close"]) if d > 0 else (r["high"] + 0.5 * r["sigma_next"] * r["close"])
-            else:
-                stop = r["open"]
-                tp = px * math.exp(d * 2 * abs(math.log(px / stop)))  # bracket TP at 2R; trailing handled by the sleeve
-            if (tp - px) * d > 0 and (px - stop) * d > 0:
-                pn = p_first(px, stop, tp)
-                why = f"{mode} after {r['z']:+.1f}σ shock (P1, H-S2)" + (f", signal {age}h old" if age else "")
-                c = Candidate(f"shk-{sym[:4]}", sym, "shock_regime", "long" if d > 0 else "short", "market", px, stop, tp, pn,
-                              p_with_edge(pn, edges["shock_regime"]), abs(math.log(tp / px)) / abs(math.log(px / stop)), None,
-                              why, CLUSTER.get(sym, "other"), str(r["event_ts"]), sigma_per_bar=sig_risk_h, freq="1h")
-                cands.append(cap_stop(c, cap, min_sig, 2.0 if mode == "continuation" else None, edges["shock_regime"]))
-
-    # --- trend sleeve (4h ema_stack): small tilt; stop 1.5 x HAR daily sigma, TP at 3R
-    tr = float(REGISTRY["ema_stack"]()(f4)[-1]) if f4.height >= 300 else 0.0  # needs real 4h history
-    if abs(tr) >= 0.3 and np.isfinite(har):
-        d = 1 if tr > 0 else -1
-        stop = px * math.exp(-d * 1.5 * har)
-        tp = px * math.exp(d * 4.5 * har)
-        pn = p_first(px, stop, tp)
-        blocked = "TradFi weekend: no new directional entries (S4)" if weekend else None
-        sig4 = float(f4["sigma_risk_next"][-1]) if "sigma_risk_next" in f4.columns and f4.height else float("nan")
-        c = Candidate(f"trd-{sym[:4]}", sym, "trend_4h", "long" if d > 0 else "short", "limit", px, stop, tp, pn,
-                      p_with_edge(pn, edges["trend_4h"]), 3.0, blocked, f"4h ema_stack {tr:+.2f} in {last['cell']} (P3, weak)", CLUSTER.get(sym, "other"),
-                      sigma_per_bar=sig4 if np.isfinite(sig4) else None, freq="4h")
-        cands.append(cap_stop(c, cap, min_sig, 3.0, edges["trend_4h"]))
+    cands = trend_candidates(sym, px, sg, weekend=weekend, cap=cap, min_sig=min_sig, cell=last["cell"])
+    zoo, tsm = sg.last("zoo_ew"), sg.last("tsmom_30d")
+    sig4 = float(sg.sigma4[-1]) if len(sg) else float("nan")
+    lc = sg.last_close()
 
     flow_txt, flow = flow_context(sym, t)
     liq_txt, liq = liq_context(sym, t)
     card = (f"{sym} {px:,.4f}  {last['event_ts']:%a %H:%M} UTC  {'[TRADFI WEEKEND] ' if weekend else ''}{last['cell']} {CELL_LABELS.get(last['cell'], '')}"
-            f"\n  vol: risk σ/h {sig_risk_h:.2%}, central σ/h {last['sigma_rb_next']:.2%} (m {last['wk_m']:.2f}), HAR day {har:.2%}"
-            f"\n  shock: {shock_txt} | shock_regime signal {s[-1]:+.2f} | 4h trend {tr:+.2f}"
-            f"\n  {flow_txt}"
+            f"\n  vol: risk σ/h {sig_risk_h:.2%}, risk σ/4h {sig4:.2%}, central σ/h {last['sigma_rb_next']:.2%} (m {last['wk_m']:.2f}), HAR day {har:.2%}"
+            + (f"\n  trend sleeves at the {lc:%H:%M}Z close: zoo_ew (spec A) {zoo:+.2f} | tsmom_30d (spec B) {tsm:+.2f}" if lc else "\n  trend sleeves: no 4h bars")
+            + ("" if sg.warm else " [history too short]")
+            + f"\n  {flow_txt}"
             f"\n  {liq_txt}")
-    state = {"symbol": sym, "price": px, "cell": last["cell"], "weekend": weekend, "har_day": har, "sigma_risk_h": sig_risk_h, "trend_4h": tr, "shock_signal": float(s[-1]), "flow": flow, "liquidations": liq,
-             "bar_ts": str(last["event_ts"]), "data_max_ts": str(f["known_ts"].max()), "data_max_ts_4h": str(f4["known_ts"].max()) if f4.height else None,
-             "label": CELL_LABELS.get(last["cell"], ""), "sigma_rb_h": float(last["sigma_rb_next"]), "wk_m": float(last["wk_m"]), "shock": shock_txt, "stop_cap": cap, "edges": edges}
+    state = {"symbol": sym, "price": px, "cell": last["cell"], "weekend": weekend, "har_day": har, "sigma_risk_h": sig_risk_h, "sigma_risk_4h": sig4,
+             "zoo_ew": zoo, "tsmom_30d": tsm, "signal_close": lc.isoformat() if lc else None, "signals_warm": sg.warm, "flow": flow, "liquidations": liq,
+             "bar_ts": str(last["event_ts"]), "data_max_ts": str(f["known_ts"].max()), "data_max_ts_4h": sg.data_max_ts,
+             "label": CELL_LABELS.get(last["cell"], ""), "sigma_rb_h": float(last["sigma_rb_next"]), "wk_m": float(last["wk_m"]), "stop_cap": cap, "edges": edges,
+             "lookback_bars": lookback_bars}
     return card, cands, state
 
 
@@ -293,16 +308,6 @@ def run(symbols: list[str], out_root: Path) -> Path:
         cards.append(c)
         cands += k
         states.append(st)
-    # A shock that hits many symbols in the same bar is ONE market bet, not N independent ones: shock candidates
-    # from the same bar on >= 3 symbols share a cluster, so the risk engine's per-cluster cap keeps only the best one.
-    by_bar: dict[str, list[Candidate]] = {}
-    for c in cands:
-        if c.shock_ts:
-            by_bar.setdefault(c.shock_ts, []).append(c)
-    for ts, group in by_bar.items():
-        if len(group) >= 3:
-            for c in group:
-                c.cluster = f"market-shock-{ts[:13]}"
     j.write("snapshot", {"states": states})
     (out / "cards.txt").write_text("\n\n".join(cards), encoding="utf-8")
     (out / "candidates.json").write_text(json.dumps([asdict(c) for c in cands], indent=1), encoding="utf-8")
@@ -310,7 +315,9 @@ def run(symbols: list[str], out_root: Path) -> Path:
     for c in cands:
         if not c.blocked and net_er(c) < gate:
             c.blocked = f"net E[R] {net_er(c):+.3f} after costs < gate {gate} (risk engine would reject)"
-    live = [c for c in cands if not c.blocked]
+    # own-exit candidates (no target) go through the decision harness only (scripts/decision_session.py): atx propose
+    # needs a resting target
+    live = [c for c in cands if not c.blocked and c.take_profit is not None]
     live.sort(key=lambda c: -net_er(c))
     proposals = {"session_id": sid, "clusters": {c.symbol: c.cluster for c in live},
                  "proposals": [{"id": c.id, "symbol": c.symbol, "side": c.side, "entry_type": c.entry_type, "entry": round(c.entry, 8),
@@ -321,8 +328,10 @@ def run(symbols: list[str], out_root: Path) -> Path:
     print("\n\n".join(cards))
     print(f"\n{len(cands)} candidates, {len(live)} proposed, {len(cands) - len(live)} blocked -> {out}")
     for c in cands:
-        print(f"  {c.id:10s} {c.sleeve:13s} {c.side:5s} {c.symbol:9s} entry {c.entry:,.4f} SL {c.stop:,.4f} TP {c.take_profit:,.4f}  "
-              f"RR {c.rr:.1f} p_null {c.p_null:.2f} p {c.p_quant:.2f} net E[R] {net_er(c):+.3f}  {'BLOCKED: ' + c.blocked if c.blocked else 'proposed'}  | {c.rationale}")
+        geo = (f"TP {c.take_profit:,.4f}  RR {c.rr:.1f} p_null {c.p_null:.2f} p {c.p_quant:.2f}" if c.take_profit is not None
+               else f"no target ({c.exit_rule}), s {c.sleeve_signal:+.2f}")
+        state = "BLOCKED: " + c.blocked if c.blocked else ("proposed" if c.take_profit is not None else "decision harness only")
+        print(f"  {c.id:10s} {c.sleeve:13s} {c.side:5s} {c.symbol:9s} entry {c.entry:,.4f} SL {c.stop:,.4f} {geo} net E[R] {net_er(c):+.3f}  {state}  | {c.rationale}")
     return out
 
 
