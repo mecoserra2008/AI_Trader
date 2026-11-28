@@ -1,0 +1,34 @@
+# WMQ amendment 1 and conditional tests (program WMM2), registered 2026-11-28 ~04:10 UTC before any SEL or HOLD replay.
+# Amendment 1 (an extra labelled trial, after seeing the CAL intensity fits, not any P&L): the registered exponential fit is
+# dominated by the touch legs (k = 12-17 per sigma, so GLFT / AS quote at ~0.07-0.1 sigma); the far legs decay at k ~ 2-4.
+# A2 refits A, k on the legs with nominal x >= 0.75 (own fit with >= 50 such CAL fills, else pooled).
+# R-WMS (WMS, commit ffd4f88): data/research/wms/selection.parquet, eligible_name = top third of S1 within the weekend;
+# eligible = eligible_name and the frozen BTC calm probability >= 0.5 (open on 2026-09-26, 10-10, 10-24 of the HOLD weekends).
+# WMN gate (commit 5434f2d): data/research/wmn/gate.parquet (sha256 of gate_params.json 656546eb..), pull / widen per minute.
+H-WMQ-13:
+  title: "GLFT / AS quotes with the intensity fitted where the quotes sit earn a positive held net (extra trial A2)"
+  statement: "The member of A2 (GLFT and AS, skew at the cap 0.5 sigma, plain or adjusted by the CAL adverse cost at the model depth + 2 bp fee, A and k fitted on the CAL probe legs with nominal x >= 0.75; 4 variants at the minimum lot) chosen on SEL by the registered CV has a positive held net per symbol-day."
+  rationale: "The whole-curve exponential fit is mis-specified (convex log-intensity); fitting k where the quotes would sit gives the closed-form quotes a fair chance. Counted as extra trials."
+  test: "As H-WMQ-3: SEL CV choice among the 4 A2 variants; held mean net per symbol-day on HOLD with the day-clustered CI per cell; paired vs B0 reported."
+  success: "Supports iff the held mean > 0 with the CI above 0 in all four cells and the SEL mean > 0 (primary); contradicts iff the held mean <= 0 with the CI below 0 in the primary cell; else inconclusive."
+  prior: 0.15
+  family: wmq_quote
+  status: proposed
+H-WMQ-14:
+  title: "WMS's Friday-known selection (R-WMS eligible_name) makes the best WMQ quoter beat B0"
+  statement: "On HOLD symbol-days whose (Saturday weekend_start, symbol) row in data/research/wms/selection.parquet has eligible_name = true, the H-WMQ-10 variant's net per symbol-day minus B0's (paired, same symbol-day) is > 0, and the H-WMQ-10 variant's own net on those symbol-days is > 0."
+  rationale: "The user wants to quote only names with a high mean-reversion index; WMS froze that rule on pre-cutoff data."
+  test: "Join HOLD symbol-days to selection.parquet on (weekend_start = the Saturday, symbol); symbol-days without a row are excluded and counted. Paired (variant - B0) and the variant's net on eligible_name symbol-days, day-clustered bootstrap CI (B = 10000) per cell. Secondary, reported and not scored: (a) eligible_name minus non-eligible difference of the paired mean (day-clustered); (b) eligible = eligible_name and calm gate open (3 HOLD weekends, underpowered); (c) the S1 score as a continuous moderator: OLS slope of the paired difference and of the variant's net on score, day-clustered bootstrap CI."
+  success: "Supports iff on eligible_name symbol-days the paired mean > 0 with the CI above 0 in all four cells AND the variant's held mean > 0 with the CI above 0 in all four cells; contradicts iff the paired mean < 0 with the CI below 0 in the primary cell; else inconclusive."
+  prior: 0.2
+  family: wmq_conditional
+  status: proposed
+H-WMQ-15:
+  title: "The WMN pull alone (no widen) improves the best WMQ quoter"
+  statement: "As H-WMQ-12 but with the pull only: no adding quotes while the WMN gate's pull is on (exit-only path), no widening; gated minus ungated held net per symbol-day of the H-WMQ-10 variant > 0 (paired). H-WMQ-12 stays the pull + widen arm."
+  rationale: "WMN found the gain comes from the pull (price / BTC jumps); the slow news kernels behind the widen add nothing."
+  test: "Same subset, cells and statistics as H-WMQ-12 (7 core names x the last 8 HOLD weekends 2026-10-03 .. 11-22; every core name has gate rows; a symbol without rows would be 'gate unknown': excluded and counted). Gate rows apply from their ts. B0 pull-only and pull + widen reported, not scored."
+  success: "Supports iff the paired mean > 0 with the CI above 0 in all four cells; contradicts iff the paired mean < 0 with the CI below 0 in the primary cell; else inconclusive."
+  prior: 0.3
+  family: wmq_filters
+  status: proposed

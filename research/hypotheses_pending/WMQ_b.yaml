@@ -1,0 +1,12 @@
+# WMQ conditional test on the WMN news gate (program WMM2). Registered 2026-11-27 on the frozen RULE of H-WMN-13/14
+# (src/ai_trader/research/wmn_gate.py) before any gate parameter or gate value exists or is looked at, and before any WMQ
+# held replay. Engine: atx mm-replay with the regime gate (exit-only while off) and the new `widen_file` series.
+H-WMQ-12:
+  title: "The WMN news-intensity gate (pull + widen) improves the best WMQ quoter"
+  statement: "Applying the WMN gate from data/research/wmn/gate.parquet (parameters fitted on pre-2026-07-01 shocks, data/research/wmn/gate_params.json): no adding quotes while pull is on (lambda_news >= 3 or the 2 minutes before a macro release; reducing quotes stay: the exit-only path), and every half-spread multiplied by widen = sqrt(1 + min(lambda_news, 3)) otherwise, raises the held net per symbol-day of the H-WMQ-10 variant (gated - ungated, paired)."
+  rationale: "Informational adverse selection: fills around news should be more toxic than flow-only fills; WMN's gate pulls at high news intensity and widens in proportion to it."
+  test: "Replays of the stored compact HOLD subset (7 core names x the last 8 HOLD weekends 2026-09-26 .. 11-21, 112 symbol-days) with and without the gate, same binary and cells; each gate row applies from its ts (piecewise constant, no later information); symbol-days without gate rows for the symbol are excluded and counted; paired per symbol-day with the day-clustered bootstrap CI (B = 10000). B0 with and without the gate reported, not scored. Forward weekends added when they exist."
+  success: "Supports iff the paired mean > 0 with the CI above 0 in all four cells; contradicts iff the paired mean < 0 with the CI below 0 in the primary cell (pro-rata 150 ms); else inconclusive. If gate_params.json / gate.parquet do not exist when the replays are due, the test is recorded as pending (no parameters invented)."
+  prior: 0.3
+  family: wmq_filters
+  status: proposed

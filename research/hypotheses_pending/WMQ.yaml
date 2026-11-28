@@ -1,0 +1,119 @@
+# WMQ QUOTE (program WMM2, 2026-11-27): how to quote a small weekend book of illiquid Bybit alt perps. Registered before
+# any replay P&L (design frozen in data/research/wmq/design.json; diary "WMQ design frozen before results").
+# Engine: atx mm-replay on real ob200 books + public tapes (crates/atx/src/mm_replay.rs, WMQ modes "probe" and "model").
+# Universe: 12 names = the H-MMW core (ATOM XLM WIF TRUMP ICP WLD PUMPFUN) + 5 by a stated widened-band rule on the same
+#   2026-11-21 snapshot (TRX GALA CRV 1000BONK GRASS). Weekends Sat + Sun UTC:
+#   CAL  2026-03-07 .. 04-11 (6, llm_in_sample): probe only -> calibration (A, k, adverse-selection add-on, x*);
+#   SEL  2026-04-18 .. 06-27 (11, llm_in_sample): selection; HOLD 2026-07-04 .. 11-21 (21, clean_holdout): tests;
+#   FWD  2026-11-28 onwards (forward).
+# Cells: queue {pro-rata, FIFO-pessimistic} x latency {150, 300} ms; primary = pro-rata 150 ms. Fees maker 2.0 / taker 5.5 bp.
+# Unit: net USD per symbol-day (spread + adverse 60 s + inventory - fees; each day starts flat, marked at 24:00 UTC), per base
+#   lot for the 3-lot families; day-clustered bootstrap 95% CI (days resampled with all their symbol-days, B = 10000,
+#   seed 20261127). Selection (all families): SEL only; every choice of 3 of the 11 SEL weekends as test (165 splits); a
+#   variant's split statistic = min over the four cells of its test mean; score = median over splits; choice = the highest
+#   score (ties: grid order). Overfitting reported for every choice: PBO (CSCV, 2000 random half splits of the 22 SEL days),
+#   deflated Sharpe (N = 37 quoting variants), purged-CV OOS estimate of the selection procedure.
+# Grid (38 variants): B0 (live mm_illiq20); PROBE; D symmetric depth m in {0.5, 1, 1.5, 2, 3} sigma + D_xstar; A {GLFT, AS} x
+#   s_cap {0.25, 0.5, 1} sigma x {plain, adj = + CAL adverse cost at 60 s + 2 bp fee}; B depth {1, 2} sigma at 3 lots x size
+#   {flat, linear}; C GLFT s_cap {0.5, 1} at 3 lots x size {flat, linear}; E on bases D_m1 and A_glft_s0.5_p x {pass10,
+#   pass10_t60, stop3_t60}; F BTC pull (k 2, cooldown 10 s) on the two bases; T trend pull (1.5 sigma over 60 min) on the
+#   two bases. Full definitions: design.json.
+H-WMQ-1:
+  title: "Some quote depth has a positive per-fill edge after adverse selection and fees"
+  statement: "For each symbol, the probe leg x*_s chosen on CAL (argmax over the 10 probe distances 0 (touch), 0.1 .. 3 sigma of lambda_j x e60_j, the fill rate times the mean per-fill net edge) has a positive mean per-fill net edge on HOLD: e60 = spread captured + 60 s markout - 2 bp maker fee > 0 (bp per fill, pooled over the 12 symbols' x*_s legs, both sides), and e300 (300 s markout) > 0 too."
+  rationale: "Touch fills lose ~10x their spread to 1 s adverse selection (H-MMW4, R-MMR-1); if no distance from the mid has a positive per-fill edge, no skew or inventory rule built on such quotes can earn, because our virtual orders do not change the market they are filled by."
+  test: "HOLD probe fills (one minimum lot per side at each distance, re-pegged by the live replace rule) at each symbol's x*_s leg, per cell; mean e60 and e300 in bp per fill with the day-clustered bootstrap CI. Reported for every leg (lambda(x), e1/e10/e60/e300 by x), per symbol, SEL and HOLD."
+  success: "Supports iff the HOLD mean e60 > 0 with the CI above 0 in all four cells AND the HOLD mean e300 > 0 in all four cells AND the SEL mean e60 > 0 (primary cell); contradicts iff the HOLD mean e60 <= 0 with the CI below 0 in the primary cell; else inconclusive."
+  prior: 0.25
+  family: wmq_probe
+  status: proposed
+H-WMQ-2:
+  title: "Fill intensity decays exponentially with depth measured in sigma, and the decay rate is stable"
+  statement: "lambda(x) = A exp(-k x), x = the probe's distance from the mid in units of the quoter's 1h sigma, fitted per symbol on CAL (Poisson GLM of fill counts per symbol-day and leg, exposure = live seconds of both sides), predicts SEL and HOLD probe fill counts no worse than the same exponential in bp distance or a power law A (x + 0.05)^-alpha, and k is stable between CAL and HOLD."
+  rationale: "GLFT / AS quotes need lambda(delta) = A exp(-k delta); scaling the distance by sigma should make the curve portable across volatility regimes and weekends. If the form or the parameters are unstable, the closed-form quotes are mis-specified."
+  test: "Out-of-sample Poisson log-likelihood per symbol-day (primary cell) of the 10 legs' counts under each CAL fit; per day, (exp_sigma - alternative) summed over symbols; mean and day-clustered bootstrap CI on SEL and on HOLD. Stability: k refitted per symbol on HOLD vs CAL (ratio), and per-weekend k on all phases."
+  success: "Supports iff on HOLD the difference vs each alternative is not significantly negative (CI upper bound >= 0) AND |k_HOLD / k_CAL - 1| <= 0.3 for >= 8 of the 12 symbols; contradicts iff exp_sigma is significantly worse than an alternative on HOLD (CI upper bound < 0) or fewer than 4 of 12 symbols are stable; else inconclusive."
+  prior: 0.5
+  family: wmq_probe
+  status: proposed
+H-WMQ-3:
+  title: "GLFT / Avellaneda-Stoikov price-skewed quotes earn a positive held net on weekend alts"
+  statement: "The member of family A (GLFT closed-form asymptotic or Avellaneda-Stoikov with a 1 h horizon; skew at the cap 0.25 / 0.5 / 1 sigma; plain or adjusted by the CAL adverse-selection cost and the maker fee; 12 variants at the minimum lot, cap 25 USD) chosen on SEL has a positive held net per symbol-day after fees and adverse selection."
+  rationale: "The classic optimal-market-making answer to inventory risk; the adjusted members add the measured post-fill drift and the fee to the half-spread (Cartea, Jaimungal & Penalva)."
+  test: "The registered selection on SEL; held mean net USD per symbol-day on the 504 HOLD symbol-days with the day-clustered CI per cell; decomposition (spread, adverse 1/10/60/300 s, inventory, fees, funding); paired difference vs B0 reported."
+  success: "Supports iff the held mean > 0 with the CI above 0 in all four cells and the SEL mean > 0 (primary cell); contradicts iff the held mean <= 0 with the CI below 0 in the primary cell; else inconclusive."
+  prior: 0.15
+  family: wmq_quote
+  status: proposed
+H-WMQ-4:
+  title: "Size skew improves symmetric depth quotes"
+  statement: "At 3 minimum lots per order (cap 75 USD), linear size skew (adding side round(3 (1 - |q| / cap)) lots, reducing side round(3 (1 + |q| / cap)) lots) beats the same prices with flat size: the linear member at the depth chosen on SEL (m in {1, 2} sigma, by the CV score of the linear members) minus its flat control > 0 per symbol-day on HOLD."
+  rationale: "The user asked for price-skewed or size-skewed quoting; size skew is the alternative inventory control that keeps the quoted prices."
+  test: "Paired per HOLD symbol-day (linear - flat, same depth), day-clustered CI per cell; both members' absolute held nets and decompositions reported."
+  success: "Supports iff the paired mean > 0 with the CI above 0 in all four cells; contradicts iff the paired mean < 0 with the CI below 0 in the primary cell; else inconclusive."
+  prior: 0.3
+  family: wmq_quote
+  status: proposed
+H-WMQ-5:
+  title: "Price skew plus size skew beats price skew alone"
+  statement: "At 3 minimum lots, GLFT quotes (skew at the cap chosen on SEL among {0.5, 1} sigma, by the CV score of the linear members) with linear size skew minus the same GLFT quotes with flat size > 0 per symbol-day on HOLD."
+  rationale: "Family (c) of the program: both levers at once."
+  test: "Paired per HOLD symbol-day, day-clustered CI per cell; absolute held nets reported."
+  success: "Supports iff the paired mean > 0 with the CI above 0 in all four cells; contradicts iff the paired mean < 0 with the CI below 0 in the primary cell; else inconclusive."
+  prior: 0.3
+  family: wmq_quote
+  status: proposed
+H-WMQ-6:
+  title: "Quoting away from the touch at a multiple of sigma earns a positive held net"
+  statement: "The member of family D (symmetric depth m in {0.5, 1, 1.5, 2, 3} x the quoter's 1h sigma, or the CAL probe-optimal depth x*_s; minimum lot, cap 25 USD, no price or size skew) chosen on SEL has a positive held net per symbol-day."
+  rationale: "The touch loses to 1 s adverse selection; deeper quotes trade less often but may be filled on overshoots that revert."
+  test: "The registered selection on SEL; held mean net per symbol-day with the day-clustered CI per cell; decomposition; paired vs B0 reported."
+  success: "Supports iff the held mean > 0 with the CI above 0 in all four cells and the SEL mean > 0 (primary cell); contradicts iff the held mean <= 0 with the CI below 0 in the primary cell; else inconclusive."
+  prior: 0.2
+  family: wmq_quote
+  status: proposed
+H-WMQ-7:
+  title: "Inventory unwinds (passive at the touch, a time limit, an adverse-move stop) improve net"
+  statement: "The member of family E chosen on SEL (bases D_m1 and A_glft_s0.5_p x {reducing quote joins the touch after 10 min; that plus a 60 min time limit closed at market; a 3 sigma adverse-move stop plus the 60 min limit}) minus its base without the unwind > 0 per symbol-day on HOLD."
+  rationale: "Weekend alts bleed and a few trend hard; stuck inventory marked at 24:00 dominated B0's P&L variance (H-MMW decomposition)."
+  test: "Paired per HOLD symbol-day (E member - its base), day-clustered CI per cell; the absolute held net of the E member reported."
+  success: "Supports iff the paired mean > 0 with the CI above 0 in all four cells; contradicts iff the paired mean < 0 with the CI below 0 in the primary cell; else inconclusive."
+  prior: 0.3
+  family: wmq_quote
+  status: proposed
+H-WMQ-8:
+  title: "The BTC-move pull improves the WMQ quoters"
+  statement: "Adding the H-MMW2 BTC pull (cancel every quote when |BTC 1 s or 5 s return| > 2 x the BTC 1h sigma scaled to the horizon; 10 s cooldown) to the two fixed bases (D_m1, A_glft_s0.5_p) raises held net per symbol-day (pulled - unpulled, paired)."
+  rationale: "H-MMW2 passed by removing fills, not by avoiding toxic ones; on quoters that are filled more often the pull may matter."
+  test: "Paired per HOLD symbol-day for each base, day-clustered CI per cell."
+  success: "Supports iff for at least one base the paired mean > 0 with the CI above 0 in all four cells and the other base's paired mean > 0 in the primary cell; contradicts iff for both bases the paired mean < 0 with the CI below 0 in the primary cell; else inconclusive."
+  prior: 0.25
+  family: wmq_filters
+  status: proposed
+H-WMQ-9:
+  title: "A trend pull (do not add against a 60 min move beyond 1.5 sigma) improves the WMQ quoters"
+  statement: "On the two fixed bases, pulling the adding bid when the 60 min log return < -1.5 x the 1h sigma and the adding ask when > +1.5 x sigma raises held net per symbol-day (paired)."
+  rationale: "The user's trend filter: weekend alts that trend hard should not be faded."
+  test: "Paired per HOLD symbol-day for each base, day-clustered CI per cell."
+  success: "Supports iff for at least one base the paired mean > 0 with the CI above 0 in all four cells and the other base's paired mean > 0 in the primary cell; contradicts iff for both bases the paired mean < 0 with the CI below 0 in the primary cell; else inconclusive."
+  prior: 0.3
+  family: wmq_filters
+  status: proposed
+H-WMQ-10:
+  title: "The best WMQ quoting scheme earns a positive held net and beats the live width B0"
+  statement: "The WMQ variant with the highest SEL CV score among the 36 quoting variants of D, A, B, C, E, F, T (net per base lot) has a held mean net per symbol-day > 0 and beats B0 (the live mm_illiq20 rule) paired on the same HOLD symbol-days."
+  rationale: "The program question: does any principled quoting scheme earn a positive held net after fees and adverse selection, and does it beat today's width?"
+  test: "Held mean net (per base lot) with the day-clustered CI per cell; paired (best per lot - B0) per symbol-day, day-clustered CI per cell; decomposition; split core 7 vs extra 5 reported."
+  success: "Supports iff the held mean > 0 with the CI above 0 in all four cells AND the paired mean > 0 with the CI above 0 in all four cells AND the SEL mean > 0 (primary); contradicts iff the held mean <= 0 with the CI below 0 in the primary cell, or the paired mean < 0 with the CI below 0 in the primary cell; else inconclusive."
+  prior: 0.1
+  family: wmq_quote
+  status: proposed
+H-WMQ-11:
+  title: "The best WMQ scheme scales to 20-50 USD per side and to a capped multi-name book"
+  statement: "The H-WMQ-10 variant at 4 and 10 minimum lots per order (about 20 and 50 USD per side; caps and loss stops scaled) keeps a held mean net per symbol-day > 0 on the stored compact HOLD subset (7 core names x the last 8 HOLD weekends), and its 12-name book on one clock with net 40 / gross 80 USD caps at the minimum lot (scaled with the size) has a held mean net per day > 0."
+  rationale: "Capacity at our size: whether a book is worth running, how many names fit under the caps, and the worst day."
+  test: "Replays of the compact subset at L = 4 and 10 (four cells); portfolio: the variant's held fills of all 12 names merged on one clock; an adding fill that would breach a cap (counting one resting adding order per quoting symbol and side as filled) is dropped with that symbol's later fills until it is flat; mean net per day with the day-clustered CI; worst day, max concurrent names, cap-binding share."
+  success: "Supports iff both size levels have held mean > 0 with the CI above 0 in all four cells and the portfolio mean per day > 0 with the CI above 0 in all four cells; contradicts iff the L = 4 held mean <= 0 with the CI below 0 in the primary cell; else inconclusive."
+  prior: 0.1
+  family: wmq_capacity
+  status: proposed

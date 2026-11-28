@@ -36,6 +36,17 @@
 //! public-tape proxy `mm::LiqProxy` with `--liq-min-notional`) and a side pull on top-5 imbalance or 30 s taker flow
 //! (`side_signal`). `latencies_ms` runs one quoter per latency in the same pass.
 //!
+//! WMQ quoting families (program WMM2, replay-only; every field defaults to the behaviour above): `mode` "probe" (an
+//! intensity probe: one minimum-lot order per side at each distance `probe_x` x the quoter's 1h sigma, 0 = join the
+//! touch, re-pegged with the live replace rule; per-distance live time and fills give the fill-intensity curve
+//! lambda(delta)), "model" (`price_rule` "depth" = symmetric `depth_sigma` x sigma; "glft" = the Gueant-Lehalle-Fernandez
+//! -Tapia closed-form asymptotic quotes; "as" = Avellaneda-Stoikov with a rolling horizon `as_tau_s`; plus `add_sigma` /
+//! `add_bps`; sizes `lots` x the minimum lot with `size_rule` "flat" or "linear" (size skew); a symmetric `cap_usd`;
+//! inventory unwinds `unwind_passive_s` (the reducing quote joins the touch), `unwind_aggr_s` (time limit: taker close)
+//! and `unwind_stop_sigma` (taker close on an adverse move from the entry); a trend side pull `trend_k`; `gate_widen_sigma`
+//! widens instead of going exit-only while the gate is off). Compact inputs: `--write-compact DIR` writes the book and
+//! trades the replay read as gzip binary (lossless on the day's grid), `--compact DIR` replays them.
+//!
 //! Not modelled (stated in the report): portfolio coupling across symbols (gross / net caps see only this symbol),
 //! structural zones (`levels_file`), the live link's stale tops and per-tick work time (use `tick_ms`), funding,
 //! Bybit internals (hidden priority, internal latency).
@@ -66,6 +77,8 @@ use crate::mm::{self, MmCfg, Others, Quote, Resting, SymState};
 const DAY_MS: i64 = 86_400_000;
 const MIN_MS: i64 = 60_000;
 const MARKOUTS_S: [i64; 3] = [1, 10, 60];
+/// WMQ: a longer markout, reported next to the three above (the net decomposition still ends at 60 s).
+const MARKOUT_LONG_S: i64 = 300;
 
 /// (price, qty) levels, best first.
 type Levels2 = Vec<(f64, f64)>;
@@ -281,6 +294,13 @@ fn read_forecast(path: &Path) -> anyhow::Result<Vec<(i64, f64)>> {
 }
 
 /// Regime gate rows (`valid_from_ms,on`; on = 1 / true), sorted by time.
+/// Widen-factor rows (`valid_from_ms,factor`), sorted by time.
+fn read_widen(path: &Path) -> anyhow::Result<Vec<(i64, f64)>> {
+    let mut v = read_forecast(path)?;
+    v.retain(|x| x.1.is_finite() && x.1 > 0.0);
+    Ok(v)
+}
+
 fn read_gate(path: &Path) -> anyhow::Result<Vec<(i64, bool)>> {
     let mut rdr = csv::Reader::from_reader(open_lines(path)?);
     let mut v = vec![];
@@ -625,6 +645,35 @@ pub enum QuoteMode {
     /// size ahead is < `touch_q` x the median touch size (`mm::short_queue`); cancelled when the size behind us falls by
     /// more than `touch_leave_frac` within `touch_leave_ms` (`mm::behind_thinned`).
     Touch,
+    /// WMQ intensity probe: one minimum-lot order per side at each `probe_x` x sigma from the mid (0 = the touch);
+    /// fills are independent events (no inventory logic, no loss stops, no pauses).
+    Probe,
+    /// WMQ quote rule (`model_quotes`): `price_rule`, `size_rule`, `cap_usd`, unwinds and the trend pull.
+    Model,
+}
+
+/// WMQ price rule of mode "model" (half-spreads in units of the quoter's 1h sigma).
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum ModelPrice {
+    /// Symmetric `depth_sigma` on both sides, no price skew.
+    #[default]
+    Depth,
+    /// Gueant, Lehalle & Fernandez-Tapia (2013) closed-form asymptotic quotes with lambda(x) = A exp(-k x).
+    Glft,
+    /// Avellaneda & Stoikov (2008) with a rolling horizon `as_tau_s`.
+    As,
+}
+
+/// WMQ size rule of mode "model".
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum SizeRule {
+    /// `lots` on both sides (the reducing side capped at the position).
+    #[default]
+    Flat,
+    /// Size skew: adding side round(lots x (1 - |q| / cap)), reducing side round(lots x (1 + |q| / cap)) (<= |q|).
+    Linear,
 }
 
 /// H-MMW3 signal.
@@ -706,6 +755,58 @@ pub struct VariantSpec {
     pub touch_leave_frac: f64,
     #[serde(default = "two_s")]
     pub touch_leave_ms: i64,
+    /// WMQ mode "probe": distances in sigma units (0 = join the touch).
+    #[serde(default)]
+    pub probe_x: Vec<f64>,
+    /// WMQ mode "model".
+    #[serde(default)]
+    pub price_rule: ModelPrice,
+    #[serde(default = "one")]
+    pub depth_sigma: f64,
+    /// GLFT / AS risk aversion (per sigma unit and base order), intensity A (fills per second at the mid) and k (per sigma).
+    #[serde(default)]
+    pub glft_gamma: f64,
+    #[serde(default)]
+    pub glft_a: f64,
+    #[serde(default)]
+    pub glft_k: f64,
+    #[serde(default = "hour_s")]
+    pub as_tau_s: f64,
+    /// Added to both half-spreads: sigma units and basis points (e.g. adverse selection and the maker fee).
+    #[serde(default)]
+    pub add_sigma: f64,
+    #[serde(default)]
+    pub add_bps: f64,
+    /// Base order size in minimum lots.
+    #[serde(default = "one_u")]
+    pub lots: u32,
+    #[serde(default)]
+    pub size_rule: SizeRule,
+    /// Symmetric inventory cap (USD after a fill; one base order from flat always allowed); 0 = the config's long / short caps.
+    #[serde(default)]
+    pub cap_usd: f64,
+    /// After holding inventory this long (s, since it left flat or flipped) the reducing quote joins the touch; 0 = off.
+    #[serde(default)]
+    pub unwind_passive_s: f64,
+    /// Time limit (s): close the position at market (taker); 0 = off.
+    #[serde(default)]
+    pub unwind_aggr_s: f64,
+    /// Close at market when the mid moved this many sigma against the average entry; 0 = off.
+    #[serde(default)]
+    pub unwind_stop_sigma: f64,
+    /// Trend pull: no adding bid when the `trend_window_min` log return < -k x sigma x sqrt(window / 1 h), no adding ask when
+    /// > +k; 0 = off.
+    #[serde(default)]
+    pub trend_k: f64,
+    #[serde(default = "sixty")]
+    pub trend_window_min: i64,
+    /// With a gate (mode "model"): while it is off, widen both half-spreads by this many sigma instead of exit-only; 0 = exit-only.
+    #[serde(default)]
+    pub gate_widen_sigma: f64,
+    /// Widen series (CSV `valid_from_ms,factor`, piecewise constant, relative to the repo root; 1 before the first row):
+    /// mode "model" multiplies both half-spreads by the factor, the live rule multiplies its quote sigma. None = off.
+    #[serde(default)]
+    pub widen_file: Option<String>,
 }
 
 impl Default for VariantSpec {
@@ -738,6 +839,18 @@ fn one() -> f64 {
     1.0
 }
 
+fn one_u() -> u32 {
+    1
+}
+
+fn hour_s() -> f64 {
+    3600.0
+}
+
+fn sixty() -> i64 {
+    60
+}
+
 fn all_queues() -> Vec<QueueModel> {
     vec![QueueModel::Pessimistic, QueueModel::Prorata, QueueModel::Optimistic]
 }
@@ -755,6 +868,101 @@ pub fn load_cfg(root: &Path, spec: &VariantSpec) -> anyhow::Result<MmCfg> {
         m.insert(k.clone(), x.clone());
     }
     serde_json::from_value(v).with_context(|| format!("{}: {} with overrides", spec.name, p.display()))
+}
+
+// ---------------------------------------------------------------- WMQ quote rule (pure)
+
+/// Gueant, Lehalle & Fernandez-Tapia (2013) closed-form asymptotic half-spreads, in units of the 1h sigma, at inventory
+/// `q` (base orders, long > 0), for fill intensity lambda(x) = `a` exp(-`k` x) (x = distance from the mid in sigma, `a`
+/// per second) and a per-second price variance of 1/3600 sigma^2: bid = c1 + (2q + 1) / 2 c2, ask = c1 - (2q - 1) / 2 c2,
+/// c1 = ln(1 + g / k) / g, c2 = sqrt(g / (2 k a) / 3600 x (1 + g / k)^(1 + k / g)). None unless g, a, k > 0.
+pub fn glft_half_spreads(g: f64, a: f64, k: f64, q: f64) -> Option<(f64, f64)> {
+    if !(g > 0.0 && a > 0.0 && k > 0.0) {
+        return None;
+    }
+    let c1 = (1.0 + g / k).ln() / g;
+    let c2 = (g / (2.0 * k * a) / 3600.0 * (1.0 + g / k).powf(1.0 + k / g)).sqrt();
+    Some((c1 + (2.0 * q + 1.0) / 2.0 * c2, c1 - (2.0 * q - 1.0) / 2.0 * c2))
+}
+
+/// Avellaneda & Stoikov (2008) half-spreads (sigma units) with a rolling horizon `tau_s`: reservation shift -q g t and
+/// total spread g t + 2 ln(1 + g / k) / g, t = tau_s / 3600 (the horizon's variance in sigma^2). None unless g, k, tau > 0.
+pub fn as_half_spreads(g: f64, k: f64, tau_s: f64, q: f64) -> Option<(f64, f64)> {
+    if !(g > 0.0 && k > 0.0 && tau_s > 0.0) {
+        return None;
+    }
+    let t = tau_s / 3600.0;
+    let h = (1.0 + g / k).ln() / g + 0.5 * g * t;
+    Some((h + q * g * t, h - q * g * t))
+}
+
+/// What the WMQ quote rule sees (quantities in qty steps).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ModelIn {
+    pub bid1: f64,
+    pub ask1: f64,
+    /// 1h sigma (fraction).
+    pub sigma: f64,
+    /// Signed position, the minimum lot and the inventory cap.
+    pub pos: i64,
+    pub lot: i64,
+    pub cap: i64,
+    /// Seconds since the position left flat (or flipped).
+    pub hold_s: f64,
+    pub no_add_bid: bool,
+    pub no_add_ask: bool,
+    /// Extra half-spread (sigma units), e.g. a news gate.
+    pub widen: f64,
+    /// Multiplier of the half-spreads (0 or 1 = none), e.g. a news-intensity widen.
+    pub mult: f64,
+}
+
+/// WMQ quotes (bid, ask): half-spreads from `price_rule` at inventory q = pos / (lots x lot), plus `add_sigma`,
+/// `add_bps` and `widen`; never crossing (PostOnly: a skewed quote may sit inside the spread); the reducing side joins the touch once the
+/// position is older than `unwind_passive_s`; sizes from `size_rule`; adding orders stay within `cap` after a full fill
+/// (one base order from flat is always allowed); the reducing order is reduce-only and never exceeds the position.
+pub fn model_quotes(spec: &VariantSpec, rule: &InstrumentRules, x: &ModelIn) -> (Option<Quote>, Option<Quote>) {
+    #[allow(clippy::nonminimal_bool)]
+    if !(x.bid1 > 0.0 && x.ask1 > x.bid1 && x.sigma > 0.0 && x.lot > 0) {
+        return (None, None);
+    }
+    let tick = rule.tick_size;
+    let mid = 0.5 * (x.bid1 + x.ask1);
+    let l = spec.lots.max(1) as i64;
+    let order = l * x.lot;
+    let q = x.pos as f64 / order as f64;
+    let hs = match spec.price_rule {
+        ModelPrice::Depth => Some((spec.depth_sigma, spec.depth_sigma)),
+        ModelPrice::Glft => glft_half_spreads(spec.glft_gamma, spec.glft_a, spec.glft_k, q),
+        ModelPrice::As => as_half_spreads(spec.glft_gamma, spec.glft_k, spec.as_tau_s, q),
+    };
+    let Some((db, da)) = hs.filter(|h| h.0.is_finite() && h.1.is_finite()) else { return (None, None) };
+    let add = spec.add_sigma + spec.add_bps / 1e4 / x.sigma + x.widen;
+    let f = if x.mult > 0.0 { x.mult } else { 1.0 };
+    let mut bid_px = round_to_step(mid * (1.0 - (db + add) * f * x.sigma), tick, Round::Down).min(x.ask1 - tick);
+    let mut ask_px = round_to_step(mid * (1.0 + (da + add) * f * x.sigma), tick, Round::Up).max(x.bid1 + tick);
+    if spec.unwind_passive_s > 0.0 && x.hold_s >= spec.unwind_passive_s {
+        if x.pos > 0 {
+            ask_px = ask_px.min(x.ask1);
+        } else if x.pos < 0 {
+            bid_px = bid_px.max(x.bid1);
+        }
+    }
+    let abs = x.pos.abs();
+    let frac = if x.cap > 0 { (abs as f64 / x.cap as f64).min(1.0) } else { 1.0 };
+    let (n_add, n_red) = match spec.size_rule {
+        SizeRule::Flat => (l, l),
+        SizeRule::Linear => ((l as f64 * (1.0 - frac)).round() as i64, (l as f64 * (1.0 + frac)).round() as i64),
+    };
+    let mut add_q = n_add.max(0) * x.lot;
+    while add_q > 0 && abs + add_q > x.cap && (abs != 0 || add_q > order) {
+        add_q -= x.lot;
+    }
+    let red_q = (n_red.max(1) * x.lot).min(abs);
+    let mk = |px: f64, n: i64, ro: bool| (n > 0).then_some(Quote { price: px, qty: n as f64 * rule.qty_step, reduce_only: ro });
+    let bid = if x.pos < 0 { mk(bid_px, red_q, true) } else if x.no_add_bid { None } else { mk(bid_px, add_q, false) };
+    let ask = if x.pos > 0 { mk(ask_px, red_q, true) } else if x.no_add_ask { None } else { mk(ask_px, add_q, false) };
+    (bid, ask)
 }
 
 // ---------------------------------------------------------------- quoter
@@ -778,6 +986,9 @@ struct SimOrder {
     tag: i64,
     /// Touch mode: (time, lots behind us) observations of the last `touch_leave_ms`.
     bh: Vec<(i64, f64)>,
+    /// The mid and the quoter's 1h sigma when the order was sent (probe distances).
+    place_mid: f64,
+    place_sigma: f64,
 }
 
 const TAG_ADD: i64 = -1;
@@ -806,6 +1017,27 @@ pub struct Fill {
     pub mid: f64,
     pub ahead0_lots: f64,
     pub pos_after: f64,
+    /// Mode "probe": which distance filled, and the mid / sigma when the order was sent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub probe: Option<ProbeTag>,
+}
+
+#[derive(Clone, Copy, Debug, Serialize, PartialEq)]
+pub struct ProbeTag {
+    pub j: usize,
+    pub x: f64,
+    pub place_mid: f64,
+    pub place_sigma: f64,
+}
+
+/// Mode "probe": exposure of one distance and side.
+#[derive(Clone, Copy, Debug, Default, Serialize)]
+pub struct ProbeLeg {
+    pub live_ms: i64,
+    pub placed: u64,
+    /// Sum of live ms x distance from the mid at sending (bp, and sigma units).
+    pub live_bps_ms: f64,
+    pub live_x_ms: f64,
 }
 
 #[derive(Clone, Debug, Default, Serialize)]
@@ -842,6 +1074,13 @@ pub struct Funnel {
     pub ladder_lots: u64,
     pub ladder_tp_fills: u64,
     pub ladder_stops: u64,
+    pub model_ticks: u64,
+    pub model_passive_ticks: u64,
+    pub model_unwind_time: u64,
+    pub model_unwind_stop: u64,
+    pub model_trend_bid_ticks: u64,
+    pub model_trend_ask_ticks: u64,
+    pub model_widen_ticks: u64,
 }
 
 pub struct Quoter {
@@ -883,6 +1122,14 @@ pub struct Quoter {
     mkt: Vec<(i64, Side, i64, &'static str, i64)>,
     pull_until: i64,
     liq_until: i64,
+    /// Mode "probe": exposure per distance and side (0 bid, 1 ask).
+    probe: Vec<[ProbeLeg; 2]>,
+    /// Mode "model": when the position left flat or flipped.
+    hold_since: Option<i64>,
+    /// (mid, sigma) stamped on orders sent this tick.
+    place_ctx: (f64, f64),
+    /// `VariantSpec::widen_file` rows (read once per file by the driver).
+    widen: Option<std::rc::Rc<Vec<(i64, f64)>>>,
 }
 
 fn side_str(s: Side) -> &'static str {
@@ -908,6 +1155,7 @@ impl Quoter {
     ) -> Self {
         let tick_ms = if spec.tick_ms > 0 { spec.tick_ms } else { cfg.refresh_s.max(1) as i64 * 1000 };
         let sym_index = cfg.symbols.iter().position(|s| s.eq_ignore_ascii_case(symbol));
+        let n_probe = spec.probe_x.len();
         Self {
             name: spec.name.clone(),
             model,
@@ -946,7 +1194,23 @@ impl Quoter {
             mkt: vec![],
             pull_until: i64::MIN,
             liq_until: i64::MIN,
+            probe: vec![[ProbeLeg::default(); 2]; n_probe],
+            hold_since: None,
+            place_ctx: (f64::NAN, f64::NAN),
+            widen: None,
         }
+    }
+
+    /// Attach the widen series (`VariantSpec::widen_file`).
+    pub fn set_widen(&mut self, rows: std::rc::Rc<Vec<(i64, f64)>>) {
+        self.widen = Some(rows);
+    }
+
+    /// The widen factor at `now` (1 without a series or before its first row).
+    fn widen_at(&self, now: i64) -> f64 {
+        let Some(w) = &self.widen else { return 1.0 };
+        let i = w.partition_point(|x| x.0 <= now);
+        if i == 0 { 1.0 } else { w[i - 1].1.max(1e-9) }
     }
 
     /// Attach the structural zones of the day (`--zones`, read once by the driver).
@@ -1007,7 +1271,14 @@ impl Quoter {
             filled: 0,
             tag,
             bh: vec![],
+            place_mid: self.place_ctx.0,
+            place_sigma: self.place_ctx.1,
         });
+        if self.spec.mode == QuoteMode::Probe
+            && let Some(leg) = usize::try_from(tag - 1).ok().and_then(|j| self.probe.get_mut(j))
+        {
+            leg[(side == Side::Sell) as usize].placed += 1;
+        }
         true
     }
 
@@ -1028,6 +1299,17 @@ impl Quoter {
             match o.side {
                 Side::Buy => self.funnel.live_ms_bid += live,
                 Side::Sell => self.funnel.live_ms_ask += live,
+            }
+            if self.spec.mode == QuoteMode::Probe
+                && let Some(leg) = usize::try_from(o.tag - 1).ok().and_then(|j| self.probe.get_mut(j))
+            {
+                let l = &mut leg[(o.side == Side::Sell) as usize];
+                let d = (o.price - o.place_mid).abs() / o.place_mid;
+                l.live_ms += live;
+                if d.is_finite() {
+                    l.live_bps_ms += live as f64 * d * 1e4;
+                    l.live_x_ms += live as f64 * d / o.place_sigma.max(1e-12);
+                }
             }
         }
         o.closed = true;
@@ -1054,6 +1336,7 @@ impl Quoter {
         let fee = notional * if maker { self.fees.maker_bps } else { self.fees.taker_bps } / 1e4;
         self.cash -= s as f64 * notional + fee;
         self.fee_paid += fee;
+        let before = self.pos;
         let ap = self.pos.abs();
         if self.pos == 0 || self.pos.signum() == s {
             self.avg = (ap as f64 * self.avg + lots as f64 * price) / (ap + lots) as f64;
@@ -1067,6 +1350,11 @@ impl Quoter {
             self.pos = s * (lots - ap);
             self.avg = price;
         }
+        if self.pos == 0 {
+            self.hold_since = None;
+        } else if before == 0 || before.signum() != self.pos.signum() {
+            self.hold_since = Some(ts);
+        }
         self.max_inv_usd = self.max_inv_usd.max((self.pos as f64 * self.step() * mid).abs());
         match kind {
             "queue" => self.funnel.fills_queue += 1,
@@ -1077,7 +1365,7 @@ impl Quoter {
         }
         self.markouts.push((s as f64, price, ts));
         let q = self.rules.qty_step * lots as f64;
-        self.fills.push(Fill { ts, side: side_str(side), price, qty: q, maker, kind, reduce_only, fee, mid, ahead0_lots: ahead0, pos_after: self.position_qty() });
+        self.fills.push(Fill { ts, side: side_str(side), price, qty: q, maker, kind, reduce_only, fee, mid, ahead0_lots: ahead0, pos_after: self.position_qty(), probe: None });
         // Venue reduce-only rule: resting reduce-only orders never exceed the position; orders that no longer reduce go.
         for i in 0..self.orders.len() {
             if self.orders[i].closed || !self.orders[i].reduce_only {
@@ -1118,6 +1406,19 @@ impl Quoter {
         }
         let tag = self.orders[i].tag;
         self.book_fill(ts, side, price, f, true, kind, ro, a0, mid, tag);
+        if self.spec.mode == QuoteMode::Probe {
+            let o = &self.orders[i];
+            let j = usize::try_from(tag - 1).unwrap_or(usize::MAX);
+            let x = self.spec.probe_x.get(j).copied().unwrap_or(f64::NAN);
+            let pt = ProbeTag { j, x, place_mid: o.place_mid, place_sigma: o.place_sigma };
+            if let Some(last) = self.fills.last_mut() {
+                last.probe = Some(pt);
+            }
+            // one fill event per probe order: the rest (if any) goes, a new order is sent next tick
+            if !done {
+                self.close_order(i, ts);
+            }
+        }
         f
     }
 
@@ -1506,6 +1807,11 @@ impl Quoter {
         let g = *m.grid();
         let (bid1, ask1) = (g.price(bt), g.price(at));
         let mid = 0.5 * (bid1 + ask1);
+        if self.spec.mode == QuoteMode::Probe {
+            self.tick_probe(now, &g, (bt, at), mid);
+            self.tick_n += 1;
+            return;
+        }
         if self.flow_due() {
             let limit = mm::flow_trades_limit(&cfg) as usize;
             let rec: Vec<&Tr> = m.recent(limit, now).collect();
@@ -1579,6 +1885,12 @@ impl Quoter {
             self.tick_n += 1;
             return;
         }
+        if self.spec.mode == QuoteMode::Model {
+            let deadline = self.spec.deadline_ms.is_some_and(|d| now >= d - cfg.exit_window_min * MIN_MS);
+            self.tick_model(now, m, &g, (bid1, ask1), gate_off, deadline, liq_paused || now < e.paused_until_ms);
+            self.tick_n += 1;
+            return;
+        }
         let pos = (self.position_qty(), if self.pos == 0 { 0.0 } else { self.avg });
         let mut x = mm::symbol_inputs(&cfg, &self.symbol, &e, bid1, ask1, pos, Others::default(), exit_only, now < e.paused_until_ms || liq_paused, guard);
         match self.spec.sigma_mode {
@@ -1588,6 +1900,11 @@ impl Quoter {
                 Some(s) => x.sigma = self.spec.forecast_scale * s,
                 None => self.funnel.forecast_missing_ticks += 1,
             },
+        }
+        let wf = self.widen_at(now);
+        if wf != 1.0 {
+            x.sigma *= wf;
+            self.funnel.model_widen_ticks += 1;
         }
         let (mut bid, mut ask) = mm::target_quotes(&cfg, &self.rules, &x, &e.levels);
         if let Some(sig) = self.spec.side_signal {
@@ -1611,6 +1928,14 @@ impl Quoter {
             self.tick_n += 1;
             return;
         }
+        self.manage_quotes(now, &g, mid, x.sigma, bid, ask);
+        self.tick_n += 1;
+    }
+
+    /// One resting quote per side: extra ones go, the first is replaced when `mm::needs_replace` says so, a missing one
+    /// is sent (order operations throttled by `order_pause_ms`, as the live loop).
+    fn manage_quotes(&mut self, now: i64, g: &Grid, mid: f64, sigma: f64, bid: Option<Quote>, ask: Option<Quote>) {
+        let cfg = self.cfg.clone();
         let mut t_op = now;
         let pause = cfg.order_pause_ms as i64;
         for (side, want) in [(Side::Buy, bid), (Side::Sell, ask)] {
@@ -1624,18 +1949,124 @@ impl Quoter {
                 let o = &self.orders[i];
                 Resting { price: o.price, leaves_qty: g.qty(o.leaves), reduce_only: o.reduce_only, updated_ms: o.updated_ms }
             });
-            let replace = mm::needs_replace(&cfg, &self.rules, want, rest.as_ref(), mid, x.sigma, now);
+            let replace = mm::needs_replace(&cfg, &self.rules, want, rest.as_ref(), mid, sigma, now);
             if let (true, Some(i)) = (replace, cur) {
                 self.cancel_idx(i, t_op);
                 t_op += pause;
             }
             if let (Some(q), true) = (want, cur.is_none() || replace) {
                 let Quote { price, qty, reduce_only } = q;
-                self.place(side, price, qty, reduce_only, t_op, &g);
+                self.place(side, price, qty, reduce_only, t_op, g);
                 t_op += pause;
             }
         }
-        self.tick_n += 1;
+    }
+
+    /// WMQ probe decision: for every distance x and side, one minimum-lot order at x sigma from the mid (x = 0: at the
+    /// touch, moved as soon as the touch moves), kept while `mm::needs_replace` allows (the live replace rule).
+    fn tick_probe(&mut self, now: i64, g: &Grid, top: (i64, i64), mid: f64) {
+        let sig = self.st.sigma;
+        if sig.is_nan() || sig <= 0.0 {
+            return;
+        }
+        let cfg = self.cfg.clone();
+        let tick = self.rules.tick_size;
+        let (bid1, ask1) = (g.price(top.0), g.price(top.1));
+        let lot = mm::min_lot(&self.rules, mid);
+        self.place_ctx = (mid, sig);
+        let xs = self.spec.probe_x.clone();
+        for (j, &x) in xs.iter().enumerate() {
+            let tag = j as i64 + 1;
+            for side in [Side::Buy, Side::Sell] {
+                let px = match (x > 0.0, side) {
+                    (false, Side::Buy) => bid1,
+                    (false, Side::Sell) => ask1,
+                    (true, Side::Buy) => round_to_step(mid * (1.0 - x * sig), tick, Round::Down).min(ask1 - tick),
+                    (true, Side::Sell) => round_to_step(mid * (1.0 + x * sig), tick, Round::Up).max(bid1 + tick),
+                };
+                let want = Quote { price: px, qty: lot, reduce_only: false };
+                let cur = (0..self.orders.len()).find(|&i| {
+                    let o = &self.orders[i];
+                    !o.closed && o.cancel_ms.is_none() && o.tag == tag && o.side == side
+                });
+                let replace = cur.is_some_and(|i| {
+                    let o = &self.orders[i];
+                    if x > 0.0 {
+                        let rest = Resting { price: o.price, leaves_qty: g.qty(o.leaves), reduce_only: false, updated_ms: o.updated_ms };
+                        mm::needs_replace(&cfg, &self.rules, Some(want), Some(&rest), mid, sig, now)
+                    } else {
+                        o.tick != if side == Side::Buy { top.0 } else { top.1 } || (g.qty(o.leaves) - lot).abs() > self.rules.qty_step * 0.5
+                    }
+                });
+                if let (true, Some(i)) = (replace, cur) {
+                    self.cancel_idx(i, now);
+                }
+                if cur.is_none() || replace {
+                    self.place_tagged(side, px, lot, false, now, g, tag);
+                }
+            }
+        }
+    }
+
+    /// WMQ model decision: aggressive unwinds (time limit, adverse-move stop: cancel everything, close at market one
+    /// latency later), the trend pull, then `model_quotes` through the live replace rule.
+    #[allow(clippy::too_many_arguments)]
+    fn tick_model(&mut self, now: i64, m: &Market, g: &Grid, top: (f64, f64), gate_off: bool, deadline: bool, paused: bool) {
+        let (bid1, ask1) = top;
+        let mid = 0.5 * (bid1 + ask1);
+        let sig = self.st.sigma;
+        if sig.is_nan() || sig <= 0.0 {
+            return;
+        }
+        self.funnel.model_ticks += 1;
+        let lot = g.lots_nearest(mm::min_lot(&self.rules, mid)).max(1);
+        let cap_usd = if self.spec.cap_usd > 0.0 { self.spec.cap_usd } else { self.cfg.max_long_usd.min(self.cfg.max_short_usd) };
+        let cap = (cap_usd / (mid * self.step())).floor() as i64;
+        let hold_s = self.hold_since.map_or(0.0, |t| (now - t) as f64 / 1000.0);
+        if !self.mkt.is_empty() {
+            return; // an unwind is on its way
+        }
+        if self.pos != 0 {
+            let long = self.pos > 0;
+            let timed = self.spec.unwind_aggr_s > 0.0 && hold_s >= self.spec.unwind_aggr_s;
+            let k = self.spec.unwind_stop_sigma;
+            let stop = k > 0.0 && self.avg > 0.0 && if long { mid <= self.avg * (1.0 - k * sig) } else { mid >= self.avg * (1.0 + k * sig) };
+            if timed || stop {
+                for i in 0..self.orders.len() {
+                    self.cancel_idx(i, now);
+                }
+                self.mkt.push((now + self.latency, if long { Side::Sell } else { Side::Buy }, self.pos.abs(), "unwind", 0));
+                if stop {
+                    self.funnel.model_unwind_stop += 1;
+                } else {
+                    self.funnel.model_unwind_time += 1;
+                }
+                return;
+            }
+        }
+        let (mut no_bid, mut no_ask) = (false, false);
+        if self.spec.trend_k > 0.0 {
+            let w = self.spec.trend_window_min.max(1);
+            let c = m.closes(now - (w + 1) * MIN_MS, now);
+            if c.len() >= 2 && c[0] > 0.0 {
+                let r = (c[c.len() - 1] / c[0]).ln();
+                let sd = sig * (w as f64 / 60.0).sqrt();
+                no_bid = r < -self.spec.trend_k * sd;
+                no_ask = r > self.spec.trend_k * sd;
+                self.funnel.model_trend_bid_ticks += no_bid as u64;
+                self.funnel.model_trend_ask_ticks += no_ask as u64;
+            }
+        }
+        let widen = if gate_off && self.spec.gate_widen_sigma > 0.0 { self.spec.gate_widen_sigma } else { 0.0 };
+        self.funnel.model_widen_ticks += (widen > 0.0) as u64;
+        let no_add = deadline || paused || (gate_off && self.spec.gate_widen_sigma <= 0.0);
+        let mult = self.widen_at(now);
+        self.funnel.model_widen_ticks += (mult != 1.0) as u64;
+        let x = ModelIn { bid1, ask1, sigma: sig, pos: self.pos, lot, cap, hold_s, no_add_bid: no_add || no_bid, no_add_ask: no_add || no_ask, widen, mult };
+        self.funnel.model_passive_ticks += (self.pos != 0 && self.spec.unwind_passive_s > 0.0 && hold_s >= self.spec.unwind_passive_s) as u64;
+        let (bid, ask) = model_quotes(&self.spec, &self.rules, &x);
+        self.place_ctx = (mid, sig);
+        self.manage_quotes(now, g, mid, sig, bid, ask);
     }
 
     /// H-MMW1 ladder decision: take-profits of open lots re-sent when missing (post-only safe at the touch), adding
@@ -1753,6 +2184,7 @@ impl Quoter {
         let mid_end = m.mid_at(end).unwrap_or(0.0);
         let (mut spread, mut fees) = (0.0, 0.0);
         let mut adv = [0.0f64; 3];
+        let mut adv_long = 0.0;
         let mut inv = 0.0;
         let mut vol = 0.0;
         let mut maker = 0u64;
@@ -1766,6 +2198,7 @@ impl Quoter {
                 adv[k] += s * f.qty * (mh - m0);
                 prev = mh;
             }
+            adv_long += s * f.qty * (m.mid_at((f.ts + MARKOUT_LONG_S * 1000).min(end)).unwrap_or(m0) - m0);
             inv += s * f.qty * (mid_end - prev);
             fees += f.fee;
             vol += f.qty * f.price;
@@ -1799,9 +2232,42 @@ impl Quoter {
         });
         out["latency_ms"] = json!(self.latency);
         out["mode"] = json!(self.spec.mode);
+        out["pnl"]["adverse_300s"] = json!(adv_long);
+        if self.spec.mode == QuoteMode::Model {
+            out["model"] = json!({"ticks": fu.model_ticks, "passive_ticks": fu.model_passive_ticks, "unwind_time": fu.model_unwind_time,
+                                  "unwind_stop": fu.model_unwind_stop, "trend_bid_ticks": fu.model_trend_bid_ticks,
+                                  "trend_ask_ticks": fu.model_trend_ask_ticks, "widen_ticks": fu.model_widen_ticks});
+        }
+        if self.spec.mode == QuoteMode::Probe {
+            let mut nf = vec![[0u64; 2]; self.probe.len()];
+            for f in &self.fills {
+                if let Some(p) = f.probe
+                    && p.j < nf.len()
+                {
+                    nf[p.j][(f.side == "Sell") as usize] += 1;
+                }
+            }
+            let legs: Vec<Value> = self
+                .probe
+                .iter()
+                .enumerate()
+                .flat_map(|(j, l)| {
+                    let x = self.spec.probe_x[j];
+                    let nf = &nf;
+                    (0..2).map(move |s| {
+                        let g = &l[s];
+                        json!({"j": j, "x": x, "side": if s == 0 { "Buy" } else { "Sell" }, "live_ms": g.live_ms, "placed": g.placed, "fills": nf[j][s],
+                               "dist_bps_mean": if g.live_ms > 0 { g.live_bps_ms / g.live_ms as f64 } else { f64::NAN },
+                               "x_eff_mean": if g.live_ms > 0 { g.live_x_ms / g.live_ms as f64 } else { f64::NAN }})
+                    })
+                })
+                .collect();
+            out["probe"] = json!(legs);
+        }
         let mmw = json!({"btc_pulls": fu.btc_pulls, "btc_pull_cancels": fu.btc_pull_cancels, "liq_pulls": fu.liq_pulls, "side_pull_ticks": fu.side_pull_ticks,
                          "touch_skips": fu.touch_skips, "touch_leaves": fu.touch_leaves, "ladder_adds_placed": fu.ladder_adds_placed,
-                         "ladder_lots": fu.ladder_lots, "ladder_tp_fills": fu.ladder_tp_fills, "ladder_stops": fu.ladder_stops});
+                         "ladder_lots": fu.ladder_lots, "ladder_tp_fills": fu.ladder_tp_fills, "ladder_stops": fu.ladder_stops,
+                         "widen_ticks": fu.model_widen_ticks});
         if let (Some(f), Some(x)) = (out["funnel"].as_object_mut(), mmw.as_object()) {
             f.extend(x.clone());
         }
@@ -1812,6 +2278,285 @@ impl Quoter {
 thread_local! {
     /// The external 1h sigma forecast (single-threaded replay; set once per run).
     static FORECAST: std::cell::RefCell<std::rc::Rc<Vec<(i64, f64)>>> = std::cell::RefCell::new(std::rc::Rc::new(vec![]));
+}
+
+// ---------------------------------------------------------------- compact inputs (WMQ)
+
+const COMPACT_FORMAT: &str = "wmq-compact-1";
+
+fn put_uv(w: &mut impl Write, mut x: u64) -> std::io::Result<()> {
+    let mut b = [0u8; 10];
+    let mut n = 0;
+    loop {
+        let c = (x & 0x7f) as u8;
+        x >>= 7;
+        if x == 0 {
+            b[n] = c;
+            n += 1;
+            break;
+        }
+        b[n] = c | 0x80;
+        n += 1;
+    }
+    w.write_all(&b[..n])
+}
+
+fn zz(x: i64) -> u64 {
+    ((x << 1) ^ (x >> 63)) as u64
+}
+
+fn unzz(u: u64) -> i64 {
+    ((u >> 1) as i64) ^ -((u & 1) as i64)
+}
+
+/// A varint; None at a clean end of the stream (no byte read).
+fn get_uv(r: &mut impl Read) -> anyhow::Result<Option<u64>> {
+    let (mut x, mut shift) = (0u64, 0u32);
+    let mut b = [0u8; 1];
+    loop {
+        if r.read(&mut b)? == 0 {
+            anyhow::ensure!(shift == 0, "compact: truncated varint");
+            return Ok(None);
+        }
+        x |= ((b[0] & 0x7f) as u64) << shift;
+        if b[0] & 0x80 == 0 {
+            return Ok(Some(x));
+        }
+        shift += 7;
+        anyhow::ensure!(shift < 64, "compact: bad varint");
+    }
+}
+
+fn need_uv(r: &mut impl Read) -> anyhow::Result<u64> {
+    get_uv(r)?.context("compact: truncated record")
+}
+
+type GzOut = flate2::write::GzEncoder<BufWriter<File>>;
+type GzIn = BufReader<MultiGzDecoder<BufReader<File>>>;
+
+fn compact_create(path: &Path, kind: &str, symbol: &str, grid: Option<&Grid>) -> anyhow::Result<GzOut> {
+    if let Some(d) = path.parent() {
+        std::fs::create_dir_all(d)?;
+    }
+    let f = File::create(path).with_context(|| path.display().to_string())?;
+    let mut w = flate2::write::GzEncoder::new(BufWriter::with_capacity(1 << 20, f), flate2::Compression::new(6));
+    let h = json!({"format": COMPACT_FORMAT, "kind": kind, "symbol": symbol, "tick_size": grid.map(|g| g.tick_size()), "qty_step": grid.map(|g| g.qty_step())});
+    writeln!(w, "{h}")?;
+    Ok(w)
+}
+
+/// Opens a compact file and checks its header (kind, and the grid it was written on).
+fn compact_open(path: &Path, kind: &str, grid: Option<&Grid>) -> anyhow::Result<GzIn> {
+    let f = File::open(path).with_context(|| path.display().to_string())?;
+    let mut r = BufReader::with_capacity(1 << 20, MultiGzDecoder::new(BufReader::with_capacity(1 << 20, f)));
+    let mut line = String::new();
+    r.read_line(&mut line)?;
+    let h: Value = serde_json::from_str(line.trim()).with_context(|| format!("{}: compact header", path.display()))?;
+    anyhow::ensure!(h["format"] == COMPACT_FORMAT && h["kind"] == kind, "{}: not a {kind} file of {COMPACT_FORMAT}", path.display());
+    if let Some(g) = grid {
+        let same = |a: &Value, b: f64| a.as_f64().is_some_and(|a| (a - b).abs() <= 1e-12 * b.abs());
+        anyhow::ensure!(same(&h["tick_size"], g.tick_size()) && same(&h["qty_step"], g.qty_step()), "{}: written on grid {} / {}, the day's grid is {} / {}", path.display(), h["tick_size"], h["qty_step"], g.tick_size(), g.qty_step());
+    }
+    Ok(r)
+}
+
+/// Writes book messages as they are replayed: per message zigzag(cts - previous cts), kind (0 delta, 1 snapshot), then
+/// per side the level count and per level zigzag(tick - previous level's tick) and the size in lots (0 = remove).
+pub struct CompactBookWriter {
+    w: GzOut,
+    grid: Grid,
+    last: i64,
+}
+
+impl CompactBookWriter {
+    pub fn create(path: &Path, symbol: &str, grid: &Grid) -> anyhow::Result<Self> {
+        Ok(Self { w: compact_create(path, "book", symbol, Some(grid))?, grid: *grid, last: 0 })
+    }
+
+    pub fn put(&mut self, cts: i64, msg: &Value) -> anyhow::Result<()> {
+        let kind = match msg["type"].as_str() {
+            Some("snapshot") => 1u8,
+            Some("delta") => 0u8,
+            other => bail!("compact: unknown message type {other:?}"),
+        };
+        put_uv(&mut self.w, zz(cts.wrapping_sub(self.last)))?;
+        self.last = cts;
+        self.w.write_all(&[kind])?;
+        let num = |v: &Value| match v {
+            Value::String(s) => s.parse::<f64>().ok(),
+            v => v.as_f64(),
+        };
+        for key in ["b", "a"] {
+            let lv = msg["data"][key].as_array().map(|a| a.as_slice()).unwrap_or(&[]);
+            put_uv(&mut self.w, lv.len() as u64)?;
+            let mut prev = 0i64;
+            for x in lv {
+                let t = num(&x[0]).and_then(|p| self.grid.ticks(p)).with_context(|| format!("compact: price {} off the tick grid", x[0]))?;
+                let s = num(&x[1]).with_context(|| format!("compact: bad size {}", x[1]))?;
+                let l = if s == 0.0 { 0 } else { self.grid.lots(s).with_context(|| format!("compact: size {s} off the qty grid"))? };
+                put_uv(&mut self.w, zz(t.wrapping_sub(prev)))?;
+                put_uv(&mut self.w, zz(l))?;
+                prev = t;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn finish(self) -> anyhow::Result<()> {
+        self.w.finish()?.flush()?;
+        Ok(())
+    }
+}
+
+/// Where book messages come from: (matching-engine time, message) in replay order.
+pub trait BookSource {
+    fn next_msg(&mut self) -> anyhow::Result<Option<(i64, Value)>>;
+}
+
+/// The quote-saver JSON lines (time = `cts`, else `ts`, never decreasing), optionally written to a compact file as read.
+pub struct JsonBook<'a> {
+    rd: &'a mut dyn BufRead,
+    line: String,
+    last_cts: i64,
+    n: u64,
+    pub tee: Option<CompactBookWriter>,
+}
+
+impl<'a> JsonBook<'a> {
+    pub fn new(rd: &'a mut dyn BufRead, tee: Option<CompactBookWriter>) -> Self {
+        Self { rd, line: String::new(), last_cts: i64::MIN, n: 0, tee }
+    }
+}
+
+impl BookSource for JsonBook<'_> {
+    fn next_msg(&mut self) -> anyhow::Result<Option<(i64, Value)>> {
+        loop {
+            self.line.clear();
+            if self.rd.read_line(&mut self.line)? == 0 {
+                return Ok(None);
+            }
+            let s = self.line.trim();
+            if s.is_empty() {
+                continue;
+            }
+            self.n += 1;
+            let msg: Value = serde_json::from_str(s).with_context(|| format!("ob200 line {}", self.n))?;
+            let cts = msg["cts"].as_i64().or_else(|| msg["ts"].as_i64()).unwrap_or(self.last_cts).max(self.last_cts);
+            self.last_cts = cts;
+            if let Some(w) = self.tee.as_mut() {
+                w.put(cts, &msg)?;
+            }
+            return Ok(Some((cts, msg)));
+        }
+    }
+}
+
+/// A compact book file (`CompactBookWriter`), decoded into the same messages (prices and sizes as numbers on the grid).
+pub struct CompactBook {
+    r: GzIn,
+    grid: Grid,
+    last: i64,
+}
+
+impl CompactBook {
+    pub fn open(path: &Path, grid: &Grid) -> anyhow::Result<Self> {
+        Ok(Self { r: compact_open(path, "book", Some(grid))?, grid: *grid, last: 0 })
+    }
+}
+
+impl BookSource for CompactBook {
+    fn next_msg(&mut self) -> anyhow::Result<Option<(i64, Value)>> {
+        let Some(d) = get_uv(&mut self.r)? else { return Ok(None) };
+        let cts = self.last.wrapping_add(unzz(d));
+        self.last = cts;
+        let mut k = [0u8; 1];
+        self.r.read_exact(&mut k)?;
+        let mut sides: [Vec<Value>; 2] = [vec![], vec![]];
+        for side in sides.iter_mut() {
+            let n = need_uv(&mut self.r)? as usize;
+            side.reserve(n);
+            let mut prev = 0i64;
+            for _ in 0..n {
+                let t = prev.wrapping_add(unzz(need_uv(&mut self.r)?));
+                let l = unzz(need_uv(&mut self.r)?);
+                prev = t;
+                side.push(json!([self.grid.price(t), self.grid.qty(l)]));
+            }
+        }
+        let [b, a] = sides;
+        Ok(Some((cts, json!({"type": if k[0] == 1 { "snapshot" } else { "delta" }, "data": {"b": b, "a": a}}))))
+    }
+}
+
+/// Trades as the replay parsed them: zigzag(ts delta), zigzag(tick delta), zigzag(lots), flags (1 buy, 2 RPI / off-grid,
+/// 4 = the price follows as f64 bits because it is not exactly the grid price of its tick).
+pub fn write_compact_trades(path: &Path, symbol: &str, grid: &Grid, trades: &[Tr]) -> anyhow::Result<()> {
+    let mut w = compact_create(path, "trades", symbol, Some(grid))?;
+    let (mut lt, mut lk) = (0i64, 0i64);
+    for t in trades {
+        put_uv(&mut w, zz(t.ts.wrapping_sub(lt)))?;
+        put_uv(&mut w, zz(t.tick.wrapping_sub(lk)))?;
+        put_uv(&mut w, zz(t.lots))?;
+        let exact = grid.price(t.tick).to_bits() == t.px.to_bits();
+        w.write_all(&[(t.buy as u8) | ((t.rpi as u8) << 1) | ((!exact as u8) << 2)])?;
+        if !exact {
+            w.write_all(&t.px.to_le_bytes())?;
+        }
+        (lt, lk) = (t.ts, t.tick);
+    }
+    w.finish()?.flush()?;
+    Ok(())
+}
+
+pub fn read_compact_trades(path: &Path, grid: &Grid) -> anyhow::Result<Vec<Tr>> {
+    let mut r = compact_open(path, "trades", Some(grid))?;
+    let (mut lt, mut lk) = (0i64, 0i64);
+    let mut out = vec![];
+    while let Some(d) = get_uv(&mut r)? {
+        let ts = lt.wrapping_add(unzz(d));
+        let tick = lk.wrapping_add(unzz(need_uv(&mut r)?));
+        let lots = unzz(need_uv(&mut r)?);
+        let mut f = [0u8; 1];
+        r.read_exact(&mut f)?;
+        let px = if f[0] & 4 != 0 {
+            let mut b = [0u8; 8];
+            r.read_exact(&mut b)?;
+            f64::from_le_bytes(b)
+        } else {
+            grid.price(tick)
+        };
+        out.push(Tr { ts, px, tick, lots, buy: f[0] & 1 != 0, rpi: f[0] & 2 != 0 });
+        (lt, lk) = (ts, tick);
+    }
+    Ok(out)
+}
+
+/// A price tape (the BTC tape of the pull): zigzag(ts delta), zigzag(delta of price x 100); prices must be exact in cents.
+pub fn write_compact_px(path: &Path, tape: &[(i64, f64)]) -> anyhow::Result<()> {
+    let mut w = compact_create(path, "px", "", None)?;
+    let (mut lt, mut lc) = (0i64, 0i64);
+    for &(t, px) in tape {
+        let c = (px * 100.0).round() as i64;
+        anyhow::ensure!((c as f64 / 100.0).to_bits() == px.to_bits(), "compact px: {px} is not exact in cents");
+        put_uv(&mut w, zz(t.wrapping_sub(lt)))?;
+        put_uv(&mut w, zz(c.wrapping_sub(lc)))?;
+        (lt, lc) = (t, c);
+    }
+    w.finish()?.flush()?;
+    Ok(())
+}
+
+pub fn read_compact_px(path: &Path) -> anyhow::Result<Vec<(i64, f64)>> {
+    let mut r = compact_open(path, "px", None)?;
+    let (mut lt, mut lc) = (0i64, 0i64);
+    let mut out = vec![];
+    while let Some(d) = get_uv(&mut r)? {
+        let t = lt.wrapping_add(unzz(d));
+        let c = lc.wrapping_add(unzz(need_uv(&mut r)?));
+        out.push((t, c as f64 / 100.0));
+        (lt, lc) = (t, c);
+    }
+    Ok(out)
 }
 
 // ---------------------------------------------------------------- driver
@@ -1841,12 +2586,17 @@ fn feed_btc(m: &mut Market, quoters: &mut [Quoter], btc: &[(i64, f64)], bi: &mut
 
 /// Runs every quoter over one symbol-day: book messages from `book`, trades `trades` (time-sorted), the BTC price tape
 /// `btc` (time-sorted; empty = no BTC pull).
+#[cfg(test)]
 pub fn run_replay(m: &mut Market, quoters: &mut [Quoter], book: &mut dyn BufRead, trades: &[Tr], btc: &[(i64, f64)], p: &ReplayParams) -> anyhow::Result<()> {
+    let mut src = JsonBook::new(book, None);
+    run_replay_src(m, quoters, &mut src, trades, btc, p)
+}
+
+/// `run_replay` over any book source (JSON lines or a compact file).
+pub fn run_replay_src(m: &mut Market, quoters: &mut [Quoter], src: &mut dyn BookSource, trades: &[Tr], btc: &[(i64, f64)], p: &ReplayParams) -> anyhow::Result<()> {
     let mut ti = 0usize;
     let mut bi = 0usize;
     let min_k = quoters.iter().map(|q| q.spec.btc_k).filter(|k| *k > 0.0).fold(f64::INFINITY, f64::min);
-    let mut line = String::new();
-    let mut last_cts = i64::MIN;
     let step = |m: &mut Market, quoters: &mut [Quoter], tr: &Tr| {
         if tr.ts < p.end {
             for q in quoters.iter_mut() {
@@ -1863,18 +2613,7 @@ pub fn run_replay(m: &mut Market, quoters: &mut [Quoter], book: &mut dyn BufRead
             }
         }
     };
-    loop {
-        line.clear();
-        if book.read_line(&mut line)? == 0 {
-            break;
-        }
-        let s = line.trim();
-        if s.is_empty() {
-            continue;
-        }
-        let msg: Value = serde_json::from_str(s).with_context(|| format!("ob200 line {}", m.n_msgs + 1))?;
-        let cts = msg["cts"].as_i64().or_else(|| msg["ts"].as_i64()).unwrap_or(last_cts).max(last_cts);
-        last_cts = cts;
+    while let Some((cts, msg)) = src.next_msg()? {
         while ti < trades.len() && trades[ti].ts <= cts {
             feed_btc(m, quoters, btc, &mut bi, trades[ti].ts, p, min_k);
             step(m, quoters, &trades[ti]);
@@ -1920,9 +2659,22 @@ pub struct MmReplayArgs {
     /// quote-saver ob200 archive (.zip, or unzipped JSON lines).
     #[arg(long)]
     ob200: Option<PathBuf>,
-    /// public.bybit.com trade archive (.csv.gz or .csv).
+    /// public.bybit.com trade archive (.csv.gz or .csv); not needed with --compact.
     #[arg(long)]
-    trades: PathBuf,
+    trades: Option<PathBuf>,
+    /// Replay the compact inputs in this directory (book.bin.gz, trades.bin.gz written by --write-compact) instead of
+    /// --ob200 / --trades.
+    #[arg(long)]
+    compact: Option<PathBuf>,
+    /// Also write the book and trades this run reads as compact files into this directory (lossless on the day's grid).
+    #[arg(long)]
+    write_compact: Option<PathBuf>,
+    /// BTCUSDT price tape in the compact format (instead of --btc-trades).
+    #[arg(long)]
+    btc_compact: Option<PathBuf>,
+    /// Write the BTC price tape read from --btc-trades in the compact format.
+    #[arg(long)]
+    write_btc_compact: Option<PathBuf>,
     /// 1m bars of earlier days (bars_1m.csv from previous runs or --bars-only) for the sigma / level warm-up.
     #[arg(long, value_delimiter = ',')]
     warmup_bars: Vec<PathBuf>,
@@ -2011,7 +2763,15 @@ pub fn run(ctx: &Ctx, a: MmReplayArgs) -> anyhow::Result<()> {
     let fees = schedule.rates(&symbol, hint.as_deref());
     std::fs::create_dir_all(&a.out)?;
     let mut m = Market::new(&rules, a.depth)?;
-    let trades = read_trades(&a.trades, m.grid())?;
+    anyhow::ensure!(!(a.compact.is_some() && a.write_compact.is_some()), "--compact and --write-compact exclude each other");
+    let trades = match (&a.compact, &a.trades) {
+        (Some(d), _) => read_compact_trades(&d.join("trades.bin.gz"), m.grid())?,
+        (None, Some(t)) => read_trades(t, m.grid())?,
+        (None, None) => bail!("--trades or --compact"),
+    };
+    if let Some(d) = &a.write_compact {
+        write_compact_trades(&d.join("trades.bin.gz"), &symbol, m.grid(), &trades)?;
+    }
     if a.bars_only {
         for t in &trades {
             m.on_trade(t);
@@ -2030,8 +2790,8 @@ pub fn run(ctx: &Ctx, a: MmReplayArgs) -> anyhow::Result<()> {
         Some(z) => read_zones(z, &symbol)?,
         None => vec![],
     });
-    let btc = match &a.btc_trades {
-        Some(b) => {
+    let btc = match (&a.btc_compact, &a.btc_trades) {
+        (Some(_), _) | (None, Some(_)) => {
             let mut wb = BTreeMap::new();
             for p in &a.btc_warmup_bars {
                 read_bars(p, &mut wb)?;
@@ -2039,10 +2799,18 @@ pub fn run(ctx: &Ctx, a: MmReplayArgs) -> anyhow::Result<()> {
             for (k, b) in wb {
                 m.btc.seed_close(k, b.c);
             }
-            read_px_tape(b)?
+            match (&a.btc_compact, &a.btc_trades) {
+                (Some(c), _) => read_compact_px(c)?,
+                (None, Some(b)) => read_px_tape(b)?,
+                _ => vec![],
+            }
         }
-        None => vec![],
+        (None, None) => vec![],
     };
+    if let Some(w) = &a.write_btc_compact {
+        anyhow::ensure!(a.btc_trades.is_some(), "--write-btc-compact needs --btc-trades");
+        write_compact_px(w, &btc)?;
+    }
     if let Some(f) = &a.forecast {
         let v = read_forecast(f)?;
         FORECAST.with(|x| *x.borrow_mut() = std::rc::Rc::new(v));
@@ -2050,7 +2818,17 @@ pub fn run(ctx: &Ctx, a: MmReplayArgs) -> anyhow::Result<()> {
     let vf: VariantsFile = serde_json::from_str(&std::fs::read_to_string(a.variants.as_ref().context("--variants")?)?)?;
     let mut quoters = vec![];
     let mut gates: BTreeMap<String, std::rc::Rc<Vec<(i64, bool)>>> = BTreeMap::new();
+    let mut widens: BTreeMap<String, std::rc::Rc<Vec<(i64, f64)>>> = BTreeMap::new();
     for v in &vf.variants {
+        let widen = match &v.widen_file {
+            Some(w) => {
+                if !widens.contains_key(w) {
+                    widens.insert(w.clone(), std::rc::Rc::new(read_widen(&ctx.s.root.join(w))?));
+                }
+                widens.get(w).cloned()
+            }
+            None => None,
+        };
         let cfg = load_cfg(&ctx.s.root, v)?;
         let gate = match &v.gate {
             Some(g) if !gates.contains_key(g) => {
@@ -2068,14 +2846,30 @@ pub fn run(ctx: &Ctx, a: MmReplayArgs) -> anyhow::Result<()> {
                 if let Some(g) = &gate {
                     q.set_gate(g.clone());
                 }
+                if let Some(w) = &widen {
+                    q.set_widen(w.clone());
+                }
                 q.set_zones(zones.clone());
                 quoters.push(q);
             }
         }
     }
     let p = ReplayParams { start, end, latency_ms: a.latency_ms, fill_rpi: a.fill_rpi, depth: a.depth };
-    let mut book = open_lines(a.ob200.as_ref().context("--ob200")?)?;
-    run_replay(&mut m, &mut quoters, &mut *book, &trades, &btc, &p)?;
+    if let Some(d) = &a.compact {
+        let mut src = CompactBook::open(&d.join("book.bin.gz"), m.grid())?;
+        run_replay_src(&mut m, &mut quoters, &mut src, &trades, &btc, &p)?;
+    } else {
+        let mut book = open_lines(a.ob200.as_ref().context("--ob200")?)?;
+        let tee = match &a.write_compact {
+            Some(d) => Some(CompactBookWriter::create(&d.join("book.bin.gz"), &symbol, m.grid())?),
+            None => None,
+        };
+        let mut src = JsonBook::new(&mut *book, tee);
+        run_replay_src(&mut m, &mut quoters, &mut src, &trades, &btc, &p)?;
+        if let Some(w) = src.tee.take() {
+            w.finish()?;
+        }
+    }
     let day_lo = start.div_euclid(DAY_MS) * DAY_MS;
     write_bars(&a.out.join("bars_1m.csv"), &m.bars, day_lo, day_lo + DAY_MS)?;
     write_outputs(&a.out, &m, &quoters, &p, &symbol, &rules, fees, t0.elapsed().as_secs_f64())?;
@@ -2108,6 +2902,7 @@ pub fn write_outputs(out: &Path, m: &Market, quoters: &[Quoter], p: &ReplayParam
             v["mid_1s"] = mk[0].clone();
             v["mid_10s"] = mk[1].clone();
             v["mid_60s"] = mk[2].clone();
+            v["mid_300s"] = json!(m.mid_at((f.ts + MARKOUT_LONG_S * 1000).min(p.end)));
             writeln!(w, "{}", serde_json::to_string(&v)?)?;
         }
     }
@@ -2639,5 +3434,187 @@ mod tests {
         // one quoter per latency x queue, and the latency is reported
         assert_eq!(a.iter().filter(|r| r["name"] == "btc").count(), 4);
         assert!(a.iter().any(|r| r["latency_ms"] == 300));
+    }
+
+    // ------------------------------------------------------------ WMQ quote rules, probe, compact inputs
+
+    #[test]
+    fn glft_and_as_half_spreads() {
+        // flat: symmetric; long inventory moves both quotes down (ask closer, bid further); the skew per order is c2
+        let (b0, a0) = glft_half_spreads(0.5, 0.01, 2.0, 0.0).unwrap();
+        assert!((b0 - a0).abs() < 1e-12);
+        let c1 = (1.0f64 + 0.25).ln() / 0.5;
+        let c2 = (0.5f64 / (2.0 * 2.0 * 0.01) / 3600.0 * 1.25f64.powf(5.0)).sqrt();
+        assert!((b0 - (c1 + 0.5 * c2)).abs() < 1e-12, "{b0} vs {}", c1 + 0.5 * c2);
+        let (b1, a1) = glft_half_spreads(0.5, 0.01, 2.0, 1.0).unwrap();
+        assert!((b1 - b0 - c2).abs() < 1e-12 && (a0 - a1 - c2).abs() < 1e-12);
+        // more risk aversion: a larger skew per order
+        let s = |g: f64| {
+            let (b, a) = glft_half_spreads(g, 0.01, 2.0, 1.0).unwrap();
+            b - a
+        };
+        assert!(s(0.1) < s(0.5) && s(0.5) < s(2.0));
+        // vanishing risk aversion: the half-spread tends to 1 / k (the single-fill profit maximiser)
+        let (bz, _) = glft_half_spreads(1e-6, 0.01, 2.0, 0.0).unwrap();
+        assert!((bz - 0.5).abs() < 1e-3, "{bz}");
+        // AS: reservation shift q g tau, spread g tau + 2 ln(1 + g / k) / g
+        let (b, a) = as_half_spreads(0.1, 2.0, 3600.0, 2.0).unwrap();
+        let h = (1.0f64 + 0.05).ln() / 0.1 + 0.05;
+        assert!((b - (h + 0.2)).abs() < 1e-12 && (a - (h - 0.2)).abs() < 1e-12);
+        assert!(glft_half_spreads(0.0, 0.01, 2.0, 0.0).is_none() && as_half_spreads(0.1, 0.0, 3600.0, 0.0).is_none());
+    }
+
+    fn mspec(rule: ModelPrice) -> VariantSpec {
+        VariantSpec { name: "m".into(), config: "config/mm_illiq20.yaml".into(), mode: QuoteMode::Model, price_rule: rule, cap_usd: 25.0, ..VariantSpec::default() }
+    }
+
+    #[test]
+    fn model_quotes_depth_caps_sizes_and_unwind() {
+        // TRX-like grid (tick 0.0001, step 1, min notional 5 -> 18 lots at 0.30), 1h sigma 40 bp, cap 83 lots (25 USD)
+        let r = rules();
+        let base = ModelIn { bid1: 0.3000, ask1: 0.3002, sigma: 0.004, pos: 0, lot: 18, cap: 83, hold_s: 0.0, no_add_bid: false, no_add_ask: false, widen: 0.0, mult: 0.0 };
+        let mut s = mspec(ModelPrice::Depth);
+        s.depth_sigma = 1.0;
+        let (b, a) = model_quotes(&s, &r, &base);
+        let (b, a) = (b.unwrap(), a.unwrap());
+        // mid 0.3001 -/+ 40 bp: 0.2988996 -> 0.2988 (down), 0.3013004 -> 0.3014 (up); one minimum lot each, adding
+        assert!((b.price - 0.2988).abs() < 1e-12 && (a.price - 0.3014).abs() < 1e-12, "{b:?} {a:?}");
+        assert_eq!((b.qty, a.qty, b.reduce_only, a.reduce_only), (18.0, 18.0, false, false));
+        // long 72 lots: the ask reduces (reduce-only, one order), the bid adds only what fits under the cap
+        let long = ModelIn { pos: 72, ..base };
+        let (b, a) = model_quotes(&s, &r, &long);
+        assert_eq!(a.unwrap().qty, 18.0);
+        assert!(a.unwrap().reduce_only && b.is_none(), "72 + 18 > 83: no adding bid");
+        // size skew (3 lots): adding shrinks, reducing grows with |q| / cap
+        let mut sk = s.clone();
+        sk.lots = 3;
+        sk.size_rule = SizeRule::Linear;
+        let x = ModelIn { pos: 108, cap: 216, ..base };
+        let (b, a) = model_quotes(&sk, &r, &x);
+        assert_eq!((b.unwrap().qty, a.unwrap().qty), (36.0, 90.0), "frac 0.5: add round(1.5) = 2 lots, reduce round(4.5) = 5 lots");
+        // passive unwind: after the holding time the reducing quote joins the touch
+        let mut u = s.clone();
+        u.unwind_passive_s = 600.0;
+        let (_, a) = model_quotes(&u, &r, &ModelIn { pos: 18, hold_s: 601.0, ..base });
+        assert!((a.unwrap().price - 0.3002).abs() < 1e-12);
+        let (_, a) = model_quotes(&u, &r, &ModelIn { pos: 18, hold_s: 599.0, ..base });
+        assert!((a.unwrap().price - 0.3014).abs() < 1e-12);
+        // no-add flags and the widen
+        let (b, a) = model_quotes(&s, &r, &ModelIn { no_add_bid: true, ..base });
+        assert!(b.is_none() && a.is_some());
+        let (b, _) = model_quotes(&s, &r, &ModelIn { widen: 1.0, ..base });
+        assert!((b.unwrap().price - 0.2976).abs() < 1e-12);
+        // a multiplicative widen of 2 doubles the half-spread (the same price as +1 sigma here)
+        let (b, _) = model_quotes(&s, &r, &ModelIn { mult: 2.0, ..base });
+        assert!((b.unwrap().price - 0.2976).abs() < 1e-12);
+        // GLFT: a long position pulls the ask in, never crossing the bid
+        let mut g = mspec(ModelPrice::Glft);
+        (g.glft_gamma, g.glft_a, g.glft_k) = (0.5, 0.01, 2.0);
+        let (_, a_flat) = model_quotes(&g, &r, &base);
+        let (_, a_long) = model_quotes(&g, &r, &ModelIn { pos: 72, ..base });
+        assert!(a_long.unwrap().price < a_flat.unwrap().price && a_long.unwrap().price >= 0.3001);
+        let mut far = g.clone();
+        far.glft_gamma = 50.0;
+        let (_, a) = model_quotes(&far, &r, &ModelIn { pos: 72, ..base });
+        assert!((a.unwrap().price - 0.3001).abs() < 1e-12, "clamped one tick above the bid");
+    }
+
+    #[test]
+    fn compact_inputs_replay_identically() {
+        let (lines, trades) = synthetic_day();
+        let dir = std::env::temp_dir().join(format!("mm_replay_compact_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let g = *m_new().grid();
+        let fee = FeeRates { maker_bps: 2.0, taker_bps: 5.5, slippage_bps: 0.0 };
+        let mk = || {
+            let mut s = spec("fixed10");
+            s.overrides.insert("refresh_s".into(), json!(5));
+            all_queues().into_iter().map(|qm| Quoter::new(cfg_with(&s), s.clone(), qm, "TRXUSDT", &rules(), fee, 150, 0, 3 * 3_600_000, false)).collect::<Vec<_>>()
+        };
+        let p = ReplayParams { start: 0, end: 3 * 3_600_000, latency_ms: 150, fill_rpi: false, depth: 200 };
+        // off-grid and RPI prints survive the round trip
+        let mut tr = trades.clone();
+        tr[3].px += 0.00001;
+        tr[3].rpi = true;
+        tr[5].rpi = true;
+        write_compact_trades(&dir.join("trades.bin.gz"), "TRXUSDT", &g, &tr).unwrap();
+        assert_eq!(read_compact_trades(&dir.join("trades.bin.gz"), &g).unwrap(), tr);
+        let px: Vec<(i64, f64)> = (0..1000).map(|i| (i * 37, 60_000.0 + (i % 13) as f64 * 0.1)).collect();
+        write_compact_px(&dir.join("px.bin.gz"), &px).unwrap();
+        assert_eq!(read_compact_px(&dir.join("px.bin.gz")).unwrap(), px);
+        // replay from the JSON lines while writing the compact book, then from the compact book: same stats
+        let text = lines.join("\n");
+        let mut rd = BufReader::new(text.as_bytes());
+        let (mut m1, mut q1) = (m_new(), mk());
+        let mut src = JsonBook::new(&mut rd, Some(CompactBookWriter::create(&dir.join("book.bin.gz"), "TRXUSDT", &g).unwrap()));
+        run_replay_src(&mut m1, &mut q1, &mut src, &trades, &[], &p).unwrap();
+        src.tee.take().unwrap().finish().unwrap();
+        let (mut m2, mut q2) = (m_new(), mk());
+        let mut src2 = CompactBook::open(&dir.join("book.bin.gz"), &g).unwrap();
+        run_replay_src(&mut m2, &mut q2, &mut src2, &trades, &[], &p).unwrap();
+        let rows = |m: &Market, q: &[Quoter]| serde_json::to_string(&q.iter().map(|x| x.summary(m, p.end)).collect::<Vec<_>>()).unwrap();
+        assert_eq!(rows(&m1, &q1), rows(&m2, &q2));
+        assert_eq!((m1.n_msgs, m1.mids.len(), m1.check_mismatch), (m2.n_msgs, m2.mids.len(), 0));
+        // a different grid is refused
+        let g2 = Grid::new(0.001, 1.0).unwrap();
+        assert!(CompactBook::open(&dir.join("book.bin.gz"), &g2).is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn probe_and_model_modes_end_to_end() {
+        let (lines, trades) = synthetic_day();
+        let fee = FeeRates { maker_bps: 2.0, taker_bps: 5.5, slippage_bps: 0.0 };
+        let run = || {
+            let mut probe = spec("probe");
+            probe.sigma_mode = SigmaMode::Config;
+            probe.mode = QuoteMode::Probe;
+            probe.probe_x = vec![0.0, 0.25, 1.0, 3.0];
+            let mut dep = mspec(ModelPrice::Depth);
+            dep.name = "depth".into();
+            dep.depth_sigma = 0.25;
+            dep.unwind_aggr_s = 300.0;
+            let mut gl = mspec(ModelPrice::Glft);
+            gl.name = "glft".into();
+            (gl.glft_gamma, gl.glft_a, gl.glft_k) = (0.5, 0.01, 2.0);
+            gl.lots = 2;
+            gl.size_rule = SizeRule::Linear;
+            gl.cap_usd = 60.0;
+            gl.trend_k = 1.0;
+            let mut quoters = vec![];
+            for s in [&probe, &dep, &gl] {
+                for qm in [QueueModel::Pessimistic, QueueModel::Prorata] {
+                    quoters.push(Quoter::new(cfg_with(s), s.clone(), qm, "TRXUSDT", &rules(), fee, 150, 0, 3 * 3_600_000, false));
+                }
+            }
+            let mut m = m_new();
+            let text = lines.join("\n");
+            let mut rd = BufReader::new(text.as_bytes());
+            let p = ReplayParams { start: 0, end: 3 * 3_600_000, latency_ms: 150, fill_rpi: false, depth: 200 };
+            run_replay(&mut m, &mut quoters, &mut rd, &trades, &[], &p).unwrap();
+            let rows: Vec<Value> = quoters.iter().map(|q| q.summary(&m, p.end)).collect();
+            let tagged = quoters[0].fills.iter().all(|f| f.probe.is_some()) && quoters[2].fills.iter().all(|f| f.probe.is_none());
+            (rows, tagged)
+        };
+        let (a, tagged) = run();
+        let (b, _) = run();
+        assert_eq!(serde_json::to_string(&a).unwrap(), serde_json::to_string(&b).unwrap(), "deterministic");
+        assert!(tagged, "probe fills carry their distance, others do not");
+        for r in &a {
+            assert!(r["pnl"]["ledger_check"].as_f64().unwrap().abs() < 1e-9, "{}", r["name"]);
+            assert!(r["pnl"]["adverse_300s"].is_number());
+        }
+        // the probe: every leg is live; the touch fills most, the far legs least
+        let legs = a[1]["probe"].as_array().unwrap();
+        assert_eq!(legs.len(), 8);
+        assert!(legs.iter().all(|l| l["live_ms"].as_i64().unwrap() > 0 && l["placed"].as_u64().unwrap() > 0));
+        let fills = |j: usize| legs.iter().filter(|l| l["j"] == j).map(|l| l["fills"].as_u64().unwrap()).sum::<u64>();
+        assert!(fills(0) > fills(2) && fills(2) >= fills(3), "{} {} {}", fills(0), fills(2), fills(3));
+        assert!(legs[2]["x_eff_mean"].as_f64().unwrap() > 0.1, "{}", legs[2]);
+        // model quoters trade; the time limit closes at market
+        let f = |name: &str, key: &str| a.iter().filter(|r| r["name"] == name).map(|r| r["model"][key].as_u64().unwrap()).sum::<u64>();
+        assert!(a.iter().filter(|r| r["name"] == "depth").all(|r| r["fills"].as_u64().unwrap() > 0));
+        assert!(f("depth", "unwind_time") > 0 && f("depth", "ticks") > 0);
+        assert!(f("glft", "ticks") > 0);
     }
 }
