@@ -5139,52 +5139,150 @@ hypotheses:
     family: ws16_trend
     status: proposed
 
-  # ==== SIGMA (agent A1, 2026-11-27 ~22:30 UTC): decision D1 rollout, shadow first. Registered BEFORE any shadow line exists
-  # and BEFORE any score of the joint spec. Code: src/ai_trader/risk/sigma.py (estimator, switch), risk/sigma_store.py (5m
-  # RV store), scripts/sigma_shadow.py (hourly logger), scripts/sigma_shadow_score.py (scorer + switch gate).
-  # Specs: robust_bc (the live sigma_risk_next), loghar_cr (WS04 pick, reproduced to 3e-16 on the WS04 grids), loghar_cr_range
-  # (loghar_cr + clock-deflated Parkinson range terms over 1/6/24 bars at 1h and 1/6 bars at 4h: NEW, never scored as such).
-  # Stop version = clock factor floored at the Mon-Thu same-hour mean on bars touching the TradFi weekend (R-VOL-2);
-  # central = unfloored. 1d: robust_bc vs vol.har. Target = the bar's 5m realised variance (store, same rule as WS04).
-  # Forward scoring: first line per symbol x horizon x bar start, lines made <= 15 min after the bar open, symbols with both
-  # specs present; pooled = cross-symbol mean loss per bar start; DM = Newey-West HAC with the HLN correction. Shadow universe =
-  # universe L (23 perps). All forward data is clean_holdout (after research.knowledge_cutoff). Student-t VaR: unit-variance t,
-  # nu 3.80 / 3.53 / 3.57 (WS04 R-WS04-2), 1% lower tail.
-  H-SIGMA-1:
-    title: "The D1 stop sigma (loghar_cr_range) beats robust_bc forward at 1h and 4h (the switch gate)"
-    statement: "On the forward shadow, pooled over the shadow universe, the stop version of loghar_cr_range has lower QLIKE against the bar's 5m realised variance than robust_bc at 1h and at 4h, and its 1h lower-tail 1% Student-t VaR is not breached more than 2% of the time."
-    rationale: "WS04: loghar_cr beats robust_bc by 31-35% (1h) and 38-44% (4h) QLIKE on history (t -4.6 to -8.8); WS12: range terms add ~5% QLIKE to a log-HAR-t at 1h. The weekend floor costs a little QLIKE on weekend bars only."
-    test: "per-bar-start pooled QLIKE differences (loghar_cr_range stop - robust_bc), DM-HLN t, at 1h and 4h; 1h lower 1% VaR exceedance rate of the stop sigma (Kupiec POF reported)."
-    success: "at the first scorer run on/after risk_sigma.switch_on, with >= 168 pooled 1h bar starts and >= 42 pooled 4h bar starts (each with >= 5 symbols): 1h mean diff < 0 with DM-HLN t < -2; 4h mean diff < 0; 1h lower 1% VaR exceedance <= 2.0%. Pass = the gate opens and the spec switches (latched); fail or too few data = stays robust_bc."
-    prior: 0.85
-    family: vol_model
+  # ---------------------------------------------------------------- WMS SELECT (program WMM2, registered 2026-11-27 ~22:30 UTC, before any index, outcome or fit)
+  # Which illiquid Bybit USDT perps to quote on weekends, and when. Data: Bybit public 5m klines (REST, delisted perps included where
+  # served), 2021-01-02 .. 2026-11-21 weekends; DVOL / BTC funding / OI from the lake; funding and 1d OI of alts from public REST.
+  # Common definitions (frozen; code in src/ai_trader/research/wms_select.py):
+  #   Weekend W = Sat 00:00 -> Mon 00:00 UTC (576 5m bars); weekend_start = the Saturday. Friday cutoff T_F = Fri 22:00 UTC; Friday-known
+  #   = 5m bars closed <= T_F, daily bars closed <= Fri 00:00, funding settled <= T_F, 1d OI with ts + 1 d <= T_F, DVOL with known_ts <= T_F.
+  #   Friday window FW = 5m bars opened in [T_F - 7 d, T_F) (2016 bars). Log returns of the last-trade close.
+  #   Universe U_W: Bybit USDT linear perpetual, symbolType '' (not innovation, not stock / ETF), Trading or Closed today, not BTC / ETH /
+  #   stablecoins / gold tokens, never SPYUSDT; median daily turnover over the 7 complete UTC days before the Friday in [5, 50] M USD;
+  #   first daily bar >= 30 days before the Friday; >= 98% of FW and of W 5m bars present; zero-turnover share of FW bars <= 10%.
+  #   No spread / depth filter historically (no historical books): select_universe.py's live filters apply only forward.
+  #   Indices on FW (and the same definitions on W for persistence; W uses DFA scales <= 96 bars):
+  #     vr5_q (q = 2, 12, 48) and vr15_q (q = 4, 16): Lo-MacKinlay overlapping variance ratio on 5m / 15m base returns with the
+  #       unbiased estimators; z* = heteroskedasticity-robust z.  ar1_5, ar1_15: OLS AR(1) of 5m / 15m returns, Kendall-corrected
+  #       (rho + (1 + 3 rho) / n).  ou_hl: half-life (h) of the 15m log price around the window mean, -ln 2 / ln(1 + b) from
+  #       dp_t = a + b p_{t-1} (capped at 1680 h).  dfa: DFA-1 exponent of 5m returns, scales 12..288 bars.  er_1h: Kaufman efficiency
+  #       ratio |p_end - p_start| / sum |dp| on 1h closes.  BoS on 15m bars: swing high (low) at bar i if its high (low) is strictly
+  #       above (below) the 3 bars on each side, confirmed at the close of bar i + 3; a bullish (bearish) break at bar t when close_t
+  #       is above (below) the most recent confirmed, not yet broken swing high (low); a broken swing is consumed. bos_count = breaks in
+  #       FW, bos_imb = |bull - bear| / max(1, bull + bear). Variant BoS1h: the same on 1h bars.
+  #   Composite S0 (fixed, no fitting): mean over 6 components of the within-weekend normal scores of ranks (Blom) of
+  #     -log vr15_4, -log vr15_16, -ar1_15, -dfa, -er_1h, -bos_imb (higher S0 = more mean-reverting, less trending).
+  #   Weekend outcomes (5m): O1 vsurp = log(RV_W / F_W), F_W = Friday-known panel log-HAR forecast of RV_W (log RV_W on log RV of the
+  #     last 24 h, the 7-day FW and the previous weekend; OLS on FIT symbol-weekends; lognormal back-transform); O2 rtr = log(sum |r| /
+  #     |sum r|) (round-trip ratio); O3 mxs = max_t |p_t - p_Sat00| / sqrt(F_W); O4 trend = |sum r| / sqrt(RV_W) (trend leg).
+  #   Alt spread s = weekend change of log(P_alt / P_BTC). Segments by weekend_start: llm_in_sample (FIT) < 2026-07-01 <= clean_holdout
+  #   < 2026-11-28 <= forward. ICs are Spearman within a weekend (weekends with >= 10 names), averaged over weekends, t from Newey-West
+  #   (lag 4) on the weekly series; panels use weekend-clustered SEs. BH within each hypothesis' sub-family; BY over the 13 primaries.
+  H-WMS-1:
+    title: "The Friday mean-reversion composite S0 persists into the weekend"
+    statement: "Across U_W, a name's Friday-window S0 is positively rank-correlated with the same composite computed on its weekend bars."
+    rationale: "The user's premise: names with a high mean-reversion index keep it. Part of it is microstructure (tick size, bounce), which persists; part is regime."
+    test: "Per-weekend Spearman IC(S0_FW, S0_W); mean over weekends, NW(4) t; panel slope of S0_W on S0_FW with weekend FE, weekend-clustered SE. Per segment."
+    success: "Supports iff the FIT mean IC > 0 with t >= 2 and the holdout mean IC > 0; contradicts iff the FIT mean IC <= 0, or the holdout mean IC < 0 with t <= -2; else inconclusive."
+    prior: 0.70
+    family: wms_select
     status: proposed
-  H-SIGMA-2:
-    title: "The high-low range terms add to the clock log-HAR at 1h (forward)"
-    statement: "loghar_cr_range has lower 1h QLIKE than loghar_cr (both central, i.e. unfloored) on the forward shadow, pooled."
-    rationale: "WS12: Parkinson range terms carry most of what small networks add over a log-HAR-t on 1h bars (-4.6% QLIKE); with 5m RV already in the model the extra information in the range should be smaller but positive (intrabar path beyond 5m closes)."
-    test: "per-bar-start pooled QLIKE differences, DM-HLN t; 4h reported alongside."
-    success: "1h mean diff < 0 with DM-HLN t < -2 after >= 336 pooled 1h bar starts (two weeks); a positive diff with t > 2 contradicts."
-    prior: 0.5
-    family: vol_model
+  H-WMS-2:
+    title: "Which single indices persist from the Friday window into the weekend"
+    statement: "For each of the 12 indices (vr5_2, vr5_12, vr5_48, vr15_4, vr15_16, ar1_5, ar1_15, ou_hl, dfa, er_1h, bos_count, bos_imb) the Friday value is positively rank-correlated with its weekend value."
+    rationale: "Dossier of each index: which ones carry a persistent name-level property and which are sampling noise."
+    test: "As H-WMS-1, per index; BH over the 12 at q 0.05 in FIT."
+    success: "Per index: supports iff FIT IC > 0 with BH q < 0.05 and holdout IC > 0; contradicts iff FIT IC <= 0; else inconclusive. The hypothesis supports iff >= 6 of the 12 support."
+    prior: 0.60
+    family: wms_select
     status: proposed
-  H-SIGMA-3:
-    title: "The weekend floor keeps the stop sigma's weekend lower tail covered (forward)"
-    statement: "On 1h forecast bars touching the TradFi weekend, the lower 1% Student-t VaR of the floored stop sigma (loghar_cr_range) is breached <= 2% of the time and no more often than with the unfloored central sigma."
-    rationale: "H-WS04-5: the hour-of-week-shrunk sigma under-covers the weekend lower tail in the holdout (1.44% at 1%, Kupiec p 0.003); R-VOL-2 forbids the weekend shrink in the stop sigma."
-    test: "exceedance counts on weekend 1h bars (pooled symbols), Kupiec POF vs 1%; floored vs central counts; QLIKE cost of the floor (stop - central) on weekend bars."
-    success: "after >= 4 weekends: floored exceedance <= 2.0% and <= the central's; a floored rate > 2% with Kupiec p < 0.05 contradicts."
-    prior: 0.7
-    family: vol_model
+  H-WMS-3:
+    title: "S0 predicts market-maker-friendly weekends: no trend leg, more round trips, smaller excursions"
+    statement: "Higher Friday S0 predicts a lower weekend trend ratio O4 (primary), a higher round-trip ratio O2, a lower max excursion O3; O1 (vol surprise) is tested two-sided."
+    rationale: "The user's selection rule: quote only names with a high mean-reversion index, excluding the names that trend. O4 ~ sqrt(VR over the whole weekend) x |N(0,1)|, so it is a single noisy draw: expect small ICs."
+    test: "Per-weekend Spearman IC(S0, O_k), k = 1..4; mean, NW(4) t; panel OLS with weekend FE and controls (log median turnover, log RV_FW), weekend-clustered SE as robustness. BH over the 4 outcomes."
+    success: "Supports iff the FIT mean IC(S0, O4) < 0 with BH q < 0.05 and the holdout IC(S0, O4) < 0, and neither O2 nor O3 is significantly (q < 0.05) of the wrong sign in FIT; contradicts iff the FIT IC(S0, O4) >= 0, or holdout IC(S0, O4) > 0 with t >= 2; else inconclusive."
+    prior: 0.35
+    family: wms_select
     status: proposed
-  H-SIGMA-4:
-    title: "Historical check of the joint spec: loghar_cr_range vs loghar_cr vs robust_bc on the 23 universe-L perps"
-    statement: "On the 5m RV store (2022-01 .. 2026-11-27; monthly walk-forward refits from a year after each symbol's first bar), pooled over symbols, the stop version of loghar_cr_range has lower QLIKE than robust_bc (computed on the same grid's close-to-close returns, as WS04) and than the stop version of loghar_cr, at 1h and at 4h."
-    rationale: "Disclosure: WS04 already scored loghar_cr vs robust_bc on 5 of these assets over the same period (re-measurement there); the range terms and the 18 other alts are new. WS12 scored range terms on a different base."
-    test: "pooled per-bar-start QLIKE differences, DM-HLN t, segments llm_in_sample (< 2026-07-01) and clean_holdout; per-symbol share with diff < 0."
-    success: "vs robust_bc: diff < 0 with t < -2 in llm_in_sample and same sign in clean_holdout at 1h and 4h; vs loghar_cr (range terms): diff < 0 with t < -2 in llm_in_sample and same sign in clean_holdout at 1h (4h reported)."
-    prior: 0.6
-    family: vol_model
+  H-WMS-4:
+    title: "Which single Friday indices predict the weekend trend leg O4"
+    statement: "For each of the 12 indices, the Friday value predicts O4 with the sign implied by mean reversion (higher vr / ar1 / dfa / er_1h / bos_imb / ou_hl -> higher O4; bos_count two-sided)."
+    rationale: "Tells which components carry the selection signal. The FIT-passing set (BH q < 0.05, expected sign) defines the extra trial S1 = equal-weight composite of those indices, tested once on the holdout."
+    test: "Per-weekend Spearman IC(index, O4), mean, NW(4) t, BH over 12 in FIT. S1 holdout IC(S1, O4) reported as an extra, labelled trial."
+    success: "Per index: supports iff FIT q < 0.05 with the expected sign and the holdout IC of the same sign; contradicts iff the FIT IC has the opposite sign with q < 0.05; else inconclusive. Hypothesis: supports iff >= 3 indices support."
+    prior: 0.35
+    family: wms_select
+    status: proposed
+  H-WMS-5:
+    title: "The frozen selection rule (top third of S0) picks weekends with smaller trend legs"
+    statement: "Within U_W, names in the top third of S0 have a lower mean O4 (and lower O3, higher O2) than the other two thirds."
+    rationale: "Decision value of the rule WMQ will test on replayed books."
+    test: "Per weekend, mean O_k(eligible) - mean O_k(rest); mean over weekends, NW(4) t."
+    success: "Supports iff the FIT difference in O4 < 0 with t <= -2 and the holdout difference < 0; contradicts iff the FIT difference >= 0; else inconclusive."
+    prior: 0.35
+    family: wms_select
+    status: proposed
+  H-WMS-6:
+    title: "Weekend breaks of structure in illiquid alts continue (trend) rather than revert"
+    statement: "After a weekend BoS (15m, k = 3) the signed log return from the break-bar close is positive at 4 h (primary), also tested at 1 h and to Sunday 24:00; raw and BTC-hedged (alt minus BTC log return); and for the BoS1h variant."
+    rationale: "The user tracks breaks of structure. Under a martingale the signed continuation is 0; for a market maker, continuation means pull or skew after a break, reversion means keep quoting."
+    test: "Signed return in units of sigma_FW,5m x sqrt(horizon bars); per-weekend mean over events (equal weight per weekend), mean over weekends with NW(2) t; events whose horizon passes Mon 00:00 dropped. BH over 12 = 3 horizons x 2 (raw, hedged) x 2 (15m, 1h). Also in bp vs an 11 bp taker round trip."
+    success: "Supports iff the primary (15m, raw, 4 h) FIT mean > 0 with BH q < 0.05 and the holdout mean > 0; contradicts iff the FIT mean < 0 with q < 0.05 (reversion) and the holdout mean <= 0; else inconclusive."
+    prior: 0.35
+    family: wms_select
+    status: proposed
+  H-WMS-7:
+    title: "BTC has a weekend buyer bias"
+    statement: "BTC's mean weekend log return (Sat 00:00 -> Mon 00:00) is > 0; also tested against the same week's weekday rate (Mon 00:00 -> Sat 00:00 log return x 2/5), paired."
+    rationale: "The user believes in a general buyer bias on weekends. Prior research (H-W2/H-W3, R-PX-9) found no directional weekend information."
+    test: "Mean of weekend log returns, NW(2) t; share positive vs 0.5 (binomial); paired weekend - weekday-rate difference, NW(2) t. Per segment; MDE reported."
+    success: "Supports iff the FIT mean > 0 with t >= 2 and the holdout mean > 0; contradicts iff the FIT mean <= 0; else inconclusive."
+    prior: 0.25
+    family: wms_select
+    status: proposed
+  H-WMS-8:
+    title: "Alts bleed against BTC over weekends"
+    statement: "The equal-weight mean over U_W of the weekend alt-minus-BTC log spread s is < 0, and more negative than the same names' spread over the matched weekday window (Tue 00:00 -> Thu 00:00 of the same week, 48 h)."
+    rationale: "The user: 'altcoins still suffer'. Survivorship pushes the other way (delisted perps are included where the REST serves them; innovation-zone ones are not)."
+    test: "Per-weekend cross-sectional mean and median of s; mean over weekends, NW(2) t; paired weekend - weekday difference. Per segment."
+    success: "Supports iff the FIT mean s < 0 with t <= -2 and the holdout mean < 0; contradicts iff the FIT mean >= 0; else inconclusive. The weekday comparison is reported as a secondary result."
+    prior: 0.55
+    family: wms_select
+    status: proposed
+  H-WMS-9:
+    title: "Weekend idiosyncratic variance is more concentrated in a few names than on weekdays"
+    statement: "The share of the cross-sectional sum of squared demeaned spreads (s - mean s) coming from the top 5% names by |s - mean s| is higher on the weekend than on the matched weekday window (Tue 00:00 -> Thu 00:00)."
+    rationale: "The user: 'a few thrive and trend hard'. Heavy tails make the share exceed the Gaussian 27.9% anywhere; the weekend-specific claim is the paired comparison."
+    test: "Per week share_W - share_weekday on the same names; mean, NW(2) t. Gaussian reference 0.279 reported. Per segment."
+    success: "Supports iff the FIT mean difference > 0 with t >= 2 and the holdout difference > 0; contradicts iff the FIT mean difference <= 0; else inconclusive."
+    prior: 0.40
+    family: wms_select
+    status: proposed
+  H-WMS-10:
+    title: "The weekend cross-section of alt spreads is right-skewed (a few thrive)"
+    statement: "The mean over weekends of the cross-sectional skewness (adjusted Fisher-Pearson) of s is > 0."
+    rationale: "Bleeding median with a few large winners is right skew; survivorship inflates it, so a pass is weak evidence."
+    test: "Per-weekend skewness of s over U_W (>= 10 names); mean, NW(2) t; same on the weekday window for comparison. Per segment."
+    success: "Supports iff the FIT mean skew > 0 with t >= 2 and the holdout mean > 0; contradicts iff the FIT mean <= 0; else inconclusive."
+    prior: 0.55
+    family: wms_select
+    status: proposed
+  H-WMS-11:
+    title: "Friday-known information picks the weekend trenders above chance"
+    statement: "A pre-specified logistic model on Friday-known inputs ranks the top-5% |s - mean s| names of each weekend above the rest: AUC > 0.5."
+    rationale: "If trenders can be seen early, a market maker can exclude them. Inputs: bos_count, bos_imb, er_1h, last funding rate (per 8 h), |funding|, 7-day log OI change, |last-24h return| / sigma, |7-day spread vs BTC| / sigma, S0, log RV_FW."
+    test: "Inputs as within-weekend normal scores; logistic fit on FIT; FIT AUC by leave-one-year-out CV (within-weekend stratified AUC), holdout AUC with the FIT model; weekend block bootstrap 95% CIs (B = 2000). Single-input AUCs reported with BH over the 10."
+    success: "Supports iff the FIT CV AUC > 0.5 with the 95% CI above 0.5 and the holdout AUC > 0.5; contradicts iff the FIT CV AUC CI includes 0.5 and its point is <= 0.52; else inconclusive."
+    prior: 0.55
+    family: wms_select
+    status: proposed
+  H-WMS-12:
+    title: "A Friday-known calm-weekend classifier beats climatology, calibrated"
+    statement: "Calm_W = 1 iff BTC's weekend 5m RV is below the median of the previous 52 weekends' BTC weekend RV and no BTC 5m |r| > 5 sigma_FW (sigma_FW = RMS 5m return of the Friday window). A logistic model on Friday-known inputs has a lower Brier score than climatology."
+    rationale: "Make markets only on calm weekends. Inputs (BTC, Friday-known): x1 log(RV_FW x 576/2016) - log(median of the previous 52 weekend RVs); x2 log(7 x RV_last24h / RV_FW) (last day vs the week); x3 log DVOL - log(median of the previous 52 Friday DVOLs); x4 last funding rate; x5 7-day log OI change; x6 CPI / NFP / FOMC in the 24 h before T_F; x7 one scheduled Mon-Tue; x8 holiday flag (the weekend after US Thanksgiving; weekend_start in Dec 22-28 or Dec 29-Jan 4)."
+    test: "Logistic fit on FIT; leave-one-year-out CV Brier skill vs the training base rate, DM t on per-weekend Brier differences (HAC); holdout Brier skill with the full-FIT model; reliability (5 bins), calibration intercept / slope. Holiday weekends reported as a labelled subset only. Secondary target: BTC vsurp < 0 and no jump."
+    success: "Supports iff the FIT CV Brier skill > 0 with DM t >= 2 and the holdout Brier skill > 0; contradicts iff the FIT CV Brier skill <= 0; else inconclusive."
+    prior: 0.55
+    family: wms_select
+    status: proposed
+  H-WMS-13:
+    title: "Bid-ask bounce makes 1m last-trade returns look mean-reverting in illiquid alts"
+    statement: "On the same minutes, the AR(1) of 1m last-trade returns is lower than the AR(1) of 1m mid returns by more than 0.02 (median over U_W-like alts in flow_3s), and the gap shrinks at 5m."
+    rationale: "Dossier check: which sampling is safe for the mean-reversion indices. Roll: AR(1) bias ~ -(s^2/4) / (sigma^2 + s^2/2)."
+    test: "Lake flow_3s (close = last trade, mid at candle close) rolled to 1m and 5m on days with >= 95% coverage and no trade_deficit hour, linear alts with 24h turnover 5-50 M; per symbol-day AR(1) difference last - mid; median and symbol-clustered bootstrap CI."
+    success: "Supports iff the median 1m difference < -0.02 with the CI below 0 and the 5m difference is smaller in magnitude; contradicts iff the 1m CI lies entirely above -0.02; else inconclusive. Segment: pooled (all November 2026)."
+    prior: 0.80
+    family: wms_select
     status: proposed
 
   # ---------------------------------------------------------------- WMN NEWS (program WMM2, registered 2026-11-27 ~22:15 UTC)
@@ -5375,3 +5473,207 @@ hypotheses:
   # specs present; pooled = cross-symbol mean loss per bar start; DM = Newey-West HAC with the HLN correction. Shadow universe =
   # universe L (23 perps). All forward data is clean_holdout (after research.knowledge_cutoff). Student-t VaR: unit-variance t,
   # nu 3.80 / 3.53 / 3.57 (WS04 R-WS04-2), 1% lower tail.
+  H-SIGMA-1:
+    title: "The D1 stop sigma (loghar_cr_range) beats robust_bc forward at 1h and 4h (the switch gate)"
+    statement: "On the forward shadow, pooled over the shadow universe, the stop version of loghar_cr_range has lower QLIKE against the bar's 5m realised variance than robust_bc at 1h and at 4h, and its 1h lower-tail 1% Student-t VaR is not breached more than 2% of the time."
+    rationale: "WS04: loghar_cr beats robust_bc by 31-35% (1h) and 38-44% (4h) QLIKE on history (t -4.6 to -8.8); WS12: range terms add ~5% QLIKE to a log-HAR-t at 1h. The weekend floor costs a little QLIKE on weekend bars only."
+    test: "per-bar-start pooled QLIKE differences (loghar_cr_range stop - robust_bc), DM-HLN t, at 1h and 4h; 1h lower 1% VaR exceedance rate of the stop sigma (Kupiec POF reported)."
+    success: "at the first scorer run on/after risk_sigma.switch_on, with >= 168 pooled 1h bar starts and >= 42 pooled 4h bar starts (each with >= 5 symbols): 1h mean diff < 0 with DM-HLN t < -2; 4h mean diff < 0; 1h lower 1% VaR exceedance <= 2.0%. Pass = the gate opens and the spec switches (latched); fail or too few data = stays robust_bc."
+    prior: 0.85
+    family: vol_model
+    status: proposed
+  H-SIGMA-2:
+    title: "The high-low range terms add to the clock log-HAR at 1h (forward)"
+    statement: "loghar_cr_range has lower 1h QLIKE than loghar_cr (both central, i.e. unfloored) on the forward shadow, pooled."
+    rationale: "WS12: Parkinson range terms carry most of what small networks add over a log-HAR-t on 1h bars (-4.6% QLIKE); with 5m RV already in the model the extra information in the range should be smaller but positive (intrabar path beyond 5m closes)."
+    test: "per-bar-start pooled QLIKE differences, DM-HLN t; 4h reported alongside."
+    success: "1h mean diff < 0 with DM-HLN t < -2 after >= 336 pooled 1h bar starts (two weeks); a positive diff with t > 2 contradicts."
+    prior: 0.5
+    family: vol_model
+    status: proposed
+  H-SIGMA-3:
+    title: "The weekend floor keeps the stop sigma's weekend lower tail covered (forward)"
+    statement: "On 1h forecast bars touching the TradFi weekend, the lower 1% Student-t VaR of the floored stop sigma (loghar_cr_range) is breached <= 2% of the time and no more often than with the unfloored central sigma."
+    rationale: "H-WS04-5: the hour-of-week-shrunk sigma under-covers the weekend lower tail in the holdout (1.44% at 1%, Kupiec p 0.003); R-VOL-2 forbids the weekend shrink in the stop sigma."
+    test: "exceedance counts on weekend 1h bars (pooled symbols), Kupiec POF vs 1%; floored vs central counts; QLIKE cost of the floor (stop - central) on weekend bars."
+    success: "after >= 4 weekends: floored exceedance <= 2.0% and <= the central's; a floored rate > 2% with Kupiec p < 0.05 contradicts."
+    prior: 0.7
+    family: vol_model
+    status: proposed
+  H-SIGMA-4:
+    title: "Historical check of the joint spec: loghar_cr_range vs loghar_cr vs robust_bc on the 23 universe-L perps"
+    statement: "On the 5m RV store (2022-01 .. 2026-11-27; monthly walk-forward refits from a year after each symbol's first bar), pooled over symbols, the stop version of loghar_cr_range has lower QLIKE than robust_bc (computed on the same grid's close-to-close returns, as WS04) and than the stop version of loghar_cr, at 1h and at 4h."
+    rationale: "Disclosure: WS04 already scored loghar_cr vs robust_bc on 5 of these assets over the same period (re-measurement there); the range terms and the 18 other alts are new. WS12 scored range terms on a different base."
+    test: "pooled per-bar-start QLIKE differences, DM-HLN t, segments llm_in_sample (< 2026-07-01) and clean_holdout; per-symbol share with diff < 0."
+    success: "vs robust_bc: diff < 0 with t < -2 in llm_in_sample and same sign in clean_holdout at 1h and 4h; vs loghar_cr (range terms): diff < 0 with t < -2 in llm_in_sample and same sign in clean_holdout at 1h (4h reported)."
+    prior: 0.6
+    family: vol_model
+    status: proposed
+
+  # WMQ QUOTE (program WMM2, 2026-11-27): how to quote a small weekend book of illiquid Bybit alt perps. Registered before
+  # any replay P&L (design frozen in data/research/wmq/design.json; diary "WMQ design frozen before results").
+  # Engine: atx mm-replay on real ob200 books + public tapes (crates/atx/src/mm_replay.rs, WMQ modes "probe" and "model").
+  # Universe: 12 names = the H-MMW core (ATOM XLM WIF TRUMP ICP WLD PUMPFUN) + 5 by a stated widened-band rule on the same
+  #   2026-11-21 snapshot (TRX GALA CRV 1000BONK GRASS). Weekends Sat + Sun UTC:
+  #   CAL  2026-03-07 .. 04-11 (6, llm_in_sample): probe only -> calibration (A, k, adverse-selection add-on, x*);
+  #   SEL  2026-04-18 .. 06-27 (11, llm_in_sample): selection; HOLD 2026-07-04 .. 11-21 (21, clean_holdout): tests;
+  #   FWD  2026-11-28 onwards (forward).
+  # Cells: queue {pro-rata, FIFO-pessimistic} x latency {150, 300} ms; primary = pro-rata 150 ms. Fees maker 2.0 / taker 5.5 bp.
+  # Unit: net USD per symbol-day (spread + adverse 60 s + inventory - fees; each day starts flat, marked at 24:00 UTC), per base
+  #   lot for the 3-lot families; day-clustered bootstrap 95% CI (days resampled with all their symbol-days, B = 10000,
+  #   seed 20261127). Selection (all families): SEL only; every choice of 3 of the 11 SEL weekends as test (165 splits); a
+  #   variant's split statistic = min over the four cells of its test mean; score = median over splits; choice = the highest
+  #   score (ties: grid order). Overfitting reported for every choice: PBO (CSCV, 2000 random half splits of the 22 SEL days),
+  #   deflated Sharpe (N = 37 quoting variants), purged-CV OOS estimate of the selection procedure.
+  # Grid (38 variants): B0 (live mm_illiq20); PROBE; D symmetric depth m in {0.5, 1, 1.5, 2, 3} sigma + D_xstar; A {GLFT, AS} x
+  #   s_cap {0.25, 0.5, 1} sigma x {plain, adj = + CAL adverse cost at 60 s + 2 bp fee}; B depth {1, 2} sigma at 3 lots x size
+  #   {flat, linear}; C GLFT s_cap {0.5, 1} at 3 lots x size {flat, linear}; E on bases D_m1 and A_glft_s0.5_p x {pass10,
+  #   pass10_t60, stop3_t60}; F BTC pull (k 2, cooldown 10 s) on the two bases; T trend pull (1.5 sigma over 60 min) on the
+  #   two bases. Full definitions: design.json.
+  H-WMQ-1:
+    title: "Some quote depth has a positive per-fill edge after adverse selection and fees"
+    statement: "For each symbol, the probe leg x*_s chosen on CAL (argmax over the 10 probe distances 0 (touch), 0.1 .. 3 sigma of lambda_j x e60_j, the fill rate times the mean per-fill net edge) has a positive mean per-fill net edge on HOLD: e60 = spread captured + 60 s markout - 2 bp maker fee > 0 (bp per fill, pooled over the 12 symbols' x*_s legs, both sides), and e300 (300 s markout) > 0 too."
+    rationale: "Touch fills lose ~10x their spread to 1 s adverse selection (H-MMW4, R-MMR-1); if no distance from the mid has a positive per-fill edge, no skew or inventory rule built on such quotes can earn, because our virtual orders do not change the market they are filled by."
+    test: "HOLD probe fills (one minimum lot per side at each distance, re-pegged by the live replace rule) at each symbol's x*_s leg, per cell; mean e60 and e300 in bp per fill with the day-clustered bootstrap CI. Reported for every leg (lambda(x), e1/e10/e60/e300 by x), per symbol, SEL and HOLD."
+    success: "Supports iff the HOLD mean e60 > 0 with the CI above 0 in all four cells AND the HOLD mean e300 > 0 in all four cells AND the SEL mean e60 > 0 (primary cell); contradicts iff the HOLD mean e60 <= 0 with the CI below 0 in the primary cell; else inconclusive."
+    prior: 0.25
+    family: wmq_probe
+    status: proposed
+  H-WMQ-2:
+    title: "Fill intensity decays exponentially with depth measured in sigma, and the decay rate is stable"
+    statement: "lambda(x) = A exp(-k x), x = the probe's distance from the mid in units of the quoter's 1h sigma, fitted per symbol on CAL (Poisson GLM of fill counts per symbol-day and leg, exposure = live seconds of both sides), predicts SEL and HOLD probe fill counts no worse than the same exponential in bp distance or a power law A (x + 0.05)^-alpha, and k is stable between CAL and HOLD."
+    rationale: "GLFT / AS quotes need lambda(delta) = A exp(-k delta); scaling the distance by sigma should make the curve portable across volatility regimes and weekends. If the form or the parameters are unstable, the closed-form quotes are mis-specified."
+    test: "Out-of-sample Poisson log-likelihood per symbol-day (primary cell) of the 10 legs' counts under each CAL fit; per day, (exp_sigma - alternative) summed over symbols; mean and day-clustered bootstrap CI on SEL and on HOLD. Stability: k refitted per symbol on HOLD vs CAL (ratio), and per-weekend k on all phases."
+    success: "Supports iff on HOLD the difference vs each alternative is not significantly negative (CI upper bound >= 0) AND |k_HOLD / k_CAL - 1| <= 0.3 for >= 8 of the 12 symbols; contradicts iff exp_sigma is significantly worse than an alternative on HOLD (CI upper bound < 0) or fewer than 4 of 12 symbols are stable; else inconclusive."
+    prior: 0.5
+    family: wmq_probe
+    status: proposed
+  H-WMQ-3:
+    title: "GLFT / Avellaneda-Stoikov price-skewed quotes earn a positive held net on weekend alts"
+    statement: "The member of family A (GLFT closed-form asymptotic or Avellaneda-Stoikov with a 1 h horizon; skew at the cap 0.25 / 0.5 / 1 sigma; plain or adjusted by the CAL adverse-selection cost and the maker fee; 12 variants at the minimum lot, cap 25 USD) chosen on SEL has a positive held net per symbol-day after fees and adverse selection."
+    rationale: "The classic optimal-market-making answer to inventory risk; the adjusted members add the measured post-fill drift and the fee to the half-spread (Cartea, Jaimungal & Penalva)."
+    test: "The registered selection on SEL; held mean net USD per symbol-day on the 504 HOLD symbol-days with the day-clustered CI per cell; decomposition (spread, adverse 1/10/60/300 s, inventory, fees, funding); paired difference vs B0 reported."
+    success: "Supports iff the held mean > 0 with the CI above 0 in all four cells and the SEL mean > 0 (primary cell); contradicts iff the held mean <= 0 with the CI below 0 in the primary cell; else inconclusive."
+    prior: 0.15
+    family: wmq_quote
+    status: proposed
+  H-WMQ-4:
+    title: "Size skew improves symmetric depth quotes"
+    statement: "At 3 minimum lots per order (cap 75 USD), linear size skew (adding side round(3 (1 - |q| / cap)) lots, reducing side round(3 (1 + |q| / cap)) lots) beats the same prices with flat size: the linear member at the depth chosen on SEL (m in {1, 2} sigma, by the CV score of the linear members) minus its flat control > 0 per symbol-day on HOLD."
+    rationale: "The user asked for price-skewed or size-skewed quoting; size skew is the alternative inventory control that keeps the quoted prices."
+    test: "Paired per HOLD symbol-day (linear - flat, same depth), day-clustered CI per cell; both members' absolute held nets and decompositions reported."
+    success: "Supports iff the paired mean > 0 with the CI above 0 in all four cells; contradicts iff the paired mean < 0 with the CI below 0 in the primary cell; else inconclusive."
+    prior: 0.3
+    family: wmq_quote
+    status: proposed
+  H-WMQ-5:
+    title: "Price skew plus size skew beats price skew alone"
+    statement: "At 3 minimum lots, GLFT quotes (skew at the cap chosen on SEL among {0.5, 1} sigma, by the CV score of the linear members) with linear size skew minus the same GLFT quotes with flat size > 0 per symbol-day on HOLD."
+    rationale: "Family (c) of the program: both levers at once."
+    test: "Paired per HOLD symbol-day, day-clustered CI per cell; absolute held nets reported."
+    success: "Supports iff the paired mean > 0 with the CI above 0 in all four cells; contradicts iff the paired mean < 0 with the CI below 0 in the primary cell; else inconclusive."
+    prior: 0.3
+    family: wmq_quote
+    status: proposed
+  H-WMQ-6:
+    title: "Quoting away from the touch at a multiple of sigma earns a positive held net"
+    statement: "The member of family D (symmetric depth m in {0.5, 1, 1.5, 2, 3} x the quoter's 1h sigma, or the CAL probe-optimal depth x*_s; minimum lot, cap 25 USD, no price or size skew) chosen on SEL has a positive held net per symbol-day."
+    rationale: "The touch loses to 1 s adverse selection; deeper quotes trade less often but may be filled on overshoots that revert."
+    test: "The registered selection on SEL; held mean net per symbol-day with the day-clustered CI per cell; decomposition; paired vs B0 reported."
+    success: "Supports iff the held mean > 0 with the CI above 0 in all four cells and the SEL mean > 0 (primary cell); contradicts iff the held mean <= 0 with the CI below 0 in the primary cell; else inconclusive."
+    prior: 0.2
+    family: wmq_quote
+    status: proposed
+  H-WMQ-7:
+    title: "Inventory unwinds (passive at the touch, a time limit, an adverse-move stop) improve net"
+    statement: "The member of family E chosen on SEL (bases D_m1 and A_glft_s0.5_p x {reducing quote joins the touch after 10 min; that plus a 60 min time limit closed at market; a 3 sigma adverse-move stop plus the 60 min limit}) minus its base without the unwind > 0 per symbol-day on HOLD."
+    rationale: "Weekend alts bleed and a few trend hard; stuck inventory marked at 24:00 dominated B0's P&L variance (H-MMW decomposition)."
+    test: "Paired per HOLD symbol-day (E member - its base), day-clustered CI per cell; the absolute held net of the E member reported."
+    success: "Supports iff the paired mean > 0 with the CI above 0 in all four cells; contradicts iff the paired mean < 0 with the CI below 0 in the primary cell; else inconclusive."
+    prior: 0.3
+    family: wmq_quote
+    status: proposed
+  H-WMQ-8:
+    title: "The BTC-move pull improves the WMQ quoters"
+    statement: "Adding the H-MMW2 BTC pull (cancel every quote when |BTC 1 s or 5 s return| > 2 x the BTC 1h sigma scaled to the horizon; 10 s cooldown) to the two fixed bases (D_m1, A_glft_s0.5_p) raises held net per symbol-day (pulled - unpulled, paired)."
+    rationale: "H-MMW2 passed by removing fills, not by avoiding toxic ones; on quoters that are filled more often the pull may matter."
+    test: "Paired per HOLD symbol-day for each base, day-clustered CI per cell."
+    success: "Supports iff for at least one base the paired mean > 0 with the CI above 0 in all four cells and the other base's paired mean > 0 in the primary cell; contradicts iff for both bases the paired mean < 0 with the CI below 0 in the primary cell; else inconclusive."
+    prior: 0.25
+    family: wmq_filters
+    status: proposed
+  H-WMQ-9:
+    title: "A trend pull (do not add against a 60 min move beyond 1.5 sigma) improves the WMQ quoters"
+    statement: "On the two fixed bases, pulling the adding bid when the 60 min log return < -1.5 x the 1h sigma and the adding ask when > +1.5 x sigma raises held net per symbol-day (paired)."
+    rationale: "The user's trend filter: weekend alts that trend hard should not be faded."
+    test: "Paired per HOLD symbol-day for each base, day-clustered CI per cell."
+    success: "Supports iff for at least one base the paired mean > 0 with the CI above 0 in all four cells and the other base's paired mean > 0 in the primary cell; contradicts iff for both bases the paired mean < 0 with the CI below 0 in the primary cell; else inconclusive."
+    prior: 0.3
+    family: wmq_filters
+    status: proposed
+  H-WMQ-10:
+    title: "The best WMQ quoting scheme earns a positive held net and beats the live width B0"
+    statement: "The WMQ variant with the highest SEL CV score among the 36 quoting variants of D, A, B, C, E, F, T (net per base lot) has a held mean net per symbol-day > 0 and beats B0 (the live mm_illiq20 rule) paired on the same HOLD symbol-days."
+    rationale: "The program question: does any principled quoting scheme earn a positive held net after fees and adverse selection, and does it beat today's width?"
+    test: "Held mean net (per base lot) with the day-clustered CI per cell; paired (best per lot - B0) per symbol-day, day-clustered CI per cell; decomposition; split core 7 vs extra 5 reported."
+    success: "Supports iff the held mean > 0 with the CI above 0 in all four cells AND the paired mean > 0 with the CI above 0 in all four cells AND the SEL mean > 0 (primary); contradicts iff the held mean <= 0 with the CI below 0 in the primary cell, or the paired mean < 0 with the CI below 0 in the primary cell; else inconclusive."
+    prior: 0.1
+    family: wmq_quote
+    status: proposed
+  H-WMQ-11:
+    title: "The best WMQ scheme scales to 20-50 USD per side and to a capped multi-name book"
+    statement: "The H-WMQ-10 variant at 4 and 10 minimum lots per order (about 20 and 50 USD per side; caps and loss stops scaled) keeps a held mean net per symbol-day > 0 on the stored compact HOLD subset (7 core names x the last 8 HOLD weekends), and its 12-name book on one clock with net 40 / gross 80 USD caps at the minimum lot (scaled with the size) has a held mean net per day > 0."
+    rationale: "Capacity at our size: whether a book is worth running, how many names fit under the caps, and the worst day."
+    test: "Replays of the compact subset at L = 4 and 10 (four cells); portfolio: the variant's held fills of all 12 names merged on one clock; an adding fill that would breach a cap (counting one resting adding order per quoting symbol and side as filled) is dropped with that symbol's later fills until it is flat; mean net per day with the day-clustered CI; worst day, max concurrent names, cap-binding share."
+    success: "Supports iff both size levels have held mean > 0 with the CI above 0 in all four cells and the portfolio mean per day > 0 with the CI above 0 in all four cells; contradicts iff the L = 4 held mean <= 0 with the CI below 0 in the primary cell; else inconclusive."
+    prior: 0.1
+    family: wmq_capacity
+    status: proposed
+
+  # WMQ conditional test on the WMN news gate (program WMM2). Registered 2026-11-27 on the frozen RULE of H-WMN-13/14
+  # (src/ai_trader/research/wmn_gate.py) before any gate parameter or gate value exists or is looked at, and before any WMQ
+  # held replay. Engine: atx mm-replay with the regime gate (exit-only while off) and the new `widen_file` series.
+  H-WMQ-12:
+    title: "The WMN news-intensity gate (pull + widen) improves the best WMQ quoter"
+    statement: "Applying the WMN gate from data/research/wmn/gate.parquet (parameters fitted on pre-2026-07-01 shocks, data/research/wmn/gate_params.json): no adding quotes while pull is on (lambda_news >= 3 or the 2 minutes before a macro release; reducing quotes stay: the exit-only path), and every half-spread multiplied by widen = sqrt(1 + min(lambda_news, 3)) otherwise, raises the held net per symbol-day of the H-WMQ-10 variant (gated - ungated, paired)."
+    rationale: "Informational adverse selection: fills around news should be more toxic than flow-only fills; WMN's gate pulls at high news intensity and widens in proportion to it."
+    test: "Replays of the stored compact HOLD subset (7 core names x the last 8 HOLD weekends 2026-09-26 .. 11-21, 112 symbol-days) with and without the gate, same binary and cells; each gate row applies from its ts (piecewise constant, no later information); symbol-days without gate rows for the symbol are excluded and counted; paired per symbol-day with the day-clustered bootstrap CI (B = 10000). B0 with and without the gate reported, not scored. Forward weekends added when they exist."
+    success: "Supports iff the paired mean > 0 with the CI above 0 in all four cells; contradicts iff the paired mean < 0 with the CI below 0 in the primary cell (pro-rata 150 ms); else inconclusive. If gate_params.json / gate.parquet do not exist when the replays are due, the test is recorded as pending (no parameters invented)."
+    prior: 0.3
+    family: wmq_filters
+    status: proposed
+
+  # WMQ amendment 1 and conditional tests (program WMM2), registered 2026-11-28 ~04:10 UTC before any SEL or HOLD replay.
+  # Amendment 1 (an extra labelled trial, after seeing the CAL intensity fits, not any P&L): the registered exponential fit is
+  # dominated by the touch legs (k = 12-17 per sigma, so GLFT / AS quote at ~0.07-0.1 sigma); the far legs decay at k ~ 2-4.
+  # A2 refits A, k on the legs with nominal x >= 0.75 (own fit with >= 50 such CAL fills, else pooled).
+  # R-WMS (WMS, commit ffd4f88): data/research/wms/selection.parquet, eligible_name = top third of S1 within the weekend;
+  # eligible = eligible_name and the frozen BTC calm probability >= 0.5 (open on 2026-09-26, 10-10, 10-24 of the HOLD weekends).
+  # WMN gate (commit 5434f2d): data/research/wmn/gate.parquet (sha256 of gate_params.json 656546eb..), pull / widen per minute.
+  H-WMQ-13:
+    title: "GLFT / AS quotes with the intensity fitted where the quotes sit earn a positive held net (extra trial A2)"
+    statement: "The member of A2 (GLFT and AS, skew at the cap 0.5 sigma, plain or adjusted by the CAL adverse cost at the model depth + 2 bp fee, A and k fitted on the CAL probe legs with nominal x >= 0.75; 4 variants at the minimum lot) chosen on SEL by the registered CV has a positive held net per symbol-day."
+    rationale: "The whole-curve exponential fit is mis-specified (convex log-intensity); fitting k where the quotes would sit gives the closed-form quotes a fair chance. Counted as extra trials."
+    test: "As H-WMQ-3: SEL CV choice among the 4 A2 variants; held mean net per symbol-day on HOLD with the day-clustered CI per cell; paired vs B0 reported."
+    success: "Supports iff the held mean > 0 with the CI above 0 in all four cells and the SEL mean > 0 (primary); contradicts iff the held mean <= 0 with the CI below 0 in the primary cell; else inconclusive."
+    prior: 0.15
+    family: wmq_quote
+    status: proposed
+  H-WMQ-14:
+    title: "WMS's Friday-known selection (R-WMS eligible_name) makes the best WMQ quoter beat B0"
+    statement: "On HOLD symbol-days whose (Saturday weekend_start, symbol) row in data/research/wms/selection.parquet has eligible_name = true, the H-WMQ-10 variant's net per symbol-day minus B0's (paired, same symbol-day) is > 0, and the H-WMQ-10 variant's own net on those symbol-days is > 0."
+    rationale: "The user wants to quote only names with a high mean-reversion index; WMS froze that rule on pre-cutoff data."
+    test: "Join HOLD symbol-days to selection.parquet on (weekend_start = the Saturday, symbol); symbol-days without a row are excluded and counted. Paired (variant - B0) and the variant's net on eligible_name symbol-days, day-clustered bootstrap CI (B = 10000) per cell. Secondary, reported and not scored: (a) eligible_name minus non-eligible difference of the paired mean (day-clustered); (b) eligible = eligible_name and calm gate open (3 HOLD weekends, underpowered); (c) the S1 score as a continuous moderator: OLS slope of the paired difference and of the variant's net on score, day-clustered bootstrap CI."
+    success: "Supports iff on eligible_name symbol-days the paired mean > 0 with the CI above 0 in all four cells AND the variant's held mean > 0 with the CI above 0 in all four cells; contradicts iff the paired mean < 0 with the CI below 0 in the primary cell; else inconclusive."
+    prior: 0.2
+    family: wmq_conditional
+    status: proposed
+  H-WMQ-15:
+    title: "The WMN pull alone (no widen) improves the best WMQ quoter"
+    statement: "As H-WMQ-12 but with the pull only: no adding quotes while the WMN gate's pull is on (exit-only path), no widening; gated minus ungated held net per symbol-day of the H-WMQ-10 variant > 0 (paired). H-WMQ-12 stays the pull + widen arm."
+    rationale: "WMN found the gain comes from the pull (price / BTC jumps); the slow news kernels behind the widen add nothing."
+    test: "Same subset, cells and statistics as H-WMQ-12 (7 core names x the last 8 HOLD weekends 2026-10-03 .. 11-22; every core name has gate rows; a symbol without rows would be 'gate unknown': excluded and counted). Gate rows apply from their ts. B0 pull-only and pull + widen reported, not scored."
+    success: "Supports iff the paired mean > 0 with the CI above 0 in all four cells; contradicts iff the paired mean < 0 with the CI below 0 in the primary cell; else inconclusive."
+    prior: 0.3
+    family: wmq_filters
+    status: proposed

@@ -16,6 +16,8 @@ Sources
   NFP    BLS Employment Situation, 08:30 ET. 2026: fedratecalc.com/nonfarm-payrolls-release-date (fetched 2026-11-13).
          2020-2025 as recorded here; 2025-09-05 matches the repo's notes; the September 2025 report came out 2025-11-20
          and October + November 2025 together on 2025-12-16 (shutdown).
+         2027 CPI and NFP: bls.gov/schedule/news_release/cpi.htm and empsit.htm (fetched 2026-11-28; they agree with the
+         BLS 2027 monthly schedule pages for Jan, Feb, Apr and May).
   Halving  block heights 630,000 (2020-05-11 19:23 UTC) and 840,000 (2024-04-20 00:09 UTC); 420,000 (2016-07-09
          16:46 UTC). Advance flag allowed 7 days before (block-time estimates are good to about a day by then).
   ETF / regulatory  SEC final deadlines and launch dates, from SEC press releases and issuer announcements: 2021-10-19
@@ -46,6 +48,7 @@ CPI = """
 2024-01-11 2024-02-13 2024-03-12 2024-04-10 2024-05-15 2024-06-12 2024-07-11 2024-08-14 2024-09-11 2024-10-10 2024-11-13 2024-12-11
 2025-01-15 2025-02-12 2025-03-12 2025-04-10 2025-05-13 2025-06-11 2025-07-15 2025-08-12 2025-09-11 2025-10-24 2025-12-18
 2026-01-13 2026-02-13 2026-03-11 2026-04-10 2026-05-12 2026-06-10 2026-07-14 2026-08-12 2026-09-11 2026-10-14 2026-11-10 2026-12-10
+2027-01-13 2027-02-11 2027-03-10 2027-04-13 2027-05-12 2027-06-10 2027-07-14 2027-08-11 2027-09-14 2027-10-14 2027-11-10 2027-12-10
 """
 NFP = """
 2020-01-10 2020-02-07 2020-03-06 2020-04-03 2020-05-08 2020-06-05 2020-07-02 2020-08-07 2020-09-04 2020-10-02 2020-11-06 2020-12-04
@@ -55,6 +58,7 @@ NFP = """
 2024-01-05 2024-02-02 2024-03-08 2024-04-05 2024-05-03 2024-06-07 2024-07-05 2024-08-02 2024-09-06 2024-10-04 2024-11-01 2024-12-06
 2025-01-10 2025-02-07 2025-03-07 2025-04-04 2025-05-02 2025-06-06 2025-07-03 2025-08-01 2025-09-05 2025-11-20 2025-12-16
 2026-01-09 2026-02-11 2026-03-06 2026-04-03 2026-05-08 2026-06-05 2026-07-02 2026-08-07 2026-09-04 2026-10-02 2026-11-06 2026-12-04
+2027-01-08 2027-02-05 2027-03-05 2027-04-02 2027-05-07 2027-06-04 2027-07-02 2027-08-06 2027-09-03 2027-10-08 2027-11-05 2027-12-03
 """
 # Delayed releases (government shutdowns): the date became public only shortly before; lead 7 days instead of 30.
 LATE_SCHEDULED = {date(2025, 10, 24), date(2025, 11, 20), date(2025, 12, 16), date(2025, 12, 18), date(2026, 2, 11), date(2026, 2, 13)}
