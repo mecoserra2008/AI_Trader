@@ -22,6 +22,7 @@ def _rule(rid: str, evidence: list[str]) -> dict:
 def test_validator_accepts_program_ids_and_rejects_malformed_ones():
     # specification-program ids (AGENT_RULES §4): R-WS04-1 style rules, H-WS05-11b style hypotheses
     assert validate([_rule("R-WS04-99", ["H-WS05-11b", "H-WS04-3"])]) == []
+    assert validate([_rule("R-WS04-98", ["H-D7F-1"])]) == []        # decision follow-up block (D7F, 2026-11-28)
     for rid in ("R-ws04-1", "R-WS04", "R-04-1", "WS04-1"):
         assert any("bad id" in e for e in validate([_rule(rid, ["H-W1"])])), rid
     for hid in ("H-WS05-", "H-ws05-1", "H-WS05-1-2"):
@@ -52,6 +53,22 @@ def test_d6_merge_decisions_hold():
     # the bias gate still finds its phrases in R-AVOID-1 (execution.gate.AVOID1_PHRASES)
     t = by["R-AVOID-1"]["rule"].lower()
     assert all(p in t for p in ("funding contrarian", "oi-price divergence", "pivot-geometry trend"))
+
+
+def test_d7f_merge_decisions_hold():
+    """D7F merge (2026-11-28): one-sided holdout test, D7b stress harness and the H-D7F-1..6 equivalence re-tests."""
+    by = {r["id"]: r for r in load_rules()}
+    for rid in ("R-PX-8", "R-RB-3"):                     # H-RL3 lost holdout support (one-sided p 0.07)
+        assert by[rid]["confidence"] == "C" and by[rid]["status"] == "provisional", rid
+    assert by["R-AVOID-3"]["confidence"] == "A" and "1h bars" in by["R-AVOID-3"]["rule"]
+    assert by["R-AVOID-5"]["confidence"] == "B" and "4h bars" in by["R-AVOID-5"]["rule"]
+    assert by["R-PX-10"]["confidence"] == "A" and by["R-PX-10"]["scope"]["assets"] == "crypto"
+    assert by["R-PX-13"]["confidence"] == "B" and by["R-PX-13"]["scope"]["assets"] == "tradfi"
+    assert "H-JD2" not in by["R-EXEC-3"]["evidence"] and by["R-EXEC-3"]["confidence"] == "B"
+    assert "compression_breakout" in by["R-STRESS-1"]["rule"]
+    for r in by.values():                                # no rule still calls these stress units SURVIVES
+        txt = f"{r['rule']} {r['then']} {r['effect']}"
+        assert "zoo_ensemble SURVIVES" not in txt and "geo_pivot_bo SURVIVES" not in txt, r["id"]
 
 
 def test_render_md_names_program_areas():

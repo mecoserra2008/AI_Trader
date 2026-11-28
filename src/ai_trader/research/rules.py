@@ -38,8 +38,9 @@ STATUSES = ("active", "provisional", "retired")
 REQUIRED = ("id", "kind", "rule", "when", "then", "scope", "effect", "confidence", "evidence", "review", "status")
 # Rule ids: R-<AREA>-<n>; an area may carry a workstream number (R-WS04-1, specification program 2026-11-27).
 ID_RE = re.compile(r"^R-[A-Z]+\d*-\d+$")
-# Hypothesis ids: H-W1, H-V1b, H-STRESS10 (block + number) or H-WS05-11b (workstream block, AGENT_RULES §4).
-H_RE = re.compile(r"^H-[A-Z]+(\d+[a-z]?|\d*-\d+[a-z]?)$")
+# Hypothesis ids: H-W1, H-V1b, H-STRESS10 (block + number), H-WS05-11b (workstream block, AGENT_RULES §4) or H-D7F-1
+# (decision follow-up block: letters, digits, letters, 2026-11-28).
+H_RE = re.compile(r"^H-[A-Z]+(\d+[a-z]?|\d*[A-Z]*-\d+[a-z]?)$")
 # Sizing belongs to the risk engine (CLAUDE.md principle 4): rules may not prescribe it.
 SIZING_RE = re.compile(r"position size|size the|sizing|risk per trade|% of (equity|capital|the account)|\blots?\b|\bnotional of\b", re.I)
 

@@ -14,6 +14,12 @@
 # R-AVOID-1 (+WS08 predictors), R-EXEC-3 (+WS05 Hawkes), R-LEV-1 (A->C, daily only), R-FLOW-2 (+R-WS05-3, intensity gate), R-MAP-1..7 (WS07: avoid lists for
 # losing strategies, cell-specific claims C; R-MAP-5 retired into R-AVOID-1), R-XS-3 (+R-WS14-2), R-EXIT-1 (B->C), R-EXE-1 (B->A, +WS10/WS16), R-EXE-2,
 # R-MMR-5 (field P(jump) gate retired), R-XS-1 (drops H-PNN1), R-PNN-1 retired (cited a contradicted hypothesis; superseded by R-WS12-1). New rules at the end.
+# 2026-11-28 (D7F merge, approved by the orchestrator under the user's standing instruction of 2026-11-28; agent D7M): applied the rule
+# proposals of research/reports/d7f_2026-11-28.md (one-sided holdout test D7a, stress harness D7b, equivalence re-tests H-D7F-1..6).
+# Grades: R-PX-8 B->C, R-RB-3 B->C (H-RL3 loses holdout support, one-sided p 0.07). Splits: R-AVOID-3 (1h dots, A) + R-AVOID-5 (4h dots, B);
+# R-PX-10 (crypto, A) + R-PX-13 (TradFi, B). Restated, grade kept: R-EXEC-3 (24h H-JD2 claim dropped), R-PX-3, R-STRESS-5, R-AVOID-1,
+# R-STRESS-1 (+compression_breakout), R-EXE-3 (funding per trade), R-PX-4 (H-W4 inconclusive), R-PX-6 (+H-D7F-5), R-VOL-7 (borderline A,
+# +H-D7F-4), R-TREND-1 (+H-D7F-6), R-WS05-5 (H-STRESS5 contradicts). Each changed rule's review field records what changed and why.
 rules:
 - id: R-VOL-1
   kind: expect
@@ -133,7 +139,9 @@ rules:
     assets: crypto
     horizon: 1d
     sides: both
-  effect: no QLIKE gain in either segment
+  effect: 'no QLIKE gain in either segment; leverage asymmetry, non-superiority at 0.10 (H-D7F-4): established in the holdout (b(RS-) - b(RS+) = -0.198, p 0.009) and on the log spec
+    in both segments (p 0.007 / 0.004), not on the registered in-sample level spec (-0.032, SE 0.115, p 0.13); borderline A: read strictly (both segments on the registered cell) the
+    leverage part is B'
   confidence: A
   evidence:
   - H-VCL2
@@ -142,7 +150,10 @@ rules:
   - H-LEV2
   - H-LEV4
   - H-VM4
-  review: H-LEV6 / H-VM6 forward tests
+  - H-D7F-4
+  - research/reports/d7f_2026-11-28.md
+  review: 'H-LEV6 / H-VM6 forward tests; D7F merge (28 Nov 2026): kept A, borderline (H-D7F-4: the in-sample level-spec equivalence is not established, p 0.13); re-grade the leverage
+    part to B if a fresh window does not establish it'
   status: active
 - id: R-VOL-8
   kind: expect
@@ -223,15 +234,19 @@ rules:
   kind: expect
   rule: WHEN considering trend-following THEN treat it as a fragile, thin edge (4h better than 1h) with no reliable way to pick the trending periods, the variants or the side
   when: trend signal present (zoo ensemble, tsmom, ema_stack, donchian and kin)
-  then: 'trend is a low-weight baseline sleeve, not a core edge: forward expectation about +0.1 R per closed trade (0 to +0.2) for zoo_ew, about 5 trades a month on the live engine;
-    no walk-forward model selection and no long-only restriction (the paying side flips with the market phase)'
+  then: 'trend is a low-weight baseline sleeve, not a core edge: zoo_ew about +0.28 R per closed trade [-0.02, +0.70] on the D7b harness (one-sided P(mean <= 0) 0.04), holdout +0.08
+    R on 131 closed trades (H-WS16-13 one-sided p 0.45); about 5 trades a month on the live engine; no walk-forward model selection and no long-only restriction (the paying side flips
+    with the market phase)'
   scope:
     assets: crypto
     horizon: 4h-1d
     sides: both
-  effect: 'WS16 closed trades, bootstrap block = p90 holding (32 d): zoo_ew +0.317 R [-0.004, +0.701] (FRAGILE; the stress ''SURVIVES'' used 5-day blocks and open positions marked at
-    the data end), holdout +0.099 R on 131 trades (MDE about 1.1 R); 594 of 687 R from 2023-24 entries; 38 variants vs zoo_ew SPA p 0.60, PBO 0.42; beats a 1-day-block null (MC p 0.010);
-    longs / shorts +0.11 / +0.22 (2020-22), +1.59 / -0.14 (2023-24), -0.16 / +0.09 (2025-26H1); 1h trend units +0.03 to +0.09 R, negative at +5-10 bp or in a liquidity drought'
+  effect: 'D7b stress harness (closed trades, block = max(5 d, p90 holding) 32 d, funding in net R): zoo_ensemble FRAGILE +0.279 R [-0.021, +0.697], P(mean <= 0) 0.037, holdout +0.079
+    R on 131 closed trades (the earlier stress verdict used 5-day blocks, open positions marked at the data end and no funding); geo_pivot_bo FRAGILE (closed-trade holdout -0.179 R on
+    71); no trend unit SURVIVES and only 4 of 9 stay positive after fees x1.5 and +5 bp in both segments (H-STRESS1 inconclusive); WS16 without funding +0.317 R [-0.004, +0.701], holdout
+    +0.099 R (MDE about 1.1 R); 594 of 687 R from 2023-24 entries; 38 variants vs zoo_ew SPA p 0.60, PBO 0.42; H-TR3 / H-TR4 holdout t 0.30 / 0.71 (inconclusive under D7a); no weighting
+    is shown to beat 1/N, and equivalence to 1/N is not established either (H-D7F-6, inconclusive in both segments); beats a 1-day-block null (MC p 0.010); longs / shorts +0.11 / +0.22
+    (2020-22), +1.59 / -0.14 (2023-24), -0.16 / +0.09 (2025-26H1); 1h trend units +0.03 to +0.09 R, negative at +5-10 bp or in a liquidity drought'
   confidence: B
   evidence:
   - H-X2b
@@ -245,9 +260,14 @@ rules:
   - H-WS16-13
   - H-STRESS0
   - H-STRESS9
+  - H-STRESS1
+  - H-D7F-6
   - research/reports/ws16_2026-11-27.md
   - research/reports/stress_test_2026-11-26.md
-  review: the H-WS16-15 forward checkpoints (100 / 300 / 1000 closed trades; kill if the mean < -0.30 R at 100 or the one-sided 95% upper bound < 0 at >= 300)
+  - research/reports/d7f_2026-11-28.md
+  review: 'the H-WS16-15 forward checkpoints (100 / 300 / 1000 closed trades; kill if the mean < -0.30 R at 100 or the one-sided 95% upper bound < 0 at >= 300); D7F merge (28 Nov 2026):
+    kept B; forward expectation restated on the D7b harness (zoo_ensemble and geo_pivot_bo stress verdicts FRAGILE: funding -0.037 R per trade moves zoo_ensemble, closed trades move
+    geo_pivot_bo); H-TR3 / H-TR4 inconclusive under D7a strengthens ''no reliable way to pick''; H-D7F-6 added'
   status: active
 - id: R-PX-4
   kind: expect
@@ -260,9 +280,10 @@ rules:
     assets: all
     horizon: 1h-1d
     sides: both
-  effect: break rate 0.52-0.55; prior-day / prior-week high-low first touch or sweep continues +0.15 sigma at 15 min vs placebo levels, the only 4 geometry cells that pass the holdout
+  effect: 'break rate 0.52-0.55; prior-day / prior-week high-low first touch or sweep continues +0.15 sigma at 15 min vs placebo levels, the only 4 geometry cells that pass the holdout
     BH (H-GEO9; holdout one-sided p about 0.08 under D7a, so sign only; a tail effect, hit rate = placebo, placebo not distance-matched); every executable version loses -0.07 to -0.22
-    R in the holdout (H-GEO16); stop beyond the prior-day extreme -0.002 R [-0.027, +0.020] (H-WS16-5)
+    R in the holdout (H-GEO16); stop beyond the prior-day extreme -0.002 R [-0.027, +0.020] (H-WS16-5); CME gap fill (H-W4) holdout t 1.70, one-sided p 0.054: inconclusive under D7a,
+    not support'
   confidence: B
   evidence:
   - H-VZ1
@@ -276,7 +297,9 @@ rules:
   - H-GEO16
   - H-WS16-5
   - research/reports/intraday_geometry_2026-11-26.md
-  review: a level family that holds > 0.55 in holdout; merges the GEO candidate R-GEO-1 (D6, 27 Nov 2026)
+  - research/reports/d7f_2026-11-28.md
+  review: 'a level family that holds > 0.55 in holdout; merges the GEO candidate R-GEO-1 (D6, 27 Nov 2026); D7F merge (28 Nov 2026): kept B; H-W4 labelled inconclusive under D7a; the
+    core ''break more often than hold'' rests on the contradicted hold hypotheses and H-VC2 (holdout p 0.002)'
   status: active
 - id: R-PX-5
   kind: avoid
@@ -308,16 +331,20 @@ rules:
     horizon: 1d-7d
     sides: both
   effect: 'up minus down 0.03 sigma, t 1.0, 37k obs; Holm-adjusted Monday drift null in 9 assets; WS07: state-specific means lower the next-day log score for 13 of 13 specs in-sample
-    (t -1.9 to -4.4), holdout gains <= +0.002 nats (t <= 1.6); hour-of-week direction joint p 0.17, in vs out rank rho 0.03 (H-GEO2)'
+    (t -1.9 to -4.4), holdout gains <= +0.002 nats (t <= 1.6); hour-of-week direction joint p 0.17, in vs out rank rho 0.03 (H-GEO2); H-RL1 holdout t 0.56 (inconclusive under D7a); non-superiority
+    at 0.005 nats (H-D7F-5): established in the holdout (every spec''s direction gain < 0.005 nats, IUT p 0.003), not in-sample (v0_cell +0.0070, kmeans9 +0.0054 nats, above the margin
+    but not significantly)'
   confidence: B
   evidence:
   - H-DOW1
   - H-RL1
   - H-WS07-5
   - H-GEO2
+  - H-D7F-5
   - research/reports/ws07_2026-11-27.md
   - research/reports/intraday_geometry_2026-11-26.md
-  review: a regime or calendar spec whose direction term raises the holdout log score with t > 2
+  - research/reports/d7f_2026-11-28.md
+  review: 'a regime or calendar spec whose direction term raises the holdout log score with t > 2; D7F merge (28 Nov 2026): kept B; H-D7F-5 added (holdout equivalence established)'
   status: active
 - id: R-PX-7
   kind: expect
@@ -343,12 +370,15 @@ rules:
     assets: all
     horizon: 1d-7d
     sides: both
-  effect: daily stay probability 0.84-0.89; duration dependence z 4.2 in-sample
-  confidence: B
+  effect: daily stay probability 0.84-0.89; duration dependence z 4.2 in-sample; holdout ageing z 1.47, one-sided p 0.07 (H-RL3, inconclusive under D7a); the 62% whipsaw-after-R9 share
+    and the 5-7 day durations are in-sample descriptions with no registered holdout check
+  confidence: C
   evidence:
   - H-RL3
-  review: holdout transition matrix drifts
-  status: active
+  - research/reports/d7f_2026-11-28.md
+  review: 'a registered holdout transition-matrix test (R9 -> next-cell shares and duration dependence); D7F merge (28 Nov 2026): B -> C, its only registered test H-RL3 loses holdout
+    support under the one-sided test (pooled age z 1.47, p 0.07)'
+  status: provisional
 - id: R-PX-9
   kind: avoid
   rule: WHEN it is the weekend THEN do not trade direction from weekend price or volume; weekend moves carry no information about Monday
@@ -399,7 +429,8 @@ rules:
     sides: both
   effect: 'failed in both segments or after costs; WS08: 196 predictor x asset x horizon cells (1h-30d) with IVX, Stambaugh, block bootstrap and Romano-Wolf: 2 survive, both 1h and both
     below costs (BTC basis +1.1 bp gross is perp-index convergence; the Coinbase premium flips sign in the holdout); the 1h / 4h nulls are powered (RW MDE corr 0.024 / 0.048 vs 0.29
-    / 0.15 needed), 1d-30d rule out only large effects; stress: funding_contrarian -0.021 R, oi_price_divergence -0.019 R (FAILS)'
+    / 0.15 needed), 1d-30d rule out only large effects; the vector-candle holdout ''win'' (H-VC1, t24 0.67, one-sided p 0.25) is inconclusive under D7a; D7b stress: funding_contrarian
+    -0.015 R, oi_price_divergence -0.023 R (FAILS); watch H-FU2: holdout VRP slope t 6.45 on 14 overlapping 30-day windows, the one cited row still opposing the rule'
   confidence: B
   evidence:
   - H-P1
@@ -426,7 +457,9 @@ rules:
   - H-STRESS0
   - research/reports/ws08_2026-11-27.md
   - research/reports/stress_test_2026-11-26.md
-  review: a new registered variant; the underpowered 1d-30d cells (stablecoin growth at 7d, real-yield changes at 1d, low-beta cross-section) are watch items, not rules
+  - research/reports/d7f_2026-11-28.md
+  review: 'a new registered variant; the underpowered 1d-30d cells (stablecoin growth at 7d, real-yield changes at 1d, low-beta cross-section) are watch items, not rules; D7F merge (28
+    Nov 2026): kept B; the failing holdout rows were evidence against the avoid (H-VC1 inconclusive strengthens it); stress numbers from the D7b re-run; H-FU2 caveat added'
   status: active
 - id: R-AVOID-2
   kind: avoid
@@ -480,26 +513,28 @@ rules:
   status: active
 - id: R-EXEC-3
   kind: expect
-  rule: WHEN a jump has just occurred THEN expect another within hours more often than a constant rate implies (jumps self-excite and cluster on US release minutes)
+  rule: WHEN a jump has just occurred THEN expect another within the next hour more often than a constant rate implies (jumps self-excite and cluster on US release minutes)
   when: 'jump detected in the last 24 h (name the test and frequency: 5m Lee-Mykland by default; the tests disagree on which days jumped)'
-  then: use a Hawkes intensity with release-minute marks for next-1h jump risk (two kernels, half-lives about 5 and 50 min); at 4h and beyond a constant rate plus the release term is
-    as good
+  then: use a Hawkes intensity with release-minute marks for next-1h jump risk (two kernels, half-lives about 5 and 50 min); at 4h and beyond, and over 24 h, a constant rate plus the
+    release term is as good
   scope:
     assets: crypto
-    horizon: 24h
+    horizon: 1h
     sides: both
-  effect: 'Hawkes beats a constant rate in both segments (H-JD2); WS05 5m BTC: self-excitation LR 3738, branching ratio 0.30, kernel half-life 10.5 min (one kernel fails time-rescaling,
-    KS p 4e-8; two kernels pass, p 0.046); 1h forecast +0.0067 nats (t 10.1) in-sample, +0.0083 (t 1.9) holdout; 4h holdout +0.0055 (t 0.7, the MCS keeps the constant); day-level kappa
-    between jump tests 0.03-0.13'
+  effect: 'WS05 5m BTC: self-excitation LR 3738, branching ratio 0.30, kernel half-life 10.5 min (one kernel fails time-rescaling, KS p 4e-8; two kernels pass, p 0.046); 1h forecast
+    +0.0067 nats (t 10.1) in-sample, +0.0083 (t 1.93, one-sided p 0.027: passes at 5%, not at 2.5%) holdout; 4h holdout +0.0055 (t 0.7, J4 p 0.24, the MCS keeps the constant); 24h: no
+    holdout gain over a constant (H-JD2 Brier skill +0.0002 [90% CI -0.0037, +0.0054]); day-level kappa between jump tests 0.03-0.13'
   confidence: B
   evidence:
-  - H-JD2
   - H-WS05-1
   - H-WS05-2
   - H-WS05-4
   - H-WS05-5
   - research/reports/ws05_2026-11-27.md
-  review: the holdout 1h gain falls below t 1 as the holdout grows, or a single-kernel spec passes time-rescaling
+  - research/reports/d7f_2026-11-28.md
+  review: 'the holdout 1h gain falls below t 1 as the holdout grows, or a single-kernel spec passes time-rescaling; D7F merge (28 Nov 2026): kept B; dropped the 24h claim ''Hawkes beats
+    a constant rate in both segments'' (H-JD2, holdout inconclusive under D7a) and H-JD2 from the evidence; the 1h claim stands (H-WS05-5 J1 holdout t 1.93, one-sided p 0.027); the registered
+    J1 and J4 conjunction is inconclusive (J4 p 0.24)'
   status: active
 - id: R-MM-1
   kind: prefer
@@ -799,39 +834,89 @@ rules:
   status: active
 - id: R-PX-10
   kind: avoid
-  rule: WHEN price makes its first 1h close beyond the prior UTC day's floor pivot R1 or S1 THEN don't expect continuation beyond a generic k-sigma move, and don't treat R1/S1 as support
-    or resistance
+  rule: WHEN a crypto perp makes its first 1h close beyond the prior UTC day's floor pivot R1 or S1 THEN don't expect continuation beyond a generic k-sigma move, and don't treat R1/S1
+    as support or resistance
   when: first 1h close beyond R1/S1 (P=(H+L+C)/3 of the prior UTC day); typical distance ~3.3 sigma_1h from the prior close
   then: expect ~0 gross signed drift over the next 4-12h (net of taker costs it is negative); pivots carry no information beyond the sigma distance; don't enter breakouts or fades on
     pivots alone
   scope:
-    assets: all
+    assets: crypto
     horizon: 4h-12h
     sides: both
-  effect: pivot minus placebo +0.005 sigma (t 0.5) at 4h in-sample, 26k events; holdout -0.05 (t -1.3) crypto, +0.04 (t 0.6) TradFi; pivot gross +0.02 sigma at 4h, net -0.09 (t -5.1)
+  effect: 'universe L: pivot minus placebo +0.005 sigma (t 0.5) at 4h in-sample, 26k events; holdout -0.05 (t -1.3); pivot gross +0.02 sigma at 4h, net -0.09 (t -5.1); every L cell is
+    below a 0.10 sigma margin in both segments (H-D7F-3, p < 1e-4)'
   confidence: A
   evidence:
   - H-BO1
+  - H-D7F-3
   - research/reports/trend_state_space_2026-11-10.md
-  review: a pivot-minus-placebo t > 2 in the growing holdout (TradFi n doubles), or a registered session-timing variant
+  - research/reports/d7f_2026-11-28.md
+  review: 'a pivot-minus-placebo t > 2 in the growing holdout, or a registered session-timing variant; D7F merge (28 Nov 2026): scoped to crypto (universe L passes the 0.10 sigma non-superiority
+    test in both segments, H-D7F-3); TradFi moves to R-PX-13 (B)'
+  status: active
+- id: R-PX-13
+  kind: avoid
+  rule: WHEN a TradFi perp makes its first 1h close beyond the prior UTC day's floor pivot R1 or S1 THEN don't expect continuation beyond a generic k-sigma move, and don't treat R1/S1
+    as support or resistance
+  when: first 1h close beyond R1/S1 (P=(H+L+C)/3 of the prior UTC day); typical distance ~3.1 sigma_1h from the prior close
+  then: expect no pivot-specific drift over the next 4-12h (net of taker costs the trade loses); don't enter breakouts or fades on pivots alone
+  scope:
+    assets: tradfi
+    horizon: 4h-12h
+    sides: both
+  effect: 'universe T: pivot minus placebo -0.01 sigma (t -0.2) at 4h and +0.03 (t 0.5) at 12h in-sample (1013 events), +0.04 (t 0.6) and +0.07 (t 1.4) holdout (1417 events); pivot net
+    at 4h -0.28 (t -3.9) in-sample, -0.23 (t -3.5) holdout; T_12h is not shown to be below the 0.10 sigma margin (in-sample +0.027, SE 0.057, p 0.10; holdout +0.074, SE 0.052, p 0.31;
+    H-D7F-3)'
+  confidence: B
+  evidence:
+  - H-BO1
+  - H-D7F-3
+  - research/reports/trend_state_space_2026-11-10.md
+  - research/reports/d7f_2026-11-28.md
+  review: a pivot-minus-placebo t > 2 in the holdout as the TradFi sample doubles, or the T_12h excess established below 0.10 sigma in both segments (then A); split from R-PX-10 in the
+    D7F merge (28 Nov 2026)
   status: active
 - id: R-AVOID-3
   kind: avoid
-  rule: WHEN a WaveTrend / Market Cipher B green or red dot prints (with or without the money-flow filter) THEN don't expect a positive net trade; don't use Cipher dots as entry or timing
-    signals
-  when: LazyBear WaveTrend(9,12,4) cross with wt2 <= -53 (green) or >= 53 (red), 1h or 4h bars
-  then: expect net trade return <= 0; the 1h variants lose more than random entries with the same side and holding
+  rule: WHEN a WaveTrend / Market Cipher B green or red dot prints on 1h bars (with or without the money-flow filter) THEN don't expect a positive net trade; don't use 1h Cipher dots
+    as entry or timing signals
+  when: 'LazyBear WaveTrend(9,12,4) cross with wt2 <= -53 (green) or >= 53 (red), 1h bars (4h dots: R-AVOID-5)'
+  then: expect a net trade return below 0; the 1h variants lose more than random entries with the same side and holding
   scope:
     assets: all
-    horizon: 12h-2d (12 bars of 1h or 4h)
+    horizon: 12h (12 bars of 1h)
     sides: both
-  effect: in-sample DSR 0.00 for all 4 variants (best daily Sharpe 0.26 vs SR0 1.6); best in-sample variant (4h + MF) holdout -0.60 risk units per trade (t -2.8, worse than random p
-    0.97); 1h unfiltered -0.30 (t -9.7) in-sample, -0.44 (t -4.9) holdout
+  effect: 'both 1h variants lose in both segments (H-D7F-1, non-superiority at margin 0): unfiltered -0.30 risk units per trade (t -9.7) in-sample, -0.43 (t -4.9) holdout; with the money-flow
+    filter -0.11 (t -2.1) in-sample, -0.49 (t -3.2) holdout; in-sample DSR 0.00 for all 4 variants (best daily Sharpe 0.26 vs SR0 1.6)'
   confidence: A
   evidence:
   - H-MC1
+  - H-D7F-1
   - research/reports/trend_state_space_2026-11-10.md
-  review: any variant with holdout DSR > 0.95 or a positive holdout mean with t > 2 after n >= 500 trades
+  - research/reports/d7f_2026-11-28.md
+  review: 'any 1h variant with holdout DSR > 0.95 or a positive holdout mean with t > 2 after n >= 500 trades; D7F merge (28 Nov 2026): split by bar size; the 1h dots keep A (the loss
+    is significant in both segments at margin 0, H-D7F-1), the 4h dots move to R-AVOID-5 (B)'
+  status: active
+- id: R-AVOID-5
+  kind: avoid
+  rule: WHEN a WaveTrend / Market Cipher B green or red dot prints on 4h bars (with or without the money-flow filter) THEN don't expect a positive net trade; don't use 4h Cipher dots
+    as entry or timing signals
+  when: 'LazyBear WaveTrend(9,12,4) cross with wt2 <= -53 (green) or >= 53 (red), 4h bars (1h dots: R-AVOID-3)'
+  then: expect no edge; unlike the 1h dots (R-AVOID-3) a loss is not established in both segments
+  scope:
+    assets: all
+    horizon: 2d (12 4-hour bars)
+    sides: both
+  effect: 'no 4h variant shows an edge (in-sample DSR 0.00, best daily Sharpe 0.26 vs SR0 1.6; Holm opposite p 1.0), but a loss is not shown in both segments (H-D7F-1): with the money-flow
+    filter +0.04 risk units per trade (t 0.34) in-sample, -0.60 (t -2.8, worse than random p 0.97) holdout; unfiltered -0.12 (t -2.0) in-sample, -0.16 (t -0.83) holdout'
+  confidence: B
+  evidence:
+  - H-MC1
+  - H-D7F-1
+  - research/reports/trend_state_space_2026-11-10.md
+  - research/reports/d7f_2026-11-28.md
+  review: 'any 4h variant with holdout DSR > 0.95 or a positive holdout mean with t > 2 after n >= 500 trades; split from R-AVOID-3 in the D7F merge (28 Nov 2026): grade A needs both
+    segments, and the 4h dots are not shown to lose in both (H-D7F-1)'
   status: active
 - id: R-SIG-5
   kind: prefer
@@ -3307,15 +3392,18 @@ rules:
     horizon: 1-7 days
     sides: both
   effect: 'first cell after R9: R6 80%, R8 18% (n 635; BTC R6 83%, clean_holdout R6 81% of 21); R9 hours left after the event median 36 (IQR 20-60); cell at +7d: R6 30%, R9 25%, R5 18%,
-    R8 13%'
-  confidence: B
+    R8 13%; descriptive only: the R6 share was never registered as a test, H-RL3 is inconclusive in the holdout under D7a (age z 1.47, one-sided p 0.07), H-RB1 contradicts (a return
+    claim, not the state path) and H-RB2 is inconclusive'
+  confidence: C
   evidence:
   - H-RB1
   - H-RB2
   - H-RL3
   - research/reports/post_cascade_2026-11-15.md
-  review: the same matrix on daily cells, or a holdout share of R6 below 60% at 40+ holdout events
-  status: active
+  - research/reports/d7f_2026-11-28.md
+  review: 'the same matrix on daily cells, or a holdout share of R6 below 60% at 40+ holdout events; D7F merge (28 Nov 2026): B -> C, H-RL3 loses holdout support (one-sided p 0.07) and
+    the R9 -> R6 path shares were never tested against a registered null; re-test: a registered holdout transition-matrix test'
+  status: provisional
 - id: R-RB-4
   kind: avoid
   rule: 'WHEN funding drops below its 90-day 10th percentile while open interest rebuilds >= 3% within 72h of a flush THEN don''t expect a short squeeze from it: the next 24h is if anything
@@ -3796,23 +3884,28 @@ rules:
 # R-WS05-3 -> R-FLOW-2, R-WS12-3 + WS08 R-XS + WS07 trend-gate -> R-TREND-1, R-WS14-2 -> R-XS-3, WS08 R-MACRO -> R-MAC-4, WS10 funding -> R-EXE-3.
 - id: R-STRESS-1
   kind: avoid
-  rule: WHEN a candidate comes from 1h mean reversion or from a calendar unit that trades the move between the Friday close and the CME reopen THEN don't run it in any regime cell (zscore_reversion,
-    rsi_reversion, weekend_shock_follow, weekend_drift_fade, cme_gap_fill); each fails the stress screens on the live trade layer
+  rule: WHEN a candidate comes from 1h mean reversion, from a calendar unit that trades the move between the Friday close and the CME reopen, or from compression_breakout THEN don't
+    run it in any regime cell (zscore_reversion, rsi_reversion, weekend_shock_follow, weekend_drift_fade, cme_gap_fill, compression_breakout); each fails the stress screens on the live
+    trade layer
   when: any v0 cell, either segment; the bias gate machine-checks parts of this list (R-MAP-3 cells, R-PX-9 for the calendar units)
   then: expect net R <= 0 at base costs and at fees x1.5, in both segments and in every v0 cell
   scope:
     assets: crypto
-    horizon: 1h-3d
+    horizon: 1h-30d
     sides: both
-  effect: 'live trade layer (pegged entry, 4-sigma stop, 23 perps): zscore_reversion -0.094 R [-0.129, -0.061], rsi_reversion -0.052 [-0.078, -0.026], weekend_shock_follow -0.051, weekend_drift_fade
-    -0.007, cme_gap_fill -0.115 (all FAILS: base mean <= 0 and fees x1.5 <= 0); worst engine crisis windows -13 to -14 R for the 1h fades'
+  effect: 'live trade layer (pegged entry, 4-sigma stop, 23 perps), D7b harness (closed trades, funding in net R): zscore_reversion -0.092 R [-0.127, -0.058], rsi_reversion -0.051 [-0.077,
+    -0.026], weekend_shock_follow -0.055, weekend_drift_fade -0.006, cme_gap_fill -0.112, compression_breakout -0.919 [-0.989, -0.827] (all FAILS: base mean <= 0 and fees x1.5 <= 0;
+    compression_breakout''s old positive mean came only from 17 positions still open at the data end; the tested version carries the 4-sigma stop cap, the native no-stop strategy is
+    a different unit); worst engine crisis windows -13 to -14 R for the 1h fades'
   confidence: B
   evidence:
   - H-STRESS0
   - H-STRESS2
   - H-T1
   - research/reports/stress_test_2026-11-26.md
-  review: a registered variant that passes the stress screens (base and fees x1.5 > 0) in both segments
+  - research/reports/d7f_2026-11-28.md
+  review: 'a registered variant that passes the stress screens (base and fees x1.5 > 0) in both segments; D7F merge (28 Nov 2026): added compression_breakout (FAILS on closed trades,
+    -0.92 R) and the D7b numbers'
   status: active
 - id: R-STRESS-2
   kind: avoid
@@ -3886,9 +3979,10 @@ rules:
     assets: crypto
     horizon: 1w-1y
     sides: both
-  effect: 'S9 engine stream: P(day stop hit) 0% for every unit, worst day -9.09 USD (zscore_reversion), -7.21 (tsmom), -2.6 (zoo_ensemble); no crisis window below -20 R (worst -14 R);
-    P(3-month loss >= 50 USD) <= 2% for the positive units; zoo_ew engine: 4.8 trades a month, max drawdown -22 R, one-year drawdown median -15 USD (5th pct -31), P(one-year P&L < 0)
-    20% even at the historical edge; a bad resampled year draws down 3-7x a typical historical symbol-year (zoo -15 R vs -3 R)'
+  effect: 'S9 engine stream (D7b harness: closed trades, funding in net R): P(day stop hit) 0% for every unit except compression_breakout (0.85%, a FAILS unit, R-STRESS-1); worst day
+    -9.10 USD (zscore_reversion), -7.20 (tsmom), -2.66 (zoo_ensemble: 369 closed trades, +0.51 USD per trade); no crisis window below -20 R (worst -14 R); P(3-month loss >= 50 USD) <=
+    2% for the positive units (tsmom 1.8%); zoo_ew engine: 4.8 trades a month, max drawdown -22 R, one-year drawdown median -15 USD (5th pct -31), P(one-year P&L < 0) 20% at the historical
+    edge, which is now FRAGILE (R-PX-3), so this is a lower bound; a bad resampled year draws down 3-7x a typical historical symbol-year (zoo -15 R vs -3 R)'
   confidence: B
   evidence:
   - H-STRESS6
@@ -3896,7 +3990,9 @@ rules:
   - H-WS16-13
   - research/reports/stress_test_2026-11-26.md
   - research/reports/ws16_2026-11-27.md
-  review: a forward record whose losing runs exceed the 99th percentile of the resampled engine paths
+  - research/reports/d7f_2026-11-28.md
+  review: 'a forward record whose losing runs exceed the 99th percentile of the resampled engine paths; D7F merge (28 Nov 2026): kept B; numbers from the D7b re-run (H-STRESS4 and H-STRESS6
+    still support); ''at the historical edge'' now refers to a FRAGILE edge'
   status: active
 - id: R-GEO-2
   kind: avoid
@@ -4125,14 +4221,16 @@ rules:
   rule: WHEN holding 2-3 same-side crypto perps THEN count them as about 1.3 independent bets in every regime, with 27-40% odds that all stop within 4 h once one stops
   when: 'two or three concurrent same-side positions in crypto perps (live limits: 3 open, 2 same side)'
   then: 'joint crash risk is fatter than a Gaussian copula implies: use a t-copula (nu about 6) or empirical co-exceedance for portfolio tails and DCC for 1h / 4h covariance; the live
-    limits contain the measured joint tail (worst same-side co-stop 3.01 USD); extra same-side positions add little diversification (R-PD-1, R-MM-2)'
+    limits contain the measured pair / triple joint tail (worst same-side co-stop 3.01 USD) but not the co-stop day tail of the 4h breakout units (H-STRESS5); extra same-side positions
+    add little diversification (R-PD-1, R-MM-2)'
   scope:
     assets: crypto
     horizon: 1h-4h
     sides: both
   effect: 'effective number of bets median 1.27 (pairs), 1.33 (BTC-ETH-X triples); co-stop within 4 h 0.40 pairs / 0.27 triples, stress / calm ratio 1.03 [0.98, 1.08]; 1% lower-tail
     co-exceedance 0.53 / 0.56 vs 0.32 / 0.35 Gaussian (x1.64 in both segments); t-copula beats Gaussian by 0.31 (t 40) / 0.35 (t 15.5) nats per row; DCC beats EWMA(0.97) and 30-day rolling
-    at 1h and 4h (t 2.5-7.4); stress S7 (concurrent same-side positions all stop in down states): trend unit means turn negative (zoo -0.34 R), daily CVaR5% +23-35% under the live limits'
+    at 1h and 4h (t 2.5-7.4); stress S7 (concurrent same-side positions all stop in down states): trend unit means turn negative (zoo -0.42 R in the D7b re-run), daily CVaR5% x1.59-1.78
+    for compression_breakout, geo_flag_bo and geo_pivot_bo, over the 1.5x bound (H-STRESS5 contradicts)'
   confidence: B
   evidence:
   - H-WS05-14
@@ -4142,7 +4240,9 @@ rules:
   - H-STRESS5
   - research/reports/ws05_2026-11-27.md
   - research/reports/stress_test_2026-11-26.md
-  review: an effective number of bets above 2 for same-side pairs in a fresh holdout year
+  - research/reports/d7f_2026-11-28.md
+  review: 'an effective number of bets above 2 for same-side pairs in a fresh holdout year; D7F merge (28 Nov 2026): kept B; H-STRESS5 now contradicts (co-stop day CVaR x1.6-1.8 for
+    the 4h breakout units), which agrees with the rule''s caution'
   status: active
 - id: R-WS12-1
   kind: prefer
@@ -4244,7 +4344,8 @@ rules:
   effect: '38 trade-layer variants vs zoo_ew: Hansen SPA p 0.60, Romano-Wolf min p 0.82, CSCV PBO 0.42 (H-WS16-11); a-priori regime cells -0.016 R, holdout -0.105 (H-WS16-8); skip 12:00
     +0.001 R, holdout -0.070, 12:00 entries the best close (H-WS16-6); weekend block +0.012 [-0.036, +0.061] (H-WS16-9); best regime gate +0.07 Sharpe (RW p 0.41, DSR 0.64; H-WS07-6);
     xs momentum rank in-sample slope -0.09 R (t -0.47), holdout filter -0.27 R [-0.43, -0.05] (H-WS08-19); LightGBM meta-label: rejected trades +0.14 R in-sample, net R per candidate
-    0.19 -> 0.10 (H-WS12-6; the holdout points the other way, rejected -0.21 R, t -1.1, 172 trades, one small window)'
+    0.19 -> 0.10 (H-WS12-6; the holdout points the other way, rejected -0.21 R, t -1.1, 172 trades, one small window); equivalence to 1/N is undetermined (H-D7F-6, margin +0.05 R: inconclusive
+    in both segments, CI half-widths 0.04-0.22 R): the rule rests on the complexity budget, not on demonstrated equivalence'
   confidence: B
   evidence:
   - H-WS16-11
@@ -4255,31 +4356,37 @@ rules:
   - H-WS07-6
   - H-WS08-19
   - H-WS12-6
+  - H-D7F-6
   - research/reports/ws16_2026-11-27.md
   - research/reports/ws07_2026-11-27.md
   - research/reports/ws08_2026-11-27.md
   - research/reports/ws12_2026-11-27.md
-  review: a registered filter that beats zoo_ew after SPA / Romano-Wolf in a fresh sample; merges the candidates R-WS12-3, WS08's R-XS (xs-rank filter) and WS07's 'no regime gate on
-    the trend sleeve' (D6, 27 Nov 2026)
+  - research/reports/d7f_2026-11-28.md
+  review: 'a registered filter that beats zoo_ew after SPA / Romano-Wolf in a fresh sample; merges the candidates R-WS12-3, WS08''s R-XS (xs-rank filter) and WS07''s ''no regime gate
+    on the trend sleeve'' (D6, 27 Nov 2026); D7F merge (28 Nov 2026): kept B; note on H-D7F-6'
   status: active
 - id: R-EXE-3
   kind: expect
   rule: WHEN judging the net R of a trade held across funding settlements THEN subtract the funding paid; for long-biased multi-day trend holds it is a real cost
   when: a multi-day position on a USDT perp (8h funding at 00 / 08 / 16 UTC); per-trade funding = side x the sum of settled rates in (entry, exit]
-  then: zoo_ensemble pays about 20 bp per trade (0.037 R), trend_4h about 8.5 bp (0.011 R); shorts in positive funding receive it (hrb2 -0.004 R); include funding in every multi-day
-    net-R number (the stress harness does since 2026-11-27)
+  then: zoo_ensemble pays about 20 bp per trade (0.037 R), the geo_* breakouts 0.03-0.06 R (geo_pivot_bo 0.059, geo_flag_bo 0.052), trend_4h about 8.5 bp (0.011 R); shorts in positive
+    funding receive it (hrb2 -0.004 R); include funding in every multi-day net-R number (the stress harness does since 2026-11-27)
   scope:
     assets: crypto
     horizon: 1d-30d
     sides: both
   effect: 'closed trades, block = max(5 d, p90 holding): zoo_ensemble +0.315 R [+0.002, +0.752] without funding -> +0.278 [-0.022, +0.696] with it (P(mean <= 0) 0.024 -> 0.038); trend_4h
-    +0.093 -> +0.082; the calibrated execution-cost model changes nothing else (0.317 -> 0.315)'
+    +0.093 -> +0.082; the calibrated execution-cost model changes nothing else (0.317 -> 0.315); D7b re-run, funding per closed trade: zoo_ensemble -0.037 R, geo_pivot_bo -0.059, geo_flag_bo
+    -0.052, geo_struct -0.033, donchian_breakout -0.015, trend_4h -0.011, tsmom -0.007; funding is the fix that turns zoo_ensemble''s stress verdict FRAGILE'
   confidence: B
   evidence:
   - H-WS10-4
   - H-WS10-5
+  - H-STRESS0
   - research/reports/ws10_2026-11-27.md
-  review: a funding regime change (for example persistently negative funding) that flips the sign of the cost for long trend holds
+  - research/reports/d7f_2026-11-28.md
+  review: 'a funding regime change (for example persistently negative funding) that flips the sign of the cost for long trend holds; D7F merge (28 Nov 2026): kept B; per-trade funding
+    costs from the D7b re-run added'
   status: active
 - id: R-MAC-4
   kind: expect
