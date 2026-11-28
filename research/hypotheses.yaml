@@ -5186,3 +5186,192 @@ hypotheses:
     prior: 0.6
     family: vol_model
     status: proposed
+
+  # ---------------------------------------------------------------- WMN NEWS (program WMM2, registered 2026-11-27 ~22:15 UTC)
+  # Registered BEFORE any event-study, decay, Hawkes, markout or gate statistic was computed (only data coverage was looked at).
+  # Code: src/ai_trader/research/wmn_data.py (sources, tagging, bars), wmn_study.py (detector, event studies, decay, Hawkes,
+  # markouts), wmn_gate.py (gate). Frozen definitions (diary "WMN design frozen before results"):
+  #   bars = Bybit linear 5m klines (public), r = log close-to-close of consecutive bars; core universe = 58 crypto perps
+  #     (wmn_data.CORE) from 2025-01-01; non-core tagged symbols: 5m windows [-50h, +50h]; delisted perps: 5m bars rebuilt
+  #     from public.bybit.com trades. FIT / llm_in_sample = known_ts < 2026-07-01; clean_holdout = 2026-07-01 .. 2026-11-27;
+  #     weekends from 2026-11-28 are forward.
+  #   idiosyncratic return e = r - beta * r_BTC, beta = OLS slope over the previous 7 days of 5m returns (updated daily,
+  #     past data only); hour-of-day factor f_h from the previous 30 days (mean |e| at hour h / mean |e|, shrunk n/(n+3));
+  #     spot sigma = bipower over the previous 288 bars of e/f (current bar excluded); z = (e/f)/sigma.
+  #   primary detector D = |z| > 4.31 (Lee-Mykland, alpha 1% per day, n = 288, as WS05) AND turnover >= 3 x the median of
+  #     the previous 288 bars; price-only variant Dp = |z| > 4.31. Episodes: detections within 60 min of the previous one in
+  #     the same symbol are merged; episode time = close of its first bar (known then).
+  #   precise token events = exchange announcements (bybit_ann except categories launch_promo / contract_update / other /
+  #     premarket; okx_ann; kucoin_ann) and HN stories, tagged to a perp symbol, known_ts at <= 1 s precision.
+  #     Day-precision events (DefiLlama hacks, Wikipedia spikes) are studied at day resolution only.
+  #   event study per event: tau = 0 is the 5m bar containing the anchor (known_ts; day start for day-precision events);
+  #     baseline from [-50h, -2h]: beta (OLS), sigma_b^2 = bipower variance of e, turnover median. ARV(a,b) =
+  #     log(mean e^2 over (a,b) / sigma_b^2); AV(a,b) = log(mean turnover / baseline median); CAR = sum of e; SCAR = CAR /
+  #     (sigma_b sqrt(n)). Placebo = same symbol, anchor - 7 days (same hour of week), dropped if another tagged event of
+  #     the symbol lies within 48 h of it. Inference: means with standard errors clustered by UTC anchor date (CR1);
+  #     event - placebo paired by event. BH at q = 0.10 within each registered family.
+  #   decay: per shock, x_k = e_k^2 / sigma_b^2 for k = 1..576 bars after the shock bar; m(tau) = B + A g(tau), g =
+  #     exp(-tau/T) (EXP) or (1 + tau/c)^-p (POW); e_k ~ Student-t(scale sigma_b sqrt(m), nu); log score per shock = mean
+  #     over its bars; DM t = mean / day-clustered SE. Persistence ratio PR = mean(x - B_pre) over (4h, 48h] / mean(x - B_pre)
+  #     over (5 min, 1h], B_pre = 1 (baseline-relative).
+  #   Hawkes: discrete 5m bins, P(D episode start in bin) = 1 - exp(-lambda); lambda = mu * rate_i * h(hour) + alpha
+  #     sum_j J_j exp(-beta (k - j)) + a_m sum_j JBTC_j exp(-beta (k - j)) + sum_c gamma_c sum_e exp(-delta (k - k_e)),
+  #     c in {exchange, hn, macro}; FIT 2-fold time split for the in-sample OOS score, fit on all FIT for the holdout.
+  #   markouts: public trades (archive) per symbol-day; maker-side markout MO(h) = d (p - m(t+h)) / m(t-) x 1e4 bp, d = +1
+  #     for a taker buy; m = midpoint proxy (last taker-buy price + last taker-sell price) / 2 over the previous 60 s
+  #     (last trade price if one side is missing); h in {1, 10, 60, 300, 1800} s. Controls (past trades only): aligned flow
+  #     d x OFI_5m, |OFI_5m|, VPIN_1h (sum |buy - sell| over 12 five-minute buckets / volume), log trade size / trailing
+  #     1h median, log RV_1h; symbol fixed effects; weights = inverse sampling probability; SEs clustered by symbol-day.
+  #   gate (wmn_gate.py): M_s(t) = 1 + w_s(t) lam_mkt(t) + (1 - w_s(t)) lam_tok,s(t); lam = sum over known events / episodes
+  #     of A_cat g_cat(t - known_ts) with A, g fitted on FIT (decay spec chosen by H-WMN-7, per category when >= 30 FIT
+  #     shocks, else pooled exogenous); w_s = beta^2 var(r_BTC) / var(r_s) over the previous 7 days. lambda_news = M - 1.
+  #     pull = lambda_news >= 3 (predicted sigma >= 2 x normal) OR t in [macro release - 2 min, release); widen =
+  #     sqrt(1 + min(lambda_news, 3)) in [1, 2] (multiplies the quoted distance from mid). Parameters frozen in
+  #     data/research/wmn/gate_params.json before any holdout gate statistic is computed.
+  H-WMN-1:
+    title: "The price+volume idiosyncratic jump detector fires after exchange announcements far more often than at random"
+    statement: "Of precise exchange-announcement events tagged to a core symbol, the share followed by a D episode on that symbol within 60 min after known_ts is >= 3x the same share for placebo windows (same symbol, 7 days earlier)."
+    rationale: "If the endogenous detector is to stand in for news when timestamps are missing, it must respond to the news we can time."
+    test: "Recall and placebo rate per segment, lift = ratio; day-clustered SE of the difference; also Dp and the reverse direction (H-WMN-2)."
+    success: "Supports iff lift >= 3 and the event - placebo difference has clustered t >= 2.33 in llm_in_sample and lift > 1 in clean_holdout; contradicts iff lift < 1.5 in llm_in_sample."
+    prior: 0.6
+    family: wmn_detector
+    status: proposed
+  H-WMN-2:
+    title: "Most idiosyncratic information arrival on alts is not labelled by any free news source"
+    statement: "Fewer than 25% of D episodes on core alts (BTCUSDT excluded) have a tagged precise token event of that symbol with known_ts in [episode - 2h, episode + 30 min]."
+    rationale: "Joulin et al. (2008) find most stock jumps have no news; with free crypto sources coverage is thinner still, so the gate must rely on the endogenous detector."
+    test: "Share of episodes explained, per segment, vs the same share for placebo episode times (7 days earlier)."
+    success: "Supports iff the explained share < 25% in both segments; contradicts iff >= 50% in llm_in_sample."
+    prior: 0.85
+    family: wmn_detector
+    status: proposed
+  H-WMN-3:
+    title: "Precise token news raises the token's idiosyncratic variance in the first hour"
+    statement: "Pooled precise token events: event - placebo ARV[0, 1h) >= 0.15 (log ratio) with date-clustered t >= 3."
+    rationale: "Information arrival should show up as excess variance; the MM's adverse-selection risk scales with it."
+    test: "Paired event - placebo mean, CR1 by anchor date, per segment."
+    success: "Supports iff diff >= 0.15 with t >= 3 in llm_in_sample and diff > 0 in clean_holdout; contradicts iff diff <= 0 or t < 1 in llm_in_sample."
+    prior: 0.7
+    family: wmn_event_study
+    status: proposed
+  H-WMN-4:
+    title: "Per-category token event effects (listing, delisting, maintenance, HN story, hack)"
+    statement: "For each category with >= 30 llm_in_sample events (bybit listing_spot, bybit delist, x_listing, x_delist, maintenance, hn_story, hack [day]), event - placebo ARV[0,1h), ARV[1h,4h), AV[0,1h) and |CAR|[0,48h) are > 0."
+    rationale: "Categories differ in information content; launch promos and contract updates are excluded as low-information."
+    test: "Paired event - placebo means, CR1 by date; BH at q = 0.10 over categories x 4 metrics in llm_in_sample; holdout sign check."
+    success: "Per category: supports iff at least the ARV[0,1h) test is BH-significant (> 0) in llm_in_sample and > 0 in clean_holdout; contradicts iff all four metrics have diff <= 0 in llm_in_sample. Recorded per segment with the per-category table."
+    prior: 0.5
+    family: wmn_event_study
+    status: proposed
+  H-WMN-5:
+    title: "Moves on news continue, unlabelled jumps revert"
+    statement: "Slope b of CAR(1h,48h) on CAR(0,1h) across events with |SCAR(0,1h)| >= 2: b_news (precise token news) - b_jump (D episodes with no tagged event within [-2h, +30 min]; initial move = e of the episode bar and the next 11 bars) > 0."
+    rationale: "Information should be absorbed permanently (continuation or no reversal); liquidity-driven jumps on thin books should partly revert (overreaction)."
+    test: "Pooled OLS with a news dummy interaction, CR1 by date, per segment; b_news and b_jump reported."
+    success: "Supports iff b_news - b_jump > 0 with t > 2 in llm_in_sample and > 0 in clean_holdout; contradicts iff the difference < 0 with t < -2 in llm_in_sample."
+    prior: 0.35
+    family: wmn_event_study
+    status: proposed
+  H-WMN-6:
+    title: "Weekend shocks produce a larger variance response than weekday shocks"
+    statement: "For precise token events and D episodes pooled, ARV[0,4h) on Sat/Sun (UTC) exceeds weekdays by >= 0.10."
+    rationale: "Thinner weekend books (smaller depth) should amplify the same information."
+    test: "Difference of means (shock type and category fixed effects), CR1 by date, per segment."
+    success: "Supports iff the weekend - weekday difference >= 0.10 with t >= 2 in llm_in_sample and > 0 in clean_holdout; contradicts iff <= 0 in llm_in_sample."
+    prior: 0.4
+    family: wmn_event_study
+    status: proposed
+  H-WMN-7:
+    title: "Excess variance after shocks relaxes as a power law (Omori), not a single exponential"
+    statement: "For (a) precise token news shocks and (b) unlabelled D episodes, POW beats EXP in out-of-sample Student-t log score of the post-shock 5m returns over 48 h."
+    rationale: "Lillo-Mantegna (2003) and Sornette et al. find power-law relaxation after shocks; a single exponential (a one-kernel Hawkes) would decay too fast and release the MM too early."
+    test: "Per-shock log-score difference POW - EXP; llm_in_sample = 2-fold time split inside FIT; clean_holdout = fit on all FIT; DM t with date-clustered SE. Recorded separately for (a) and (b)."
+    success: "Supports iff diff > 0 with t > 2 in llm_in_sample and diff > 0 in clean_holdout for both (a) and (b); contradicts iff diff < 0 with t < -2 in llm_in_sample for either."
+    prior: 0.55
+    family: wmn_decay
+    status: proposed
+  H-WMN-8:
+    title: "News-driven volatility relaxes faster than the volatility after unlabelled jumps"
+    statement: "Persistence ratio PR (mean excess variance over (4h, 48h] / over (5 min, 1h]) is smaller for news-associated shocks (D episodes with a tagged precise event within [-2h, +30 min], plus precise news events with |SCAR(0,1h)| >= 2) than for unlabelled D episodes."
+    rationale: "Joulin, Lefevre, Grunberg and Bouchaud (2008): jumps with news relax faster than jumps without news."
+    test: "PR_news / PR_endo with a date-cluster bootstrap (B = 2000) 90% CI, per segment."
+    success: "Supports iff the ratio < 1 with the 90% CI below 1 in llm_in_sample and ratio < 1 in clean_holdout; contradicts iff the CI lies above 1 in llm_in_sample."
+    prior: 0.5
+    family: wmn_decay
+    status: proposed
+  H-WMN-9:
+    title: "Exogenous news marks improve a self-exciting Hawkes forecast of idiosyncratic jumps"
+    statement: "The Hawkes with exogenous marks (exchange announcements, HN stories, macro releases) has a higher out-of-sample log score per 5m bin than the same Hawkes without them."
+    rationale: "If news adds information beyond the self-excitation of past jumps, a news-aware gate is better than a jump-only gate."
+    test: "Day-aggregated log-score difference; DM with NW lag 7 days; llm_in_sample by the 2-fold FIT split, clean_holdout fit on all FIT. Branching ratio and the share of episode intensity due to news reported."
+    success: "Supports iff diff > 0 with t > 2 in llm_in_sample and diff > 0 in clean_holdout; contradicts iff diff <= 0 in llm_in_sample."
+    prior: 0.5
+    family: wmn_hawkes
+    status: proposed
+  H-WMN-10:
+    title: "News adds adverse selection for a passive quoter beyond order-flow toxicity"
+    statement: "In the markout regression, the coefficient on 'within 60 min after a precise token news event' is <= -1.0 bp at h = 60 s and 300 s, controlling for aligned flow, |OFI_5m|, VPIN_1h, log size and log RV_1h."
+    rationale: "The user's question: is weekend MM adverse selection only flow, or also information?"
+    test: "Weighted OLS per horizon, symbol FE, CR1 by symbol-day; trades split by segment of the trade date."
+    success: "Supports iff the coefficient <= -1.0 bp with t <= -2 at both 60 s and 300 s in llm_in_sample and < 0 at both in clean_holdout; contradicts iff >= 0 at both horizons in llm_in_sample."
+    prior: 0.45
+    family: wmn_markout
+    status: proposed
+  H-WMN-11:
+    title: "Endogenous jump episodes add adverse selection beyond order-flow toxicity"
+    statement: "Same regression: the coefficient on 'within 60 min after a D episode of the symbol' is <= -1.0 bp at h = 60 s and 300 s."
+    rationale: "If unlabelled information arrival is the main hazard (H-WMN-2), the jump state should carry the adverse selection that the flow controls miss."
+    test: "As H-WMN-10."
+    success: "Supports iff the coefficient <= -1.0 bp with t <= -2 at both 60 s and 300 s in llm_in_sample and < 0 at both in clean_holdout; contradicts iff >= 0 at both horizons in llm_in_sample."
+    prior: 0.55
+    family: wmn_markout
+    status: proposed
+  H-WMN-12:
+    title: "Market-scope events raise market variance (macro releases primary)"
+    statement: "For US macro releases (CPI, NFP, FOMC) event - placebo ARV[0,1h) of BTC >= 0.2 with t >= 3; HN market bursts (>= 3 stories on bitcoin / crypto terms within 1 h; known at the 3rd) and hacks >= 100 M USD (day resolution) tested under BH on BTC and the equal-weight alt index."
+    rationale: "Market-wide information hits every quoted alt through beta; WS05 found release minutes multiply BTC jump intensity by 76."
+    test: "Paired event - placebo means (placebo 7 days earlier), CR1 by date; BH q = 0.10 over the secondary set."
+    success: "Supports iff the macro BTC diff >= 0.2 with t >= 3 in llm_in_sample and > 0 in clean_holdout (secondary results reported in metrics); contradicts iff the macro diff <= 0 in llm_in_sample."
+    prior: 0.85
+    family: wmn_event_study
+    status: proposed
+  H-WMN-13:
+    title: "The frozen news-intensity gate forecasts weekend variance"
+    statement: "On weekend minutes (Fri 00:00 - Mon 00:00 UTC) of core alts, the gate's forecast sigma_base^2 x M(t) beats sigma_base^2 for the realised variance of the next 30 min (QLIKE), and realised 30-min variance in pull minutes is >= 2x that in non-pull minutes."
+    rationale: "The gate's job is to say when the next minutes are riskier than the quoter's sigma thinks."
+    test: "QLIKE difference per weekend, mean and weekend-clustered t; variance ratio pull / non-pull with a weekend bootstrap. sigma_base = PIT bipower over the previous 288 bars x hour factor (the detector's sigma)."
+    success: "Supports iff QLIKE diff < 0 with t < -2 and the pull / non-pull ratio >= 2 in clean_holdout (parameters fit on FIT, so llm_in_sample is reported as in-sample only); contradicts iff QLIKE diff > 0 in clean_holdout."
+    prior: 0.55
+    family: wmn_gate
+    status: proposed
+  H-WMN-14:
+    title: "Gate pull minutes carry worse passive markouts"
+    statement: "In the markout sample, trades in gate-pull minutes have maker markouts at 60 s worse than non-pull minutes by >= 2 bp after the same flow controls as H-WMN-10."
+    rationale: "A gate that predicts variance is only useful to the MM if it also predicts adverse selection the quoter cannot see in flow."
+    test: "Markout regression with a pull dummy in place of the news / jump states; CR1 by symbol-day."
+    success: "Supports iff the coefficient <= -2 bp with t <= -2 in clean_holdout days; contradicts iff >= 0 in clean_holdout."
+    prior: 0.45
+    family: wmn_gate
+    status: proposed
+  H-WMN-15:
+    title: "Forward: the gate's variance forecast keeps its edge on the first four forward weekends"
+    statement: "On the weekends 2026-11-28/29 .. 2026-12-19/20 (forward, after this registration), H-WMN-13's QLIKE diff is < 0 pooled over the four weekends."
+    rationale: "Only forward data are clean of any selection made here."
+    test: "As H-WMN-13 on forward weekends, computed once after 2026-12-21."
+    success: "Supports iff the pooled QLIKE diff < 0; contradicts iff > 0 with t > 2."
+    prior: 0.5
+    family: wmn_gate
+    status: proposed
+
+  # ==== SIGMA (agent A1, 2026-11-27 ~22:30 UTC): decision D1 rollout, shadow first. Registered BEFORE any shadow line exists
+  # and BEFORE any score of the joint spec. Code: src/ai_trader/risk/sigma.py (estimator, switch), risk/sigma_store.py (5m
+  # RV store), scripts/sigma_shadow.py (hourly logger), scripts/sigma_shadow_score.py (scorer + switch gate).
+  # Specs: robust_bc (the live sigma_risk_next), loghar_cr (WS04 pick, reproduced to 3e-16 on the WS04 grids), loghar_cr_range
+  # (loghar_cr + clock-deflated Parkinson range terms over 1/6/24 bars at 1h and 1/6 bars at 4h: NEW, never scored as such).
+  # Stop version = clock factor floored at the Mon-Thu same-hour mean on bars touching the TradFi weekend (R-VOL-2);
+  # central = unfloored. 1d: robust_bc vs vol.har. Target = the bar's 5m realised variance (store, same rule as WS04).
+  # Forward scoring: first line per symbol x horizon x bar start, lines made <= 15 min after the bar open, symbols with both
+  # specs present; pooled = cross-symbol mean loss per bar start; DM = Newey-West HAC with the HLN correction. Shadow universe =
+  # universe L (23 perps). All forward data is clean_holdout (after research.knowledge_cutoff). Student-t VaR: unit-variance t,
+  # nu 3.80 / 3.53 / 3.57 (WS04 R-WS04-2), 1% lower tail.
