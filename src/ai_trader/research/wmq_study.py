@@ -729,8 +729,8 @@ def rerun_compact(tag: str, variants: list[dict[str, Any]], symbols: list[str] |
         for sym in symbols:
             comp = OUT / "compact" / sym / d
             out = OUT / "reruns" / tag / sym / d
-            if (out / "done.json").is_file() or not (comp / "book.bin.gz").is_file():
-                continue
+            if (out / "done.json").is_file() or not (comp / "book.bin.gz").is_file() or not (day_dir(sym, d) / "done.json").is_file():
+                continue  # done, not kept, or its main replay (which writes the compact book) has not finished
             t0 = time.time()
             done = json.loads((day_dir(sym, d) / "done.json").read_text(encoding="utf-8"))
             vs = [{k: v for k, v in x.items() if k != "family"} for x in variants]

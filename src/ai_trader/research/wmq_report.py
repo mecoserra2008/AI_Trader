@@ -352,36 +352,75 @@ def held_tests(df: pl.DataFrame, sel: dict[str, Any]) -> dict[str, Any]:
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def probe_curves(phase: str, cell: tuple[str, int] = S.PRIMARY) -> pl.DataFrame:
+H_ALL = ("1s", "10s", "60s", "300s")
+
+
+def probe_agg(phase: str) -> pl.DataFrame:
+    """Per (symbol, date, queue, latency, j): probe fill count and sums of the per-fill edges (bp), cached per phase."""
+    cache = OUT / f"probe_agg_{phase}.parquet"
     days = S.phase_days(phase)
-    legs = S.load_probe_legs(days, cell)
-    fills = S.load_probe_fills(days, cell)
+    if cache.is_file():
+        return pl.read_parquet(cache)
+    cols = ["variant", "queue", "latency", "s", "price", "qty", "fee", "mid", "kind", "probe_j", "place_sigma", *[f"mid_{h}" for h in H_ALL]]
+    out = []
+    for sym in S.SYMBOLS:
+        for d in days:
+            f = S.day_dir(sym, d) / "fills.parquet"
+            if not f.is_file():
+                continue
+            x = pl.scan_parquet(f).select(cols).filter(pl.col("variant") == "PROBE").collect()
+            x = S.add_edges(x)
+            agg = x.group_by("queue", "latency", "probe_j").agg(
+                pl.len().alias("n"), *[pl.col(f"e_{h}_bp").sum().alias(f"s_e{h[:-1]}") for h in H_ALL],
+                *[pl.col(f"adv_{h}_bp").sum().alias(f"s_adv{h[:-1]}") for h in H_ALL], pl.col("spread_bp").sum().alias("s_spread"),
+                (pl.col("kind") == "through").sum().alias("s_through"), pl.col("adv_cost_60_sigma").sum().alias("s_advsig"))
+            out.append(agg.with_columns(pl.lit(sym).alias("symbol"), pl.lit(d).alias("date")).rename({"probe_j": "j"}))
+    df = pl.concat(out) if out else pl.DataFrame()
+    df.write_parquet(cache)
+    return df
+
+
+def boot_sums(sums: np.ndarray, cnts: np.ndarray, seed: int = SEED) -> dict[str, Any]:
+    """Ratio mean sum / count with a day-clustered bootstrap (rows = days)."""
+    sums, cnts = np.asarray(sums, float), np.asarray(cnts, float)
+    ok = cnts > 0
+    sums, cnts = sums[ok], cnts[ok]
+    if not len(sums):
+        return {"mean": float("nan"), "ci": [float("nan")] * 2, "n": 0, "n_days": 0}
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, len(sums), size=(B, len(sums)))
+    m = sums[idx].sum(1) / cnts[idx].sum(1)
+    return {"mean": float(sums.sum() / cnts.sum()), "ci": [float(np.percentile(m, 2.5)), float(np.percentile(m, 97.5))], "n": int(cnts.sum()), "n_days": int(len(sums))}
+
+
+def probe_curves(phase: str, cell: tuple[str, int] = S.PRIMARY) -> pl.DataFrame:
+    legs = S.load_probe_legs(S.phase_days(phase), cell)
     if not legs.height:
         return pl.DataFrame()
     lt = S.leg_table(legs)
     t = lt.group_by("symbol", "j").agg(pl.col("x").first(), pl.col("live_s").sum(), pl.col("fills").sum(),
                                        ((pl.col("x_eff") * pl.col("live_s")).sum() / pl.col("live_s").sum()).alias("x_eff"),
                                        ((pl.col("d_bps") * pl.col("live_s")).sum() / pl.col("live_s").sum()).alias("d_bps"))
-    f = fills.group_by("symbol", "probe_j").agg(pl.len().alias("n"), *[pl.col(f"e_{h}_bp").mean().alias(f"e{h[:-1]}") for h in ("1s", "10s", "60s", "300s")],
-                                                pl.col("spread_bp").mean().alias("spread_bp"), *[pl.col(f"adv_{h}_bp").mean().alias(f"adv{h[:-1]}") for h in ("1s", "10s", "60s", "300s")],
-                                                (pl.col("kind") == "through").mean().alias("through_share")).rename({"probe_j": "j"})
-    return t.join(f, on=["symbol", "j"], how="left").with_columns((pl.col("fills") / pl.col("live_s") * 3600).alias("fills_per_h")).sort("symbol", "j")
+    a = probe_agg(phase).filter((pl.col("queue") == cell[0]) & (pl.col("latency") == cell[1]))
+    g = a.group_by("symbol", "j").agg(pl.col("n").sum(), *[pl.col(c).sum() for c in a.columns if c.startswith("s_")])
+    g = g.with_columns(*[(pl.col(f"s_e{h[:-1]}") / pl.col("n")).alias(f"e{h[:-1]}") for h in H_ALL],
+                       *[(pl.col(f"s_adv{h[:-1]}") / pl.col("n")).alias(f"adv{h[:-1]}") for h in H_ALL],
+                       (pl.col("s_spread") / pl.col("n")).alias("spread_bp"), (pl.col("s_through") / pl.col("n")).alias("through_share"))
+    return t.join(g.select("symbol", "j", "n", "e1", "e10", "e60", "e300", "adv1", "adv10", "adv60", "adv300", "spread_bp", "through_share"),
+                  on=["symbol", "j"], how="left").with_columns(pl.col("n").fill_null(0)).sort("symbol", "j")
 
 
 def h1(cal: dict[str, Any]) -> dict[str, Any]:
     xs = {s: cal["symbols"][s]["params"]["xstar"] for s in S.SYMBOLS}
+    jstar = {s: S.PROBE_X.index(x) for s, x in xs.items()}
     out: dict[str, Any] = {"xstar": xs, "cells": {}, "sel": {}}
     for ph in ("sel", "hold"):
+        a = probe_agg(ph).with_columns(pl.col("symbol").replace_strict(jstar, return_dtype=pl.Int64).alias("jstar"))
         for c in S.CELLS:
-            f = S.load_probe_fills(S.phase_days(ph), c)
-            if not f.height:
-                continue
-            f = f.with_columns(pl.col("symbol").replace_strict(xs, return_dtype=pl.Float64).alias("xstar"),
-                               pl.col("probe_j").map_elements(lambda j: S.PROBE_X[j] if 0 <= j < len(S.PROBE_X) else float("nan"), return_dtype=pl.Float64).alias("xj"))
-            g = f.filter((pl.col("xj") - pl.col("xstar")).abs() < 1e-9)
-            r = {"e60": boot(g["e_60s_bp"].to_numpy(), g["date"].to_numpy()), "e300": boot(g["e_300s_bp"].to_numpy(), g["date"].to_numpy()),
-                 "e1": float(g["e_1s_bp"].mean()) if g.height else float("nan"), "spread_bp": float(g["spread_bp"].mean()) if g.height else float("nan"),
-                 "n_fills": g.height}
+            g = a.filter((pl.col("queue") == c[0]) & (pl.col("latency") == c[1]) & (pl.col("j") == pl.col("jstar")))
+            dd = g.group_by("date").agg(pl.col("n").sum(), pl.col("s_e60").sum(), pl.col("s_e300").sum(), pl.col("s_e1").sum(), pl.col("s_spread").sum())
+            r = {"e60": boot_sums(dd["s_e60"].to_numpy(), dd["n"].to_numpy()), "e300": boot_sums(dd["s_e300"].to_numpy(), dd["n"].to_numpy()),
+                 "e1": float(dd["s_e1"].sum() / max(dd["n"].sum(), 1)), "spread_bp": float(dd["s_spread"].sum() / max(dd["n"].sum(), 1)), "n_fills": int(dd["n"].sum())}
             (out["cells"] if ph == "hold" else out["sel"])[cell_name(c)] = r
     cs = list(out["cells"].values())
     passes = len(cs) == 4 and all(x["e60"]["mean"] > 0 and x["e60"]["ci"][0] > 0 and x["e300"]["mean"] > 0 for x in cs)
@@ -400,7 +439,10 @@ def _pois_ll(n: np.ndarray, mu: np.ndarray) -> np.ndarray:
 def h2(cal: dict[str, Any]) -> dict[str, Any]:
     out: dict[str, Any] = {"phases": {}, "stability": {}}
     for ph in ("sel", "hold"):
-        lt = S.leg_table(S.load_probe_legs(S.phase_days(ph))).filter(pl.col("x_eff").is_not_null() & (pl.col("live_s") > 0))
+        legs = S.load_probe_legs(S.phase_days(ph))
+        if not legs.height:
+            continue
+        lt = S.leg_table(legs).filter(pl.col("x_eff").is_not_null() & (pl.col("live_s") > 0))
         rows = []
         for s in S.SYMBOLS:
             fit = cal["symbols"][s]["fit"] or cal["pooled"]["fit"]
@@ -681,11 +723,11 @@ def rerun_variants(best: str) -> list[dict[str, Any]]:
     return out
 
 
-def run_reruns(best: str) -> None:
+def run_reruns(best: str, symbols: list[str] | None = None) -> None:
     """Gate and capacity arms on the stored compact subset, with per-symbol parameters from the calibration."""
     cal = json.loads(S.CALIB.read_text(encoding="utf-8"))
     tmpl = rerun_variants(best)
-    for sym in S.KEEP_COMPACT["symbols"]:
+    for sym in symbols or S.KEEP_COMPACT["symbols"]:
         g = {v["name"]: v for v in S.grid(cal, sym, "hold")}
         vs = []
         for v in tmpl:
@@ -750,6 +792,37 @@ def cond_eval(best: str, main_df: pl.DataFrame) -> dict[str, Any]:
             res[f"L{L}_per_lot"] = {c: res[f"L{L}"]["cells"][c]["mean"] / L for c in res[f"L{L}"]["cells"]}
     res["ctl_subset"] = held_eval(rr.with_columns(*[pl.col(k).alias(f"{k}_lot") for k in PNL if k in rr.columns]), f"{best}__ctl", col="net")
     return res
+
+
+STATIC_DATA = """## Data
+
+- **Names (12).** The H-MMW core 7 (ATOM, XLM, WIF, TRUMP, ICP, WLD, PUMPFUN; select_universe.py rule) plus 5 by a rule stated before any result: the same filters on the same 2026-11-21 snapshot with a widened band (spread >= 3 bp, depth within 25 bp >= 25 k USD per side), ranked by spread / median |1m return|, the top 5 not in the core: TRX, GALA, CRV, 1000BONK, GRASS. No innovation-zone, TradFi or SPY names. The snapshot (2026-11-21) is applied to earlier weekends: survivorship and look-ahead in the *choice of names*, not in any quote.
+- **Weekends (Sat + Sun UTC).** CAL 2026-03-07 .. 04-12 (6 weekends, 144 symbol-days, probe only), SEL 2026-04-18 .. 06-28 (11 weekends, 264 symbol-days), HOLD 2026-07-04 .. 11-22 (21 weekends, 504 symbol-days, clean_holdout). Forward weekends from 2026-11-28 are left to `wmq_study run fwd` (the archive publishes a day or two later).
+- **Sources.** quote-saver.bycsi.com ob200 books and public.bybit.com trades of each symbol-day, and BTCUSDT's tape of each day for the BTC pull; Bybit public 1m klines for the warm-up of days without an earlier replay (the same closes as tape bars; highs / lows can differ because a kline opens at the previous close); the public funding history; today's public instrument rules. Every raw file was processed one symbol-day at a time and deleted.
+- **Grids.** A per-day audit: a finer historical grid (prices off today's grid) is inferred from the decimals and retried (XLM in March used 0.00001); a coarser one (every print on a multiple of k ticks) is replayed on k ticks.
+- **Compact books** of the 7 core names on the last 8 HOLD weekends were kept (lossless binary + gzip, ~10 MB per symbol-day vs ~23 MB raw; bit-identical replays) for the conditional and capacity re-runs.
+"""
+
+STATIC_METHOD = """## Method
+
+- **Engine.** `atx mm-replay` (crates/atx/src/mm_replay.rs; private release copy data/research/wmq/bin/atx-wmq.exe): the ob200 snapshot + deltas through at_match's replayer into a real order book; the public tape merged by matching-engine time; virtual orders (no impact on the book). Queue: join the back at activation; prints at our price consume from the front; prints through our price or a crossing book fill us; unexplained level decreases are cancels split pro-rata or FIFO-pessimistic. Orders and cancels take effect one latency after they are sent. Regression: B0 on XLMUSDT 2026-11-15 with the new binary equals the MMW stats in every field of all four cells; replays from the compact files are bit-identical to the JSON source.
+- **Cells.** pro-rata / FIFO-pessimistic x 150 / 300 ms; primary = pro-rata 150 ms. Fees: maker 2.0 bp, taker 5.5 bp.
+- **Day.** Each symbol-day starts flat at 00:00 UTC and is marked to the mid at 24:00 UTC. net = spread + adverse 60 s + inventory - fees; adverse 1 / 10 / 300 s reported; funding = -position x mark x rate at the funding times inside the day (Bybit public history, 4 h or 8 h by symbol); closed = net - |end inventory| x (taker 5.5 bp + half the snapshot spread).
+- **Probe.** One minimum-lot order per side at each x = 0 (the touch), 0.1, 0.2, 0.35, 0.5, 0.75, 1, 1.5, 2, 3 x the quoter's 1h sigma (max of the 240 and 30 min robust sigma, floor 20 bp; loghar_cr exists only for BTC ETH SOL XRP DOGE XAU XAG, none of them in the universe), re-pegged by the live replace rule; a filled order is re-sent at the next 10 s tick. Intensity = fills per live second of one order-side; per-fill edge e_h = spread captured + markout at h - fee (bp of the price).
+- **Quote families** (mode model; minimum lot unless stated; symmetric cap 25 USD x lots, one base order from flat always allowed; the live 1.5 USD per-symbol and 10 USD global loss stops x lots; the live shock pause; no flow / toxicity / level layers). D: symmetric depth m sigma. A: GLFT closed-form asymptotic quotes (Gueant, Lehalle & Fernandez-Tapia 2013) and Avellaneda-Stoikov (2008) with a 1 h horizon, gamma set by the skew at the cap s_cap with 5 base orders at the cap, plain or adjusted by the CAL adverse cost at 60 s + fee (the Cartea-Jaimungal-Penalva depth). A2: the same with A, k fitted on the deep legs (amendment 1, extra trial). B: size skew at 3 lots. C: GLFT + size skew at 3 lots. E: passive unwind (the reducing quote joins the touch after 10 min), time limit (taker close after 60 min), adverse-move stop (3 sigma). F: the H-MMW2 BTC pull. T: a 60 min trend pull. B0: the live mm_illiq20 rule.
+- **Selection** (SEL only): every choice of 3 of the 11 SEL weekends as test (165 splits); split statistic = the worst cell's test mean per base lot; score = median over splits; PBO by CSCV (2000 random half splits of the 22 SEL days), deflated Sharpe (N = 41 quoting variants), purged-CV OOS estimate of the procedure. Frozen in data/research/wmq/selection.json before any HOLD analysis.
+- **Tests** (HOLD): mean per symbol-day with a day-clustered percentile bootstrap (B = 10000, seed 20261127); paired differences on the same symbol-days. Pass = mean > 0 with the CI above 0 in all four cells (plus the SEL mean > 0 for the absolute tests).
+- **Segments.** CAL and SEL are before research.knowledge_cutoff (llm_in_sample); HOLD is clean_holdout. All results are recorded with hypotheses.record.
+"""
+
+
+def compose_report(plain: str, caveats: str) -> str:
+    tables = (OUT / "tables.md").read_text(encoding="utf-8")
+    head = ("# WMQ QUOTE: how to quote a small weekend book of illiquid Bybit alt perps (program WMM2), 2026-11-27\n\n"
+            "Agent WMQ. Research only: no orders, no private calls, no live runs. Engine: `atx mm-replay` on real ob200 books and public tapes "
+            "(crates/atx/src/mm_replay.rs), with the replay-only WMQ modes. Registered hypotheses H-WMQ-1..15 (research/hypotheses_pending/WMQ*.yaml) "
+            "before any SEL or HOLD replay; design frozen in data/research/wmq/design.json (amendment 1 logged before SEL / HOLD).\n\n")
+    return head + plain.strip() + "\n\n" + tables + "\n" + STATIC_DATA + "\n" + caveats.strip() + "\n\n" + STATIC_METHOD
 
 
 def render_cond(held: dict[str, Any], cond: dict[str, Any]) -> str:
@@ -907,8 +980,10 @@ def main(argv: list[str] | None = None) -> None:
     elif a[0] == "cond":
         sel = json.loads(SEL_FILE.read_text(encoding="utf-8"))
         best = sel["families"]["ALL"]["choice"]
-        print(write_wmn_gates())
-        run_reruns(best)
+        syms = a[a.index("--symbols") + 1].split(",") if "--symbols" in a else None
+        if "--no-gates" not in a:
+            print(write_wmn_gates())
+        run_reruns(best, syms)
     elif a[0] == "cond_eval":
         sel = json.loads(SEL_FILE.read_text(encoding="utf-8"))
         best = sel["families"]["ALL"]["choice"]
