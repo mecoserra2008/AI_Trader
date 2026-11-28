@@ -5677,3 +5677,73 @@ hypotheses:
     prior: 0.3
     family: wmq_filters
     status: proposed
+
+  # ==== D7F (2026-11-28, follow-up to decision D7, user-approved 2026-11-27): equivalence / non-superiority re-tests of
+  # "no effect" claims whose clean_holdout 'supports' rows were judged by a sign or |t| < 2 rule (absence of evidence), which
+  # research/reports/verdict_fix_diff_2026-11-27.md (Part B, null claims) flagged as needing an equivalence test.
+  # Registered BEFORE any equivalence statistic below is computed. These are EXTRA, labelled trials on already-recorded
+  # estimates: the point estimates and their t / CI have been in research/hypotheses_results.jsonl since 2026-11-10..27 and
+  # were visible when the margins were set, so each margin is anchored on an external quantity stated in its entry (costs,
+  # the original registration's own threshold, a cost-equivalent forecast gain), never tuned to the recorded numbers.
+  # Method (all): one-sided tests from the recorded estimate and its standard error (SE = |estimate / t| from the recorded
+  # HAC / clustered t, or (hi - lo) / (2 x 1.96) from a recorded 95% CI); normal reference. A null claim over several cells is
+  # an intersection-union test: p = max over cells of the per-cell one-sided p. Segments judged separately (llm_in_sample,
+  # clean_holdout; the latest recorded row of the source hypothesis per segment). Level 5% one-sided (alpha 0.025 reported).
+  # Verdict per segment: supports iff the IUT p < 0.05; contradicts iff some cell exceeds the margin with Holm-adjusted
+  # one-sided p < 0.05 (the claim's opposite); else inconclusive. Code: src/ai_trader/research/d7f_tost.py.
+  # Claims NOT re-tested here (no natural margin, misclassified as null claims, or a declared bound test already exists) are
+  # listed in research/reports/d7f_2026-11-28.md.
+  H-D7F-1:
+    title: "Re-test of H-MC1 (non-superiority, margin 0): every Market Cipher B variant's mean net return is below zero"
+    statement: "For each of the four H-MC1 variants (1h / 4h x money-flow filter on / off), the mean net trade return (sigma units, after costs) is < 0."
+    rationale: "H-MC1 claims 'no edge after costs'; a negative mean is consistent with the claim, so the right test is non-superiority with margin 0 (costs are already in the net return), not a two-sided equivalence."
+    test: "per variant one-sided z = mean_net / SE (SE from the recorded NW t_nw), p = Phi(z); IUT over the 4 variants."
+    success: "supports iff max p < 0.05; contradicts iff some variant has mean_net > 0 with Holm one-sided p < 0.05; else inconclusive."
+    prior: 0.6
+    family: d7f_equivalence
+    status: proposed
+  H-D7F-2:
+    title: "Re-test of H-WS04-2 (non-superiority, margin 0): no GARCH-family spec beats the best clock log-HAR at 1h, 4h, 1d"
+    statement: "For every GARCH-family spec recorded in H-WS04-2 and every horizon (1h, 4h, 1d), the QLIKE difference (GARCH spec - best clock log-HAR) is > 0."
+    rationale: "'Complexity does not pay' is one-sided (the complex spec is not better); margin 0 is the strictest version and needs no scale choice. HARQ / HAR-J terms are part of H-WS04-2's title but are tested only if their DM t is recorded."
+    test: "per spec x horizon one-sided p = 1 - Phi(t) from the recorded DM t of (spec - best clock HAR); IUT over all recorded spec x horizon cells."
+    success: "supports iff max p < 0.05; contradicts iff some cell has t < 0 with Holm one-sided p < 0.05 (a GARCH spec better); else inconclusive."
+    prior: 0.85
+    family: d7f_equivalence
+    status: proposed
+  H-D7F-3:
+    title: "Re-test of H-BO1 (non-superiority, margin 0.10 sigma): floor-pivot R1/S1 breakouts continue no more than placebo levels"
+    statement: "For each universe x horizon cell recorded in H-BO1 (L / T x 4h / 12h), the pivot-minus-placebo signed net return difference is < +0.10 sigma."
+    rationale: "H-BO1 states 'no larger than placebo' (one-sided). Margin = about one round trip of costs (2 x 7.5 bp) at a typical 4h-12h sigma of 1.5%: 0.10 sigma; an excess smaller than that could not pay for the trade."
+    test: "per cell z = (diff_vs_placebo - 0.10) / SE (SE from the recorded date-clustered t_vs_placebo), p = Phi(z); IUT over the cells."
+    success: "supports iff max p < 0.05; contradicts iff some cell has diff > 0.10 with Holm one-sided p < 0.05; else inconclusive."
+    prior: 0.6
+    family: d7f_equivalence
+    status: proposed
+  H-D7F-4:
+    title: "Re-test of H-LEV2 (non-superiority, margin 0.10): crypto has no material leverage effect in the pooled SHAR"
+    statement: "In H-LEV2's primary pooled SHAR (universe L, daily, level spec), b(RS-) - b(RS+) < +0.10; an inverted asymmetry (negative difference) is allowed."
+    rationale: "H-LEV2 allows an inverted asymmetry, so the claim is one-sided. Margin 0.10 = about one third of the typical semivariance loading (~0.3) and about one fifth of the daily equity-index asymmetry in the semivariance HAR literature (Patton and Sheppard 2015, b(RS-) - b(RS+) ~ 0.5): an asymmetry below 0.10 would not justify an asymmetric sigma model."
+    test: "z = (diff - 0.10) / SE (SE from the recorded date-clustered diff_t), p = Phi(z); the log spec is reported as a robustness cell, not part of the verdict."
+    success: "supports iff p < 0.05; contradicts iff diff > 0.10 with one-sided p < 0.05; else inconclusive."
+    prior: 0.5
+    family: d7f_equivalence
+    status: proposed
+  H-D7F-5:
+    title: "Re-test of H-WS07-5 (non-superiority, margin 0.005 nats): no regime spec's direction term raises the next-day log score materially"
+    statement: "For every regime spec recorded in H-WS07-5 (13 specs), the date-level next-day log-score gain from adding state-specific shrunk means is < 0.005 nats."
+    rationale: "A correctly signed mean shift of mu sd per day raises a Gaussian log score by about mu^2 / 2; a directional edge worth trading at a daily horizon is about 0.1 sd (about 30 bp at 3% daily vol, twice round-trip costs), i.e. 0.005 nats. Gains below that cannot carry a direction tilt."
+    test: "per spec z = (mean - 0.005) / SE (SE from the recorded DM-HAC t), p = Phi(z); IUT over the 13 specs."
+    success: "supports iff max p < 0.05; contradicts iff some spec has gain > 0.005 with Holm one-sided p < 0.05; else inconclusive."
+    prior: 0.5
+    family: d7f_equivalence
+    status: proposed
+  H-D7F-6:
+    title: "Re-test of H-WS16-2 (non-superiority, margin +0.05 R/trade): no alternative zoo weighting beats 1/N"
+    statement: "For each of the four weightings registered in H-WS16-2 (zoo_iv, zoo_shr, zoo_fam, zoo_vote), the paired difference in mean net R per trade vs zoo_ew is < +0.05 R."
+    rationale: "+0.05 R/trade is the margin H-WS16-2's own registration set before its results; the original rule passed when the CI included 0 (absence of evidence). zoo_slow (recorded but not registered in H-WS16-2) is reported, not judged."
+    test: "per weighting z = (diff - 0.05) / SE with SE = (hi - lo) / (2 x 1.96) from the recorded paired 95% CI; p = Phi(z); IUT over the 4 weightings."
+    success: "supports iff max p < 0.05; contradicts iff some weighting has diff > 0.05 with Holm one-sided p < 0.05; else inconclusive."
+    prior: 0.4
+    family: d7f_equivalence
+    status: proposed
