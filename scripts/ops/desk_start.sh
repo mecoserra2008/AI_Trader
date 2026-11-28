@@ -19,10 +19,6 @@ start xs_v4        'uv run --extra ml python scripts/live_xs_v4.py --loop >> dat
 # Plan time stops (intent context.time_stop_h): closes due BOT trades reduce-only, never opens anything. Runs from a copy
 # (bin/atx-live.exe) so builds don't hit a locked binary; refresh the copy after changing crates/atx/src/live.rs.
 start watchdog  'while true; do L=logs/watchdog_$(date -u +%Y%m%d).log; echo "### start $(date -u +%FT%TZ)" >> $L; AI_TRADER_ENVIRONMENT=mainnet AI_TRADER_ALLOW_MAINNET=1 ./bin/atx-live.exe live watchdog --interval 60 2>&1 | grep --line-buffered -v -iE "balance|equity|wallet|available" >> $L; echo "### exited; restart in 30s" >> $L; sleep 30; done'
-# D8 daily data jobs (ai_trader.storage.daily): cold flow_3s days compacted + rolled up to flow_1m (reversible), the last
-# 2 days of flow_bars from the trade archive, the 08:00 Deribit surface (deribit_svi). 08:20 UTC daily, wall-clock
-# polling every 60 s (suspend-safe), through the governor; atx runs from bin/atx-ops.exe (a copy, like the others).
-start daily_ops 'while true; do now=$(date -u +%s); next=$(( now/86400*86400 + 30000 )); if [ $now -ge $next ]; then next=$(( next + 86400 )); fi; while [ $(date -u +%s) -lt $next ]; do sleep 60; done; echo "### $(date -u +%FT%TZ)" >> logs/daily_ops.log; PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe scripts/ops/governor.py run --mb 2500 --slots heavy --name daily_ops -- .venv/Scripts/python.exe -m ai_trader.storage.daily >> logs/daily_ops.log 2>&1; echo "### exit $?" >> logs/daily_ops.log; done'
 # D1 stop-sigma shadow (ai_trader.risk.sigma): hourly at hh:02:30, wall-clock polling every 30 s (suspend-safe); appends
 # data/journal/sigma_shadow/<date>.jsonl, refreshes the 5m RV store, then scores and takes the one-time switch gate.
 start sigma_shadow 'uv run python scripts/sigma_shadow.py --loop >> logs/sigma_shadow.log 2>&1'
@@ -30,3 +26,11 @@ start sigma_shadow 'uv run python scripts/sigma_shadow.py --loop >> logs/sigma_s
 # atx live refuses every new entry while the file is missing or older than 5 min, so start this BEFORE deploying an atx
 # binary that reads it; closes, stops, reconcile and the watchdog never read it.
 start live_gates   '.venv/Scripts/python.exe scripts/live_gates.py --loop >> logs/live_gates.log 2>&1'
+# D8 daily data jobs (ai_trader.storage.daily): cold flow_3s days compacted + rolled up to flow_1m (reversible), the last
+# 2 days of flow_bars from the trade archive, the 08:00 Deribit surface (deribit_svi). 08:20 UTC daily, wall-clock
+# polling every 60 s (suspend-safe), through the governor; atx runs from bin/atx-ops.exe (a copy, like the others).
+start daily_ops 'while true; do now=$(date -u +%s); next=$(( now/86400*86400 + 30000 )); if [ $now -ge $next ]; then next=$(( next + 86400 )); fi; while [ $(date -u +%s) -lt $next ]; do sleep 60; done; echo "### $(date -u +%FT%TZ)" >> logs/daily_ops.log; PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe scripts/ops/governor.py run --mb 2500 --slots heavy --name daily_ops -- .venv/Scripts/python.exe -m ai_trader.storage.daily >> logs/daily_ops.log 2>&1; echo "### exit $?" >> logs/daily_ops.log; done'
+# XT cross-venue recorders (agent XT, 2026-11-28; data only: public Bybit websocket + read-only cTrader MCP get_spot_prices,
+# 20 req/s round robin). Registered forward sample 2026-11-29..12-12 (H-XT-1..8); the loops end 2026-12-14 01:00 UTC.
+start xt_bybit   'while [ $(date -u +%s) -lt 1797210000 ]; do .venv/Scripts/python.exe scripts/xt_bybit_l1.py --until 2026-12-14T01:00:00Z --trades-skip BTCUSDT ETHUSDT >/dev/null 2>>logs/xt_bybit_l1.err; sleep 10; done'
+start xt_ctrader 'while [ $(date -u +%s) -lt 1797210000 ]; do .venv/Scripts/python.exe scripts/xt_ctrader_quotes.py --rate 20 --until 2026-12-14T01:00:00Z >/dev/null 2>>logs/xt_ctrader_quotes.err; sleep 10; done'
