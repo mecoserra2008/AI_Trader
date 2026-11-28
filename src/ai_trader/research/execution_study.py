@@ -210,6 +210,7 @@ GATE_RULES = {
          "clock-5m log returns of the 24 h before t",
     "S": "no shock in the last 6 h: no closed clock hour with |ln(close / previous hour's close)| >= 4 x sigma_1h, sigma_1h = "
          "sqrt(12) x sigma_5m as of that hour's start, closing in (t - 6 h, t] (mirrors the shock sleeve's |z| >= 4)",
+    # J_field is DEPRECATED for live use (D3, 2026-11-27; H-WS05-6): see field_pjump. Kept to reproduce the study.
     "J_field": "BTCUSDT: the probability field's P(jump in the next hour) from the frozen pre-cutoff fit "
                "(data/models/field/btc_field_cutoff_2026-07-01.json; state from the 1h lake frame, row valid from its known_ts) "
                "<= its median over the FIT-day hours",
@@ -286,7 +287,11 @@ def gate_components(sym: str) -> tuple[pl.DataFrame, np.ndarray]:
 
 
 def field_pjump() -> pl.DataFrame:
-    """BTC P(jump in the next hour) from the frozen pre-cutoff field fit, per 1h row valid from its known_ts."""
+    """BTC P(jump in the next hour) from the frozen pre-cutoff field fit, per 1h row valid from its known_ts.
+
+    DEPRECATED for live use (user decision D3, 2026-11-27): the field's p_jump is a latent mixture weight, not the chance
+    of a visible jump (H-WS05-6, R-WS05-1). Kept only to reproduce this study; live jump gating is the Hawkes gate in
+    data/live/gates.json (src/ai_trader/live/gates.py)."""
     from ai_trader.field.model import Field, coords_matrix
     from ai_trader.field.state import build_state, load_frame
 

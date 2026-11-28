@@ -119,7 +119,7 @@ def field(line: dict) -> str | None:
         return None
     t = f["p_touch"]
     return (f"Field ({line['field'].get('cell', '?')}): this hour touches +1% with {100 * t['+1%']:.0f}% and -1% with {100 * t['-1%']:.0f}%, "
-            f"±2% with {100 * t['+2%']:.0f}/{100 * t['-2%']:.0f}%; P(jump) {100 * f['p_jump']:.1f}%.")
+            f"±2% with {100 * t['+2%']:.0f}/{100 * t['-2%']:.0f}%.")  # the field P(jump) is not shown (D3, H-WS05-6)
 
 
 def thinking(act: dict, line: dict, prev: dict | None, v2: dict | None, alarms: list[dict]) -> list[dict]:

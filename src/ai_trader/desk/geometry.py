@@ -274,7 +274,7 @@ def field_card(live_nn_dir: Path, as_of: datetime, days: int = 1) -> dict | None
     hz = {}
     for h, v in f.get("horizons", {}).items():
         hz[h] = {"p_touch": v.get("p_touch"), "touch_prices": {k: _r(close * (1 + float(k.rstrip("%")) / 100), 1) for k in v.get("p_touch", {})},
-                 "q05_q95_pct": [v["quantiles_pct"].get("q05"), v["quantiles_pct"].get("q95")], "p_jump": v.get("p_jump")}
+                 "q05_q95_pct": [v["quantiles_pct"].get("q05"), v["quantiles_pct"].get("q95")]}  # no field P(jump) (D3, H-WS05-6)
     return {"line": ln["id"], "line_as_of": ln["as_of"], "close": close, "cell": f.get("cell"), "horizons": hz,
             "note": "touch = P(price reaches close x (1 + x%) within the horizon); not a direction call (R-FLD-3)"}
 

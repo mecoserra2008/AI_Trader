@@ -26,3 +26,11 @@ start daily_ops 'while true; do now=$(date -u +%s); next=$(( now/86400*86400 + 3
 # D1 stop-sigma shadow (ai_trader.risk.sigma): hourly at hh:02:30, wall-clock polling every 30 s (suspend-safe); appends
 # data/journal/sigma_shadow/<date>.jsonl, refreshes the 5m RV store, then scores and takes the one-time switch gate.
 start sigma_shadow 'uv run python scripts/sigma_shadow.py --loop >> logs/sigma_shadow.log 2>&1'
+# D2 / D3 live entry gates (src/ai_trader/live/gates.py): data/live/gates.json every 60 s on the wall clock (suspend-safe).
+# atx live refuses every new entry while the file is missing or older than 5 min, so start this BEFORE deploying an atx
+# binary that reads it; closes, stops, reconcile and the watchdog never read it.
+start live_gates   '.venv/Scripts/python.exe scripts/live_gates.py --loop >> logs/live_gates.log 2>&1'
+# D8 daily data jobs (ai_trader.storage.daily): cold flow_3s days compacted + rolled up to flow_1m (reversible), the last
+# 2 days of flow_bars from the trade archive, the 08:00 Deribit surface (deribit_svi). 08:20 UTC daily, wall-clock
+# polling every 60 s (suspend-safe), through the governor; atx runs from bin/atx-ops.exe (a copy, like the others).
+start daily_ops 'while true; do now=$(date -u +%s); next=$(( now/86400*86400 + 30000 )); if [ $now -ge $next ]; then next=$(( next + 86400 )); fi; while [ $(date -u +%s) -lt $next ]; do sleep 60; done; echo "### $(date -u +%FT%TZ)" >> logs/daily_ops.log; PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe scripts/ops/governor.py run --mb 2500 --slots heavy --name daily_ops -- .venv/Scripts/python.exe -m ai_trader.storage.daily >> logs/daily_ops.log 2>&1; echo "### exit $?" >> logs/daily_ops.log; done'

@@ -33,7 +33,7 @@ EQUILIBRIUM_KEYS = ("positioning", "trapped", "stops", "forced_flows", "payoff_a
 MAX_PROPOSALS = 3
 MAX_MD_LINES = 80
 P_TP_TOL = 0.10
-SNAP_FILES = ("xs", "geometry", "news", "sentiment", "tape", "account")
+SNAP_FILES = ("xs", "geometry", "news", "sentiment", "tape", "account", "gates")   # gates.json: D2 / D3 entry gates (live.gates)
 MD_SECTIONS = ("Regime", "Ideas", "No trade / watch", "Data gaps", "Honesty")
 
 
@@ -268,6 +268,7 @@ def validate_proposals(d: dict, snap: dict | None = None, rules: set[str] | None
     universe = {t["symbol"]: t for t in snap.get("xs", {}).get("tokens", [])}
     geo = {t["symbol"]: t for t in snap.get("geometry", {}).get("tokens", []) if "symbol" in t}
     tape = {t["symbol"]: t for t in snap.get("tape", {}).get("tokens", [])}
+    gates = snap.get("gates")
     ids = set()
     for i, p in enumerate(props):
         w = f"proposals[{i}]"
@@ -351,11 +352,46 @@ def validate_proposals(d: dict, snap: dict | None = None, rules: set[str] | None
         cell = ((universe.get(sym) or {}).get("regime") or {}).get("cell")
         if side == "long" and cell == "R9" and "R-RB-1" not in cited:
             warnings.append(f"{w}: {sym} is in R9 (liquidation): a long must address R-RB-1 (the flush low usually comes later)")
-        cl = (((tape.get(sym) or {}).get("liq") or {}).get("cluster_60m") or {})
-        if cl.get("fired") and "R-FLOW-2" not in cited:
-            warnings.append(f"{w}: a liquidation cluster fired on {sym} in the last 60 min: address R-FLOW-2 (do not fade it)")
+        warnings += _gate_warnings(w, sym, cited, gates, tape)
         derived.append(row)
     return {"ok": not errors, "errors": errors, "warnings": warnings, "derived": derived}
+
+
+def _gate_warnings(w: str, sym: str, cited, gates: dict | None, tape: dict) -> list[str]:
+    """R-FLOW-2 on the live jump-intensity gate (D3) and R-WS05-2 (D2), from the gates state (data/live/gates.json, in the
+    snapshot or fresh live). Without a gates state the old 60-min tape cluster flag is the fallback."""
+    out = []
+    if not gates or not gates.get("jump"):
+        cl = (((tape.get(sym) or {}).get("liq") or {}).get("cluster_60m") or {})
+        if cl.get("fired") and "R-FLOW-2" not in cited:
+            out.append(f"{w}: a liquidation cluster fired on {sym} in the last 60 min (no live gates state: 60-min fallback): address R-FLOW-2 (do not fade it)")
+        return out
+    jm = gates["jump"]
+    fb = (gates.get("jump_model") or {}).get("fallback_symbol", "BTCUSDT")
+    j = jm.get(sym) or jm.get(fb) or {"elevated": True, "reason": "no jump state"}
+    if j.get("elevated") and "R-FLOW-2" not in cited:
+        comp = j.get("components") or {}
+        why = (f"x{j['ratio']:.2f}" if j.get("ratio") is not None else (j.get("reason") or "?")) + (f" until {j['until_utc'][11:16]}Z" if j.get("until_utc") else "")
+        liq = (comp.get("liq") or 0) > 0 or (j.get("liq_cluster_minutes_6h") or 0) > 0
+        out.append(f"{w}: {sym} jump gate elevated ({why}{', liquidation cascade' if liq else ''}{'' if jm.get(sym) else ', ' + fb + ' fallback'}): "
+                   "address R-FLOW-2 (do not fade a cascade; atx live refuses stops < 2 sigma while elevated)")
+    if "R-WS05-2" not in cited:
+        act = [x for x in gates.get("release_windows", []) if x.get("active")]
+        if act:
+            out.append(f"{w}: inside the {act[0]['event']} release window: address R-WS05-2 (atx live refuses stops < 2 sigma)")
+    return out
+
+
+def _live_gates(max_age_ms: int = 300_000) -> dict | None:
+    """The live gates file when it is fresh (validation runs at decision time), else None."""
+    try:
+        import time
+
+        from ai_trader.live.gates import load
+        g = load()
+        return g if g and g.get("written_ms") and time.time() * 1000 - g["written_ms"] <= max_age_ms else None
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def validate_file(path: Path, snapshot: Path | None = None) -> dict:
@@ -367,6 +403,8 @@ def validate_file(path: Path, snapshot: Path | None = None) -> dict:
         ref = d.get("snapshot") or (d.get("meta") or {}).get("snapshot")
         snapshot = Path(ref) if ref and Path(ref).is_dir() else None
     snap = load_snapshot(snapshot)
+    if "proposals" in d and "gates" not in snap and (g := _live_gates()) is not None:
+        snap["gates"] = g
     try:
         rules = rule_ids()
     except Exception:  # noqa: BLE001

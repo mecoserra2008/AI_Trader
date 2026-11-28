@@ -486,7 +486,11 @@ _PJ: dict[str, Any] = {}
 
 
 def field_pjump():
-    """BTC P(jump in the next hour) from the frozen pre-cutoff field fit, per 1h row valid from its known_ts; FIT-hour q33 / median."""
+    """BTC P(jump in the next hour) from the frozen pre-cutoff field fit, per 1h row valid from its known_ts; FIT-hour q33 / median.
+
+    DEPRECATED for live use (user decision D3, 2026-11-27): the field's p_jump is a latent mixture weight, not the chance
+    of a visible jump (H-WS05-6, R-WS05-1). Kept only to reproduce this study; live jump gating is the Hawkes gate in
+    data/live/gates.json (src/ai_trader/live/gates.py)."""
     if "pj" in _PJ:
         return _PJ["pj"], _PJ["q33"], _PJ["med"]
     import polars as pl

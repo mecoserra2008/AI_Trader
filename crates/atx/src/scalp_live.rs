@@ -241,7 +241,8 @@ pub async fn update_trade(root: &Path, state: &Path, id: &str, f: impl FnOnce(&m
     Ok(out)
 }
 
-/// The full per-entry decision: decide_live on the tightened profile, then the scalper refusals (merged).
+/// The full per-entry decision: decide_live on the tightened profile (with the D2 / D3 entry gates), then the scalper
+/// refusals (merged).
 #[allow(clippy::too_many_arguments)]
 pub fn decide_entry(
     intent: &OrderIntent,
@@ -257,9 +258,10 @@ pub fn decide_entry(
     run: &RunCounters,
     max_entries: u32,
     now: i64,
+    gates: &lv::LiveGates,
 ) -> LiveDecision {
     let tight = tightened(live, lim);
-    let mut d = lv::decide_live(intent, Some(touch), account, positions, facts, fees, placement, &tight);
+    let mut d = lv::decide_live(intent, Some(touch), account, positions, facts, fees, placement, &tight, gates);
     let side = intent.side.side().unwrap_or(Side::Long);
     for r in scalp_refusals(st, positions, facts, live, lim, &intent.symbol, side, run, max_entries, now) {
         let k = r.split(':').next().unwrap_or("scalp").to_string();
@@ -495,7 +497,8 @@ impl Runner<'_> {
         let stype = facts.get(&self.cfg.symbol).map(|f| f.symbol_type.clone()).unwrap_or_default();
         let fees = self.desk.fee_rates(&self.cfg.symbol, &stype).await;
         let account = LiveAccount { available_usd: snap.available, entries_today: st.entries_today, realised_today_usd: st.realised_today(now), kill: self.desk.paths.kill_active() };
-        let d = decide_entry(&intent, touch, &account, &positions, &st, &facts, &fees, &self.placement, &self.desk.cfg, &self.cfg.limits, &self.run, self.max_entries, now);
+        let gates = self.desk.paths.gates_at(now);
+        let d = decide_entry(&intent, touch, &account, &positions, &st, &facts, &fees, &self.placement, &self.desk.cfg, &self.cfg.limits, &self.run, self.max_entries, now, &gates);
         self.j("risk_decision", json!({"intent": intent, "decision": d, "fees": fees, "entries_today": st.entries_today, "reconcile_notes": notes, "covered_by": self.approved_by}));
         if !d.accepted() {
             st.save(&self.state_path())?;
@@ -1147,7 +1150,17 @@ mod tests {
             let intent = build_intent(&c, id, side, &br, 0.00001, 0.0016, 0.62, now, "t1");
             let positions = positions_of(st, &venue);
             let acct = LiveAccount { available_usd: 100.0, entries_today: st.entries_today, realised_today_usd: st.realised_today(now), kill: false };
-            decide_entry(&intent, 0.02899, &acct, &positions, st, &facts(), &fees, &placement, &l, &c.limits, run, 12, now)
+            let gates = lv::LiveGates {
+                now_ms: now,
+                file: Some(lv::GatesFile {
+                    written_ms: now - 1000,
+                    calendar: lv::GateCalendar { ok: true, reason: None },
+                    jump: [("BTCUSDT".to_string(), lv::JumpGate { ratio: Some(1.0), ..Default::default() })].into_iter().collect(),
+                    ..Default::default()
+                }),
+                error: None,
+            };
+            decide_entry(&intent, 0.02899, &acct, &positions, st, &facts(), &fees, &placement, &l, &c.limits, run, 12, now, &gates)
         };
         let st0 = LiveState::load(&state).unwrap();
         let d = decide(&st0, Side::Long, "sc-t1-1", &run);

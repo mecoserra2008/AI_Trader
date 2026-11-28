@@ -22,7 +22,9 @@
 //!
 //! Files (mainnet root data/live, other environments data/live/<env>): state.json, pending/<id>.json,
 //! approvals/<id>.ok (the user's file approval: the confirmation code), done/<id>.json, KILL (data/live/KILL stops every
-//! environment), corr_cache.json (shared). Journal: data/journal/live (mainnet) or data/journal/live_<env>.
+//! environment), corr_cache.json (shared), gates.json (shared; D2 release-hour rule and D3 jump gate, written every minute
+//! by scripts/live_gates.py --loop: missing or older than 5 min refuses new entries; closes, stops, reconcile and the
+//! watchdog never read it). Journal: data/journal/live (mainnet) or data/journal/live_<env>.
 
 use std::collections::{HashMap, HashSet};
 use std::io::{BufRead, IsTerminal, Write as _};
@@ -38,7 +40,7 @@ use at_core::num::{Round, format_step, round_to_step};
 use at_core::time::{DAY, Freq, HOUR, now_ms};
 use at_core::types::{InstrumentRules, Side};
 use at_risk::fees::{FeeRates, FeeSchedule};
-use at_risk::live::{self as lv, LiveAccount, LiveDecision, LivePos, LiveSmallCfg, SymbolFacts};
+use at_risk::live::{self as lv, LiveAccount, LiveDecision, LiveGates, LivePos, LiveSmallCfg, SymbolFacts};
 use at_risk::{DecideConfig, OrderIntent};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -190,6 +192,8 @@ pub struct LivePaths {
     pub global_kill: PathBuf,
     pub journal: PathBuf,
     pub corr_cache: PathBuf,
+    /// D2 / D3 entry gates (shared by every environment, like the global KILL).
+    pub gates: PathBuf,
 }
 
 impl LivePaths {
@@ -197,7 +201,7 @@ impl LivePaths {
         let base = data_root.join("live");
         let root = if env == Environment::Mainnet { base.clone() } else { base.join(env.as_str()) };
         let journal = if env == Environment::Mainnet { journal_base.join("live") } else { journal_base.join(format!("live_{}", env.as_str())) };
-        Self { global_kill: base.join("KILL"), corr_cache: base.join("corr_cache.json"), root, journal }
+        Self { global_kill: base.join("KILL"), corr_cache: base.join("corr_cache.json"), gates: base.join("gates.json"), root, journal }
     }
     pub(crate) fn state(&self) -> PathBuf {
         self.root.join("state.json")
@@ -219,6 +223,19 @@ impl LivePaths {
     }
     pub fn kill_active(&self) -> bool {
         self.global_kill.exists() || self.local_kill().exists()
+    }
+    /// The entry gates for a decision at `now` (never an error: missing or unreadable is a stale gate, which refuses new
+    /// entries only).
+    pub fn gates_at(&self, now: i64) -> LiveGates {
+        load_gates(&self.gates, now)
+    }
+}
+
+/// Read data/live/gates.json; a missing or unreadable file becomes a stale gate state (fail closed for entries).
+pub fn load_gates(path: &Path, now: i64) -> LiveGates {
+    match std::fs::read_to_string(path) {
+        Ok(t) => LiveGates::parse(&t, now),
+        Err(e) => LiveGates::missing(format!("{}: {e}", path.display()), now),
     }
 }
 
@@ -1107,7 +1124,7 @@ impl<'a> Desk<'a> {
             }
             _ => self.cfg.clone(),
         };
-        let d = lv::decide_live(intent, touch, &account, &positions, &facts, &fees, &placement, &cfg);
+        let d = lv::decide_live(intent, touch, &account, &positions, &facts, &fees, &placement, &cfg, &self.paths.gates_at(now_ms()));
         Ok((d, facts, fees))
     }
 
@@ -1131,6 +1148,20 @@ impl<'a> Desk<'a> {
             d.net_er_r.map(|x| (x * 1000.0).round() / 1000.0),
             d.clusters,
             if d.min_lot_used { " | MIN LOT" } else { "" }
+        );
+        let g = &d.gates;
+        println!(
+            "  gates: {} | release {} | calendar {} | jump {} {}{}",
+            match (g.stale, g.age_ms) {
+                (true, _) => format!("STALE ({})", g.stale_reason.as_deref().unwrap_or("?")),
+                (false, Some(a)) => format!("{} s old", a / 1000),
+                _ => "?".into(),
+            },
+            g.release.as_ref().map(|w| format!("{} window", w.event)).unwrap_or_else(|| "none".into()),
+            if g.calendar_ok { "ok" } else { "NOT OK" },
+            g.jump_symbol.as_deref().unwrap_or("-"),
+            g.jump.as_ref().and_then(|j| j.ratio).map(|r| format!("x{r:.2}")).unwrap_or_else(|| "?".into()),
+            if g.jump_elevated() { " ELEVATED" } else { "" }
         );
         for (k, v) in &d.details {
             println!("  REFUSED {k}: {v}");
@@ -2169,6 +2200,26 @@ mod tests {
         assert_eq!(d.root, Path::new("data/live/demo"));
         assert_eq!(d.journal, Path::new("data/journal/live_demo"));
         assert_eq!(d.global_kill, m.global_kill, "data/live/KILL stops every environment");
+        assert_eq!(m.gates, Path::new("data/live/gates.json"));
+        assert_eq!(d.gates, m.gates, "one gates file for every environment");
+    }
+
+    #[test]
+    fn gates_file_missing_unreadable_old_or_fresh() {
+        let dir = std::env::temp_dir().join(format!("atx-live-gates-{}-{}", std::process::id(), now_ms()));
+        std::fs::create_dir_all(dir.join("live")).unwrap();
+        let p = LivePaths::new(&dir, &dir.join("journal"), Environment::Mainnet);
+        let now = 1_795_820_000_000;
+        let g = p.gates_at(now);
+        assert!(g.file.is_none() && g.error.as_deref().is_some_and(|e| e.contains("gates.json")), "{g:?}");
+        assert!(lv::gate_check(&g, "BTCUSDT", 15.0).stale, "missing = stale");
+        std::fs::write(&p.gates, "{garbage").unwrap();
+        assert!(lv::gate_check(&p.gates_at(now), "BTCUSDT", 15.0).stale, "unreadable = stale");
+        std::fs::write(&p.gates, format!(r#"{{"written_ms": {}, "calendar": {{"ok": true}}, "jump": {{"BTCUSDT": {{"elevated": false, "ratio": 1.0}}}}}}"#, now - 400_000)).unwrap();
+        assert!(lv::gate_check(&p.gates_at(now), "BTCUSDT", 15.0).stale, "6.7 min old = stale");
+        let c = lv::gate_check(&p.gates_at(now - 300_000), "ETHUSDT", 15.0);
+        assert!(!c.stale && !c.needs_wide_stop() && c.jump_symbol.as_deref() == Some("BTCUSDT"), "{c:?}");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

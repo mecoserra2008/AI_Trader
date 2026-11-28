@@ -299,6 +299,170 @@ pub struct LiveAccount {
     pub kill: bool,
 }
 
+// ---------------------------------------------------------------- entry gates (D2 release-hour rule, D3 jump gate)
+//
+// User decisions D2 and D3 (2026-11-27 ~21:35 UTC). `scripts/live_gates.py --loop` writes data/live/gates.json every
+// minute (model, threshold and fail-safe rules: src/ai_trader/live/gates.py). Only NEW entries read it: closes, stops,
+// reconcile and the watchdog never do.
+// - Missing, unreadable or older than GATES_MAX_AGE_MS: every new entry is refused ("gates stale").
+// - D2: an entry whose re-peg window [now, now + entry.window_min] touches a CPI / NFP / FOMC window (release - 5 min to
+//   release + 30 min) needs a stop >= GATE_MIN_STOP_SIGMA sigma of its own horizon (sigma.per_bar). An incomplete
+//   release calendar counts as inside a window (fail closed).
+// - D3: the same stop floor while the symbol's Hawkes jump gate is elevated (replaces R-FLOW-2's fixed 60 min and the
+//   field P(jump)). A symbol the file does not list reads the fallback symbol (BTCUSDT); no state at all counts as
+//   elevated.
+
+/// data/live/gates.json older than this (or missing): every new entry is refused.
+pub const GATES_MAX_AGE_MS: i64 = 300_000;
+/// Inside a release window or while the jump gate is elevated, a new entry needs a stop at least this many sigma away.
+pub const GATE_MIN_STOP_SIGMA: f64 = 2.0;
+/// Symbol whose jump state stands in for symbols the gates file does not list.
+pub const GATE_FALLBACK_SYMBOL: &str = "BTCUSDT";
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct ReleaseWindow {
+    pub event: String,
+    #[serde(default)]
+    pub kind: String,
+    pub release_ms: i64,
+    pub start_ms: i64,
+    pub end_ms: i64,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct JumpGate {
+    #[serde(default)]
+    pub intensity: Option<f64>,
+    #[serde(default)]
+    pub baseline: Option<f64>,
+    #[serde(default)]
+    pub ratio: Option<f64>,
+    pub elevated: bool,
+    #[serde(default)]
+    pub until_ms: Option<i64>,
+    #[serde(default)]
+    pub reason: Option<String>,
+    #[serde(default)]
+    pub source: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct GateCalendar {
+    /// Missing = false: an unknown calendar counts as inside a window.
+    #[serde(default)]
+    pub ok: bool,
+    #[serde(default)]
+    pub reason: Option<String>,
+}
+
+/// data/live/gates.json (unknown fields ignored: the writer may add context).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct GatesFile {
+    pub written_ms: i64,
+    #[serde(default)]
+    pub version: String,
+    #[serde(default)]
+    pub release_windows: Vec<ReleaseWindow>,
+    #[serde(default)]
+    pub calendar: GateCalendar,
+    #[serde(default)]
+    pub jump: BTreeMap<String, JumpGate>,
+}
+
+/// The gate input of one decision: the file as read (None = missing or unreadable, with the error) and the clock.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct LiveGates {
+    pub now_ms: i64,
+    pub file: Option<GatesFile>,
+    pub error: Option<String>,
+}
+
+impl LiveGates {
+    pub fn parse(text: &str, now_ms: i64) -> Self {
+        match serde_json::from_str::<GatesFile>(text) {
+            Ok(f) => Self { now_ms, file: Some(f), error: None },
+            Err(e) => Self::missing(format!("unreadable gates file: {e}"), now_ms),
+        }
+    }
+
+    pub fn missing(error: String, now_ms: i64) -> Self {
+        Self { now_ms, file: None, error: Some(error) }
+    }
+}
+
+/// The gate state a decision saw (journaled with every risk_decision).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct GateCheck {
+    pub now_ms: i64,
+    pub written_ms: Option<i64>,
+    pub age_ms: Option<i64>,
+    pub version: Option<String>,
+    pub stale: bool,
+    pub stale_reason: Option<String>,
+    /// The release window the entry's re-peg window touches, if any.
+    pub release: Option<ReleaseWindow>,
+    pub calendar_ok: bool,
+    pub calendar_reason: Option<String>,
+    /// Whose jump state was read (the symbol itself or the fallback).
+    pub jump_symbol: Option<String>,
+    pub jump: Option<JumpGate>,
+    pub min_stop_sigma: f64,
+    /// End of the entry's re-peg window (now + entry.window_min).
+    pub entry_window_end_ms: i64,
+}
+
+impl GateCheck {
+    /// Elevated jump state, or no state at all (fail closed).
+    pub fn jump_elevated(&self) -> bool {
+        self.jump.as_ref().is_none_or(|j| j.elevated)
+    }
+
+    /// True when D2 or D3 asks for the wide-stop floor.
+    pub fn needs_wide_stop(&self) -> bool {
+        self.release.is_some() || !self.calendar_ok || self.jump_elevated()
+    }
+}
+
+/// Gate state for an entry on `symbol` whose pegged order may rest for `window_min` minutes.
+pub fn gate_check(g: &LiveGates, symbol: &str, window_min: f64) -> GateCheck {
+    let now = g.now_ms;
+    let end = now + (window_min.max(0.0) * 60_000.0) as i64;
+    let mut c = GateCheck { now_ms: now, min_stop_sigma: GATE_MIN_STOP_SIGMA, entry_window_end_ms: end, ..Default::default() };
+    let Some(f) = &g.file else {
+        c.stale = true;
+        c.stale_reason = Some(g.error.clone().unwrap_or_else(|| "no gates file".into()));
+        return c;
+    };
+    let age = now - f.written_ms;
+    (c.written_ms, c.age_ms, c.version) = (Some(f.written_ms), Some(age), Some(f.version.clone()));
+    if age > GATES_MAX_AGE_MS {
+        c.stale = true;
+        c.stale_reason = Some(format!("written {:.1} min ago (max {} min)", age as f64 / 60_000.0, GATES_MAX_AGE_MS / 60_000));
+    } else if age < -60_000 {
+        // a file from the future (clock skew or a bad writer) is not trusted either
+        c.stale = true;
+        c.stale_reason = Some(format!("written_ms {} is {:.1} min in the future", f.written_ms, -age as f64 / 60_000.0));
+    }
+    c.release = f.release_windows.iter().filter(|w| w.start_ms <= end && w.end_ms >= now).min_by_key(|w| w.start_ms).cloned();
+    c.calendar_ok = f.calendar.ok;
+    c.calendar_reason = f.calendar.reason.clone();
+    let (js, j) = match f.jump.get(symbol) {
+        Some(j) => (symbol, Some(j)),
+        None => (GATE_FALLBACK_SYMBOL, f.jump.get(GATE_FALLBACK_SYMBOL)),
+    };
+    if let Some(j) = j {
+        c.jump_symbol = Some(js.to_string());
+        c.jump = Some(j.clone());
+    }
+    c
+}
+
+/// HH:MM UTC of an epoch ms.
+fn utc_hm(ms: i64) -> String {
+    let m = ms.div_euclid(60_000).rem_euclid(1440);
+    format!("{:02}:{:02}", m / 60, m % 60)
+}
+
 // ---------------------------------------------------------------- output
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -332,6 +496,9 @@ pub enum LiveRejection {
     MinLotOverMaxLoss,
     MaxLossPerTrade,
     InsufficientMargin,
+    GatesStale,
+    ReleaseWindowTightStop,
+    JumpGateTightStop,
 }
 
 impl LiveRejection {
@@ -365,6 +532,9 @@ impl LiveRejection {
             Self::MinLotOverMaxLoss => "min_lot_over_max_loss",
             Self::MaxLossPerTrade => "max_loss_per_trade",
             Self::InsufficientMargin => "insufficient_margin",
+            Self::GatesStale => "gates_stale",
+            Self::ReleaseWindowTightStop => "release_window_tight_stop",
+            Self::JumpGateTightStop => "jump_gate_tight_stop",
         }
     }
 }
@@ -399,6 +569,9 @@ pub struct LiveDecision {
     pub open_after: u32,
     pub same_direction_after: u32,
     pub gross_after_usd: f64,
+    /// D2 / D3 entry gates as this decision saw them (data/live/gates.json).
+    #[serde(default)]
+    pub gates: GateCheck,
 }
 
 impl LiveDecision {
@@ -497,6 +670,7 @@ fn finite_pos(x: Option<f64>) -> Option<f64> {
 
 /// Decide one live entry intent. `entry_px` overrides the intent's reference price (the current touch at submission).
 /// `facts` must hold the intent's symbol and every symbol in `positions` (unknown ones count as BTC-correlated).
+/// `gates`: the D2 / D3 entry gates (data/live/gates.json) and the decision clock; stale or missing refuses the entry.
 #[allow(clippy::too_many_arguments)]
 pub fn decide_live(
     intent: &OrderIntent,
@@ -507,6 +681,7 @@ pub fn decide_live(
     fees: &FeeRates,
     placement: &PlacementCfg,
     cfg: &LiveSmallCfg,
+    gates: &LiveGates,
 ) -> LiveDecision {
     use LiveRejection as R;
     let mut d = LiveDecision { intent_id: intent.intent_id.clone(), decision: "reject".into(), symbol: intent.symbol.clone(), ..Default::default() };
@@ -514,6 +689,13 @@ pub fn decide_live(
     // ---- what the intent is
     if account.kill {
         d.reject(R::KillSwitch, "data/live/KILL present: no new entries".into());
+    }
+    d.gates = gate_check(gates, &intent.symbol, cfg.entry.window_min);
+    if d.gates.stale {
+        d.reject(
+            R::GatesStale,
+            format!("gates stale: {} (data/live/gates.json; run scripts/live_gates.py --loop)", d.gates.stale_reason.as_deref().unwrap_or("unknown")),
+        );
     }
     if intent.mode.as_deref() != Some("live") {
         d.reject(R::NotLiveMode, format!("intent mode {:?}: the live desk takes only mode \"live\"", intent.mode));
@@ -645,6 +827,44 @@ pub fn decide_live(
             if k > placement.max_stop_distance_sigma {
                 d.reject(R::StopBeyondMaxSigma, format!("stop {k:.3} sigma > max {}", placement.max_stop_distance_sigma));
             }
+        }
+    }
+
+    // ---- D2 / D3 entry gates: inside a release window or while the jump gate is elevated, stops >= 2 sigma only
+    let g = d.gates.clone();
+    if !g.stale && g.needs_wide_stop() && d.stop_sigma.is_none_or(|k| k < g.min_stop_sigma) {
+        let k = d.stop_sigma.map(|k| format!("{k:.2} sigma")).unwrap_or_else(|| "unknown sigma".into());
+        if let Some(w) = &g.release {
+            d.reject(
+                R::ReleaseWindowTightStop,
+                format!(
+                    "stop {k} < {} inside the {} window {}-{} UTC (release {}; the entry may rest until {} UTC): D2",
+                    g.min_stop_sigma,
+                    w.event,
+                    utc_hm(w.start_ms),
+                    utc_hm(w.end_ms),
+                    utc_hm(w.release_ms),
+                    utc_hm(g.entry_window_end_ms)
+                ),
+            );
+        } else if !g.calendar_ok {
+            d.reject(
+                R::ReleaseWindowTightStop,
+                format!("stop {k} < {}: release calendar not ok ({}), treated as inside a window: D2", g.min_stop_sigma, g.calendar_reason.as_deref().unwrap_or("unknown")),
+            );
+        }
+        if g.jump_elevated() {
+            let why = match (&g.jump, &g.jump_symbol) {
+                (Some(j), Some(js)) => format!(
+                    "{js}{} jump intensity x{} >= threshold{}{}",
+                    if js != sym { " (fallback)" } else { "" },
+                    j.ratio.map(|r| format!("{r:.2}")).unwrap_or_else(|| "?".into()),
+                    j.until_ms.map(|u| format!(" until ~{} UTC", utc_hm(u))).unwrap_or_default(),
+                    j.reason.as_deref().map(|r| format!(" ({r})")).unwrap_or_default()
+                ),
+                _ => format!("no jump state for {sym} or {GATE_FALLBACK_SYMBOL} (fail closed)"),
+            };
+            d.reject(R::JumpGateTightStop, format!("stop {k} < {} while the jump gate is elevated: {why}: D3", g.min_stop_sigma));
         }
     }
 
@@ -849,12 +1069,33 @@ mod tests {
         LiveAccount { available_usd: 1000.0, entries_today: 0, realised_today_usd: 0.0, kill: false }
     }
 
+    const NOW: i64 = 1_795_820_000_000; // 2026-11-27 22:53:20 UTC
+
+    fn jg(ratio: f64, elevated: bool) -> JumpGate {
+        JumpGate { ratio: Some(ratio), elevated, until_ms: elevated.then_some(NOW + 3_600_000), ..Default::default() }
+    }
+
+    /// A fresh gates file: no release window, calendar ok, BTC / ETH jump state normal.
+    fn gates_file() -> GatesFile {
+        GatesFile {
+            written_ms: NOW - 30_000,
+            version: "gates-v1".into(),
+            release_windows: vec![],
+            calendar: GateCalendar { ok: true, reason: None },
+            jump: [("BTCUSDT".to_string(), jg(1.05, false)), ("ETHUSDT".to_string(), jg(1.10, false))].into_iter().collect(),
+        }
+    }
+
+    fn gates() -> LiveGates {
+        LiveGates { now_ms: NOW, file: Some(gates_file()), error: None }
+    }
+
     fn pos(sym: &str, side: Side, qty: f64, px: f64, pnl: f64) -> LivePos {
         LivePos { symbol: sym.into(), side, qty, entry_price: px, mark: px, open_pnl_usd: pnl, max_loss_usd: 2.0, pending: false }
     }
 
     fn run(i: &OrderIntent, a: &LiveAccount, p: &[LivePos]) -> LiveDecision {
-        decide_live(i, None, a, p, &facts(), &fees(), &placement(), &cfg())
+        decide_live(i, None, a, p, &facts(), &fees(), &placement(), &cfg(), &gates())
     }
 
     #[test]
@@ -925,7 +1166,7 @@ mod tests {
     fn depth_share_caps_the_notional() {
         let mut fs = facts();
         fs.get_mut("XMRUSDT").unwrap().bid_depth_usd = 200.0; // 20% of 200 = 40 USD cap
-        let d = decide_live(&intent("XMRUSDT", "long", 300.0, 0.3), None, &acct(), &[], &fs, &fees(), &placement(), &cfg());
+        let d = decide_live(&intent("XMRUSDT", "long", 300.0, 0.3), None, &acct(), &[], &fs, &fees(), &placement(), &cfg(), &gates());
         assert!(d.notional_cap_usd <= 40.0 + 1e-9, "{}", d.notional_cap_usd);
         assert!(d.notional_usd <= 40.0 + 1e-9);
     }
@@ -1023,7 +1264,7 @@ mod tests {
         // unknown correlation counts as btc_beta (fail closed)
         let mut fs = facts();
         fs.get_mut("TAOUSDT").unwrap().btc_corr = None;
-        let d = decide_live(&intent("TAOUSDT", "short", 400.0, 1.0), None, &acct(), &p, &fs, &fees(), &placement(), &cfg());
+        let d = decide_live(&intent("TAOUSDT", "short", 400.0, 1.0), None, &acct(), &p, &fs, &fees(), &placement(), &cfg(), &gates());
         assert!(d.has(LiveRejection::CorrelatedHedge), "{:?}", d.details);
     }
 
@@ -1036,14 +1277,14 @@ mod tests {
         fs.get_mut("XMRUSDT").unwrap().usdt_linear_perp = false;
         fs.get_mut("TAOUSDT").unwrap().symbol_type = "innovation".into();
         // the project profile excludes the innovation zone (user decision 2026-11-15); crypto ("") and TradFi types trade
-        let d = decide_live(&intent("TAOUSDT", "long", 400.0, 1.0), None, &acct(), &[], &fs, &fees(), &placement(), &cfg());
+        let d = decide_live(&intent("TAOUSDT", "long", 400.0, 1.0), None, &acct(), &[], &fs, &fees(), &placement(), &cfg(), &gates());
         assert!(d.has(LiveRejection::ExcludedSymbol), "{:?}", d.details);
         fs.get_mut("TAOUSDT").unwrap().symbol_type = "commodity".into();
-        let d = decide_live(&intent("TAOUSDT", "long", 400.0, 1.0), None, &acct(), &[], &fs, &fees(), &placement(), &cfg());
+        let d = decide_live(&intent("TAOUSDT", "long", 400.0, 1.0), None, &acct(), &[], &fs, &fees(), &placement(), &cfg(), &gates());
         assert!(d.accepted(), "{:?}", d.details);
-        let d = decide_live(&intent("SOLUSDT", "long", 150.0, 1.0), None, &acct(), &[], &fs, &fees(), &placement(), &cfg());
+        let d = decide_live(&intent("SOLUSDT", "long", 150.0, 1.0), None, &acct(), &[], &fs, &fees(), &placement(), &cfg(), &gates());
         assert!(d.has(LiveRejection::ForeignActivityOnSymbol));
-        let d = decide_live(&intent("XMRUSDT", "long", 300.0, 1.0), None, &acct(), &[], &fs, &fees(), &placement(), &cfg());
+        let d = decide_live(&intent("XMRUSDT", "long", 300.0, 1.0), None, &acct(), &[], &fs, &fees(), &placement(), &cfg(), &gates());
         assert!(d.has(LiveRejection::NotUsdtLinearPerp));
         let d = run(&intent("DOGEUSDT", "long", 0.2, 1.0), &acct(), &[]);
         assert!(d.has(LiveRejection::UnknownInstrument));
@@ -1135,5 +1376,149 @@ mod tests {
         let (ra, rb) = aligned_log_returns(&a, &b);
         assert_eq!(ra.len(), 2, "aligned on common timestamps 0, 1, 4");
         assert!((ra[0] - (1.01f64).ln()).abs() < 1e-12 && (rb[0] - (1.01f64).ln()).abs() < 1e-12);
+    }
+
+    // ------------------------------------------------------------ D2 / D3 entry gates
+
+    /// `intent` with the stop at `k` sigma (sigma.per_bar set from the stop distance).
+    fn intent_k(sym: &str, side: &str, px: f64, stop_pct: f64, k: f64) -> OrderIntent {
+        let mut i = intent(sym, side, px, stop_pct);
+        let stop = i.stop.unwrap();
+        i.sigma.as_mut().unwrap().per_bar = Some((px / stop).ln().abs() / k);
+        i
+    }
+
+    fn run_g(i: &OrderIntent, g: &LiveGates) -> LiveDecision {
+        decide_live(i, None, &acct(), &[], &facts(), &fees(), &placement(), &cfg(), g)
+    }
+
+    fn with_file(f: GatesFile) -> LiveGates {
+        LiveGates { now_ms: NOW, file: Some(f), error: None }
+    }
+
+    fn window(start_off_min: i64) -> ReleaseWindow {
+        let start = NOW + start_off_min * 60_000;
+        ReleaseWindow { event: "NFP".into(), kind: "nfp".into(), release_ms: start + 300_000, start_ms: start, end_ms: start + 35 * 60_000 }
+    }
+
+    #[test]
+    fn stale_missing_or_future_gates_refuse_every_entry() {
+        let i = intent_k("ETHUSDT", "long", 3000.0, 1.0, 3.0);
+        assert!(run_g(&i, &gates()).accepted(), "fresh gates, wide stop");
+        let d = run_g(&i, &LiveGates::missing("data/live/gates.json: not found".into(), NOW));
+        assert!(d.has(LiveRejection::GatesStale) && d.gates.stale, "{:?}", d.details);
+        assert!(d.details["gates_stale"].starts_with("gates stale"), "{:?}", d.details);
+        let mut f = gates_file();
+        f.written_ms = NOW - GATES_MAX_AGE_MS - 1;
+        let d = run_g(&i, &with_file(f.clone()));
+        assert!(d.has(LiveRejection::GatesStale) && d.gates.age_ms == Some(GATES_MAX_AGE_MS + 1), "{:?}", d.gates);
+        f.written_ms = NOW - GATES_MAX_AGE_MS;
+        assert!(run_g(&i, &with_file(f.clone())).accepted(), "exactly 5 min old is still fresh");
+        f.written_ms = NOW + 120_000;
+        assert!(run_g(&i, &with_file(f)).has(LiveRejection::GatesStale), "a file from the future is not trusted");
+        assert!(run_g(&i, &LiveGates::parse("{not json", NOW)).has(LiveRejection::GatesStale));
+        // stale gates refuse whatever the stop: the gate state is unknown
+        assert!(run_g(&intent_k("ETHUSDT", "long", 3000.0, 1.0, 3.9), &LiveGates::missing("x".into(), NOW)).has(LiveRejection::GatesStale));
+    }
+
+    #[test]
+    fn release_window_needs_a_two_sigma_stop() {
+        let mut f = gates_file();
+        f.release_windows = vec![window(-1)]; // active now
+        let g = with_file(f.clone());
+        let d = run_g(&intent_k("ETHUSDT", "long", 3000.0, 1.0, 1.5), &g);
+        assert!(d.has(LiveRejection::ReleaseWindowTightStop), "{:?}", d.details);
+        assert!(d.details["release_window_tight_stop"].contains("NFP") && d.gates.release.is_some());
+        assert!(!d.has(LiveRejection::JumpGateTightStop), "the jump gate is normal");
+        assert!(run_g(&intent_k("ETHUSDT", "long", 3000.0, 1.0, 2.5), &g).accepted(), "a 2.5 sigma stop may enter in the window");
+        // a window that starts inside the 15-min re-peg window counts (the entry may fill in it); one that starts later does not
+        f.release_windows = vec![window(10)];
+        assert!(run_g(&intent_k("ETHUSDT", "long", 3000.0, 1.0, 1.5), &with_file(f.clone())).has(LiveRejection::ReleaseWindowTightStop));
+        f.release_windows = vec![window(20)];
+        assert!(run_g(&intent_k("ETHUSDT", "long", 3000.0, 1.0, 1.5), &with_file(f.clone())).accepted());
+        // a window that ended is gone
+        f.release_windows = vec![window(-40)];
+        assert!(run_g(&intent_k("ETHUSDT", "long", 3000.0, 1.0, 1.5), &with_file(f.clone())).accepted());
+        // unknown stop distance in sigma inside a window: refused (require_sigma off in a looser profile)
+        f.release_windows = vec![window(-1)];
+        let mut c = cfg();
+        c.require_sigma = false;
+        let mut i = intent("ETHUSDT", "long", 3000.0, 1.0);
+        i.sigma = None;
+        let d = decide_live(&i, None, &acct(), &[], &facts(), &fees(), &placement(), &c, &with_file(f));
+        assert!(d.has(LiveRejection::ReleaseWindowTightStop) && !d.has(LiveRejection::MissingSigma), "{:?}", d.details);
+    }
+
+    #[test]
+    fn incomplete_release_calendar_counts_as_a_window() {
+        let mut f = gates_file();
+        f.calendar = GateCalendar { ok: false, reason: Some("no future nfp release".into()) };
+        let g = with_file(f);
+        let d = run_g(&intent_k("ETHUSDT", "long", 3000.0, 1.0, 1.5), &g);
+        assert!(d.has(LiveRejection::ReleaseWindowTightStop) && d.details["release_window_tight_stop"].contains("calendar"), "{:?}", d.details);
+        assert!(run_g(&intent_k("ETHUSDT", "long", 3000.0, 1.0, 2.0), &g).accepted(), "2 sigma exactly meets the floor");
+        // a file without a calendar block parses as not ok (fail closed)
+        let g = LiveGates::parse(&format!("{{\"written_ms\": {}, \"jump\": {{\"BTCUSDT\": {{\"elevated\": false}}}}}}", NOW - 1000), NOW);
+        assert!(run_g(&intent_k("ETHUSDT", "long", 3000.0, 1.0, 1.5), &g).has(LiveRejection::ReleaseWindowTightStop));
+    }
+
+    #[test]
+    fn elevated_jump_gate_needs_a_two_sigma_stop_with_btc_fallback() {
+        let mut f = gates_file();
+        f.jump.insert("ETHUSDT".into(), jg(3.1, true));
+        let g = with_file(f.clone());
+        let d = run_g(&intent_k("ETHUSDT", "short", 3000.0, 1.0, 1.5), &g);
+        assert!(d.has(LiveRejection::JumpGateTightStop), "{:?}", d.details);
+        assert!(d.details["jump_gate_tight_stop"].contains("x3.10") && d.gates.jump_symbol.as_deref() == Some("ETHUSDT"), "{:?}", d.details);
+        assert!(run_g(&intent_k("ETHUSDT", "short", 3000.0, 1.0, 2.5), &g).accepted());
+        assert!(run_g(&intent_k("XMRUSDT", "long", 300.0, 1.0, 1.5), &g).accepted(), "XMR reads BTC (normal)");
+        // an unlisted symbol reads the BTC fallback
+        f.jump.insert("BTCUSDT".into(), jg(2.0, true));
+        let d = run_g(&intent_k("XMRUSDT", "long", 300.0, 1.0, 1.5), &with_file(f.clone()));
+        assert!(d.has(LiveRejection::JumpGateTightStop) && d.gates.jump_symbol.as_deref() == Some("BTCUSDT"), "{:?}", d.gates);
+        assert!(d.details["jump_gate_tight_stop"].contains("(fallback)"));
+        // no state for the symbol and none for BTC: elevated (fail closed)
+        f.jump.clear();
+        let d = run_g(&intent_k("XMRUSDT", "long", 300.0, 1.0, 1.5), &with_file(f.clone()));
+        assert!(d.has(LiveRejection::JumpGateTightStop) && d.gates.jump.is_none(), "{:?}", d.details);
+        assert!(run_g(&intent_k("XMRUSDT", "long", 300.0, 1.0, 2.5), &with_file(f)).accepted());
+    }
+
+    #[test]
+    fn gate_state_is_in_the_journaled_decision_and_parses_the_python_file() {
+        let text = format!(
+            r#"{{"written_ms": {w}, "written_utc": "x", "version": "gates-v1", "min_stop_sigma": 2.0,
+                "release_windows": [{{"event": "CPI", "kind": "cpi", "release_ms": {r}, "release_utc": "x", "start_ms": {a}, "end_ms": {b}, "active": false}}],
+                "release_flag_bars": [{{"event": "CPI", "freq": "1h", "bar": "release", "bar_open_ms": 0, "bar_close_ms": 1, "active": false}}],
+                "calendar": {{"ok": true, "reason": null, "covered_until_ms": {{"cpi": 1}}, "warn": []}},
+                "jump": {{"ETHUSDT": {{"intensity": 0.0136, "baseline": 0.0043, "ratio": 3.25, "elevated": true, "until_ms": {u}, "until_utc": "x",
+                          "p_jump_1h": 0.11, "p_jump_1h_base": 0.05, "components": {{"release": 1.0, "self": 0.1, "liq": 2.0}}, "source": "own", "reason": null}},
+                          "BTCUSDT": {{"intensity": null, "baseline": null, "ratio": null, "elevated": true, "until_ms": null, "source": "error", "reason": "flow stale"}}}},
+                "jump_model": {{"threshold": 1.5429}}, "errors": []}}"#,
+            w = NOW - 20_000,
+            r = NOW + 7_200_000,
+            a = NOW + 6_900_000,
+            b = NOW + 9_000_000,
+            u = NOW + 3_000_000
+        );
+        let g = LiveGates::parse(&text, NOW);
+        assert!(g.error.is_none(), "{:?}", g.error);
+        let f = g.file.as_ref().unwrap();
+        assert_eq!((f.release_windows.len(), f.calendar.ok, f.jump.len()), (1, true, 2));
+        let d = run_g(&intent_k("ETHUSDT", "long", 3000.0, 1.0, 1.5), &g);
+        assert!(d.has(LiveRejection::JumpGateTightStop) && !d.has(LiveRejection::ReleaseWindowTightStop), "the CPI window is 2 h away: {:?}", d.details);
+        assert_eq!(d.gates.age_ms, Some(20_000));
+        let v = serde_json::to_value(&d).unwrap();
+        assert_eq!(v["gates"]["jump"]["ratio"], serde_json::json!(3.25));
+        assert_eq!(v["gates"]["jump_symbol"], "ETHUSDT");
+        assert_eq!(v["gates"]["min_stop_sigma"], serde_json::json!(2.0));
+        // a BTC state without numbers (writer error) is elevated with its reason
+        let d = run_g(&intent_k("XMRUSDT", "long", 300.0, 1.0, 1.5), &g);
+        assert!(d.details["jump_gate_tight_stop"].contains("flow stale"), "{:?}", d.details);
+        // an old decision without the gates field still deserialises (pending proposals written before the gates)
+        let mut v0 = serde_json::to_value(&d).unwrap();
+        v0.as_object_mut().unwrap().remove("gates");
+        let back: LiveDecision = serde_json::from_value(v0).unwrap();
+        assert_eq!(back.gates, GateCheck::default());
     }
 }
