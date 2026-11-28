@@ -1,0 +1,15 @@
+# XT extra trial (agent XT, 2026-11-28 ~14:50 UTC), added AFTER the minute-level first look of the pilot (cTrader m1 bars vs
+# Bybit ob200 top of book, 2026-11-16 .. 11-27, descriptive) and BEFORE the registered forward sample (2026-11-29 .. 12-12).
+# Why: that look shows persistent levels, not just noise: Bybit TradFi perps quote 16-20 bp above the CFDs (gold, silver,
+# QQQ) and oil carries roll bases of 1.5-4.5%. H-XT-3's raw crossing counts such a level as a crossing for days although it
+# never converges (it is a carry, not an arbitrage), so a basis-adjusted crossing gets its own hypothesis and rule here.
+# H-XT-3 stays as registered; it is reported next to this one. Counted as an additional trial in the xt_cross family.
+H-XT-8:
+  title: "Basis-adjusted crossings: deviations of the gap from its own recent level exceed all costs and outlast our round trip"
+  statement: "For at least one arb pair, the basis-adjusted executable crossing y = max(1e4 ln(bid_bybit / ask_ctrader) - m, 1e4 ln(bid_ctrader / ask_bybit) + m), with m = the median 1 s mid gap of the pair over (t - 60 min, t - 1 s] (point in time, USDT-corrected for USDT legs), minus the H-XT-3 cost hurdle, is > 0 and persists > 1.32 s in at least 0.1% of common live seconds (mean over qualifying pair-days), with a median net crossing of at least 1 bp."
+  rationale: "A convergence trade earns the return of the gap to its level, not the level itself; the level (perp premium, USDT basis, roll basis) is carried, and its carry (funding vs CFD swap) is a separate question. The first look puts the minute-to-minute sd of the gap at 0.7-2 bp against a round-trip hurdle of ~6-7 bp (TradFi) and ~12 bp (crypto), so the prior is low."
+  test: "As H-XT-3 on the same registered sample, grid, alignment, costs and persistence rule, with y in place of x; m needs 60 min of common live seconds (the first hour of each session is skipped). Sensitivities: 21.2 s persistence, 1.0 bp CFD commission, m over 15 min."
+  success: "Per pair: supports iff the mean of (f_d - 0.001) over qualifying pair-days is > 0 by a one-sided Wilcoxon signed-rank test at 5% AND the median net crossing >= 1 bp; contradicts iff f_d < 0.0001 on every qualifying day; else inconclusive. Sampled-quote counts are lower bounds ('not seen at the sampling rate' is not a contradiction)."
+  prior: 0.1
+  family: xt_cross
+  status: proposed

@@ -5747,3 +5747,111 @@ hypotheses:
     prior: 0.4
     family: d7f_equivalence
     status: proposed
+
+  # XT (agent XT, 2026-11-28): tick-by-tick bid / ask study, BlackBull CFDs on cTrader vs Bybit linear perps. Registered before
+  # any analysis of the cross-venue data (diary "XT design frozen before results"). Research only: no orders on either venue.
+  # Pairs (arb = same underlying): XAUUSDT/XAUUSD, XAUTUSDT/XAUUSD, XAGUSDT/XAGUSD, QQQUSDT/QQQ and QQQ-24, BZUSDT/BRENT and
+  #   UKBRENT.F, CLUSDT/WTI and USOIL.F, BTCUSDT/BTCUSD, ETHUSDT/ETHUSD. Proxy (lead-lag only): QQQUSDT vs NAS100 / USTEC.F,
+  #   SPXLUSDT vs US500 / SPX500 / US500.F. Copper: cTrader-only series, descriptive. SPYUSDT never (user rule).
+  # Data: Bybit = scripts/xt_bybit_l1.py (public websocket orderbook.1 + publicTrade; recv_ts local ms, ts / cts exchange ms);
+  #   cTrader = scripts/xt_ctrader_quotes.py (SAMPLED QUOTES, NOT TICKS: get_spot_prices polled round-robin at 20 req/s,
+  #   rows on change, local send / recv ms) and, where the user runs it, research/xt/TickRecorder.cs (true ticks, server ms).
+  #   Where both exist for a window, cBot ticks are primary and sampled quotes a sensitivity.
+  # Registered sample (forward): 2026-11-29 00:00 .. 2026-12-12 24:00 UTC, all clean_holdout (after research.knowledge_cutoff
+  #   2026-07-01; no llm_in_sample exists for forward tick data, so the verdict rests on the declared one-sided test in
+  #   clean_holdout alone). The 2026-11-28 pilot is excluded (data quality only). A pair-day counts if both legs quoted in
+  #   >= 4 h of common live seconds (crypto >= 12 h); a pair gets a verdict with >= 5 such days, else "insufficient sample".
+  # Alignment: 1 s grid of each leg's last quote with age <= 5 s (live_age); both legs live and the CFD inside its session
+  #   (data/research/xt/ctrader_map.json). Times: local recv_ts on both legs (one machine clock); sensitivity Bybit cts and cBot
+  #   server ms corrected by the logged clock offsets. mid = (bid + ask) / 2. gap = 1e4 * ln(mid_bybit / mid_ctrader);
+  #   USDT-priced legs (BTCUSDT, ETHUSDT, XAUTUSDT) are converted with 1e4 * ln(USDCUSDT mid) (Bybit spot 1 m, config/xvenue.yaml)
+  #   and raw + corrected gaps are both reported. Oil: the cash CFDs (BRENT, WTI) carry a roll basis vs the front-month
+  #   perps; the futures CFDs (UKBRENT.F, USOIL.F) are the like-for-like legs; both are reported.
+  # Costs (per fill, bp of notional): Bybit taker 2.75 (TradFi) / 5.5 (crypto) from config/fees.yaml; BlackBull commission is
+  #   not exposed by the MCP symbol details: base 0.3 bp per fill (Prime: USD 3 per side per USD 100k), sensitivity 1.0 bp.
+  #   Spreads are in the quotes. Holds: Bybit funding pro rata (|last funding rate| x hold / interval; 4 h XAU / XAG, 8 h
+  #   otherwise) and the CFD swap if a hold crosses 17:00 ET (swap from the account terms: unknown via MCP -> charged 1 day of
+  #   |funding|-equivalent, sensitivity 0). Round trip of a two-leg trade: L = 2 x 0.66 s = 1.32 s (Bybit order/create p50,
+  #   data/research/xvenue/latency_* and xvenue_study.LATENCY; cTrader request RTT p50 0.12 s); sensitivity 2 x p90 = 21.2 s.
+  # Sampling caveat: with polled cTrader quotes, a crossing shorter than the per-symbol poll interval (n_live / 20 s) is
+  #   invisible and quote times are late by up to one interval; H-XT-3 / H-XT-4 counts from sampled quotes are lower bounds of
+  #   frequency and say nothing about episodes shorter than the interval; H-XT-2 lags shorter than the interval are not read.
+  H-XT-1:
+    title: "Each same-underlying gap is stationary within the day around a pair-specific basis"
+    statement: "For each arb pair, the 1 s mid gap on common live seconds (crypto after the USDT correction) is stationary within each pair-day: ADF (constant, lags by AIC <= 30) rejects a unit root at 5% AND KPSS (level, Newey-West bandwidth) does not reject stationarity at 5%, and the AR(1) half-life of the 1 s gap is below 300 s."
+    rationale: "A convergence trade needs a gap that returns to a level; a gap that wanders (unit root) is a basis you carry, not an arbitrage. The level itself (perp premium + USDT basis for crypto, roll basis for cash oil, ~0 for QQQ / QQQ-24 and metals) is reported with its daily median, IQR, 1st / 99th percentiles and day-to-day drift."
+    test: "Per pair-day: ADF + KPSS on the 1 s corrected gap; AR(1) by OLS on the 1 s gap (half-life = ln 0.5 / ln phi); report the share of qualifying pair-days passing all three. Descriptive tables (raw and corrected) by pair, hour of day and session state."
+    success: "Per pair: supports iff the share of pair-days passing (ADF reject, KPSS no-reject, half-life < 300 s) is above 50% by a one-sided exact binomial test at 5% (>= 5 pair-days); contradicts iff the share is below 50% by the mirror test; else inconclusive. Family verdict = the per-pair verdicts, Holm-adjusted across the 11 arb pairs."
+    prior: 0.6
+    family: xt_gap
+    status: proposed
+  H-XT-2:
+    title: "Price discovery: Bybit leads for crypto, the CFD (fed by the primary market) leads for TradFi"
+    statement: "BTC / ETH: Bybit leads the CFD (the Hayashi-Yoshida cross-correlation of log-mid changes peaks at a lag > 0 = Bybit first, and Bybit's Hasbrouck information share, midpoint of the upper / lower bounds, at 1 s is > 0.5). Metals, energy, QQQ and the proxies (QQQUSDT vs NAS100 / USTEC.F, SPXLUSDT vs US500 / SPX500 / US500.F): the CFD leads (peak at lag < 0, Bybit IS < 0.5). The Gonzalo-Granger component share is reported alongside."
+    rationale: "Bybit is a primary crypto venue and the BTC / ETH CFDs are broker quotes derived from crypto venues; Bybit TradFi perps are thin derivatives of index prices from external markets, while the CFD liquidity provider quotes from the futures / cash market. If true, the lagging venue is the one to execute on and the leader's move is the signal."
+    test: "HY correlation on the asynchronous mids, lag grid -10 .. +10 s in 100 ms steps (cBot ticks) or in steps of the per-symbol poll interval (sampled quotes; lags shorter than one interval are not read), per pair-day; peak lag and its hour-block bootstrap 95% CI (B = 2000, seed 20261128). VECM on the 1 s mids (lags by BIC <= 10, cointegrating vector [1, -1] fixed for arb pairs, estimated for proxies) -> Hasbrouck IS bounds and GG share per pair-day; mean and day-block bootstrap CI."
+    success: "Per pair: supports iff the pooled peak-lag CI excludes 0 on the registered side AND the mean IS midpoint CI excludes 0.5 on the registered side (one-sided 5%); contradicts iff either CI excludes 0 / 0.5 on the opposite side; else inconclusive. With sampled quotes only, a lead shorter than one poll interval cannot support or contradict (reported as unresolved)."
+    prior: 0.6
+    family: xt_leadlag
+    status: proposed
+  H-XT-3:
+    title: "Executable crossings beyond all costs occur and persist longer than our round trip"
+    statement: "For at least one arb pair, executable crossings x = max(1e4 ln(bid_bybit / ask_ctrader), 1e4 ln(bid_ctrader / ask_bybit)) (USDT-corrected for USDT legs) minus the round-trip cost hurdle (4 fills: 2 x Bybit taker + 2 x CFD commission, plus the trailing 60 min median of both spreads in bp as the expected exit cost, plus funding / swap for a 60 min hold) are > 0 and persist > 1.32 s in at least 0.1% of common live seconds, on the mean over qualifying pair-days, with a median net crossing of at least 1 bp."
+    rationale: "The user's question: are there arbitrage opportunities between BlackBull and Bybit? A crossing that only exists below our round trip or below the costs is not one."
+    test: "Per pair-day on the 1 s grid (and on the event times of both legs for cBot ticks): episodes of x_net > 0 (start = first observation crossed, end = first not crossed), durations, net size in bp and executable size (min of the two touch sizes in USD; CFD size unknown from quotes -> Bybit touch size reported). Frequency f_d = seconds inside episodes longer than 1.32 s / common live seconds. Sensitivities: 21.2 s persistence, 1.0 bp CFD commission, basis-adjusted crossings (gap minus its trailing 60 min point-in-time median), raw vs USDT-corrected."
+    success: "Per pair: supports iff the mean of (f_d - 0.001) over qualifying pair-days is > 0 by a one-sided Wilcoxon signed-rank test at 5% AND the median net crossing over those episodes is >= 1 bp; contradicts iff f_d < 0.0001 on every qualifying day; else inconclusive. Sampled-quote counts are lower bounds: a contradiction from sampled quotes alone is recorded as 'not seen at the sampling rate', not as a contradiction."
+    prior: 0.15
+    family: xt_cross
+    status: proposed
+  H-XT-4:
+    title: "A latency-delayed convergence trade on the crossings earns more than its costs"
+    statement: "Entering each H-XT-3 episode one round trip (1.32 s) after it is first seen, at the then-current touch of both legs (long the cheap venue's ask, short the rich venue's bid), and exiting when the crossing gap has halved, after 60 min, or 5 min before the CFD session ends, at the then-current touches, earns a positive mean net P&L per episode (bp of notional, after fees, commission, funding and swap)."
+    rationale: "H-ARB2 on tick data: a crossing that vanishes within our latency or does not converge after it is entered is not an arbitrage."
+    test: "Episode simulation on the H-XT-3 episodes of the registered sample, no overlapping positions per pair, one unit each leg; mean net bp per episode with the day-clustered bootstrap 95% CI (B = 4000, seed 20261128); sensitivities: 21.2 s delay, 1.0 bp commission, exit at a full close of the gap."
+    success: "Supports iff >= 30 episodes AND the mean net P&L > 0 by the one-sided bootstrap test at 5% (lower 95% bound > 0) pooled over pairs AND for the best pair; contradicts iff the upper 95% bound < 0 pooled; else inconclusive (including < 30 episodes)."
+    prior: 0.1
+    family: xt_cross
+    status: proposed
+  H-XT-5:
+    title: "Bybit's weekend price predicts where the CFD reopens"
+    statement: "For TradFi pairs whose CFD closes for the weekend (gold, silver, Brent, WTI, NAS100 / QQQ-24 vs QQQUSDT, US500 vs SPXLUSDT), the CFD weekend return r_cfd = ln(first CFD bid of the reopening minute / last CFD bid of the Friday close) regressed on the Bybit weekend return r_bybit = ln(Bybit close in the minute before the CFD reopens / Bybit close in the CFD's last Friday minute) has slope beta > 0.5 and R^2 >= 0.5."
+    rationale: "Bybit TradFi perps trade through the weekend while the CFD is shut; if the perps aggregate weekend news, they price the reopening gap in advance (useful for Monday-open positioning and for the Friday-close references of the Bybit TradFi perps). If beta is near 0, the weekend perp price is noise around a stale index."
+    test: "Weekends from the later of the two venues' first data (cTrader m1 trendbars, BARS not ticks; Bybit 1 m klines, public REST) through 2026-12-13, per pair; OLS with heteroskedasticity-robust SEs; pooled over metals + energy (one weekend = one cluster). Segments llm_in_sample (weekends before 2026-07-01) and clean_holdout (after)."
+    success: "Supports iff the pooled slope is > 0.5 by a one-sided t test at 5% and R^2 >= 0.5 in clean_holdout, with slope > 0.5 in llm_in_sample; contradicts iff the clean_holdout slope's upper 95% bound < 0.5; else inconclusive. Needs >= 8 weekends per segment."
+    prior: 0.55
+    family: xt_weekend
+    status: proposed
+  H-XT-6:
+    title: "At the CFD reopen the Bybit perp converges to the CFD, not the other way round"
+    statement: "For the same pairs and weekends, the deviation d(t) = gap(t) - gap(Friday close) at the CFD's first reopening minute shrinks by at least half within 30 min in more than 50% of pair-weekends, and more than half of that closing comes from the Bybit leg: share_bybit = -(Delta ln mid_bybit) / (Delta ln mid_bybit - Delta ln mid_ctrader) over the 30 min, averaged over pair-weekends with |d(t_open)| >= 5 bp, is > 0.5."
+    rationale: "When the primary market reopens (CME Globex Sunday 23:00 UTC), the CFD quote comes from it; the thin weekend perp should be the one that moves. If the CFD moves toward Bybit instead, the perps carry real weekend information (consistent with a large H-XT-5 slope)."
+    test: "Minute closes (cTrader m1 BARS, bid; Bybit 1 m kline closes; forward weekends also on the recorders' quotes). Binomial test of the halving share vs 0.5; mean share_bybit with the weekend-cluster bootstrap CI. Segments as H-XT-5."
+    success: "Supports iff, in clean_holdout, the halving share > 0.5 (one-sided exact binomial, 5%) AND the mean share_bybit > 0.5 (one-sided bootstrap, 5%), with both > 0.5 in llm_in_sample; contradicts iff the mean share_bybit's upper 95% bound < 0.5 in clean_holdout; else inconclusive. Needs >= 8 weekends per segment."
+    prior: 0.6
+    family: xt_weekend
+    status: proposed
+  H-XT-7:
+    title: "At 20 requests / s the cTrader poller sees most quote changes of the live symbols"
+    statement: "With the recorder at 20 get_spot_prices requests / s over the live symbols, the ratio of recorded quote changes to the cTrader tick count of the same minute (m1 trendbar volume) is >= 0.5 for the median symbol-minute of BTCUSD and ETHUSD and of the open TradFi CFDs."
+    rationale: "Whether sampled quotes can stand in for ticks in H-XT-1..4 depends on how much of the tick stream they see; the answer fixes whether the cBot / Open API is needed before any crossing verdict."
+    test: "Per symbol-minute inside the session over the registered sample: n_changes (ctrader_quotes_SAMPLED rows) / trendbar volume; median and IQR per symbol, by number of live symbols. Where the cBot runs: recorded changes / cBot ticks for the same minutes (primary when available)."
+    success: "Per symbol: supports iff the median ratio >= 0.5 with the minute-block bootstrap lower 95% bound >= 0.4; contradicts iff the upper 95% bound < 0.5; else inconclusive."
+    prior: 0.5
+    family: xt_quality
+    status: proposed
+
+  # XT extra trial (agent XT, 2026-11-28 ~14:50 UTC), added AFTER the minute-level first look of the pilot (cTrader m1 bars vs
+  # Bybit ob200 top of book, 2026-11-16 .. 11-27, descriptive) and BEFORE the registered forward sample (2026-11-29 .. 12-12).
+  # Why: that look shows persistent levels, not just noise: Bybit TradFi perps quote 16-20 bp above the CFDs (gold, silver,
+  # QQQ) and oil carries roll bases of 1.5-4.5%. H-XT-3's raw crossing counts such a level as a crossing for days although it
+  # never converges (it is a carry, not an arbitrage), so a basis-adjusted crossing gets its own hypothesis and rule here.
+  # H-XT-3 stays as registered; it is reported next to this one. Counted as an additional trial in the xt_cross family.
+  H-XT-8:
+    title: "Basis-adjusted crossings: deviations of the gap from its own recent level exceed all costs and outlast our round trip"
+    statement: "For at least one arb pair, the basis-adjusted executable crossing y = max(1e4 ln(bid_bybit / ask_ctrader) - m, 1e4 ln(bid_ctrader / ask_bybit) + m), with m = the median 1 s mid gap of the pair over (t - 60 min, t - 1 s] (point in time, USDT-corrected for USDT legs), minus the H-XT-3 cost hurdle, is > 0 and persists > 1.32 s in at least 0.1% of common live seconds (mean over qualifying pair-days), with a median net crossing of at least 1 bp."
+    rationale: "A convergence trade earns the return of the gap to its level, not the level itself; the level (perp premium, USDT basis, roll basis) is carried, and its carry (funding vs CFD swap) is a separate question. The first look puts the minute-to-minute sd of the gap at 0.7-2 bp against a round-trip hurdle of ~6-7 bp (TradFi) and ~12 bp (crypto), so the prior is low."
+    test: "As H-XT-3 on the same registered sample, grid, alignment, costs and persistence rule, with y in place of x; m needs 60 min of common live seconds (the first hour of each session is skipped). Sensitivities: 21.2 s persistence, 1.0 bp CFD commission, m over 15 min."
+    success: "Per pair: supports iff the mean of (f_d - 0.001) over qualifying pair-days is > 0 by a one-sided Wilcoxon signed-rank test at 5% AND the median net crossing >= 1 bp; contradicts iff f_d < 0.0001 on every qualifying day; else inconclusive. Sampled-quote counts are lower bounds ('not seen at the sampling rate' is not a contradiction)."
+    prior: 0.1
+    family: xt_cross
+    status: proposed
